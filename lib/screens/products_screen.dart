@@ -135,6 +135,52 @@ class _ProductTile extends StatelessWidget {
           context,
           MaterialPageRoute(builder: (_) => ProductFormScreen(product: product)),
         ),
+        onLongPress: () => _showStockDialog(context),
+      ),
+    );
+  }
+
+  void _showStockDialog(BuildContext context) {
+    final ctrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('รับสินค้าเข้า: ${product.name}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('สต็อกปัจจุบัน: ${product.stock}',
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'จำนวนที่รับเข้า',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ยกเลิก')),
+          FilledButton(
+            onPressed: () async {
+              final qty = int.tryParse(ctrl.text) ?? 0;
+              if (qty <= 0) return;
+              await ProductService.adjustStock(product.id, qty);
+              if (ctx.mounted) {
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  SnackBar(content: Text('เพิ่มสต็อก ${product.name} +$qty ชิ้น')),
+                );
+              }
+            },
+            child: const Text('บันทึก'),
+          ),
+        ],
       ),
     );
   }

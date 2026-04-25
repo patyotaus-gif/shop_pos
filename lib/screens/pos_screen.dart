@@ -20,6 +20,7 @@ class _PosScreenState extends State<PosScreen> {
   final List<CartItem> _cart = [];
   double _discount = 0;
   bool _scanning = false;
+  PaymentMethod _paymentMethod = PaymentMethod.cash;
 
   double get _subtotal => _cart.fold(0, (s, e) => s + e.subtotal);
   double get _total => _subtotal - _discount;
@@ -74,8 +75,15 @@ class _PosScreenState extends State<PosScreen> {
       if (customerName == null) return;
     }
 
-    final paid = isDebt ? 0.0 : await _askPayment();
-    if (!isDebt && paid < 0) return;
+    double paid = 0.0;
+    if (!isDebt) {
+      if (_paymentMethod == PaymentMethod.cash) {
+        paid = await _askPayment();
+        if (paid < 0) return;
+      } else {
+        paid = _total;
+      }
+    }
 
     try {
       final sale = await SaleService.checkout(
@@ -84,6 +92,7 @@ class _PosScreenState extends State<PosScreen> {
         discount: _discount,
         isDebt: isDebt,
         customerName: customerName,
+        paymentMethod: _paymentMethod,
       );
 
       setState(() {
@@ -268,6 +277,47 @@ class _PosScreenState extends State<PosScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: _ProductSearch(onSelected: _addToCart),
           ),
+          // Pinned products
+          StreamBuilder<List<Product>>(
+            stream: ProductService.watchAll(),
+            builder: (ctx, snap) {
+              final pinned = (snap.data ?? []).where((p) => p.isPinned).toList();
+              if (pinned.isEmpty) return const SizedBox.shrink();
+              return SizedBox(
+                height: 44,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  itemCount: pinned.length,
+                  itemBuilder: (ctx, i) => Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ActionChip(
+                      label: Text(pinned[i].name, style: const TextStyle(fontSize: 12)),
+                      avatar: const Icon(Icons.push_pin, size: 14),
+                      onPressed: () => _addToCart(pinned[i]),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          // Payment method selector
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: Row(
+              children: PaymentMethod.values.map((m) {
+                final selected = _paymentMethod == m;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(m.label, style: const TextStyle(fontSize: 12)),
+                    selected: selected,
+                    onSelected: (_) => setState(() => _paymentMethod = m),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
           // Cart
           Expanded(
             child: _cart.isEmpty
@@ -276,10 +326,10 @@ class _PosScreenState extends State<PosScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.shopping_cart_outlined,
-                            size: 64, color: cs.onSurface.withOpacity(0.3)),
+                            size: 64, color: cs.onSurface.withValues(alpha: 0.3)),
                         const SizedBox(height: 8),
                         Text('ยังไม่มีสินค้าในตะกร้า',
-                            style: TextStyle(color: cs.onSurface.withOpacity(0.4))),
+                            style: TextStyle(color: cs.onSurface.withValues(alpha: 0.4))),
                       ],
                     ),
                   )

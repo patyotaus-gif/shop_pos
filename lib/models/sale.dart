@@ -1,5 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+enum PaymentMethod { cash, transfer, qr }
+
+extension PaymentMethodExt on PaymentMethod {
+  String get label => switch (this) {
+        PaymentMethod.cash => 'เงินสด',
+        PaymentMethod.transfer => 'โอนเงิน',
+        PaymentMethod.qr => 'QR Code',
+      };
+}
+
 class SaleItem {
   final String productId;
   final String productName;
@@ -42,6 +52,7 @@ class Sale {
   final DateTime createdAt;
   final bool isDebt;
   final String? customerName;
+  final PaymentMethod paymentMethod;
 
   const Sale({
     required this.id,
@@ -53,6 +64,7 @@ class Sale {
     required this.createdAt,
     this.isDebt = false,
     this.customerName,
+    this.paymentMethod = PaymentMethod.cash,
   });
 
   factory Sale.fromFirestore(Map<String, dynamic> data, String id) => Sale(
@@ -67,6 +79,10 @@ class Sale {
         createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         isDebt: data['isDebt'] ?? false,
         customerName: data['customerName'],
+        paymentMethod: PaymentMethod.values.firstWhere(
+          (e) => e.name == (data['paymentMethod'] ?? 'cash'),
+          orElse: () => PaymentMethod.cash,
+        ),
       );
 
   Map<String, dynamic> toFirestore() => {
@@ -78,5 +94,6 @@ class Sale {
         'createdAt': Timestamp.fromDate(createdAt),
         'isDebt': isDebt,
         'customerName': customerName,
+        'paymentMethod': paymentMethod.name,
       };
 }

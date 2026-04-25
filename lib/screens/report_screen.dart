@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../models/sale.dart';
 import '../services/sale_service.dart';
 
@@ -45,12 +48,62 @@ class _ReportScreenState extends State<ReportScreen> with SingleTickerProviderSt
     };
   }
 
+  Future<void> _exportPdf(DateTimeRange range, String title) async {
+    final sales = await SaleService.watchByRange(range.start, range.end).first;
+    final total = sales.fold<double>(0, (s, e) => s + e.total);
+    final pdf = pw.Document();
+    pdf.addPage(
+      pw.Page(
+        build: (ctx) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text('รายงานการขาย - $title',
+                style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 8),
+            pw.Text('จำนวนบิล: ${sales.length} บิล'),
+            pw.Text('รายได้รวม: ฿${_baht.format(total)}'),
+            pw.Divider(),
+            pw.SizedBox(height: 8),
+            ...sales.map((s) => pw.Padding(
+                  padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                  child: pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text(_dateFormat.format(s.createdAt),
+                          style: const pw.TextStyle(fontSize: 10)),
+                      pw.Text(s.isDebt ? 'เชื่อ' : s.paymentMethod.label,
+                          style: const pw.TextStyle(fontSize: 10)),
+                      pw.Text('฿${_baht.format(s.total)}',
+                          style: const pw.TextStyle(fontSize: 10)),
+                    ],
+                  ),
+                )),
+          ],
+        ),
+      ),
+    );
+    await Printing.sharePdf(bytes: await pdf.save(), filename: 'report_$title.pdf');
+  }
+
   @override
   Widget build(BuildContext context) {
+    final periods = ['today', 'week', 'month'];
+    final titles = ['วันนี้', '7 วัน', 'เดือนนี้'];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('รายงาน'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            tooltip: 'Export PDF',
+            onPressed: () {
+              final idx = _tab.index;
+              _exportPdf(_rangeFor(periods[idx]), titles[idx]);
+            },
+          ),
+        ],
         bottom: TabBar(
           controller: _tab,
           tabs: const [

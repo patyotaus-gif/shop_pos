@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
+import 'services/notification_service.dart';
+import 'screens/dashboard_screen.dart';
 import 'screens/pos_screen.dart';
 import 'screens/products_screen.dart';
 import 'screens/report_screen.dart';
@@ -9,7 +12,9 @@ import 'screens/product_form_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('th_TH', null);
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await NotificationService.init();
   runApp(const ShopPosApp());
 }
 
@@ -60,6 +65,7 @@ class _MainShellState extends State<MainShell> {
   int _index = 0;
 
   static const _screens = [
+    DashboardScreen(),
     PosScreen(),
     ProductsScreen(),
     ReportScreen(),
@@ -74,6 +80,11 @@ class _MainShellState extends State<MainShell> {
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard),
+            label: 'ภาพรวม',
+          ),
           NavigationDestination(
             icon: Icon(Icons.point_of_sale_outlined),
             selectedIcon: Icon(Icons.point_of_sale),

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/cart_item.dart';
 import '../models/sale.dart';
 import '../models/debt.dart';
+import 'notification_service.dart';
 import 'product_service.dart';
 
 class SaleService {
@@ -14,9 +15,10 @@ class SaleService {
     required double discount,
     bool isDebt = false,
     String? customerName,
+    PaymentMethod paymentMethod = PaymentMethod.cash,
   }) async {
     final total = cart.fold<double>(0, (s, e) => s + e.subtotal) - discount;
-    final change = isDebt ? 0 : paid - total;
+    final change = isDebt || paymentMethod != PaymentMethod.cash ? 0.0 : paid - total;
 
     final saleItems = cart
         .map((e) => SaleItem(
@@ -33,11 +35,12 @@ class SaleService {
       items: saleItems,
       total: total,
       discount: discount,
-      paid: isDebt ? 0 : paid,
+      paid: isDebt ? 0.0 : paid,
       change: change,
       createdAt: DateTime.now(),
       isDebt: isDebt,
       customerName: customerName,
+      paymentMethod: paymentMethod,
     );
 
     final batch = FirebaseFirestore.instance.batch();
@@ -66,16 +69,26 @@ class SaleService {
     }
 
     await batch.commit();
+
+    // Check low stock and notify
+    for (final item in cart) {
+      final product = await ProductService.getByBarcode(item.product.barcode);
+      if (product != null && product.isLowStock) {
+        await NotificationService.showLowStock(product.name, product.stock);
+      }
+    }
+
     return Sale(
       id: saleRef.id,
       items: saleItems,
       total: total,
       discount: discount,
-      paid: isDebt ? 0 : paid,
+      paid: isDebt ? 0.0 : paid,
       change: change,
       createdAt: sale.createdAt,
       isDebt: isDebt,
       customerName: customerName,
+      paymentMethod: paymentMethod,
     );
   }
 
