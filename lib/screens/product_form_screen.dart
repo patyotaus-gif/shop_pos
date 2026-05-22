@@ -41,11 +41,16 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     super.initState();
     final p = widget.product;
     _name = TextEditingController(text: p?.name ?? '');
-    _barcode = TextEditingController(text: p?.barcode ?? widget.initialBarcode ?? '');
+    _barcode =
+        TextEditingController(text: p?.barcode ?? widget.initialBarcode ?? '');
     _price = TextEditingController(text: p?.price.toStringAsFixed(2) ?? '');
-    _costPrice = TextEditingController(text: p?.costPrice != null && p!.costPrice > 0 ? p.costPrice.toStringAsFixed(2) : '');
+    _costPrice = TextEditingController(
+        text: p?.costPrice != null && p!.costPrice > 0
+            ? p.costPrice.toStringAsFixed(2)
+            : '');
     _stock = TextEditingController(text: p?.stock.toString() ?? '0');
-    _lowStock = TextEditingController(text: p?.lowStockThreshold.toString() ?? '5');
+    _lowStock =
+        TextEditingController(text: p?.lowStockThreshold.toString() ?? '5');
     _category = p?.category ?? 'ทั่วไป';
     _isPinned = p?.isPinned ?? false;
     if (p?.imagePath != null) _imageFile = File(p!.imagePath!);
@@ -70,7 +75,10 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: source, imageQuality: 90);
     if (picked == null) return;
-    setState(() { _imageFile = File(picked.path); _processingImage = false; });
+    setState(() {
+      _imageFile = File(picked.path);
+      _processingImage = false;
+    });
   }
 
   Future<void> _processAndSetImage() async {
@@ -81,7 +89,10 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       if (_removeBackground) {
         result = await ImageService.removeBackground(result);
       }
-      setState(() { _imageFile = result; _processingImage = false; });
+      setState(() {
+        _imageFile = result;
+        _processingImage = false;
+      });
     } catch (_) {
       setState(() => _processingImage = false);
     }
@@ -97,18 +108,27 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
             ListTile(
               leading: const Icon(Icons.camera_alt_outlined),
               title: const Text('ถ่ายรูป'),
-              onTap: () { Navigator.pop(ctx); _pickImage(ImageSource.camera); },
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickImage(ImageSource.camera);
+              },
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
               title: const Text('เลือกจากคลังรูป'),
-              onTap: () { Navigator.pop(ctx); _pickImage(ImageSource.gallery); },
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickImage(ImageSource.gallery);
+              },
             ),
             if (_imageFile != null)
               ListTile(
                 leading: const Icon(Icons.delete_outline, color: Colors.red),
                 title: const Text('ลบรูป', style: TextStyle(color: Colors.red)),
-                onTap: () { Navigator.pop(ctx); setState(() => _imageFile = null); },
+                onTap: () {
+                  Navigator.pop(ctx);
+                  setState(() => _imageFile = null);
+                },
               ),
           ],
         ),
@@ -143,7 +163,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
 
       if (_imageFile != null) {
         File toSave = _imageFile!;
-        if (_removeBackground) toSave = await ImageService.removeBackground(toSave);
+        if (_removeBackground)
+          toSave = await ImageService.removeBackground(toSave);
         final result = await ImageService.saveProduct(toSave, shopId, tempId);
         savedImagePath = result.localPath;
         savedImageUrl = result.imageUrl;
@@ -187,7 +208,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         title: const Text('ลบสินค้า'),
         content: Text('ต้องการลบ "${widget.product!.name}" ใช่ไหม?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('ยกเลิก')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('ยกเลิก')),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
@@ -250,7 +273,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                       child: _imageFile != null
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(12),
-                              child: Image.file(_imageFile!, fit: BoxFit.contain),
+                              child:
+                                  Image.file(_imageFile!, fit: BoxFit.contain),
                             )
                           : const Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -291,7 +315,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                                     child: SizedBox(
                                       width: 20,
                                       height: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2),
                                     ),
                                   )
                                 : IconButton(
@@ -316,11 +341,12 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                       labelText: 'ชื่อสินค้า *',
                       border: OutlineInputBorder(),
                     ),
-                    validator: (v) => v!.trim().isEmpty ? 'กรุณากรอกชื่อสินค้า' : null,
+                    validator: (v) =>
+                        v!.trim().isEmpty ? 'กรุณากรอกชื่อสินค้า' : null,
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: _category,
+                    initialValue: _category,
                     decoration: const InputDecoration(
                       labelText: 'หมวดหมู่',
                       border: OutlineInputBorder(),
@@ -344,7 +370,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                           ),
                           validator: (v) {
                             if (v!.isEmpty) return 'กรุณากรอกราคา';
-                            if (double.tryParse(v) == null) return 'ราคาไม่ถูกต้อง';
+                            if (double.tryParse(v) == null)
+                              return 'ราคาไม่ถูกต้อง';
                             return null;
                           },
                         ),
@@ -405,7 +432,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                   const SizedBox(height: 16),
                   FilledButton(
                     onPressed: _saving ? null : _save,
-                    style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+                    style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(52)),
                     child: _saving
                         ? const CircularProgressIndicator(color: Colors.white)
                         : Text(_isEdit ? 'บันทึก' : 'เพิ่มสินค้า'),
