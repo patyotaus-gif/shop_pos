@@ -25,7 +25,9 @@ dependencies:
   url_launcher: ^6.3.1
 
   # Barcode scanner
-  mobile_scanner: ^5.2.3
+  # 7.x is the minimum that uses GoogleMLKit 8+/GoogleUtilities 8.x,
+  # compatible with Firebase 11+
+  mobile_scanner: ^7.0.0
 
   # Receipt
   pdf: ^3.11.1
