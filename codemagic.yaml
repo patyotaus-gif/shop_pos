@@ -69,7 +69,7 @@ workflows:
         script: |
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
-            --certificate-key-path /tmp/cert_key.pem \
+            --certificate-key=@file:/tmp/cert_key.pem \
             --create
       - name: Archive the cert private key (for first-run capture)
         script: |
