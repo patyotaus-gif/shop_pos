@@ -33,7 +33,7 @@ workflows:
         bundle_identifier: app.pokpok.pos
       vars:
         BUNDLE_ID: "app.pokpok.pos"
-        APP_STORE_APP_ID: 0000000000
+        APP_STORE_APP_ID: 6772182588
       flutter: 3.41.7
       xcode: latest
       cocoapods: default
@@ -64,5 +64,7 @@ workflows:
       app_store_connect:
         auth: integration
         submit_to_testflight: true
-        beta_groups:
-          - Internal Testing
+        # Internal testers (App Store Connect Users group) get builds automatically.
+        # To add an external group later, uncomment and create the group in TestFlight first:
+        # beta_groups:
+        #   - Internal Testing
