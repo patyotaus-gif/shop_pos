@@ -1,12 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum PaymentMethod { cash, transfer, qr }
+enum PaymentMethod { cash, transfer, qr, online }
 
 extension PaymentMethodExt on PaymentMethod {
   String get label => switch (this) {
         PaymentMethod.cash => 'เงินสด',
         PaymentMethod.transfer => 'โอนเงิน',
         PaymentMethod.qr => 'QR Code',
+        PaymentMethod.online => 'ออนไลน์',
       };
 }
 
@@ -14,6 +15,7 @@ class SaleItem {
   final String productId;
   final String productName;
   final double price;
+  final double costPrice;
   final int quantity;
   final double subtotal;
 
@@ -21,14 +23,18 @@ class SaleItem {
     required this.productId,
     required this.productName,
     required this.price,
+    this.costPrice = 0,
     required this.quantity,
     required this.subtotal,
   });
+
+  double get profit => (price - costPrice) * quantity;
 
   factory SaleItem.fromMap(Map<String, dynamic> m) => SaleItem(
         productId: m['productId'] ?? '',
         productName: m['productName'] ?? '',
         price: (m['price'] ?? 0).toDouble(),
+        costPrice: (m['costPrice'] ?? 0).toDouble(),
         quantity: m['quantity'] ?? 1,
         subtotal: (m['subtotal'] ?? 0).toDouble(),
       );
@@ -37,6 +43,7 @@ class SaleItem {
         'productId': productId,
         'productName': productName,
         'price': price,
+        'costPrice': costPrice,
         'quantity': quantity,
         'subtotal': subtotal,
       };
@@ -53,6 +60,10 @@ class Sale {
   final bool isDebt;
   final String? customerName;
   final PaymentMethod paymentMethod;
+  final bool isRefunded;
+  final DateTime? refundedAt;
+  final String? refundReason;
+  final String? stripePaymentIntentId;
 
   const Sale({
     required this.id,
@@ -65,6 +76,10 @@ class Sale {
     this.isDebt = false,
     this.customerName,
     this.paymentMethod = PaymentMethod.cash,
+    this.isRefunded = false,
+    this.refundedAt,
+    this.refundReason,
+    this.stripePaymentIntentId,
   });
 
   factory Sale.fromFirestore(Map<String, dynamic> data, String id) => Sale(
@@ -83,6 +98,10 @@ class Sale {
           (e) => e.name == (data['paymentMethod'] ?? 'cash'),
           orElse: () => PaymentMethod.cash,
         ),
+        isRefunded: data['isRefunded'] ?? false,
+        refundedAt: (data['refundedAt'] as Timestamp?)?.toDate(),
+        refundReason: data['refundReason'],
+        stripePaymentIntentId: data['stripePaymentIntentId'],
       );
 
   Map<String, dynamic> toFirestore() => {

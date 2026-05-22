@@ -1,4 +1,11 @@
+import 'dart:async';
+import 'dart:io';
+import 'dart:math';
+import 'dart:typed_data';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:intl/intl.dart';
 import '../models/product.dart';
@@ -6,6 +13,7 @@ import '../models/cart_item.dart';
 import '../models/sale.dart';
 import '../services/product_service.dart';
 import '../services/sale_service.dart';
+import '../services/settings_service.dart';
 import '../utils/receipt_generator.dart';
 
 class PosScreen extends StatefulWidget {
@@ -19,8 +27,8 @@ class _PosScreenState extends State<PosScreen> {
   final _baht = NumberFormat('#,##0.00', 'th_TH');
   final List<CartItem> _cart = [];
   double _discount = 0;
-  bool _scanning = false;
   PaymentMethod _paymentMethod = PaymentMethod.cash;
+  String _selectedCategory = 'ทั้งหมด';
 
   double get _subtotal => _cart.fold(0, (s, e) => s + e.subtotal);
   double get _total => _subtotal - _discount;
@@ -46,28 +54,42 @@ class _PosScreenState extends State<PosScreen> {
     }
   }
 
-  Future<void> _onBarcodeDetected(String barcode) async {
-    setState(() => _scanning = false);
-    final product = await ProductService.getByBarcode(barcode);
-    if (!mounted) return;
-    if (product == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('ไม่พบสินค้า barcode: $barcode'),
-          action: SnackBarAction(
-            label: 'เพิ่มสินค้า',
-            onPressed: () => Navigator.pushNamed(context, '/product-form',
-                arguments: barcode),
-          ),
+  Future<void> _openScanner() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _ScannerScreen(
+          onScan: (barcode) async {
+            final product = await ProductService.getByBarcode(barcode);
+            if (!mounted) return null;
+            if (product != null) {
+              _addToCart(product);
+              return product.name;
+            }
+            return null;
+          },
         ),
-      );
-    } else {
-      _addToCart(product);
-    }
+      ),
+    );
   }
+
 
   Future<void> _checkout({bool isDebt = false}) async {
     if (_cart.isEmpty) return;
+
+    // ตรวจ stock ก่อน checkout
+    for (final item in _cart) {
+      if (item.product.stock < item.quantity) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                '${item.product.name}: stock ไม่พอ (เหลือ ${item.product.stock} ชิ้น)'),
+            backgroundColor: Colors.red,
+          ));
+        }
+        return;
+      }
+    }
 
     String? customerName;
     if (isDebt) {
@@ -207,7 +229,8 @@ class _PosScreenState extends State<PosScreen> {
           FilledButton.icon(
             onPressed: () async {
               Navigator.pop(ctx);
-              await ReceiptGenerator.printReceipt(sale);
+              final shopName = await SettingsService.getShopName();
+              await ReceiptGenerator.printReceipt(sale, shopName: shopName);
             },
             icon: const Icon(Icons.receipt_long),
             label: const Text('พิมพ์ใบเสร็จ'),
@@ -242,7 +265,9 @@ class _PosScreenState extends State<PosScreen> {
         ],
       ),
     );
-    if (result != null) setState(() => _discount = result);
+    if (result != null) {
+      setState(() => _discount = result.clamp(0.0, _subtotal));
+    }
   }
 
   @override
@@ -256,32 +281,58 @@ class _PosScreenState extends State<PosScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.qr_code_scanner),
-            onPressed: () => setState(() => _scanning = true),
+            onPressed: _openScanner,
           ),
         ],
       ),
       body: Column(
         children: [
-          if (_scanning)
-            SizedBox(
-              height: 200,
-              child: MobileScanner(
-                onDetect: (capture) {
-                  final barcode = capture.barcodes.firstOrNull?.rawValue;
-                  if (barcode != null && _scanning) _onBarcodeDetected(barcode);
-                },
-              ),
-            ),
           // Product search
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: _ProductSearch(onSelected: _addToCart),
+            child: _ProductSearch(
+              onSelected: _addToCart,
+              selectedCategory: _selectedCategory,
+            ),
           ),
+          // Category filter chips
+          StreamBuilder<List<Product>>(
+            stream: ProductService.watchAll(),
+            builder: (ctx, snap) {
+              final cats = ['ทั้งหมด', ...ProductService.categories];
+              return SizedBox(
+                height: 36,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  children: cats.map((cat) {
+                    final sel = cat == _selectedCategory;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(cat, style: const TextStyle(fontSize: 12)),
+                        selected: sel,
+                        onSelected: (_) =>
+                            setState(() => _selectedCategory = cat),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 4),
           // Pinned products
           StreamBuilder<List<Product>>(
             stream: ProductService.watchAll(),
             builder: (ctx, snap) {
-              final pinned = (snap.data ?? []).where((p) => p.isPinned).toList();
+              final all = snap.data ?? [];
+              final pinned = all
+                  .where((p) =>
+                      p.isPinned &&
+                      (_selectedCategory == 'ทั้งหมด' ||
+                          p.category == _selectedCategory))
+                  .toList();
               if (pinned.isEmpty) return const SizedBox.shrink();
               return SizedBox(
                 height: 44,
@@ -292,7 +343,8 @@ class _PosScreenState extends State<PosScreen> {
                   itemBuilder: (ctx, i) => Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: ActionChip(
-                      label: Text(pinned[i].name, style: const TextStyle(fontSize: 12)),
+                      label: Text(pinned[i].name,
+                          style: const TextStyle(fontSize: 12)),
                       avatar: const Icon(Icons.push_pin, size: 14),
                       onPressed: () => _addToCart(pinned[i]),
                     ),
@@ -304,16 +356,15 @@ class _PosScreenState extends State<PosScreen> {
           // Payment method selector
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: Row(
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 4,
               children: PaymentMethod.values.map((m) {
                 final selected = _paymentMethod == m;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(m.label, style: const TextStyle(fontSize: 12)),
-                    selected: selected,
-                    onSelected: (_) => setState(() => _paymentMethod = m),
-                  ),
+                return ChoiceChip(
+                  label: Text(m.label, style: const TextStyle(fontSize: 12)),
+                  selected: selected,
+                  onSelected: (_) => setState(() => _paymentMethod = m),
                 );
               }).toList(),
             ),
@@ -363,7 +414,8 @@ class _PosScreenState extends State<PosScreen> {
 
 class _ProductSearch extends StatefulWidget {
   final ValueChanged<Product> onSelected;
-  const _ProductSearch({required this.onSelected});
+  final String selectedCategory;
+  const _ProductSearch({required this.onSelected, this.selectedCategory = 'ทั้งหมด'});
 
   @override
   State<_ProductSearch> createState() => _ProductSearchState();
@@ -371,22 +423,39 @@ class _ProductSearch extends StatefulWidget {
 
 class _ProductSearchState extends State<_ProductSearch> {
   final _ctrl = TextEditingController();
+  List<Product> _allProducts = [];
   List<Product> _results = [];
+  StreamSubscription<List<Product>>? _sub;
+
+  @override
+  void initState() {
+    super.initState();
+    _sub = ProductService.watchAll().listen((products) {
+      setState(() => _allProducts = products);
+    });
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   void _search(String q) {
     if (q.isEmpty) {
       setState(() => _results = []);
       return;
     }
-    ProductService.watchAll().first.then((products) {
-      setState(() {
-        _results = products
-            .where((p) =>
-                p.name.toLowerCase().contains(q.toLowerCase()) ||
-                p.barcode.contains(q))
-            .take(5)
-            .toList();
-      });
+    setState(() {
+      _results = _allProducts
+          .where((p) =>
+              (widget.selectedCategory == 'ทั้งหมด' ||
+                  p.category == widget.selectedCategory) &&
+              (p.name.toLowerCase().contains(q.toLowerCase()) ||
+                  p.barcode.contains(q)))
+          .take(5)
+          .toList();
     });
   }
 
@@ -420,6 +489,16 @@ class _ProductSearchState extends State<_ProductSearch> {
               children: _results
                   .map((p) => ListTile(
                         dense: true,
+                        leading: p.imagePath != null
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: Image.file(
+                                  File(p.imagePath!),
+                                  width: 40, height: 40, fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported, size: 40),
+                                ),
+                              )
+                            : null,
                         title: Text(p.name),
                         subtitle: Text('฿${p.price.toStringAsFixed(2)} · สต็อก ${p.stock}'),
                         trailing: Text(p.barcode,
@@ -455,6 +534,16 @@ class _CartItemTile extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
+        leading: item.product.imagePath != null
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Image.file(
+                  File(item.product.imagePath!),
+                  width: 44, height: 44, fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox(width: 44),
+                ),
+              )
+            : null,
         title: Text(item.product.name, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text('฿${baht.format(item.product.price)} × ${item.quantity}'),
         trailing: Row(
@@ -467,7 +556,40 @@ class _CartItemTile extends StatelessWidget {
               icon: const Icon(Icons.remove_circle_outline),
               onPressed: () => onQtyChanged(item.quantity - 1),
             ),
-            Text('${item.quantity}'),
+            GestureDetector(
+              onTap: () async {
+                final ctrl = TextEditingController(text: '${item.quantity}');
+                final result = await showDialog<int>(
+                  context: context,
+                  builder: (c) => AlertDialog(
+                    title: const Text('จำนวน'),
+                    content: TextField(
+                      controller: ctrl,
+                      keyboardType: TextInputType.number,
+                      autofocus: true,
+                      decoration: const InputDecoration(border: OutlineInputBorder()),
+                    ),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(c), child: const Text('ยกเลิก')),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(c, int.tryParse(ctrl.text)),
+                        child: const Text('ตกลง'),
+                      ),
+                    ],
+                  ),
+                );
+                if (result != null) onQtyChanged(result);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text('${item.quantity}',
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ),
             IconButton(
               icon: const Icon(Icons.add_circle_outline),
               onPressed: () => onQtyChanged(item.quantity + 1),
@@ -503,8 +625,10 @@ class _CheckoutPanel extends StatelessWidget {
     final baht = NumberFormat('#,##0.00', 'th_TH');
     final cs = Theme.of(context).colorScheme;
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+    return SafeArea(
+      top: false,
+      child: Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       decoration: BoxDecoration(
         color: cs.surfaceContainerHighest,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -571,6 +695,339 @@ class _CheckoutPanel extends StatelessWidget {
           ),
         ],
       ),
+    ));
+  }
+}
+
+// ── Full-screen scanner ─────────────────────────────────────────
+class _ScannerScreen extends StatefulWidget {
+  /// Returns product name if found, null if not found.
+  final Future<String?> Function(String barcode) onScan;
+  const _ScannerScreen({required this.onScan});
+
+  @override
+  State<_ScannerScreen> createState() => _ScannerScreenState();
+}
+
+class _ScannerScreenState extends State<_ScannerScreen>
+    with SingleTickerProviderStateMixin {
+  late final MobileScannerController _ctrl;
+  late final AnimationController _lineCtrl;
+  late final Animation<double> _lineAnim;
+  bool _torchOn = false;
+  bool _busy = false;
+  Timer? _bannerTimer;
+  late final AudioPlayer _audio;
+  String? _beepPath;
+
+  String? _bannerMsg;
+  bool _bannerSuccess = false;
+  bool _bannerVisible = false;
+
+  // Generates a short 880Hz beep WAV in memory — no asset file needed
+  static Uint8List _generateBeep() {
+    const sampleRate = 44100;
+    const freq = 3500;   // supermarket scanner ~3500Hz
+    const durationMs = 80;
+    const numSamples = sampleRate * durationMs ~/ 1000;
+    const dataSize = numSamples * 2;
+
+    final buf = ByteData(44 + dataSize);
+    for (final e in [
+      [0, 0x52], [1, 0x49], [2, 0x46], [3, 0x46],
+      [8, 0x57], [9, 0x41], [10, 0x56], [11, 0x45],
+      [12, 0x66], [13, 0x6D], [14, 0x74], [15, 0x20],
+      [36, 0x64], [37, 0x61], [38, 0x74], [39, 0x61],
+    ]) { buf.setUint8(e[0], e[1]); }
+    buf.setUint32(4, 36 + dataSize, Endian.little);
+    buf.setUint32(16, 16, Endian.little);
+    buf.setUint16(20, 1, Endian.little);
+    buf.setUint16(22, 1, Endian.little);
+    buf.setUint32(24, sampleRate, Endian.little);
+    buf.setUint32(28, sampleRate * 2, Endian.little);
+    buf.setUint16(32, 2, Endian.little);
+    buf.setUint16(34, 16, Endian.little);
+    buf.setUint32(40, dataSize, Endian.little);
+    // attack คมทันที, decay เร็ว (เหมือน barcode scanner จริง)
+    for (var i = 0; i < numSamples; i++) {
+      final attack = i < 20 ? i / 20.0 : 1.0;
+      final decay = (numSamples - i) / numSamples.toDouble();
+      final env = attack * decay;
+      final s = (sin(2 * pi * freq * i / sampleRate) * 0.65 * env * 32767).round().clamp(-32768, 32767);
+      buf.setInt16(44 + i * 2, s, Endian.little);
+    }
+    return buf.buffer.asUint8List();
+  }
+
+  Future<void> _initBeep() async {
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/pokpok_beep.wav');
+    await file.writeAsBytes(_generateBeep());
+    _beepPath = file.path;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _audio = AudioPlayer();
+    _initBeep();
+    _ctrl = MobileScannerController(
+      detectionSpeed: DetectionSpeed.unrestricted,
+      formats: const [
+        BarcodeFormat.ean13,
+        BarcodeFormat.ean8,
+        BarcodeFormat.code128,
+        BarcodeFormat.qrCode,
+        BarcodeFormat.upcA,
+        BarcodeFormat.upcE,
+      ],
+      autoStart: true,
+    );
+    _lineCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat(reverse: true);
+    _lineAnim = CurvedAnimation(parent: _lineCtrl, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _bannerTimer?.cancel();
+    _audio.dispose();
+    _ctrl.dispose();
+    _lineCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _onDetect(BarcodeCapture capture) async {
+    if (_busy) return;
+    final value = capture.barcodes.firstOrNull?.rawValue;
+    if (value == null) return;
+
+    _busy = true;
+    HapticFeedback.mediumImpact();
+    if (_beepPath != null) unawaited(_audio.play(DeviceFileSource(_beepPath!)));
+
+    final productName = await widget.onScan(value);
+    if (!mounted) return;
+
+    // Cancel previous timer and show new banner
+    _bannerTimer?.cancel();
+    setState(() {
+      _bannerSuccess = productName != null;
+      _bannerMsg = productName != null
+          ? 'เพิ่ม "$productName" ลงตะกร้าแล้ว'
+          : 'ไม่พบสินค้า (barcode: $value)';
+      _bannerVisible = true;
+    });
+
+    // Auto-dismiss after 2s then allow next scan
+    _bannerTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _bannerVisible = false);
+      Future.delayed(const Duration(milliseconds: 300), () => _busy = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final scanW = size.width - 40;
+    const scanH = 160.0;
+    final scanRect = Rect.fromCenter(
+      center: Offset(size.width / 2, size.height / 2),
+      width: scanW,
+      height: scanH,
+    );
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // Camera feed (full screen)
+          MobileScanner(
+            controller: _ctrl,
+            onDetect: _onDetect,
+            scanWindow: scanRect,
+          ),
+
+          // Dark overlay with cutout
+          CustomPaint(
+            size: Size(size.width, size.height),
+            painter: _OverlayPainter(scanRect),
+          ),
+
+          // Animated scan line
+          Positioned(
+            left: scanRect.left + 2,
+            width: scanRect.width - 4,
+            top: scanRect.top + 2,
+            height: scanRect.height - 4,
+            child: ClipRect(
+              child: AnimatedBuilder(
+                animation: _lineAnim,
+                builder: (_, __) => Align(
+                  alignment: Alignment(0, _lineAnim.value * 2 - 1),
+                  child: Container(
+                    height: 2,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [
+                        Colors.transparent,
+                        const Color(0xFFBE123C).withValues(alpha: 0.9),
+                        Colors.transparent,
+                      ]),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Top area: nav bar + banner stacked in a Column inside SafeArea
+          Positioned(
+            top: 0, left: 0, right: 0,
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Nav bar row
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      const Expanded(
+                        child: Text(
+                          'สแกนบาร์โค้ด',
+                          style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w600),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          _torchOn ? Icons.flashlight_on : Icons.flashlight_off,
+                          color: _torchOn ? Colors.yellow : Colors.white,
+                        ),
+                        onPressed: () {
+                          _ctrl.toggleTorch();
+                          setState(() => _torchOn = !_torchOn);
+                        },
+                      ),
+                    ],
+                  ),
+                  // Banner — slides in right below nav bar
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 260),
+                    curve: Curves.easeOut,
+                    child: _bannerVisible
+                        ? Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: _bannerSuccess
+                                    ? const Color(0xFF16A34A)
+                                    : const Color(0xFFDC2626),
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: const [
+                                  BoxShadow(color: Colors.black38, blurRadius: 16, offset: Offset(0, 4)),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    _bannerSuccess ? Icons.check_circle : Icons.error_outline,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      _bannerMsg ?? '',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Bottom hint
+          Positioned(
+            bottom: 72, left: 0, right: 0,
+            child: Column(children: [
+              const Text(
+                'จ่อกล้องที่บาร์โค้ดในกรอบ',
+                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'ระบบสแกนอัตโนมัติ ไม่ต้องกดปุ่ม',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            ]),
+          ),
+        ],
+      ),
     );
   }
+}
+
+// ── Scanner overlay painter ─────────────────────────────────────
+class _OverlayPainter extends CustomPainter {
+  final Rect scanRect;
+  _OverlayPainter(this.scanRect);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Dark overlay with hole
+    canvas.drawPath(
+      Path.combine(
+        PathOperation.difference,
+        Path()..addRect(Rect.fromLTWH(0, 0, size.width, size.height)),
+        Path()..addRRect(RRect.fromRectAndRadius(scanRect, const Radius.circular(12))),
+      ),
+      Paint()..color = Colors.black.withValues(alpha: 0.65),
+    );
+
+    // Corner brackets
+    final p = Paint()
+      ..color = const Color(0xFFBE123C)
+      ..strokeWidth = 3.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    const len = 22.0;
+    final r = scanRect;
+
+    // Top-left
+    canvas.drawLine(Offset(r.left, r.top + len), r.topLeft, p);
+    canvas.drawLine(r.topLeft, Offset(r.left + len, r.top), p);
+    // Top-right
+    canvas.drawLine(Offset(r.right - len, r.top), r.topRight, p);
+    canvas.drawLine(r.topRight, Offset(r.right, r.top + len), p);
+    // Bottom-left
+    canvas.drawLine(Offset(r.left, r.bottom - len), r.bottomLeft, p);
+    canvas.drawLine(r.bottomLeft, Offset(r.left + len, r.bottom), p);
+    // Bottom-right
+    canvas.drawLine(Offset(r.right - len, r.bottom), r.bottomRight, p);
+    canvas.drawLine(r.bottomRight, Offset(r.right, r.bottom - len), p);
+  }
+
+  @override
+  bool shouldRepaint(_OverlayPainter old) => old.scanRect != scanRect;
 }

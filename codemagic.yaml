@@ -1,0 +1,68 @@
+workflows:
+  ios-test:
+    name: iOS Test Build (no signing)
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      flutter: 3.41.7
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          flutter pub get
+      - name: Install pods
+        script: |
+          find . -name "Podfile" -execdir pod install \;
+      - name: Build iOS (no codesign)
+        script: |
+          flutter build ios --release --no-codesign
+    artifacts:
+      - build/ios/iphoneos/*.app
+      - flutter_drive.log
+
+  ios-release:
+    name: iOS Release to TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      app_store_connect: pokpok-asc
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: app.pokpok.pos
+      vars:
+        BUNDLE_ID: "app.pokpok.pos"
+        APP_STORE_APP_ID: 0000000000
+      flutter: 3.41.7
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Set build number
+        script: |
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APP_ID" || echo 0)
+          cd $CM_BUILD_DIR
+          BUILD_NUMBER=$(($LATEST_BUILD_NUMBER + 1))
+          echo "Using build number $BUILD_NUMBER"
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> $CM_ENV
+      - name: Get Flutter packages
+        script: |
+          flutter pub get
+      - name: Install pods
+        script: |
+          find . -name "Podfile" -execdir pod install \;
+      - name: Flutter build ipa
+        script: |
+          flutter build ipa --release \
+            --build-name=1.1.0 \
+            --build-number=$BUILD_NUMBER \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        beta_groups:
+          - Internal Testing

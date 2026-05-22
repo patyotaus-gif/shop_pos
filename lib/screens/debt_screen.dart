@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/debt.dart';
+import '../models/sale.dart';
 import '../services/debt_service.dart';
+import '../services/sale_service.dart';
 
 class DebtScreen extends StatelessWidget {
   const DebtScreen({super.key});
 
   static final _baht = NumberFormat('#,##0.00', 'th_TH');
-  static final _date = DateFormat('dd/MM/yyyy', 'th_TH');
 
   @override
   Widget build(BuildContext context) {
@@ -16,6 +17,7 @@ class DebtScreen extends StatelessWidget {
       body: StreamBuilder<List<Debt>>(
         stream: DebtService.watchUnpaid(),
         builder: (ctx, snap) {
+          if (snap.hasError) return const Center(child: Text('โหลดข้อมูลไม่สำเร็จ'));
           if (!snap.hasData) return const Center(child: CircularProgressIndicator());
           final debts = snap.data!;
           final totalDebt = debts.fold<double>(0, (s, e) => s + e.remaining);
@@ -77,7 +79,8 @@ class _DebtTile extends StatelessWidget {
   const _DebtTile({required this.debt});
 
   static final _baht = NumberFormat('#,##0.00', 'th_TH');
-  static final _date = DateFormat('dd/MM/yyyy', 'th_TH');
+  static final _dateShort = DateFormat('dd/MM/yyyy', 'th_TH');
+  static final _dateTime = DateFormat('dd/MM/yyyy HH:mm', 'th_TH');
 
   @override
   Widget build(BuildContext context) {
@@ -90,22 +93,151 @@ class _DebtTile extends StatelessWidget {
         ),
         title: Text(debt.customerName,
             style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text('เปิดบิล ${_date.format(debt.createdAt)}'),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
+        subtitle: Text('เปิดบิล ${_dateShort.format(debt.createdAt)}'),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text('฿${_baht.format(debt.remaining)}',
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.orange,
-                    fontSize: 16)),
-            if (debt.paidAmount > 0)
-              Text('ชำระแล้ว ฿${_baht.format(debt.paidAmount)}',
-                  style: const TextStyle(fontSize: 11, color: Colors.green)),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text('฿${_baht.format(debt.remaining)}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange,
+                        fontSize: 16)),
+                if (debt.paidAmount > 0)
+                  Text('ชำระแล้ว ฿${_baht.format(debt.paidAmount)}',
+                      style: const TextStyle(fontSize: 11, color: Colors.green)),
+              ],
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              icon: const Icon(Icons.history, color: Colors.grey),
+              tooltip: 'ประวัติการซื้อ',
+              onPressed: () => _showHistory(context),
+            ),
           ],
         ),
         onTap: () => _showPayDialog(context),
+      ),
+    );
+  }
+
+  void _showHistory(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.6,
+        maxChildSize: 0.9,
+        builder: (_, controller) => Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.history, color: Colors.orange),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'ประวัติ: ${debt.customerName}',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: StreamBuilder<List<Sale>>(
+                stream: SaleService.watchByCustomer(debt.customerName),
+                builder: (ctx, snap) {
+                  if (!snap.hasData)
+                    return const Center(child: CircularProgressIndicator());
+                  final sales = snap.data!;
+                  if (sales.isEmpty)
+                    return const Center(child: Text('ยังไม่มีประวัติ'));
+                  final totalSpent = sales
+                      .where((s) => !s.isRefunded)
+                      .fold<double>(0, (a, s) => a + s.total);
+                  return Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('${sales.length} บิล',
+                                style: const TextStyle(color: Colors.grey)),
+                            Text('ยอดรวม ฿${_baht.format(totalSpent)}',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.orange)),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: ListView.builder(
+                          controller: controller,
+                          itemCount: sales.length,
+                          itemBuilder: (ctx, i) {
+                            final s = sales[i];
+                            return ListTile(
+                              leading: CircleAvatar(
+                                radius: 18,
+                                backgroundColor: s.isRefunded
+                                    ? Colors.red.shade100
+                                    : Colors.green.shade100,
+                                child: Icon(
+                                  s.isRefunded ? Icons.undo : Icons.check,
+                                  size: 16,
+                                  color: s.isRefunded
+                                      ? Colors.red
+                                      : Colors.green,
+                                ),
+                              ),
+                              title: Text(
+                                s.items
+                                    .map((e) =>
+                                        '${e.productName}×${e.quantity}')
+                                    .join(', '),
+                                style: const TextStyle(fontSize: 13),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle:
+                                  Text(_dateTime.format(s.createdAt)),
+                              trailing: Text(
+                                '฿${_baht.format(s.total)}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  decoration: s.isRefunded
+                                      ? TextDecoration.lineThrough
+                                      : null,
+                                  color: s.isRefunded
+                                      ? Colors.grey
+                                      : null,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

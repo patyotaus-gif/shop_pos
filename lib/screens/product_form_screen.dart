@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../models/product.dart';
+import '../services/image_service.dart';
 import '../services/product_service.dart';
 import '../utils/barcode_lookup.dart';
 
@@ -27,6 +30,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   bool _lookingUp = false;
   bool _saving = false;
   bool _isPinned = false;
+  File? _imageFile;
+  bool _removeBackground = false;
+  bool _processingImage = false;
 
   bool get _isEdit => widget.product != null;
 
@@ -42,6 +48,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     _lowStock = TextEditingController(text: p?.lowStockThreshold.toString() ?? '5');
     _category = p?.category ?? 'ทั่วไป';
     _isPinned = p?.isPinned ?? false;
+    if (p?.imagePath != null) _imageFile = File(p!.imagePath!);
 
     if (_barcode.text.isNotEmpty && !_isEdit) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _lookupBarcode());
@@ -57,6 +64,56 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     _stock.dispose();
     _lowStock.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: source, imageQuality: 90);
+    if (picked == null) return;
+    setState(() { _imageFile = File(picked.path); _processingImage = false; });
+  }
+
+  Future<void> _processAndSetImage() async {
+    if (_imageFile == null) return;
+    setState(() => _processingImage = true);
+    try {
+      File result = _imageFile!;
+      if (_removeBackground) {
+        result = await ImageService.removeBackground(result);
+      }
+      setState(() { _imageFile = result; _processingImage = false; });
+    } catch (_) {
+      setState(() => _processingImage = false);
+    }
+  }
+
+  void _showImageSourceSheet() {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text('ถ่ายรูป'),
+              onTap: () { Navigator.pop(ctx); _pickImage(ImageSource.camera); },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('เลือกจากคลังรูป'),
+              onTap: () { Navigator.pop(ctx); _pickImage(ImageSource.gallery); },
+            ),
+            if (_imageFile != null)
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                title: const Text('ลบรูป', style: TextStyle(color: Colors.red)),
+                onTap: () { Navigator.pop(ctx); setState(() => _imageFile = null); },
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _lookupBarcode() async {
@@ -76,6 +133,22 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
     try {
+      final tempId = widget.product?.id.isNotEmpty == true
+          ? widget.product!.id
+          : DateTime.now().millisecondsSinceEpoch.toString();
+      final shopId = (await ProductService.currentShopId()) ?? tempId;
+
+      String? savedImagePath = widget.product?.imagePath;
+      String? savedImageUrl = widget.product?.imageUrl;
+
+      if (_imageFile != null) {
+        File toSave = _imageFile!;
+        if (_removeBackground) toSave = await ImageService.removeBackground(toSave);
+        final result = await ImageService.saveProduct(toSave, shopId, tempId);
+        savedImagePath = result.localPath;
+        savedImageUrl = result.imageUrl;
+      }
+
       final product = Product(
         id: widget.product?.id ?? '',
         name: _name.text.trim(),
@@ -86,6 +159,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         lowStockThreshold: int.parse(_lowStock.text),
         category: _category,
         isPinned: _isPinned,
+        imagePath: savedImagePath,
+        imageUrl: savedImageUrl,
       );
 
       if (_isEdit) {
@@ -162,6 +237,45 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  // รูปสินค้า
+                  GestureDetector(
+                    onTap: _showImageSourceSheet,
+                    child: Container(
+                      height: 160,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: _imageFile != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.file(_imageFile!, fit: BoxFit.contain),
+                            )
+                          : const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.add_photo_alternate_outlined,
+                                    size: 40, color: Colors.grey),
+                                SizedBox(height: 8),
+                                Text('เพิ่มรูปสินค้า',
+                                    style: TextStyle(color: Colors.grey)),
+                              ],
+                            ),
+                    ),
+                  ),
+                  if (_imageFile != null) ...[
+                    const SizedBox(height: 8),
+                    SwitchListTile(
+                      value: _removeBackground,
+                      onChanged: (v) => setState(() => _removeBackground = v),
+                      title: const Text('ตัดพื้นหลังออก'),
+                      subtitle: const Text('เหมาะกับรูปที่มีพื้นหลังสีเรียบ'),
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                    ),
+                  ],
+                  const SizedBox(height: 16),
                   // Barcode
                   Row(
                     children: [

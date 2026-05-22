@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pokpok — ระบบขายหน้าร้านสำหรับร้านค้าไทย</title>
+  <meta name="description" content="Pokpok ระบบ POS จัดการการขาย สต็อก และออเดอร์ออนไลน์ในแอปเดียว ทดลองใช้ฟรี 14 วัน" />
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://pok-pok.app/" />
+  <meta property="og:title" content="Pokpok — ระบบขายหน้าร้านสำหรับร้านค้าไทย" />
+  <meta property="og:description" content="ระบบ POS จัดการการขาย สต็อก ลูกหนี้ และออเดอร์ออนไลน์ในแอปเดียว ทดลองใช้ฟรี 14 วัน ไม่ต้องผูกบัตร" />
+  <meta property="og:image" content="https://pok-pok.app/favicon.png" />
+  <meta property="og:image:width" content="512" />
+  <meta property="og:image:height" content="512" />
+  <meta property="og:locale" content="th_TH" />
+  <meta property="og:site_name" content="Pokpok" />
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Pokpok — ระบบขายหน้าร้านสำหรับร้านค้าไทย" />
+  <meta name="twitter:description" content="ระบบ POS จัดการการขาย สต็อก และออเดอร์ออนไลน์ในแอปเดียว ทดลองใช้ฟรี 14 วัน" />
+  <meta name="twitter:image" content="https://pok-pok.app/favicon.png" />
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="apple-touch-icon" href="/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Pokpok POS",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Android",
+    "url": "https://pok-pok.app",
+    "description": "ระบบ POS สำหรับร้านค้าปลีกไทย จัดการการขาย สต็อก ลูกหนี้ และออเดอร์ออนไลน์",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "THB", "description": "ทดลองใช้ฟรี 14 วัน" },
+    "publisher": { "@type": "Organization", "name": "Pokpok", "url": "https://pok-pok.app" }
+  }
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ruby:       #be123c;
+      --ruby-dark:  #9f1239;
+      --ruby-dim:   #fff1f2;
+      --slate:      #1e293b;
+      --slate-2:    #334155;
+      --slate-3:    #475569;
+      --cream:      #fffbf7;
+      --cream-2:    #fdf5eb;
+      --ink:        #1a1212;
+      --ink-2:      #3d2e2e;
+      --ink-3:      #6b7280;
+      --ink-4:      #9ca3af;
+      --border:     #e8ddd4;
+      --border-2:   #d6c9bc;
+      --white:      #ffffff;
+      --green:      #059669;
+      --r: 14px;
+      --r-sm: 8px;
+    }
+
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Sarabun', 'TH Sarabun New', Arial, sans-serif; background: var(--cream); color: var(--ink); line-height: 1.65; }
+
+    /* ── NAVBAR ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--ruby);
+      border-bottom: 1px solid var(--ruby-dark);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 6%; height: 66px;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: white; font-weight: 800; font-size: 1.4rem; letter-spacing: -.3px; }
+    .logo-symbol { display: flex; align-items: flex-end; gap: 4px; }
+    .logo-bar { border-radius: 5px; background: white; }
+    .logo-bar-1 { width: 9px; height: 24px; }
+    .logo-bar-2 { width: 9px; height: 15px; }
+    .logo-dot { color: rgba(255,255,255,.6); }
+    .nav-links { display: flex; gap: 30px; list-style: none; }
+    .nav-links a { text-decoration: none; color: rgba(255,255,255,.75); font-size: .9rem; font-weight: 500; transition: color .15s; }
+    .nav-links a:hover { color: white; }
+    .nav-end { display: flex; gap: 8px; align-items: center; }
+    .btn-ghost { padding: 7px 16px; border-radius: var(--r-sm); color: rgba(255,255,255,.85); font-size: .875rem; font-weight: 500; text-decoration: none; transition: background .15s; }
+    .btn-ghost:hover { background: rgba(255,255,255,.12); }
+    .btn-ruby { padding: 8px 20px; border-radius: var(--r-sm); background: white; color: var(--ruby-dark); font-size: .875rem; font-weight: 700; text-decoration: none; transition: all .15s; font-family: 'Sarabun', sans-serif; border: none; cursor: pointer; }
+    .btn-ruby:hover { background: var(--cream); }
+
+    /* ── HERO ── */
+    .hero {
+      padding: 88px 6% 72px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 7px;
+      font-size: .78rem; font-weight: 600; color: var(--ruby);
+      border: 1px solid #fda4af; background: var(--ruby-dim);
+      padding: 4px 13px; border-radius: 100px; margin-bottom: 22px; letter-spacing: .2px;
+    }
+    .hero-eyebrow-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ruby); animation: blink 2s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+    h1 { font-size: clamp(2.2rem, 4vw, 3.4rem); font-weight: 800; line-height: 1.18; letter-spacing: -.6px; color: var(--ink); margin-bottom: 20px; }
+    h1 em { font-style: normal; color: var(--ruby); }
+    .hero-desc { font-size: 1rem; color: var(--ink-3); margin-bottom: 36px; max-width: 440px; line-height: 1.75; }
+    .hero-ctas { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 40px; }
+    .btn-lg { padding: 13px 30px; border-radius: var(--r-sm); font-size: .95rem; font-weight: 700; text-decoration: none; transition: all .15s; display: inline-flex; align-items: center; gap: 7px; font-family: 'Sarabun', sans-serif; border: none; cursor: pointer; }
+    .btn-lg-ruby { background: var(--ruby); color: white; }
+    .btn-lg-ruby:hover { background: var(--ruby-dark); }
+    .btn-lg-outline { background: white; color: var(--ink-2); border: 1.5px solid var(--border-2); }
+    .btn-lg-outline:hover { border-color: var(--ink-3); }
+    .hero-proof { display: flex; gap: 20px; flex-wrap: wrap; }
+    .proof-item { font-size: .8rem; color: var(--ink-4); display: flex; align-items: center; gap: 5px; }
+    .proof-check { color: var(--green); font-weight: 700; }
+
+    /* MOCKUP */
+    .mockup-wrap { position: relative; }
+    .mockup {
+      background: var(--slate); border-radius: 18px; overflow: hidden;
+      box-shadow: 0 32px 64px rgba(30,18,18,.18), 0 0 0 1px rgba(0,0,0,.07);
+    }
+    .mockup-bar { background: #0f172a; padding: 11px 14px; display: flex; align-items: center; gap: 6px; }
+    .mkdot { width: 10px; height: 10px; border-radius: 50%; }
+    .mockup-body { padding: 18px; }
+    .m-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .m-title { color: #f1f5f9; font-size: .8rem; font-weight: 600; }
+    .m-badge { background: var(--ruby); color: white; font-size: .65rem; font-weight: 700; padding: 2px 9px; border-radius: 100px; }
+    .m-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 12px; }
+    .m-tile { background: #1e293b; border-radius: 8px; padding: 11px; border: 1px solid #334155; cursor: pointer; transition: border-color .15s; }
+    .m-tile:hover { border-color: var(--ruby); }
+    .m-tile-name { color: #94a3b8; font-size: .65rem; margin-bottom: 3px; }
+    .m-tile-price { color: #f1f5f9; font-size: .82rem; font-weight: 700; }
+    .m-tile-stock { color: #475569; font-size: .6rem; margin-top: 2px; }
+    .m-cart { background: #1e293b; border-radius: 8px; padding: 13px; border: 1px solid #334155; }
+    .m-cart-label { color: #475569; font-size: .63rem; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
+    .m-cart-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+    .m-cart-row span { color: #cbd5e1; font-size: .75rem; }
+    .m-cart-sep { border: none; border-top: 1px solid #334155; margin: 9px 0; }
+    .m-cart-total { display: flex; justify-content: space-between; align-items: center; }
+    .m-cart-total-l { color: #94a3b8; font-size: .75rem; }
+    .m-cart-total-r { color: white; font-size: 1.05rem; font-weight: 800; }
+    .m-btn { margin-top: 10px; width: 100%; padding: 9px; background: var(--ruby); border: none; border-radius: 7px; color: white; font-weight: 700; font-size: .8rem; cursor: pointer; font-family: 'Sarabun', sans-serif; letter-spacing: .2px; }
+    .m-float {
+      position: absolute; background: white; border-radius: 12px; padding: 11px 15px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.13); display: flex; align-items: center; gap: 10px;
+      border: 1px solid var(--border);
+    }
+    .m-float-1 { bottom: -16px; left: -24px; }
+    .m-float-2 { top: 24px; right: -24px; }
+    .m-float-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: .9rem; font-weight: 700; }
+    .m-float-label { font-size: .68rem; color: var(--ink-3); }
+    .m-float-val { font-size: .9rem; font-weight: 700; color: var(--ink); margin-top: 1px; }
+
+    /* ── TRUST ── */
+    .trust { padding: 18px 6%; background: var(--slate); display: flex; align-items: center; gap: 36px; flex-wrap: wrap; }
+    .trust-label { font-size: .75rem; color: #64748b; white-space: nowrap; text-transform: uppercase; letter-spacing: .5px; }
+    .trust-divider { width: 1px; height: 18px; background: #334155; }
+    .trust-items { display: flex; gap: 28px; flex-wrap: wrap; }
+    .trust-item { font-size: .82rem; color: #94a3b8; display: flex; align-items: center; gap: 6px; }
+    .trust-item-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--ruby); }
+
+    /* ── FEATURES ── */
+    .features { padding: 88px 6%; background: white; border-bottom: 1px solid var(--border); }
+    .eyebrow { font-size: .75rem; font-weight: 700; color: var(--ruby); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 14px; }
+    .heading { font-size: clamp(1.6rem, 2.8vw, 2.2rem); font-weight: 800; color: var(--ink); letter-spacing: -.4px; line-height: 1.25; margin-bottom: 14px; }
+    .subtext { font-size: .95rem; color: var(--ink-3); max-width: 500px; line-height: 1.75; }
+
+    .feat-top { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 52px; margin-bottom: 16px; }
+    .feat-bottom { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
+    .feat-card { background: var(--cream); border: 1px solid var(--border); border-radius: var(--r); padding: 28px; transition: all .2s; }
+    .feat-card:hover { border-color: var(--border-2); box-shadow: 0 8px 24px rgba(30,18,18,.07); transform: translateY(-2px); }
+    .feat-card.large { padding: 36px; }
+    .feat-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--ruby-dim); border: 1px solid #fda4af; display: flex; align-items: center; justify-content: center; margin-bottom: 18px; }
+    .feat-icon svg { width: 18px; height: 18px; stroke: var(--ruby); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .feat-name { font-size: 1rem; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+    .feat-card.large .feat-name { font-size: 1.15rem; }
+    .feat-desc { font-size: .875rem; color: var(--ink-3); line-height: 1.7; }
+
+    /* ── HOW ── */
+    .how { padding: 88px 6%; background: var(--cream); border-bottom: 1px solid var(--border); }
+    .how-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: start; margin-top: 52px; }
+    .how-steps { display: flex; flex-direction: column; gap: 0; }
+    .how-step { display: flex; gap: 20px; padding: 24px 0; border-bottom: 1px solid var(--border); }
+    .how-step:last-child { border-bottom: none; }
+    .how-num { width: 36px; height: 36px; border-radius: 10px; background: var(--ruby); color: white; font-size: .85rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+    .how-step-title { font-size: .95rem; font-weight: 700; color: var(--ink); margin-bottom: 5px; }
+    .how-step-desc { font-size: .875rem; color: var(--ink-3); line-height: 1.65; }
+    .how-visual { background: var(--slate); border-radius: 18px; padding: 28px; border: 1px solid #334155; }
+    .how-visual-title { color: #94a3b8; font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 20px; }
+    .dash-metric-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    .dash-metric { background: #0f172a; border-radius: 10px; padding: 16px; }
+    .dash-metric-label { color: #475569; font-size: .68rem; font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .4px; }
+    .dash-metric-val { color: #f1f5f9; font-size: 1.3rem; font-weight: 800; }
+    .dash-metric-sub { color: var(--green); font-size: .72rem; font-weight: 600; margin-top: 3px; }
+    .dash-chart { background: #0f172a; border-radius: 10px; padding: 16px; }
+    .dash-chart-label { color: #475569; font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 12px; }
+    .bars { display: flex; align-items: flex-end; gap: 6px; height: 56px; }
+    .bar { flex: 1; border-radius: 4px 4px 0 0; background: #1e293b; transition: all .3s; }
+    .bar.active { background: var(--ruby); }
+    .day-labels { display: flex; gap: 6px; margin-top: 6px; }
+    .day-label { flex: 1; text-align: center; font-size: .6rem; color: #475569; }
+    .day-label.active { color: var(--ruby); font-weight: 600; }
+
+    /* ── ONLINE ── */
+    .online { padding: 88px 6%; background: var(--slate); border-bottom: 1px solid #1e293b; }
+    .online-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: center; }
+    .online .eyebrow { color: #fda4af; }
+    .online .heading { color: white; }
+    .online .subtext { color: #94a3b8; }
+    .online-feats { margin-top: 32px; display: flex; flex-direction: column; gap: 18px; }
+    .o-feat { display: flex; gap: 14px; align-items: flex-start; }
+    .o-feat-icon { width: 34px; height: 34px; border-radius: 8px; background: rgba(190,18,60,.2); border: 1px solid rgba(190,18,60,.3); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .o-feat-icon svg { width: 15px; height: 15px; stroke: #fda4af; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .o-feat-title { font-size: .9rem; font-weight: 600; color: #e2e8f0; margin-bottom: 3px; }
+    .o-feat-desc { font-size: .83rem; color: #64748b; line-height: 1.6; }
+    .order-card { background: white; border-radius: 16px; padding: 24px; }
+    .order-card-header { margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .order-card-store { font-size: .95rem; font-weight: 700; color: var(--ink); }
+    .order-card-sub { font-size: .8rem; color: var(--ink-3); margin-top: 3px; }
+    .order-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+    .o-tile { background: var(--cream); border: 1.5px solid var(--border); border-radius: 10px; padding: 14px; cursor: pointer; transition: all .15s; }
+    .o-tile.sel { border-color: var(--ruby); background: var(--ruby-dim); }
+    .o-tile-name { font-size: .82rem; font-weight: 600; color: var(--ink); margin-bottom: 3px; }
+    .o-tile-price { font-size: .82rem; color: var(--ink-3); }
+    .o-tile.sel .o-tile-price { color: var(--ruby); font-weight: 600; }
+    .order-summary { background: var(--cream); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+    .order-sum-row { display: flex; justify-content: space-between; font-size: .82rem; color: var(--ink-3); margin-bottom: 6px; }
+    .order-sum-total { display: flex; justify-content: space-between; font-size: .9rem; font-weight: 700; color: var(--ink); padding-top: 8px; border-top: 1px solid var(--border); margin-top: 6px; }
+    .order-pay-btn { width: 100%; padding: 12px; background: var(--ruby); border: none; border-radius: 9px; color: white; font-weight: 700; font-size: .9rem; cursor: pointer; font-family: 'Sarabun', sans-serif; }
+
+    /* ── PREVIEW ── */
+    .preview { padding: 88px 6%; background: white; border-bottom: 1px solid var(--border); }
+    .preview-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-top: 48px; }
+    .prev-card { border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; background: white; }
+    .prev-card-head { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--cream); }
+    .prev-card-title { font-size: .82rem; font-weight: 700; color: var(--ink); }
+    .prev-card-meta { font-size: .72rem; color: var(--ink-4); }
+    .prev-card-meta.alert { color: var(--ruby); font-weight: 600; }
+    .prev-card-meta.info { color: #2563eb; font-weight: 600; }
+    .prev-card-body { padding: 18px; }
+    .p-metric { margin-bottom: 16px; }
+    .p-metric-label { font-size: .7rem; color: var(--ink-4); margin-bottom: 3px; text-transform: uppercase; letter-spacing: .3px; }
+    .p-metric-val { font-size: 1.5rem; font-weight: 800; color: var(--ink); letter-spacing: -.3px; }
+    .p-metric-change { display: inline-block; font-size: .72rem; font-weight: 600; color: var(--green); margin-left: 6px; }
+    .p-bars { display: flex; align-items: flex-end; gap: 5px; height: 44px; margin-top: 12px; }
+    .p-bar { flex: 1; border-radius: 3px 3px 0 0; background: var(--ruby-dim); }
+    .p-bar.hi { background: var(--ruby); }
+    .p-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); }
+    .p-row:last-child { border-bottom: none; }
+    .p-row-name { font-size: .82rem; color: var(--ink-2); }
+    .p-row-val { font-size: .82rem; font-weight: 600; }
+    .p-row-val.low { color: var(--ruby); }
+    .p-row-val.ok { color: var(--ink-4); }
+    .p-status { font-size: .7rem; font-weight: 600; padding: 3px 9px; border-radius: 100px; }
+    .p-status.new { background: #dbeafe; color: #1d4ed8; }
+    .p-status.ready { background: #dcfce7; color: #15803d; }
+    .p-status.done { background: var(--cream-2); color: var(--ink-4); }
+
+    /* ── PRICING ── */
+    .pricing { padding: 88px 6%; background: var(--cream); border-bottom: 1px solid var(--border); }
+    .billing-switch { display: flex; background: white; border: 1px solid var(--border); border-radius: 9px; padding: 3px; width: fit-content; margin: 32px 0 44px; gap: 2px; }
+    .bill-btn { padding: 7px 22px; border-radius: 7px; font-size: .875rem; font-weight: 500; cursor: pointer; border: none; background: transparent; color: var(--ink-3); font-family: 'Sarabun', sans-serif; transition: all .15s; }
+    .bill-btn.on { background: var(--ruby); color: white; font-weight: 600; }
+    .save-pill { font-size: .68rem; background: #dcfce7; color: #15803d; padding: 2px 7px; border-radius: 100px; font-weight: 700; margin-left: 4px; }
+    .pricing-cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; max-width: 940px; }
+    .p-card { background: white; border: 1px solid var(--border); border-radius: var(--r); padding: 32px; transition: all .2s; }
+    .p-card:hover { box-shadow: 0 8px 24px rgba(30,18,18,.08); }
+    .p-card.featured { border: 2px solid var(--ruby); position: relative; background: var(--ruby); }
+    .p-card.featured .p-sep { border-color: rgba(255,255,255,.2); }
+    .p-card.featured .p-desc { color: rgba(255,255,255,.7); }
+    .p-card.featured .p-list li { color: rgba(255,255,255,.9); }
+    .p-card.featured .p-list li::before { background: rgba(255,255,255,.2); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' fill='none' d='M3 8l3 3 7-7'/%3E%3C/svg%3E"); }
+    .p-card-badge { position: absolute; top: -13px; left: 28px; background: white; color: var(--ruby-dark); font-size: .72rem; font-weight: 800; padding: 3px 14px; border-radius: 100px; }
+    .p-plan { font-size: .8rem; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 10px; }
+    .p-card.featured .p-plan { color: rgba(255,255,255,.7); }
+    .p-price { font-size: 3rem; font-weight: 800; color: var(--ink); letter-spacing: -.5px; margin-bottom: 4px; line-height: 1; font-family: Arial, sans-serif; }
+    .p-card.featured .p-price { color: white; }
+    .p-price .currency { font-size: 1.4rem; font-weight: 700; vertical-align: top; margin-top: 8px; display: inline-block; font-family: Arial, sans-serif; }
+    .p-price .period { font-size: .9rem; color: var(--ink-3); font-weight: 400; letter-spacing: 0; font-family: 'Sarabun', sans-serif; }
+    .p-card.featured .p-price .period { color: rgba(255,255,255,.6); }
+    .p-desc { font-size: .875rem; color: var(--ink-3); margin-bottom: 22px; margin-top: 8px; }
+    .p-sep { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+    .p-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 26px; }
+    .p-list li { font-size: .875rem; color: var(--ink-2); display: flex; align-items: flex-start; gap: 9px; line-height: 1.5; }
+    .p-list li::before { content: ''; width: 16px; height: 16px; border-radius: 50%; background: var(--ruby-dim); flex-shrink: 0; margin-top: 1px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath stroke='%23be123c' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' fill='none' d='M3 8l3 3 7-7'/%3E%3C/svg%3E"); }
+    .p-list li.off { color: var(--ink-4); }
+    .p-list li.off::before { background: #f3f4f6; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath stroke='%23d1d5db' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' fill='none' d='M4 8h8'/%3E%3C/svg%3E"); }
+    .p-btn { display: block; width: 100%; padding: 12px; border-radius: 9px; text-align: center; font-size: .9rem; font-weight: 600; cursor: pointer; font-family: 'Sarabun', sans-serif; transition: all .15s; text-decoration: none; border: 1.5px solid var(--border-2); color: var(--ink-2); background: transparent; }
+    .p-btn:hover { border-color: var(--ink-3); }
+    .p-btn.ruby { background: white; color: var(--ruby-dark); border-color: white; font-weight: 700; }
+    .p-btn.ruby:hover { background: var(--cream); border-color: var(--cream); }
+
+    /* ── CTA ── */
+    .cta-section { padding: 96px 6%; background: var(--ruby); text-align: center; position: relative; overflow: hidden; }
+    .cta-section::before { content: ''; position: absolute; top: -120px; right: -120px; width: 400px; height: 400px; border-radius: 50%; background: rgba(255,255,255,.05); }
+    .cta-section::after { content: ''; position: absolute; bottom: -80px; left: -80px; width: 280px; height: 280px; border-radius: 50%; background: rgba(0,0,0,.06); }
+    .cta-section h2 { font-size: clamp(1.8rem, 3.2vw, 2.6rem); font-weight: 800; color: white; letter-spacing: -.4px; margin-bottom: 14px; position: relative; }
+    .cta-section p { color: rgba(255,255,255,.75); font-size: .95rem; margin-bottom: 36px; position: relative; }
+    .cta-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; position: relative; }
+    .btn-white { padding: 13px 32px; border-radius: var(--r-sm); background: white; color: var(--ruby-dark); font-size: .95rem; font-weight: 700; text-decoration: none; transition: all .15s; }
+    .btn-white:hover { background: var(--cream); }
+    .btn-ghost-white { padding: 13px 28px; border-radius: var(--r-sm); border: 1.5px solid rgba(255,255,255,.4); color: white; font-size: .95rem; font-weight: 600; text-decoration: none; transition: all .15s; }
+    .btn-ghost-white:hover { border-color: rgba(255,255,255,.7); background: rgba(255,255,255,.08); }
+
+    /* ── FOOTER ── */
+    footer { background: var(--slate); padding: 56px 6% 32px; }
+    .footer-top { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 44px; margin-bottom: 44px; }
+    .footer-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: white; font-weight: 800; font-size: 1rem; margin-bottom: 12px; }
+    .footer-symbol { display: flex; align-items: flex-end; gap: 3px; }
+    .footer-bar { border-radius: 4px; background: var(--ruby); }
+    .footer-bar-1 { width: 7px; height: 19px; }
+    .footer-bar-2 { width: 7px; height: 12px; }
+    .footer-tagline { font-size: .83rem; color: #475569; line-height: 1.7; }
+    .footer-col h4 { font-size: .72rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 14px; }
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .footer-col ul a { font-size: .83rem; color: #475569; text-decoration: none; transition: color .15s; }
+    .footer-col ul a:hover { color: #94a3b8; }
+    .footer-bottom { border-top: 1px solid #1e293b; padding-top: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; font-size: .78rem; color: #334155; }
+    .footer-bottom a { color: #334155; text-decoration: none; transition: color .15s; }
+    .footer-bottom a:hover { color: #64748b; }
+
+    /* ── ANIMATIONS ── */
+
+    /* Scroll fade-in */
+    [data-anim] { opacity: 0; transform: translateY(28px); transition: opacity .55s ease, transform .55s ease; }
+    [data-anim].visible { opacity: 1; transform: none; }
+    [data-anim][data-delay="1"] { transition-delay: .1s; }
+    [data-anim][data-delay="2"] { transition-delay: .2s; }
+    [data-anim][data-delay="3"] { transition-delay: .3s; }
+    [data-anim][data-delay="4"] { transition-delay: .4s; }
+
+    /* Hero headline stagger */
+    .hero h1 .line { display: block; opacity: 0; transform: translateY(20px); transition: opacity .5s ease, transform .5s ease; }
+    .hero h1 .line.in { opacity: 1; transform: none; }
+
+    /* Notification popup */
+    .notif {
+      position: fixed; bottom: 28px; right: 28px; z-index: 9999;
+      background: white; border-radius: 14px; padding: 14px 18px;
+      box-shadow: 0 12px 40px rgba(0,0,0,.16); border: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px;
+      transform: translateX(calc(100% + 40px)); transition: transform .45s cubic-bezier(.34,1.56,.64,1);
+      min-width: 240px;
+    }
+    .notif.show { transform: translateX(0); }
+    .notif-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--ruby-dim); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .notif-icon svg { width: 16px; height: 16px; stroke: var(--ruby); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .notif-title { font-size: .8rem; font-weight: 700; color: var(--ink); }
+    .notif-body { font-size: .75rem; color: var(--ink-3); margin-top: 2px; }
+
+    /* Counter */
+    .count-val { display: inline-block; }
+
+    /* Interactive cart */
+    .m-tile { cursor: pointer; }
+    .m-tile.active { border-color: var(--ruby) !important; background: rgba(190,18,60,.08) !important; }
+    .m-tile .m-tile-qty { display: none; font-size: .6rem; font-weight: 700; color: var(--ruby); margin-top: 2px; }
+    .m-tile.active .m-tile-qty { display: block; }
+
+    /* Bar chart grow animation */
+    .bar, .p-bar { transform: scaleY(0); transform-origin: bottom; transition: transform .6s cubic-bezier(.34,1.2,.64,1); }
+    .bars-ready .bar, .bars-ready .p-bar { transform: scaleY(1); }
+
+    /* ── FAQ ── */
+    .faq-section { padding: 88px 6%; background: white; border-bottom: 1px solid var(--border); }
+    .faq-list { max-width: 720px; margin-top: 48px; display: flex; flex-direction: column; gap: 0; }
+    .faq-item { border-bottom: 1px solid var(--border); }
+    .faq-q { width: 100%; background: none; border: none; padding: 20px 0; text-align: left; font-family: 'Sarabun', sans-serif; font-size: .95rem; font-weight: 600; color: var(--ink); cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+    .faq-q:hover { color: var(--ruby); }
+    .faq-arrow { font-size: .8rem; color: var(--ink-4); transition: transform .25s; flex-shrink: 0; }
+    .faq-item.open .faq-arrow { transform: rotate(180deg); color: var(--ruby); }
+    .faq-a { max-height: 0; overflow: hidden; transition: max-height .35s ease, padding .25s; font-size: .9rem; color: var(--ink-3); line-height: 1.75; padding: 0; }
+    .faq-item.open .faq-a { max-height: 200px; padding-bottom: 18px; }
+
+    /* ── BACK TO TOP ── */
+    .back-top { position: fixed; bottom: 28px; left: 28px; width: 42px; height: 42px; background: var(--slate); color: white; border: none; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; z-index: 98; font-size: 1.1rem; }
+    .back-top.show { opacity: 1; pointer-events: auto; }
+    .back-top:hover { transform: translateY(-2px); background: var(--ruby); }
+
+    /* ── HAMBURGER ── */
+    .hamburger { display: none; flex-direction: column; justify-content: center; gap: 5px; cursor: pointer; padding: 6px; background: none; border: none; }
+    .hamburger span { display: block; width: 22px; height: 2px; background: white; border-radius: 2px; transition: all .3s; }
+    .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    .mobile-nav { display: none; position: fixed; top: 66px; left: 0; right: 0; background: var(--ruby-dark); padding: 8px 0 16px; z-index: 99; border-top: 1px solid rgba(255,255,255,.1); }
+    .mobile-nav.open { display: block; }
+    .mobile-nav a { display: block; padding: 13px 6%; color: rgba(255,255,255,.85); font-size: .95rem; font-weight: 500; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,.07); }
+    .mobile-nav a:last-child { border-bottom: none; margin: 12px 6% 0; background: white; color: var(--ruby-dark); font-weight: 700; border-radius: 8px; text-align: center; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 1024px) {
+      .feat-top { grid-template-columns: 1fr; }
+      .feat-bottom { grid-template-columns: 1fr 1fr; }
+      .pricing-cards { grid-template-columns: 1fr; max-width: 380px; }
+      .preview-grid { grid-template-columns: 1fr; }
+      .footer-top { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 768px) {
+      .hamburger { display: flex; }
+      .nav-links { display: none; }
+      .nav-end .btn-ghost { display: none; }
+      .hero { grid-template-columns: 1fr; padding: 60px 6%; }
+      .mockup-wrap { display: none; }
+      .how-inner { grid-template-columns: 1fr; }
+      .online-inner { grid-template-columns: 1fr; }
+      .feat-bottom { grid-template-columns: 1fr; }
+      .footer-top { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav>
+  <a href="/" class="logo">
+    <div class="logo-symbol">
+      <div class="logo-bar logo-bar-1"></div>
+      <div class="logo-bar logo-bar-2"></div>
+    </div>
+    Pok<span class="logo-dot">·</span>pok
+  </a>
+  <ul class="nav-links">
+    <li><a href="#features">ฟีเจอร์</a></li>
+    <li><a href="#how">วิธีใช้</a></li>
+    <li><a href="#pricing">ราคา</a></li>
+  </ul>
+  <div class="nav-end">
+    <a href="#" class="btn-ghost">เข้าสู่ระบบ</a>
+    <a href="#pricing" class="btn-ruby">ทดลองใช้ฟรี</a>
+    <button class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="เมนู">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+<div class="mobile-nav" id="mobileNav">
+  <a href="#features" onclick="toggleMenu()">ฟีเจอร์</a>
+  <a href="#how" onclick="toggleMenu()">วิธีใช้</a>
+  <a href="#pricing" onclick="toggleMenu()">ราคา</a>
+  <a href="#pricing" onclick="toggleMenu()">ทดลองใช้ฟรี</a>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div>
+    <div class="hero-eyebrow"><span class="hero-eyebrow-dot"></span>ทดลองใช้ฟรี 14 วัน — ไม่ต้องผูกบัตร</div>
+    <h1>
+      <span class="line">ขายได้มากขึ้น</span>
+      <span class="line">จัดการ<em>ง่ายขึ้น</em></span>
+      <span class="line">ในแอปเดียว</span>
+    </h1>
+    <p class="hero-desc">ระบบ POS สำหรับร้านค้าปลีกไทย จัดการการขาย สต็อก ลูกหนี้ และออเดอร์ออนไลน์ บน Android ใช้งานได้ทันที</p>
+    <div class="hero-ctas">
+      <button class="btn-lg btn-lg-ruby" onclick="window.location='#pricing'">เริ่มทดลองใช้ฟรี</button>
+      <a href="#features" class="btn-lg btn-lg-outline">ดูฟีเจอร์ทั้งหมด</a>
+    </div>
+    <a href="#" id="play-badge" style="display:inline-flex;align-items:center;gap:10px;background:#000;color:#fff;padding:10px 20px;border-radius:10px;text-decoration:none;margin-bottom:24px;width:fit-content;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M3.18 23.72a2 2 0 001.86-.21l11.72-6.77L13.3 13.3 3.18 23.72zm15.54-9l-3.27-1.9-3.17 3.17 3.17 3.17 3.28-1.91a1.6 1.6 0 000-2.53zM3.18.28A2 2 0 002 2.08v19.84l10.13-10.5L3.18.28zm9.63 9.83l3.46-3.59L4.55.35A2 2 0 003.18.28l9.63 9.83z"/></svg>
+      <div style="line-height:1.2;">
+        <div style="font-size:.62rem;letter-spacing:.5px;opacity:.8;">รับได้บน</div>
+        <div style="font-size:1rem;font-weight:700;letter-spacing:-.3px;">Google Play</div>
+      </div>
+    </a>
+    <div class="hero-proof">
+      <span class="proof-item"><span class="proof-check">✓</span> ไม่ต้องผูกบัตรเครดิต</span>
+      <span class="proof-item"><span class="proof-check">✓</span> ยกเลิกได้ทุกเมื่อ</span>
+      <span class="proof-item"><span class="proof-check">✓</span> ข้อมูลบน Cloud ปลอดภัย</span>
+    </div>
+  </div>
+
+  <div class="mockup-wrap">
+    <div style="padding: 16px 36px 32px;">
+      <div class="mockup">
+        <div class="mockup-bar">
+          <div class="mkdot" style="background:#ef4444"></div>
+          <div class="mkdot" style="background:#f59e0b"></div>
+          <div class="mkdot" style="background:#22c55e"></div>
+          <span style="color:#475569;font-size:.68rem;margin-left:8px;font-weight:500;">Pokpok</span>
+        </div>
+        <div class="mockup-body">
+          <div class="m-header">
+            <span class="m-title">เลือกสินค้า</span>
+            <span class="m-badge">สต็อก live</span>
+          </div>
+          <div class="m-grid">
+            <div class="m-tile"><div class="m-tile-name">น้ำดื่ม</div><div class="m-tile-price">฿8</div><div class="m-tile-stock">เหลือ 48</div></div>
+            <div class="m-tile"><div class="m-tile-name">บะหมี่กึ่ง</div><div class="m-tile-price">฿12</div><div class="m-tile-stock">เหลือ 30</div></div>
+            <div class="m-tile"><div class="m-tile-name">น้ำผลไม้</div><div class="m-tile-price">฿25</div><div class="m-tile-stock">เหลือ 12</div></div>
+          </div>
+          <div class="m-cart">
+            <div class="m-cart-label">รายการ</div>
+            <div class="m-cart-row"><span>น้ำดื่ม × 3</span><span>฿24</span></div>
+            <div class="m-cart-row"><span>น้ำผลไม้ × 1</span><span>฿25</span></div>
+            <hr class="m-cart-sep"/>
+            <div class="m-cart-total"><span class="m-cart-total-l">ยอดรวม</span><span class="m-cart-total-r">฿49</span></div>
+            <button class="m-btn">ชำระเงิน</button>
+          </div>
+        </div>
+      </div>
+      <div class="m-float m-float-1">
+        <div class="m-float-icon" style="background:#dcfce7;color:#15803d;">+</div>
+        <div><div class="m-float-label">ยอดขายวันนี้</div><div class="m-float-val" style="color:#15803d;">฿4,820</div></div>
+      </div>
+      <div class="m-float m-float-2">
+        <div class="m-float-icon" style="background:var(--ruby-dim);color:var(--ruby);">3</div>
+        <div><div class="m-float-label">ออเดอร์ใหม่</div><div class="m-float-val">รอดำเนินการ</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST BAR -->
+<div class="trust">
+  <span class="trust-label">สร้างบน</span>
+  <div class="trust-divider"></div>
+  <div class="trust-items">
+    <span class="trust-item"><span class="trust-item-dot"></span>Firebase by Google</span>
+    <span class="trust-item"><span class="trust-item-dot"></span>Stripe Payment</span>
+    <span class="trust-item"><span class="trust-item-dot"></span>Android</span>
+    <span class="trust-item"><span class="trust-item-dot"></span>ไม่ต้องติดตั้งเซิร์ฟเวอร์</span>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="eyebrow">ฟีเจอร์</div>
+  <h2 class="heading">ครบทุกสิ่งที่จำเป็น</h2>
+  <p class="subtext">ออกแบบมาสำหรับร้านค้าปลีกไทยโดยเฉพาะ ใช้งานได้ทันที ไม่ต้องอบรมนาน</p>
+  <div class="feat-top">
+    <div class="feat-card large" data-anim data-delay="1">
+      <div class="feat-icon"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+      <div class="feat-name">ระบบขายหน้าร้าน (POS)</div>
+      <div class="feat-desc">ค้นหาสินค้า เพิ่มลงตะกร้า รับเงินสด โอน หรือบัตร คำนวณเงินทอนอัตโนมัติ รองรับส่วนลดต่อบิล และสินค้า Pinned สำหรับรายการขายดี</div>
+    </div>
+    <div class="feat-card large" data-anim data-delay="2">
+      <div class="feat-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg></div>
+      <div class="feat-name">รับออเดอร์ออนไลน์</div>
+      <div class="feat-desc">แชร์ลิงก์ร้านให้ลูกค้าผ่าน LINE หรือ Facebook ลูกค้าเลือกสินค้าและชำระผ่าน Stripe ออเดอร์ขึ้นหน้าจอแบบ real-time ทันที</div>
+    </div>
+  </div>
+  <div class="feat-bottom">
+    <div class="feat-card">
+      <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div>
+      <div class="feat-name">จัดการสต็อก</div>
+      <div class="feat-desc">ติดตาม real-time แจ้งเตือนสินค้าใกล้หมด รับสินค้าเข้าสต็อก</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+      <div class="feat-name">รายงานยอดขาย</div>
+      <div class="feat-desc">Dashboard ยอดขายรายวัน สินค้าขายดี ส่งออก PDF</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+      <div class="feat-name">จัดการลูกหนี้</div>
+      <div class="feat-desc">บันทึกขายเชื่อ ติดตามลูกหนี้ รับชำระ ยกเลิกได้ครบ</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+      <div class="feat-name">Cloud ปลอดภัย</div>
+      <div class="feat-desc">เก็บบน Firebase ของ Google สำรองข้อมูลอัตโนมัติตลอด 24 ชม.</div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="how">
+  <div class="eyebrow">วิธีใช้งาน</div>
+  <h2 class="heading">เปิดร้านได้ภายในวันเดียว</h2>
+  <div class="how-inner">
+    <div class="how-steps">
+      <div class="how-step">
+        <div class="how-num">1</div>
+        <div>
+          <div class="how-step-title">ดาวน์โหลดแอป</div>
+          <div class="how-step-desc">ติดตั้ง Pokpok บน Android รองรับ Android 8 ขึ้นไป ไม่ต้องติดตั้งอะไรเพิ่ม</div>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="how-num">2</div>
+        <div>
+          <div class="how-step-title">สมัครและตั้งค่าร้าน</div>
+          <div class="how-step-desc">สมัครด้วย email เพียง 2 นาที ใส่ชื่อร้าน เริ่มทดลองใช้ 14 วันได้ทันที</div>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="how-num">3</div>
+        <div>
+          <div class="how-step-title">เพิ่มสินค้า</div>
+          <div class="how-step-desc">เพิ่มสินค้าพร้อมราคาและสต็อก ระบบจะแจ้งเตือนเมื่อสินค้าใกล้หมดโดยอัตโนมัติ</div>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="how-num">4</div>
+        <div>
+          <div class="how-step-title">เริ่มขาย</div>
+          <div class="how-step-desc">แตะสินค้า ใส่จำนวน ชำระเงิน — ดูยอดขายและรายงานได้ทันที</div>
+        </div>
+      </div>
+    </div>
+    <div class="how-visual">
+      <div class="how-visual-title">Dashboard วันนี้</div>
+      <div class="dash-metric-row">
+        <div class="dash-metric">
+          <div class="dash-metric-label">ยอดขาย</div>
+          <div class="dash-metric-val">฿4,820</div>
+          <div class="dash-metric-sub">+12% จากเมื่อวาน</div>
+        </div>
+        <div class="dash-metric">
+          <div class="dash-metric-label">บิลวันนี้</div>
+          <div class="dash-metric-val">38 บิล</div>
+          <div class="dash-metric-sub">+5 จากเมื่อวาน</div>
+        </div>
+      </div>
+      <div class="dash-chart">
+        <div class="dash-chart-label">ยอดขาย 7 วันที่ผ่านมา</div>
+        <div class="bars">
+          <div class="bar" style="height:45%"></div>
+          <div class="bar" style="height:62%"></div>
+          <div class="bar" style="height:50%"></div>
+          <div class="bar" style="height:78%"></div>
+          <div class="bar" style="height:55%"></div>
+          <div class="bar" style="height:68%"></div>
+          <div class="bar active" style="height:88%"></div>
+        </div>
+        <div class="day-labels">
+          <span class="day-label">จ</span><span class="day-label">อ</span><span class="day-label">พ</span>
+          <span class="day-label">พฤ</span><span class="day-label">ศ</span><span class="day-label">ส</span>
+          <span class="day-label active">อา</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ONLINE ORDERS -->
+<section class="online">
+  <div class="online-inner">
+    <div>
+      <div class="eyebrow">ออเดอร์ออนไลน์</div>
+      <h2 class="heading">ลูกค้าสั่งผ่านเว็บ<br/>คุณรับในแอป</h2>
+      <p class="subtext">แชร์ลิงก์ร้านให้ลูกค้าสั่งและจ่ายเงินออนไลน์ ออเดอร์ขึ้นหน้าจอทันทีเมื่อชำระสำเร็จ</p>
+      <div class="online-feats">
+        <div class="o-feat">
+          <div class="o-feat-icon"><svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg></div>
+          <div><div class="o-feat-title">ลิงก์ร้านส่วนตัว</div><div class="o-feat-desc">แต่ละร้านได้ลิงก์เฉพาะตัว แชร์ผ่าน LINE หรือ Facebook ได้เลย</div></div>
+        </div>
+        <div class="o-feat">
+          <div class="o-feat-icon"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
+          <div><div class="o-feat-title">ชำระผ่าน Stripe</div><div class="o-feat-desc">รับบัตรเครดิต/เดบิต ปลอดภัยด้วยมาตรฐาน PCI DSS</div></div>
+        </div>
+        <div class="o-feat">
+          <div class="o-feat-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+          <div><div class="o-feat-title">Real-time ทุกการสั่ง</div><div class="o-feat-desc">ออเดอร์ขึ้นหน้าจอทันทีเมื่อลูกค้าจ่ายเงิน ไม่พลาดการขาย</div></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="order-card">
+        <div class="order-card-header">
+          <div class="order-card-store">ร้านสะดวกซื้อตัวอย่าง</div>
+          <div class="order-card-sub">เลือกสินค้าที่ต้องการ</div>
+        </div>
+        <div class="order-grid">
+          <div class="o-tile sel"><div class="o-tile-name">น้ำดื่ม 600ml</div><div class="o-tile-price">฿8</div></div>
+          <div class="o-tile"><div class="o-tile-name">บะหมี่กึ่งสำเร็จรูป</div><div class="o-tile-price">฿12</div></div>
+          <div class="o-tile sel"><div class="o-tile-name">น้ำผลไม้</div><div class="o-tile-price">฿25</div></div>
+          <div class="o-tile"><div class="o-tile-name">ขนมปัง</div><div class="o-tile-price">฿18</div></div>
+        </div>
+        <div class="order-summary">
+          <div class="order-sum-row"><span>น้ำดื่ม 600ml × 1</span><span>฿8</span></div>
+          <div class="order-sum-row"><span>น้ำผลไม้ × 1</span><span>฿25</span></div>
+          <div class="order-sum-total"><span>รวม</span><span>฿33</span></div>
+        </div>
+        <button class="order-pay-btn">ชำระเงิน ฿33</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- APP PREVIEW -->
+<section class="preview" id="preview">
+  <div class="eyebrow">ภาพรวมแอป</div>
+  <h2 class="heading">ดูได้ทุกอย่างในที่เดียว</h2>
+  <p class="subtext">Dashboard ยอดขาย สต็อกสินค้า และออเดอร์ออนไลน์ อยู่ในหน้าจอเดียวกัน</p>
+  <div class="preview-grid">
+    <div class="prev-card">
+      <div class="prev-card-head"><span class="prev-card-title">Dashboard</span><span class="prev-card-meta">อัปเดต real-time</span></div>
+      <div class="prev-card-body">
+        <div class="p-metric">
+          <div class="p-metric-label">ยอดขายวันนี้</div>
+          <div class="p-metric-val">฿4,820 <span class="p-metric-change">+12%</span></div>
+        </div>
+        <div class="p-bars">
+          <div class="p-bar" style="height:42%"></div><div class="p-bar" style="height:58%"></div>
+          <div class="p-bar" style="height:47%"></div><div class="p-bar" style="height:72%"></div>
+          <div class="p-bar" style="height:55%"></div><div class="p-bar" style="height:65%"></div>
+          <div class="p-bar hi" style="height:88%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="prev-card">
+      <div class="prev-card-head"><span class="prev-card-title">สต็อกสินค้า</span><span class="prev-card-meta alert">ใกล้หมด 2 รายการ</span></div>
+      <div class="prev-card-body">
+        <div class="p-row"><span class="p-row-name">น้ำดื่ม 600ml</span><span class="p-row-val ok">48 ชิ้น</span></div>
+        <div class="p-row"><span class="p-row-name">บะหมี่กึ่งฯ</span><span class="p-row-val ok">30 ชิ้น</span></div>
+        <div class="p-row"><span class="p-row-name">น้ำผลไม้</span><span class="p-row-val low">3 ชิ้น</span></div>
+        <div class="p-row"><span class="p-row-name">ขนมปัง</span><span class="p-row-val low">2 ชิ้น</span></div>
+      </div>
+    </div>
+    <div class="prev-card">
+      <div class="prev-card-head"><span class="prev-card-title">ออเดอร์ออนไลน์</span><span class="prev-card-meta info">3 รายการใหม่</span></div>
+      <div class="prev-card-body">
+        <div class="p-row"><span class="p-row-name">น้ำดื่ม × 5, บะหมี่ × 2</span><span class="p-status new">ใหม่</span></div>
+        <div class="p-row"><span class="p-row-name">น้ำผลไม้ × 3</span><span class="p-status ready">พร้อมรับ</span></div>
+        <div class="p-row"><span class="p-row-name">ขนมปัง × 1, น้ำดื่ม × 2</span><span class="p-status done">ส่งแล้ว</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing" id="pricing">
+  <div class="eyebrow">ราคา</div>
+  <h2 class="heading">ราคาตรงไปตรงมา</h2>
+  <p class="subtext">ไม่มีค่าใช้จ่ายซ่อนเร้น ยกเลิกได้ทุกเมื่อ</p>
+  <div class="billing-switch">
+    <button class="bill-btn on" id="bm" onclick="setBill('m')">รายเดือน</button>
+    <button class="bill-btn" id="by" onclick="setBill('y')">รายปี <span class="save-pill">ประหยัด 17%</span></button>
+  </div>
+  <div class="pricing-cards">
+    <div class="p-card" data-anim data-delay="1">
+      <div class="p-plan">ทดลองใช้</div>
+      <div class="p-price">ฟรี</div>
+      <div class="p-desc">14 วัน ใช้งานได้เต็มระบบ</div>
+      <hr class="p-sep"/>
+      <ul class="p-list">
+        <li>ระบบ POS เต็มรูปแบบ</li>
+        <li>จัดการสต็อก</li>
+        <li>รายงานยอดขาย</li>
+        <li>ออเดอร์ออนไลน์</li>
+      </ul>
+      <a href="#" class="p-btn">เริ่มทดลองใช้ฟรี</a>
+    </div>
+    <div class="p-card featured" data-anim data-delay="2">
+      <div class="p-card-badge">แนะนำ</div>
+      <div class="p-plan">Pro</div>
+      <div class="p-price"><span class="currency">฿</span><span id="pa">299</span><span class="period" id="pp"> /เดือน</span></div>
+      <div class="p-desc" id="pd">สำหรับร้านค้าทุกขนาด</div>
+      <hr class="p-sep"/>
+      <ul class="p-list">
+        <li>ระบบ POS เต็มรูปแบบ</li>
+        <li>จัดการสต็อก</li>
+        <li>รายงานและ Dashboard</li>
+        <li>จัดการลูกหนี้</li>
+        <li>ออเดอร์ออนไลน์</li>
+        <li>ส่งออก PDF</li>
+        <li>Cloud backup อัตโนมัติ</li>
+      </ul>
+      <button class="p-btn ruby">เริ่มใช้งาน</button>
+    </div>
+    <div class="p-card" data-anim data-delay="3">
+      <div class="p-plan">Enterprise</div>
+      <div class="p-price" style="font-size:1.8rem">ติดต่อ</div>
+      <div class="p-desc">หลายสาขา หรือความต้องการพิเศษ</div>
+      <hr class="p-sep"/>
+      <ul class="p-list">
+        <li>ทุกอย่างใน Pro</li>
+        <li>หลายสาขา</li>
+        <li>API integration</li>
+        <li>Priority support</li>
+      </ul>
+      <a href="mailto:contact@pok-pok.app" class="p-btn">ติดต่อเรา</a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq-section" id="faq">
+  <div class="eyebrow">คำถามที่พบบ่อย</div>
+  <h2 class="heading">มีข้อสงสัยอะไร?</h2>
+  <p class="subtext">ถ้าไม่พบคำตอบที่ต้องการ <a href="mailto:contact@pok-pok.app" style="color:var(--ruby);">ติดต่อเราได้เลย</a></p>
+  <div class="faq-list">
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        Pokpok เหมาะกับร้านค้าประเภทไหน?
+        <span class="faq-arrow">▾</span>
+      </button>
+      <div class="faq-a">เหมาะกับร้านค้าปลีกทุกประเภท ไม่ว่าจะเป็นร้านของชำ ร้านสะดวกซื้อ ร้านขายของชำ ร้านขายเครื่องดื่ม หรือร้านค้าทั่วไปที่ขายสินค้าหน้าร้านและออนไลน์ ออกแบบมาให้ใช้งานง่ายไม่ต้องอบรมนาน</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        ต้องมีอินเทอร์เน็ตตลอดเวลาไหม?
+        <span class="faq-arrow">▾</span>
+      </button>
+      <div class="faq-a">ต้องการอินเทอร์เน็ตสำหรับการซิงค์ข้อมูล รับออเดอร์ออนไลน์ และ push notification แต่ถ้าเน็ตหลุดชั่วคราวสามารถขายสินค้าหน้าร้านต่อได้ระยะสั้น ข้อมูลจะซิงค์อัตโนมัติเมื่อเชื่อมต่อใหม่</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        ข้อมูลจะหายไหมถ้าเปลี่ยนโทรศัพท์หรือถอนแอป?
+        <span class="faq-arrow">▾</span>
+      </button>
+      <div class="faq-a">ข้อมูลทั้งหมดเก็บบน Firebase Cloud ของ Google ปลอดภัย 100% ถ้าเปลี่ยนเครื่องหรือติดตั้งแอปใหม่ เพียงเข้าสู่ระบบด้วย email เดิม ข้อมูลทุกอย่างกลับมาครบทันที</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        ทดลองใช้ฟรีต้องทำอะไรบ้าง?
+        <span class="faq-arrow">▾</span>
+      </button>
+      <div class="faq-a">เพียงดาวน์โหลดแอปจาก Google Play → สมัครด้วย email → เริ่มใช้งานได้ทันที ไม่ต้องใส่ข้อมูลบัตรเครดิต ทดลองได้ครบทุกฟีเจอร์ 14 วัน</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        ถ้าไม่ต่ออายุ subscription จะเกิดอะไรขึ้น?
+        <span class="faq-arrow">▾</span>
+      </button>
+      <div class="faq-a">ถ้า subscription หมดอายุ ระบบจะแสดงหน้าต่ออายุ แต่ข้อมูลทั้งหมดยังคงอยู่ครบถ้วน สามารถต่ออายุและกลับมาใช้งานได้ตลอดเวลา ข้อมูลไม่ถูกลบ</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        ค่าธรรมเนียมการชำระเงินออนไลน์ผ่าน Stripe เป็นเท่าไหร่?
+        <span class="faq-arrow">▾</span>
+      </button>
+      <div class="faq-a">Stripe เก็บค่าธรรมเนียมตามจริงตามประเภทบัตรและช่องทาง (ประมาณ 3.65%+฿10 สำหรับ Visa/Mastercard, 1.5%+฿10 สำหรับ PromptPay) ค่าธรรมเนียมนี้เป็นของ Stripe โดยตรง ไม่ใช่ของ Pokpok</div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2>พร้อมเริ่มต้นแล้วใช่ไหม</h2>
+  <p>ทดลองใช้ฟรี 14 วัน ไม่ต้องผูกบัตร ยกเลิกได้ทุกเมื่อ</p>
+  <div class="cta-btns">
+    <a href="#" class="btn-white">เริ่มทดลองใช้ฟรี</a>
+    <a href="mailto:contact@pok-pok.app" class="btn-ghost-white">ติดต่อเรา</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-top">
+    <div>
+      <a href="/" class="footer-logo">
+        <div class="footer-symbol">
+          <div class="footer-bar footer-bar-1"></div>
+          <div class="footer-bar footer-bar-2"></div>
+        </div>
+        Pok<span style="color:var(--ruby);">·</span>pok
+      </a>
+      <p class="footer-tagline">ระบบ POS สำหรับร้านค้าปลีกไทย จัดการการขาย สต็อก และออเดอร์ออนไลน์ในแอปเดียว — Pokpok</p>
+    </div>
+    <div class="footer-col">
+      <h4>ผลิตภัณฑ์</h4>
+      <ul>
+        <li><a href="#features">ฟีเจอร์</a></li>
+        <li><a href="#pricing">ราคา</a></li>
+        <li><a href="#how">วิธีใช้งาน</a></li>
+        <li><a href="/order">สั่งสินค้าออนไลน์</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>บริษัท</h4>
+      <ul>
+        <li><a href="#">เกี่ยวกับเรา</a></li>
+        <li><a href="mailto:contact@pok-pok.app">ติดต่อ</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>ช่วยเหลือ</h4>
+      <ul>
+        <li><a href="/privacy">นโยบายความเป็นส่วนตัว</a></li>
+        <li><a href="/terms">เงื่อนไขการใช้บริการ</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 Pokpok. สงวนลิขสิทธิ์ทุกประการ</span>
+    <div style="display:flex;gap:20px;">
+      <a href="/privacy">นโยบายความเป็นส่วนตัว</a>
+      <a href="/terms">เงื่อนไขการใช้บริการ</a>
+    </div>
+  </div>
+</footer>
+
+<!-- Back to top -->
+<button class="back-top" id="backTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="กลับด้านบน">↑</button>
+
+<!-- Notification popup -->
+<div class="notif" id="notif">
+  <div class="notif-icon">
+    <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+  </div>
+  <div>
+    <div class="notif-title" id="notif-title">ออเดอร์ใหม่</div>
+    <div class="notif-body" id="notif-body">น้ำดื่ม × 3, บะหมี่กึ่ง × 1</div>
+  </div>
+</div>
+
+<script>
+  function setBill(t) {
+    document.getElementById('bm').classList.toggle('on', t==='m');
+    document.getElementById('by').classList.toggle('on', t==='y');
+    document.getElementById('pa').textContent = t==='m' ? '299' : '2,990';
+    document.getElementById('pp').textContent = t==='m' ? ' /เดือน' : ' /ปี';
+    document.getElementById('pd').textContent = t==='m' ? 'สำหรับร้านค้าทุกขนาด' : 'ประหยัดกว่ารายเดือน ฿598 ต่อปี';
+  }
+
+  // ── HERO HEADLINE STAGGER ──
+  setTimeout(() => {
+    document.querySelectorAll('.hero h1 .line').forEach((el, i) => {
+      setTimeout(() => el.classList.add('in'), i * 160);
+    });
+  }, 200);
+
+  // ── SCROLL FADE-IN ──
+  const scrollObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); scrollObs.unobserve(e.target); } });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('[data-anim]').forEach(el => scrollObs.observe(el));
+
+  // ── BAR CHART ANIMATE ──
+  const barObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('bars-ready'); barObs.unobserve(e.target); } });
+  }, { threshold: 0.3 });
+  document.querySelectorAll('.bars, .p-bars, .mini-bar-wrap').forEach(el => barObs.observe(el));
+
+  // ── COUNTER ANIMATION ──
+  function animCount(el, target, prefix='', suffix='', duration=1800) {
+    let start = null;
+    const step = (ts) => {
+      if (!start) start = ts;
+      const progress = Math.min((ts - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const val = Math.floor(eased * target);
+      el.textContent = prefix + val.toLocaleString() + suffix;
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  const countObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const el = e.target;
+        const target = parseInt(el.dataset.target);
+        const prefix = el.dataset.prefix || '';
+        const suffix = el.dataset.suffix || '';
+        animCount(el, target, prefix, suffix);
+        countObs.unobserve(el);
+      }
+    });
+  }, { threshold: 0.5 });
+  document.querySelectorAll('[data-target]').forEach(el => countObs.observe(el));
+
+  // ── INTERACTIVE HERO CART ──
+  const products = [
+    { name: 'น้ำดื่ม', price: 8 },
+    { name: 'บะหมี่กึ่ง', price: 12 },
+    { name: 'น้ำผลไม้', price: 25 }
+  ];
+  const cart = { 0: 0, 1: 0, 2: 0 };
+  document.querySelectorAll('.m-tile').forEach((tile, i) => {
+    tile.addEventListener('click', () => {
+      cart[i] = (cart[i] + 1) % 4;
+      tile.classList.toggle('active', cart[i] > 0);
+      let qtyEl = tile.querySelector('.m-tile-qty');
+      if (!qtyEl) { qtyEl = document.createElement('div'); qtyEl.className = 'm-tile-qty'; tile.appendChild(qtyEl); }
+      qtyEl.textContent = cart[i] > 0 ? `× ${cart[i]}` : '';
+      updateCart();
+    });
+  });
+  function updateCart() {
+    const rows = document.querySelectorAll('.m-cart-row');
+    let total = 0;
+    products.forEach((p, i) => {
+      if (rows[i]) {
+        const qty = cart[i];
+        rows[i].style.opacity = qty > 0 ? '1' : '0.3';
+        rows[i].querySelector('span:first-child').textContent = `${p.name} × ${qty || '-'}`;
+        rows[i].querySelector('span:last-child').textContent = qty > 0 ? `฿${p.price * qty}` : '-';
+        total += p.price * qty;
+      }
+    });
+    const totalEl = document.querySelector('.m-cart-total-r');
+    if (totalEl) totalEl.textContent = `฿${total}`;
+    const btn = document.querySelector('.m-btn');
+    if (btn) btn.textContent = total > 0 ? `ชำระเงิน ฿${total}` : 'ชำระเงิน';
+  }
+
+  // ── HAMBURGER MENU ──
+  function toggleMenu() {
+    const btn = document.getElementById('hamburger');
+    const nav = document.getElementById('mobileNav');
+    btn.classList.toggle('open');
+    nav.classList.toggle('open');
+  }
+  document.addEventListener('click', (e) => {
+    const nav = document.getElementById('mobileNav');
+    const btn = document.getElementById('hamburger');
+    if (!nav.contains(e.target) && !btn.contains(e.target)) {
+      nav.classList.remove('open');
+      btn.classList.remove('open');
+    }
+  });
+
+  // ── FAQ ACCORDION ──
+  function toggleFaq(btn) {
+    const item = btn.closest('.faq-item');
+    const isOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item.open').forEach(i => i.classList.remove('open'));
+    if (!isOpen) item.classList.add('open');
+  }
+
+  // ── BACK TO TOP ──
+  const backTop = document.getElementById('backTop');
+  window.addEventListener('scroll', () => {
+    backTop.classList.toggle('show', window.scrollY > 400);
+  });
+
+  // ── NOTIFICATION POPUP ──
+  const notifs = [
+    { title: 'ออเดอร์ใหม่', body: 'น้ำดื่ม × 3, บะหมี่กึ่ง × 1' },
+    { title: 'ออเดอร์ใหม่', body: 'น้ำผลไม้ × 2, ขนมปัง × 1' },
+    { title: 'สต็อกใกล้หมด', body: 'น้ำผลไม้ เหลือ 3 ชิ้น' },
+    { title: 'ออเดอร์ใหม่', body: 'น้ำดื่ม × 5' },
+    { title: 'ชำระเงินสำเร็จ', body: 'ออเดอร์ #0042 — ฿97' },
+  ];
+  let notifIdx = 0;
+  const notifEl = document.getElementById('notif');
+  function showNotif() {
+    const n = notifs[notifIdx % notifs.length];
+    document.getElementById('notif-title').textContent = n.title;
+    document.getElementById('notif-body').textContent = n.body;
+    notifEl.classList.add('show');
+    setTimeout(() => notifEl.classList.remove('show'), 3500);
+    notifIdx++;
+  }
+  setTimeout(() => { showNotif(); setInterval(showNotif, 7000); }, 3000);
+</script>
+</body>
+</html>

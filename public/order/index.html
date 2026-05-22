@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>สั่งสินค้าออนไลน์</title>
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <style>
+    /* ── MODERN DESIGN SYSTEM PROPERTIES ── */
+    :root {
+      --primary: #be123c;       /* Rose 700 - สอดคล้องกับแบรนด์ Pok pok */
+      --primary-hover: #9f1239; /* Rose 800 */
+      --primary-light: #ffe4e6; /* Rose 100 */
+      --bg-main: #f8fafc;       /* Slate 50 - พื้นหลังสบายตากว่าเดิม */
+      --text-main: #0f172a;     /* Slate 900 */
+      --text-muted: #64748b;    /* Slate 500 */
+      --border-color: #e2e8f0;  /* Slate 200 */
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 20px;
+      --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.04);
+      --shadow-md: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.08);
+      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+      background: var(--bg-main); 
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── HEADER ── */
+    header { 
+      background: linear-gradient(135deg, #be123c 0%, #881337 100%); /* ไล่เฉดสีสวยงามตามสไตล์ Favicon */
+      color: white; 
+      padding: 18px 20px; 
+      position: sticky; 
+      top: 0; 
+      z-index: 100; 
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between;
+      box-shadow: 0 4px 20px rgba(136, 19, 55, 0.15);
+    }
+    header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.025em; }
+    
+    #cartBtn { 
+      background: rgba(255, 255, 255, 0.15); 
+      color: white; 
+      border: 1px solid rgba(255, 255, 255, 0.25); 
+      border-radius: 30px; 
+      padding: 8px 16px; 
+      font-size: 14px; 
+      font-weight: 600; 
+      cursor: pointer; 
+      display: flex; 
+      align-items: center; 
+      gap: 8px;
+      transition: var(--transition);
+      backdrop-filter: blur(4px);
+    }
+    #cartBtn:hover {
+      background: white;
+      color: var(--primary);
+    }
+    #cartCount { 
+      background: white; 
+      color: var(--primary); 
+      border-radius: 50%; 
+      width: 20px; 
+      height: 20px; 
+      font-size: 11px; 
+      font-weight: 700;
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      transition: var(--transition);
+    }
+    #cartBtn:hover #cartCount {
+      background: var(--primary);
+      color: white;
+    }
+
+    /* ── UTILITIES STATE ── */
+    #loading, #error { text-align: center; padding: 80px 20px; color: var(--text-muted); font-size: 15px; font-weight: 500; }
+    #error { color: #ef4444; background: #fef2f2; border-radius: var(--radius-md); margin: 20px; padding: 20px; }
+
+    /* ── PRODUCT GRID & CARDS ── */
+    #products { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); 
+      gap: 16px; 
+      padding: 20px; 
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .product-card { 
+      background: white; 
+      border-radius: var(--radius-md); 
+      padding: 14px; 
+      cursor: pointer; 
+      box-shadow: var(--shadow-sm); 
+      transition: var(--transition); 
+      position: relative; 
+      border: 1px solid rgba(241, 245, 249, 0.8);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .product-card:hover { 
+      transform: translateY(-4px);
+      box-shadow: 0 12px 20px -8px rgba(15, 23, 42, 0.08);
+      border-color: var(--border-color);
+    }
+    .product-card:active { transform: scale(0.98) translateY(-2px); }
+    .product-card.out-of-stock { opacity: 0.5; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+    
+    .product-name { font-weight: 600; font-size: 14px; color: var(--text-main); margin-bottom: 4px; line-height: 1.4; }
+    .product-category { font-size: 11px; font-weight: 500; color: var(--text-muted); margin-bottom: 12px; background: #f1f5f9; width: fit-content; padding: 2px 8px; border-radius: 4px; }
+    .product-price { font-size: 16px; font-weight: 700; color: var(--primary); margin-top: auto; }
+    .product-stock { font-size: 11px; font-weight: 500; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+    .product-stock.low { color: #f59e0b; font-weight: 600; }
+    .product-card.out-of-stock .product-stock { color: #ef4444; font-weight: 600; }
+    
+    .qty-badge { 
+      position: absolute; 
+      top: -6px; 
+      right: -6px; 
+      background: var(--primary); 
+      color: white; 
+      border-radius: 50%; 
+      width: 24px; 
+      height: 24px; 
+      font-size: 12px; 
+      font-weight: 700; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      box-shadow: 0 4px 10px rgba(190, 18, 60, 0.3);
+      animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+
+    /* ── DRAWER & OVERLAY (GLASSMORPHISM) ── */
+    #cartOverlay { 
+      display: none; 
+      position: fixed; 
+      inset: 0; 
+      background: rgba(15, 23, 42, 0.3); 
+      backdrop-filter: blur(8px); /* เอฟเฟกต์ฉากหลังเบลอแบบโมเดิร์น */
+      z-index: 200; 
+    }
+    #cartDrawer { 
+      position: fixed; 
+      bottom: 0; 
+      left: 0; 
+      right: 0; 
+      background: white; 
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0; 
+      padding: 24px; 
+      max-height: 85vh; 
+      overflow-y: auto; 
+      z-index: 201; 
+      transform: translateY(100%); 
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1); 
+      box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
+    }
+    @media(min-width: 640px) { /* แสดงผลแบบด้านข้างกรณีเปิดบน Tablet/PC */
+      #cartDrawer { top: 0; bottom: 0; right: 0; left: auto; width: 400px; max-height: 100vh; border-radius: var(--radius-lg) 0 0 var(--radius-lg); transform: translateX(100%); }
+      #cartDrawer.open { transform: translateX(0); }
+    }
+    #cartDrawer.open { transform: translateY(0); }
+    #cartOverlay.open { display: block; }
+    
+    .drawer-handle { width: 40px; height: 5px; background: #e2e8f0; border-radius: 10px; margin: -8px auto 20px; }
+    @media(min-width: 640px) { .drawer-handle { display: none; } }
+    .drawer-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; color: var(--text-main); }
+    
+    .cart-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border-color); }
+    .cart-item-name { font-size: 14px; font-weight: 600; color: var(--text-main); }
+    .cart-item-price { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+    
+    .qty-controls { display: flex; align-items: center; gap: 12px; }
+    .qty-btn { 
+      width: 32px; 
+      height: 32px; 
+      border: 1px solid var(--border-color); 
+      border-radius: 50%; 
+      background: white; 
+      cursor: pointer; 
+      font-size: 16px; 
+      font-weight: 600;
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      transition: var(--transition);
+      color: var(--text-main);
+    }
+    .qty-btn:hover { background: var(--bg-main); border-color: #cbd5e1; }
+    .qty-btn:active { transform: scale(0.9); }
+    .qty-num { font-size: 15px; font-weight: 700; min-width: 24px; text-align: center; color: var(--text-main); }
+    
+    .cart-total { display: flex; justify-content: space-between; font-size: 18px; font-weight: 700; padding: 20px 0 4px; color: var(--text-main); }
+    
+    #checkoutBtn { 
+      width: 100%; 
+      background: var(--primary); 
+      color: white; 
+      border: none; 
+      border-radius: var(--radius-md); 
+      padding: 16px; 
+      font-size: 16px; 
+      font-weight: 600; 
+      cursor: pointer; 
+      margin-top: 16px; 
+      transition: var(--transition);
+      box-shadow: 0 4px 12px rgba(190, 18, 60, 0.15);
+    }
+    #checkoutBtn:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(190, 18, 60, 0.25); }
+    #checkoutBtn:disabled { background: #cbd5e1; color: #94a3b8; cursor: not-allowed; box-shadow: none; }
+
+    /* ── MODAL OVERLAY (ORDER FORM) ── */
+    #modalOverlay { 
+      display: none; 
+      position: fixed; 
+      inset: 0; 
+      background: rgba(15, 23, 42, 0.4); 
+      backdrop-filter: blur(8px);
+      z-index: 300; 
+      align-items: center; 
+      justify-content: center; 
+      padding: 20px; 
+    }
+    #modalOverlay.open { display: flex; }
+    #modal { 
+      background: white; 
+      border-radius: var(--radius-lg); 
+      padding: 28px; 
+      width: 100%; 
+      max-width: 420px; 
+      box-shadow: var(--shadow-md);
+      animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes modalPop { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    
+    #modal h2 { font-size: 19px; font-weight: 700; margin-bottom: 6px; color: var(--text-main); }
+    #modal .subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+    
+    .field { margin-bottom: 18px; }
+    .field label { font-size: 13px; font-weight: 600; color: var(--text-main); display: block; margin-bottom: 8px; }
+    .field input { 
+      width: 100%; 
+      border: 1.5px solid var(--border-color); 
+      border-radius: var(--radius-sm); 
+      padding: 12px 14px; 
+      font-size: 15px; 
+      outline: none; 
+      transition: var(--transition);
+      background: #f8fafc;
+    }
+    .field input:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 4px var(--primary-light); }
+    
+    .modal-total { 
+      background: #fff1f2; 
+      border-radius: var(--radius-md); 
+      padding: 14px 16px; 
+      display: flex; 
+      justify-content: space-between; 
+      font-weight: 700; 
+      font-size: 16px; 
+      margin-bottom: 20px; 
+      color: var(--primary);
+    }
+    
+    #payBtn { 
+      width: 100%; 
+      background: var(--primary); 
+      color: white; 
+      border: none; 
+      border-radius: var(--radius-md); 
+      padding: 16px; 
+      font-size: 16px; 
+      font-weight: 600; 
+      cursor: pointer; 
+      transition: var(--transition);
+      box-shadow: 0 4px 12px rgba(190, 18, 60, 0.15);
+    }
+    #payBtn:hover:not(:disabled) { background: var(--primary-hover); }
+    #payBtn:disabled { background: #cbd5e1; cursor: not-allowed; box-shadow: none; }
+    
+    #cancelBtn { width: 100%; background: none; border: none; color: var(--text-muted); padding: 12px; font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 8px; transition: var(--transition); border-radius: var(--radius-sm); }
+    #cancelBtn:hover { background: var(--bg-main); color: var(--text-main); }
+    
+    .spinner { display: inline-block; width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 8px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .empty-cart { text-align: center; color: var(--text-muted); padding: 30px 0; font-size: 14px; font-weight: 500; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1 id="shopName">กำลังโหลด...</h1>
+  <button id="cartBtn" onclick="openCart()">
+    🛒 ตะกร้า <span id="cartCount">0</span>
+  </button>
+</header>
+
+<div id="loading">กำลังโหลดสินค้า...</div>
+<div id="error" style="display:none"></div>
+<div id="products" style="display:none"></div>
+
+<div id="cartOverlay" onclick="closeCart()"></div>
+<div id="cartDrawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-title">ตะกร้าสินค้า</div>
+  <div id="cartItems"></div>
+  <div class="cart-total">
+    <span>ยอดรวม</span>
+    <span id="cartTotal">฿0.00</span>
+  </div>
+  <button id="checkoutBtn" onclick="openModal()" disabled>สั่งและชำระเงิน</button>
+</div>
+
+<div id="modalOverlay">
+  <div id="modal">
+    <h2>ข้อมูลผู้สั่ง</h2>
+    <p class="subtitle">กรอกข้อมูลเพื่อให้ร้านติดต่อกลับเมื่อสินค้าพร้อม</p>
+    <div class="field">
+      <label>ชื่อ-นามสกุล</label>
+      <input id="customerName" type="text" placeholder="ชื่อของคุณ" />
+    </div>
+    <div class="field">
+      <label>เบอร์โทรศัพท์</label>
+      <input id="customerPhone" type="tel" placeholder="08X-XXX-XXXX" />
+    </div>
+    <div class="modal-total">
+      <span>ยอดชำระ</span>
+      <span id="modalTotal">฿0.00</span>
+    </div>
+    <button id="payBtn" onclick="submitOrder()">ชำระเงิน</button>
+    <button id="cancelBtn" onclick="closeModal()">ยกเลิก</button>
+  </div>
+</div>
+
+<script>
+  const API_KEY = 'AIzaSyDmY7ZnGfbpB66zb1pJcS2I-NCgUsiu6QA';
+  const PROJECT = 'shop-pos-89294';
+  const FIRESTORE = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents`;
+
+  const params = new URLSearchParams(window.location.search);
+  const shopId = params.get('shop');
+
+  const cart = {}; // productId -> { id, name, price, stock, quantity }
+
+  // ── Parse Firestore REST response ──
+  function parseValue(v) {
+    if (!v) return null;
+    if (v.stringValue !== undefined) return v.stringValue;
+    if (v.integerValue !== undefined) return parseInt(v.integerValue);
+    if (v.doubleValue !== undefined) return parseFloat(v.doubleValue);
+    if (v.booleanValue !== undefined) return v.booleanValue;
+    return null;
+  }
+  function parseDoc(doc) {
+    const result = { id: doc.name.split('/').pop() };
+    for (const [k, v] of Object.entries(doc.fields || {})) result[k] = parseValue(v);
+    return result;
+  }
+
+  // ── Load shop + products ──
+  async function init() {
+    if (!shopId) { showError('ลิงก์ไม่ถูกต้อง — ไม่พบ shop ID'); return; }
+    try {
+      const [shopRes, productsRes] = await Promise.all([
+        fetch(`${FIRESTORE}/shops/${shopId}?key=${API_KEY}`),
+        fetch(`${FIRESTORE}/shops/${shopId}/products?key=${API_KEY}&pageSize=200`),
+      ]);
+      if (!shopRes.ok) { showError('ไม่พบร้านค้านี้'); return; }
+      const shopData = await shopRes.json();
+      const shopName = shopData.fields?.name?.stringValue || 'ร้านค้า';
+      document.getElementById('shopName').textContent = shopName;
+      document.title = `สั่งสินค้า — ${shopName}`;
+
+      const productsData = await productsRes.json();
+      const allProducts = (productsData.documents || []).map(parseDoc);
+      // แสดงเฉพาะสินค้าที่มี stock > 0
+      const products = allProducts.filter(p => p.stock !== undefined);
+
+      renderProducts(products);
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('products').style.display = 'grid';
+    } catch (e) {
+      showError('เกิดข้อผิดพลาดในการโหลดข้อมูล');
+    }
+  }
+
+  function showError(msg) {
+    document.getElementById('loading').style.display = 'none';
+    const el = document.getElementById('error');
+    el.style.display = 'block';
+    el.textContent = msg;
+  }
+
+  // ── Render products ──
+  function renderProducts(products) {
+    const container = document.getElementById('products');
+    if (!products.length) {
+      container.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#9ca3af;padding:40px">ยังไม่มีสินค้า</p>';
+      return;
+    }
+    container.innerHTML = products.map(p => {
+      const inCart = cart[p.id]?.quantity || 0;
+      const outOfStock = p.stock <= 0;
+      const imgHtml = p.imageUrl
+        ? `<img src="${p.imageUrl}" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;margin-bottom:10px;" loading="lazy" onerror="this.style.display='none'">`
+        : '';
+      return `
+        <div class="product-card${outOfStock ? ' out-of-stock' : ''}"
+             onclick="${outOfStock ? '' : `addToCart('${p.id}','${escHtml(p.name)}',${p.price},${p.stock})`}"
+             data-id="${p.id}">
+          ${inCart > 0 ? `<div class="qty-badge">${inCart}</div>` : ''}
+          ${imgHtml}
+          <div>
+            <div class="product-name">${escHtml(p.name)}</div>
+            <div class="product-category">${escHtml(p.category || 'ทั่วไป')}</div>
+          </div>
+          <div>
+            <div class="product-price">฿${Number(p.price).toFixed(2)}</div>
+            <div class="product-stock${p.stock <= 5 ? ' low' : ''}">
+              ${outOfStock ? '❌ หมด' : `📦 เหลือ ${p.stock}`}
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Cart logic ──
+  function addToCart(id, name, price, stock) {
+    if (cart[id]) {
+      if (cart[id].quantity >= stock) return;
+      cart[id].quantity++;
+    } else {
+      cart[id] = { id, name, price, stock, quantity: 1 };
+    }
+    updateUI();
+  }
+
+  function changeQty(id, delta) {
+    if (!cart[id]) return;
+    cart[id].quantity += delta;
+    if (cart[id].quantity <= 0) delete cart[id];
+    updateUI();
+  }
+
+  function updateUI() {
+    const items = Object.values(cart);
+    const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
+    const count = items.reduce((s, i) => s + i.quantity, 0);
+
+    document.getElementById('cartCount').textContent = count;
+    document.getElementById('cartTotal').textContent = `฿${total.toFixed(2)}`;
+    document.getElementById('modalTotal').textContent = `฿${total.toFixed(2)}`;
+    document.getElementById('checkoutBtn').disabled = items.length === 0;
+
+    // Re-render cart items
+    const cartEl = document.getElementById('cartItems');
+    if (!items.length) {
+      cartEl.innerHTML = '<div class="empty-cart">ยังไม่มีสินค้าในตะกร้า</div>';
+    } else {
+      cartEl.innerHTML = items.map(item => `
+        <div class="cart-item">
+          <div>
+            <div class="cart-item-name">${escHtml(item.name)}</div>
+            <div class="cart-item-price">฿${item.price.toFixed(2)} × ${item.quantity} = ฿${(item.price * item.quantity).toFixed(2)}</div>
+          </div>
+          <div class="qty-controls">
+            <button class="qty-btn" onclick="changeQty('${item.id}',-1)">−</button>
+            <span class="qty-num">${item.quantity}</span>
+            <button class="qty-btn" onclick="changeQty('${item.id}',1)">+</button>
+          </div>
+        </div>`).join('');
+    }
+
+    // อัพเดต badge บนการ์ดสินค้า
+    document.querySelectorAll('.product-card').forEach(card => {
+      const id = card.dataset.id;
+      const qty = cart[id]?.quantity || 0;
+      const existing = card.querySelector('.qty-badge');
+      if (qty > 0) {
+        if (existing) existing.textContent = qty;
+        else {
+          const badge = document.createElement('div');
+          badge.className = 'qty-badge';
+          badge.textContent = qty;
+          card.appendChild(badge);
+        }
+      } else if (existing) {
+        existing.remove();
+      }
+    });
+  }
+
+  function openCart() {
+    document.getElementById('cartDrawer').classList.add('open');
+    document.getElementById('cartOverlay').classList.add('open');
+  }
+  function closeCart() {
+    document.getElementById('cartDrawer').classList.remove('open');
+    document.getElementById('cartOverlay').classList.remove('open');
+  }
+  function openModal() {
+    closeCart();
+    document.getElementById('modalOverlay').classList.add('open');
+  }
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('open');
+  }
+
+  // ── Submit order ──
+  async function submitOrder() {
+    const name = document.getElementById('customerName').value.trim();
+    const phone = document.getElementById('customerPhone').value.trim();
+    if (!name) { alert('กรุณากรอกชื่อ'); return; }
+    if (!phone) { alert('กรุณากรอกเบอร์โทร'); return; }
+
+    const items = Object.values(cart).map(i => ({
+      productId: i.id,
+      productName: i.name,
+      price: i.price,
+      quantity: i.quantity,
+    }));
+
+    const payBtn = document.getElementById('payBtn');
+    payBtn.disabled = true;
+    payBtn.innerHTML = '<span class="spinner"></span>กำลังดำเนินการ...';
+
+    try {
+      const res = await fetch('/api/createOrderCheckout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shopId, customerName: name, customerPhone: phone, items }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert('เกิดข้อผิดพลาด: ' + (data.error || 'กรุณาลองใหม่'));
+        payBtn.disabled = false;
+        payBtn.textContent = 'ชำระเงิน';
+      }
+    } catch {
+      alert('เชื่อมต่อไม่ได้ กรุณาลองใหม่');
+      payBtn.disabled = false;
+      payBtn.textContent = 'ชำระเงิน';
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Pokpok — Logo Concepts</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --ruby: #be123c;
+      --ruby-dark: #9f1239;
+      --slate: #1e293b;
+      --cream: #fffbf7;
+      --ink: #1a1212;
+      --gray: #6b7280;
+      --border: #e8ddd4;
+    }
+    body { font-family: 'Sarabun', sans-serif; background: #f5f5f5; color: var(--ink); padding: 40px 5%; }
+    h1 { font-size: 1.1rem; font-weight: 600; color: var(--gray); margin-bottom: 8px; letter-spacing: .5px; text-transform: uppercase; }
+    p.desc { font-size: .9rem; color: var(--gray); margin-bottom: 48px; }
+
+    .concept { margin-bottom: 72px; }
+    .concept-label {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: .72rem; font-weight: 700; color: var(--gray);
+      text-transform: uppercase; letter-spacing: .8px;
+      margin-bottom: 20px;
+    }
+    .concept-label span {
+      background: var(--ruby); color: white; width: 22px; height: 22px;
+      border-radius: 6px; display: flex; align-items: center; justify-content: center;
+      font-size: .75rem;
+    }
+    .concept-title { font-size: 1.3rem; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+    .concept-desc { font-size: .875rem; color: var(--gray); margin-bottom: 28px; max-width: 480px; line-height: 1.7; }
+
+    .previews { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+    .preview-box {
+      border-radius: 16px; padding: 40px 32px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 24px; min-height: 200px;
+    }
+    .preview-box.light { background: var(--cream); border: 1px solid var(--border); }
+    .preview-box.dark { background: var(--slate); }
+    .preview-box.ruby { background: var(--ruby); }
+    .preview-label { font-size: .7rem; color: var(--gray); text-transform: uppercase; letter-spacing: .6px; margin-top: 8px; }
+    .preview-box.dark .preview-label { color: #64748b; }
+    .preview-box.ruby .preview-label { color: rgba(255,255,255,.6); }
+
+    .divider { border: none; border-top: 1px solid #e5e7eb; margin: 72px 0; }
+
+    /* ── LOGO A: LETTERMARK ── */
+    .logo-a-mark {
+      width: 52px; height: 52px; border-radius: 14px; background: var(--ruby);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .logo-a-mark.inv { background: white; }
+    .logo-a-mark.outline { background: transparent; border: 2px solid var(--ruby); }
+    .logo-a-full { display: flex; align-items: center; gap: 12px; }
+    .logo-a-name {
+      font-family: 'Inter', sans-serif; font-size: 1.3rem; font-weight: 800;
+      color: var(--ink); letter-spacing: -.3px;
+    }
+    .logo-a-name.white { color: white; }
+    .logo-a-name.ruby { color: var(--ruby); }
+
+    /* ── LOGO B: WORDMARK ── */
+    .logo-b {
+      font-family: 'Inter', sans-serif; font-size: 1.8rem; font-weight: 900;
+      letter-spacing: -.5px; line-height: 1;
+    }
+    .logo-b .pok1 { color: var(--ruby); }
+    .logo-b .sep { color: var(--ruby); margin: 0 1px; font-size: 1.2rem; vertical-align: middle; }
+    .logo-b .pok2 { color: var(--ink); }
+    .logo-b.all-ruby .pok2 { color: var(--ruby); }
+    .logo-b.on-dark .pok2 { color: white; }
+    .logo-b.on-dark .pok1 { color: #fda4af; }
+    .logo-b.on-ruby .pok1 { color: white; font-weight: 900; }
+    .logo-b.on-ruby .sep { color: rgba(255,255,255,.5); }
+    .logo-b.on-ruby .pok2 { color: rgba(255,255,255,.75); }
+    .logo-b-sub {
+      font-family: 'Inter', sans-serif; font-size: .65rem; font-weight: 600;
+      letter-spacing: 2px; text-transform: uppercase; color: var(--gray); margin-top: 4px; text-align: center;
+    }
+    .logo-b-sub.white { color: rgba(255,255,255,.5); }
+
+    /* ── LOGO C: SYMBOL ── */
+    .logo-c-mark { display: flex; align-items: flex-end; gap: 5px; }
+    .logo-c-block {
+      border-radius: 10px; background: var(--ruby);
+    }
+    .logo-c-block.b1 { width: 22px; height: 38px; }
+    .logo-c-block.b2 { width: 22px; height: 26px; }
+    .logo-c-block.inv { background: white; }
+    .logo-c-block.semi { background: rgba(255,255,255,.5); }
+    .logo-c-full { display: flex; align-items: center; gap: 12px; }
+    .logo-c-name {
+      font-family: 'Inter', sans-serif; font-size: 1.3rem; font-weight: 800;
+      color: var(--ink); letter-spacing: -.2px;
+    }
+    .logo-c-name .dot { color: var(--ruby); }
+    .logo-c-name.white { color: white; }
+    .logo-c-name.white .dot { color: #fda4af; }
+    .logo-c-name.on-ruby { color: white; }
+    .logo-c-name.on-ruby .dot { color: rgba(255,255,255,.5); }
+
+    /* SIZE DEMOS */
+    .size-row { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; margin-top: 20px; padding: 24px 28px; background: white; border-radius: 12px; border: 1px solid var(--border); }
+    .size-label { font-size: .72rem; color: var(--gray); text-align: center; margin-top: 6px; }
+  </style>
+</head>
+<body>
+
+<h1>Logo Concepts</h1>
+<p class="desc">Pokpok — ระบบ POS สำหรับร้านค้าไทย · 3 แนวทาง</p>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- LOGO A: LETTERMARK                      -->
+<!-- ═══════════════════════════════════════ -->
+<div class="concept">
+  <div class="concept-label"><span>A</span> ตัวเลือกที่ 1</div>
+  <div class="concept-title">Lettermark — P</div>
+  <div class="concept-desc">ตัว "P" ในกรอบสี่เหลี่ยมสีแดง เรียบง่าย จำง่าย ใช้ได้ทุกขนาด ตั้งแต่ favicon จนถึง signboard ดูมืออาชีพและสากล</div>
+
+  <div class="previews">
+    <!-- Light -->
+    <div class="preview-box light">
+      <div class="logo-a-full">
+        <div class="logo-a-mark">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <text x="5" y="22" font-family="Inter,Arial,sans-serif" font-size="22" font-weight="900" fill="white">P</text>
+          </svg>
+        </div>
+        <span class="logo-a-name">Pokpok</span>
+      </div>
+      <span class="preview-label">Background สว่าง</span>
+    </div>
+    <!-- Dark -->
+    <div class="preview-box dark">
+      <div class="logo-a-full">
+        <div class="logo-a-mark">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <text x="5" y="22" font-family="Inter,Arial,sans-serif" font-size="22" font-weight="900" fill="white">P</text>
+          </svg>
+        </div>
+        <span class="logo-a-name white">Pokpok</span>
+      </div>
+      <span class="preview-label">Background มืด</span>
+    </div>
+    <!-- Ruby -->
+    <div class="preview-box ruby">
+      <div class="logo-a-full">
+        <div class="logo-a-mark inv">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <text x="5" y="22" font-family="Inter,Arial,sans-serif" font-size="22" font-weight="900" fill="#be123c">P</text>
+          </svg>
+        </div>
+        <span class="logo-a-name white">Pokpok</span>
+      </div>
+      <span class="preview-label">Background แดง</span>
+    </div>
+  </div>
+
+  <!-- Size demo -->
+  <div class="size-row">
+    <div style="text-align:center">
+      <div class="logo-a-full" style="gap:6px;">
+        <div class="logo-a-mark" style="width:24px;height:24px;border-radius:6px;">
+          <svg width="14" height="14" viewBox="0 0 28 28"><text x="5" y="22" font-family="Inter,Arial,sans-serif" font-size="22" font-weight="900" fill="white">P</text></svg>
+        </div>
+        <span style="font-family:'Inter',sans-serif;font-size:.75rem;font-weight:800;">Pokpok</span>
+      </div>
+      <div class="size-label">เล็ก (navbar)</div>
+    </div>
+    <div style="text-align:center">
+      <div class="logo-a-full">
+        <div class="logo-a-mark">
+          <svg width="28" height="28" viewBox="0 0 28 28"><text x="5" y="22" font-family="Inter,Arial,sans-serif" font-size="22" font-weight="900" fill="white">P</text></svg>
+        </div>
+        <span class="logo-a-name">Pokpok</span>
+      </div>
+      <div class="size-label">กลาง</div>
+    </div>
+    <div style="text-align:center">
+      <div class="logo-a-full" style="gap:16px;">
+        <div class="logo-a-mark" style="width:72px;height:72px;border-radius:20px;">
+          <svg width="40" height="40" viewBox="0 0 28 28"><text x="5" y="22" font-family="Inter,Arial,sans-serif" font-size="22" font-weight="900" fill="white">P</text></svg>
+        </div>
+        <span style="font-family:'Inter',sans-serif;font-size:1.8rem;font-weight:800;letter-spacing:-.3px;">Pokpok</span>
+      </div>
+      <div class="size-label">ใหญ่</div>
+    </div>
+    <div style="text-align:center">
+      <div class="logo-a-mark" style="width:40px;height:40px;border-radius:10px;">
+        <svg width="22" height="22" viewBox="0 0 28 28"><text x="5" y="22" font-family="Inter,Arial,sans-serif" font-size="22" font-weight="900" fill="white">P</text></svg>
+      </div>
+      <div class="size-label">Icon only (app)</div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- LOGO B: WORDMARK                        -->
+<!-- ═══════════════════════════════════════ -->
+<div class="concept">
+  <div class="concept-label"><span>B</span> ตัวเลือกที่ 2</div>
+  <div class="concept-title">Wordmark — pokpok</div>
+  <div class="concept-desc">ชื่อแบรนด์เป็นโลโก้ "pok·pok" โดยตรง จุดกลางแบ่ง 2 พยางค์ให้เห็น rhythm ชัดเจน สีแดงใน "pok" แรก สะท้อนความเป็น brand ที่มีชีวิต</div>
+
+  <div class="previews">
+    <div class="preview-box light">
+      <div>
+        <div class="logo-b">
+          <span class="pok1">pok</span><span class="sep">·</span><span class="pok2">pok</span>
+        </div>
+        <div class="logo-b-sub">POS SYSTEM</div>
+      </div>
+      <span class="preview-label">Background สว่าง</span>
+    </div>
+    <div class="preview-box dark">
+      <div>
+        <div class="logo-b on-dark">
+          <span class="pok1">pok</span><span class="sep">·</span><span class="pok2">pok</span>
+        </div>
+        <div class="logo-b-sub white">POS SYSTEM</div>
+      </div>
+      <span class="preview-label">Background มืด</span>
+    </div>
+    <div class="preview-box ruby">
+      <div>
+        <div class="logo-b on-ruby">
+          <span class="pok1">pok</span><span class="sep">·</span><span class="pok2">pok</span>
+        </div>
+        <div class="logo-b-sub white">POS SYSTEM</div>
+      </div>
+      <span class="preview-label">Background แดง</span>
+    </div>
+  </div>
+
+  <div class="size-row">
+    <div style="text-align:center">
+      <div class="logo-b" style="font-size:.95rem;">
+        <span class="pok1">pok</span><span class="sep">·</span><span class="pok2">pok</span>
+      </div>
+      <div class="size-label">เล็ก (navbar)</div>
+    </div>
+    <div style="text-align:center">
+      <div class="logo-b">
+        <span class="pok1">pok</span><span class="sep">·</span><span class="pok2">pok</span>
+      </div>
+      <div class="size-label">กลาง</div>
+    </div>
+    <div style="text-align:center">
+      <div class="logo-b" style="font-size:3rem;">
+        <span class="pok1">pok</span><span class="sep">·</span><span class="pok2">pok</span>
+      </div>
+      <div class="size-label">ใหญ่</div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- LOGO C: SYMBOL                          -->
+<!-- ═══════════════════════════════════════ -->
+<div class="concept">
+  <div class="concept-label"><span>C</span> ตัวเลือกที่ 3</div>
+  <div class="concept-title">Symbol — จังหวะเสียง</div>
+  <div class="concept-desc">สองแท่งสูงต่างกัน สื่อถึงจังหวะ "ป๊อก-ป๊อก" โดยตรง แท่งแรกสูง (เสียงหนัก) แท่งสองต่ำกว่า (เสียงเบา) เป็น symbol ที่มีเรื่องเล่าและเป็นเอกลักษณ์</div>
+
+  <div class="previews">
+    <div class="preview-box light">
+      <div class="logo-c-full">
+        <div class="logo-c-mark">
+          <div class="logo-c-block b1"></div>
+          <div class="logo-c-block b2"></div>
+        </div>
+        <span class="logo-c-name">Pok<span class="dot">·</span>pok</span>
+      </div>
+      <span class="preview-label">Background สว่าง</span>
+    </div>
+    <div class="preview-box dark">
+      <div class="logo-c-full">
+        <div class="logo-c-mark">
+          <div class="logo-c-block b1 inv"></div>
+          <div class="logo-c-block b2 inv" style="opacity:.6"></div>
+        </div>
+        <span class="logo-c-name white">Pok<span class="dot" style="color:#fda4af;">·</span>pok</span>
+      </div>
+      <span class="preview-label">Background มืด</span>
+    </div>
+    <div class="preview-box ruby">
+      <div class="logo-c-full">
+        <div class="logo-c-mark">
+          <div class="logo-c-block b1 inv"></div>
+          <div class="logo-c-block b2 semi"></div>
+        </div>
+        <span class="logo-c-name on-ruby">Pok<span class="dot">·</span>pok</span>
+      </div>
+      <span class="preview-label">Background แดง</span>
+    </div>
+  </div>
+
+  <div class="size-row">
+    <div style="text-align:center">
+      <div class="logo-c-full" style="gap:7px;">
+        <div class="logo-c-mark" style="gap:3px;">
+          <div class="logo-c-block b1" style="width:11px;height:19px;border-radius:4px;"></div>
+          <div class="logo-c-block b2" style="width:11px;height:13px;border-radius:4px;"></div>
+        </div>
+        <span style="font-family:'Inter',sans-serif;font-size:.8rem;font-weight:800;">Pok<span style="color:var(--ruby);">·</span>pok</span>
+      </div>
+      <div class="size-label">เล็ก (navbar)</div>
+    </div>
+    <div style="text-align:center">
+      <div class="logo-c-full">
+        <div class="logo-c-mark">
+          <div class="logo-c-block b1"></div>
+          <div class="logo-c-block b2"></div>
+        </div>
+        <span class="logo-c-name">Pok<span class="dot">·</span>pok</span>
+      </div>
+      <div class="size-label">กลาง</div>
+    </div>
+    <div style="text-align:center">
+      <div class="logo-c-full" style="gap:18px;">
+        <div class="logo-c-mark" style="gap:8px;">
+          <div class="logo-c-block b1" style="width:32px;height:56px;border-radius:14px;"></div>
+          <div class="logo-c-block b2" style="width:32px;height:38px;border-radius:14px;"></div>
+        </div>
+        <span style="font-family:'Inter',sans-serif;font-size:2rem;font-weight:800;letter-spacing:-.3px;">Pok<span style="color:var(--ruby);">·</span>pok</span>
+      </div>
+      <div class="size-label">ใหญ่</div>
+    </div>
+    <div style="text-align:center">
+      <div style="background:var(--ruby);border-radius:12px;padding:10px;display:inline-flex;align-items:flex-end;gap:5px;">
+        <div style="width:14px;height:24px;border-radius:5px;background:white;"></div>
+        <div style="width:14px;height:16px;border-radius:5px;background:rgba(255,255,255,.6);"></div>
+      </div>
+      <div class="size-label">Icon only (app)</div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<div style="background:white;border:1px solid var(--border);border-radius:16px;padding:28px;max-width:600px;">
+  <p style="font-size:.85rem;font-weight:700;color:var(--ink);margin-bottom:12px;">สรุปความเหมาะสม</p>
+  <div style="display:flex;flex-direction:column;gap:10px;">
+    <div style="font-size:.85rem;color:var(--gray);line-height:1.65;"><strong style="color:var(--ink);">A — Lettermark:</strong> ง่าย ใช้งานได้ทุกที่ เหมาะถ้าอยากให้ดูเป็น SaaS / Tech</div>
+    <div style="font-size:.85rem;color:var(--gray);line-height:1.65;"><strong style="color:var(--ink);">B — Wordmark:</strong> ชื่อแบรนด์เป็นโลโก้เลย เหมาะถ้าอยากให้คนจำชื่อได้เร็ว</div>
+    <div style="font-size:.85rem;color:var(--gray);line-height:1.65;"><strong style="color:var(--ink);">C — Symbol:</strong> มีเรื่องเล่า โดดเด่น เหมาะถ้าอยากให้ brand มีบุคลิกชัดเจนที่สุด</div>
+  </div>
+</div>
+
+</body>
+</html>

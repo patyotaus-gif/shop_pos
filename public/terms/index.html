@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ข้อกำหนดการใช้งาน — Pokpok</title>
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <style>
+    /* ── MODERN DESIGN SYSTEM PROPERTIES ── */
+    :root {
+      --primary: #be123c;       /* Rose 700 - เอกลักษณ์แบรนด์ Pokpok */
+      --primary-hover: #9f1239; /* Rose 800 */
+      --bg-main: #f8fafc;       /* Slate 50 - สีพื้นหลังนุ่มนวล สบายตากว่าเดิม */
+      --text-main: #1e293b;     /* Slate 800 */
+      --text-muted: #64748b;    /* Slate 500 */
+      --border-color: #e2e8f0;  /* Slate 200 */
+      --radius-lg: 16px;
+      --shadow-document: 0 4px 24px -4px rgba(15, 23, 42, 0.04), 0 2px 12px -2px rgba(15, 23, 42, 0.02);
+      --transition: all 0.2s ease;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+      background: var(--bg-main); 
+      color: var(--text-main);
+      line-height: 1.8;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── PREMIUM HEADER ── */
+    header { 
+      background: linear-gradient(135deg, #be123c 0%, #881337 100%); /* ไล่เฉดสีแดงทับทิมหรูหรา */
+      color: white; 
+      padding: 32px 24px;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(136, 19, 55, 0.08);
+    }
+    header h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.025em; }
+    header p { font-size: 14px; opacity: 0.85; margin-top: 6px; font-weight: 500; }
+
+    /* ── CONTAINER & DOCUMENT CONTAINER ── */
+    .container { 
+      max-width: 800px; 
+      margin: -20px auto 80px; /* ยกระดับตัวการ์ดขึ้นไปเกยขอบ Header เล็กน้อย */
+      padding: 0 20px;
+    }
+    
+    .document-card {
+      background: white;
+      border-radius: var(--radius-lg);
+      padding: 40px 32px;
+      box-shadow: var(--shadow-document);
+      border: 1px solid rgba(226, 232, 240, 0.6);
+    }
+
+    .updated { 
+      font-size: 13px; 
+      color: var(--text-muted); 
+      margin-bottom: 24px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .updated::before {
+      content: "•";
+      color: var(--primary);
+      font-size: 18px;
+    }
+
+    /* ── TYPOGRAPHY ELEMENTS ── */
+    h2 { 
+      font-size: 18px; 
+      font-weight: 700; 
+      color: #0f172a; 
+      margin: 40px 0 16px; 
+      padding-left: 12px;
+      border-left: 4px solid var(--primary); /* เส้นขอบหน้านำสายตาสีแดงสุดโมเดิร์น */
+      letter-spacing: -0.01em;
+    }
+    h2:first-of-type { margin-top: 10px; }
+    
+    p, li { font-size: 15px; color: #334155; }
+    p { margin-bottom: 12px; }
+    
+    ul { padding-left: 24px; margin-top: 12px; margin-bottom: 20px; }
+    li { margin-bottom: 10px; } /* ขยายระยะห่างระหว่างลิสต์ให้อ่านง่าย ไม่เบียดกัน */
+    li strong { color: #0f172a; }
+    
+    /* ── INTERACTIVE LINKS ── */
+    a { 
+      color: var(--primary); 
+      text-decoration: none;
+      font-weight: 600;
+      border-bottom: 1px dashed var(--primary);
+      transition: var(--transition);
+      padding-bottom: 1px;
+    }
+    a:hover { 
+      color: var(--primary-hover); 
+      border-bottom-style: solid;
+    }
+
+    /* ── RESPONSIVE PADDING ── */
+    @media (max-width: 640px) {
+      header { padding: 28px 20px; }
+      header h1 { font-size: 20px; }
+      .document-card { padding: 28px 20px; }
+      h2 { font-size: 17px; }
+      p, li { font-size: 14.5px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>ข้อกำหนดการใช้งาน</h1>
+  <p>Pokpok — ระบบจัดการร้านค้า</p>
+</header>
+
+<div class="container">
+  <div class="document-card">
+    <p class="updated">อัปเดตล่าสุด: 30 เมษายน 2026</p>
+
+    <h2>1. การยอมรับข้อกำหนด</h2>
+    <p>การใช้งานแอปพลิเคชัน Pokpok ถือว่าคุณยอมรับข้อกำหนดการใช้งานฉบับนี้ทุกประการ</p>
+
+    <h2>2. บริการที่ให้</h2>
+    <p>Pokpok ให้บริการซอฟต์แวร์ระบบขายหน้าร้าน (POS) สำหรับร้านค้าปลีกขนาดเล็ก ในรูปแบบ SaaS รายเดือน/รายปี ครอบคลุม:</p>
+    <ul>
+      <li>การจัดการสินค้าและสต็อก</li>
+      <li>ระบบขายหน้าร้านและรายงาน</li>
+      <li>ระบบรับออเดอร์ออนไลน์</li>
+      <li>การจัดการลูกหนี้</li>
+    </ul>
+
+    <h2>3. บัญชีผู้ใช้</h2>
+    <ul>
+      <li>คุณต้องให้ข้อมูลที่ถูกต้องในการสมัครใช้งาน</li>
+      <li>คุณรับผิดชอบต่อความปลอดภัยของรหัสผ่านและกิจกรรมทั้งหมดในบัญชีของคุณ</li>
+      <li>บัญชีหนึ่งบัญชีใช้สำหรับร้านค้าหนึ่งร้านเท่านั้น</li>
+    </ul>
+
+    <h2>4. การชำระเงินและ Subscription</h2>
+    <ul>
+      <li>ค่าบริการชำระผ่าน <strong>Stripe</strong> ล่วงหน้าตามแผนที่เลือก</li>
+      <li>ไม่มีการคืนเงินหลังจากชำระแล้ว ยกเว้นกรณีที่บริการไม่สามารถใช้งานได้เกิน 24 ชั่วโมง</li>
+      <li>ทดลองใช้ฟรี 14 วัน โดยไม่ต้องใส่ข้อมูลบัตรเครดิต</li>
+    </ul>
+
+    <h2>5. การใช้งานที่ต้องห้าม</h2>
+    <ul>
+      <li>ใช้บริการเพื่อกิจกรรมที่ผิดกฎหมาย</li>
+      <li>พยายามเข้าถึงข้อมูลของผู้ใช้รายอื่น</li>
+      <li>ใช้บริการในลักษณะที่อาจก่อให้เกิดความเสียหายต่อระบบ</li>
+    </ul>
+
+    <h2>6. การยุติบริการ</h2>
+    <p>เราสงวนสิทธิ์ระงับหรือยุติบัญชีที่ละเมิดข้อกำหนดนี้โดยไม่ต้องแจ้งล่วงหน้า</p>
+
+    <h2>7. ข้อจำกัดความรับผิด</h2>
+    <p>Pokpok ไม่รับผิดชอบต่อความเสียหายทางอ้อมที่เกิดจากการใช้หรือไม่สามารถใช้บริการได้ เราพยายามให้บริการอย่างต่อเนื่องแต่ไม่รับประกัน Uptime 100%</p>
+
+    <h2>8. การติดต่อ</h2>
+    <p>หากมีข้อสงสัยเกี่ยวกับข้อกำหนดนี้ ติดต่อได้ที่:<br>
+    <strong>พัฒน์ยศ จำนงศรี</strong><br>
+    <a href="mailto:patyotaus@gmail.com">patyotaus@gmail.com</a></p>
+  </div>
+</div>
+
+</body>
+</html>

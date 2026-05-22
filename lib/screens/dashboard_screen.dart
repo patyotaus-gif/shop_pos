@@ -12,8 +12,6 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final startOfDay = DateTime(now.year, now.month, now.day);
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -28,7 +26,7 @@ class DashboardScreen extends StatelessWidget {
           children: [
             // Today summary
             StreamBuilder<List<Sale>>(
-              stream: SaleService.watchByRange(startOfDay, now),
+              stream: SaleService.watchToday(),
               builder: (ctx, snap) {
                 final sales = snap.data ?? [];
                 final revenue = sales.fold<double>(0, (s, e) => s + e.total);
@@ -123,7 +121,7 @@ class DashboardScreen extends StatelessWidget {
 
             // Top selling today
             StreamBuilder<List<Sale>>(
-              stream: SaleService.watchByRange(startOfDay, now),
+              stream: SaleService.watchToday(),
               builder: (ctx, snap) {
                 final sales = snap.data ?? [];
                 if (sales.isEmpty) return const SizedBox.shrink();

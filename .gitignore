@@ -43,10 +43,28 @@ app.*.map.json
 /android/app/release
 
 # Firebase
-google-services.json
-GoogleService-Info.plist
-firebase_options.dart
+# (config files are not secret — they're shipped in the app bundle anyway,
+#  protected by Firebase Security Rules + SHA fingerprints)
 
 # Environment
 .env
 *.env
+
+# Codemagic
+.codemagic-cache/
+
+# Firebase CLI cache
+.firebase/
+
+# Node modules (functions)
+functions/node_modules/
+node_modules/
+
+# Accidentally vendored SDK / junk
+/flutter/
+header*.html
+icon_generator.html
+icon_512.html
+header_image.html
+hs_err_pid*.log
+*.iml

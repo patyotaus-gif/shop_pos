@@ -116,18 +116,28 @@ class _ProductTile extends StatelessWidget {
         subtitle: Text(
           '${product.category} · Barcode: ${product.barcode.isEmpty ? "-" : product.barcode}',
         ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text('฿${product.price.toStringAsFixed(2)}',
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-            Text(
-              'สต็อก ${product.stock}',
-              style: TextStyle(
-                color: product.isLowStock ? Colors.red : Colors.grey,
-                fontSize: 12,
-              ),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text('฿${product.price.toStringAsFixed(2)}',
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  'สต็อก ${product.stock}',
+                  style: TextStyle(
+                    color: product.isLowStock ? Colors.red : Colors.grey,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+            IconButton(
+              icon: const Icon(Icons.add_box_outlined),
+              tooltip: 'รับสินค้าเข้า',
+              onPressed: () => _showStockDialog(context),
             ),
           ],
         ),
@@ -135,7 +145,6 @@ class _ProductTile extends StatelessWidget {
           context,
           MaterialPageRoute(builder: (_) => ProductFormScreen(product: product)),
         ),
-        onLongPress: () => _showStockDialog(context),
       ),
     );
   }

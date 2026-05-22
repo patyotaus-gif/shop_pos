@@ -8,6 +8,8 @@ class Product {
   final int lowStockThreshold;
   final String category;
   final bool isPinned;
+  final String? imagePath;
+  final String? imageUrl;
 
   const Product({
     required this.id,
@@ -19,6 +21,8 @@ class Product {
     this.lowStockThreshold = 5,
     this.category = 'ทั่วไป',
     this.isPinned = false,
+    this.imagePath,
+    this.imageUrl,
   });
 
   bool get isLowStock => stock <= lowStockThreshold;
@@ -35,6 +39,8 @@ class Product {
         lowStockThreshold: data['lowStockThreshold'] ?? 5,
         category: data['category'] ?? 'ทั่วไป',
         isPinned: data['isPinned'] ?? false,
+        imagePath: data['imagePath'],
+        imageUrl: data['imageUrl'],
       );
 
   Map<String, dynamic> toFirestore() => {
@@ -46,6 +52,8 @@ class Product {
         'lowStockThreshold': lowStockThreshold,
         'category': category,
         'isPinned': isPinned,
+        if (imagePath != null) 'imagePath': imagePath,
+        if (imageUrl != null) 'imageUrl': imageUrl,
       };
 
   Product copyWith({
@@ -57,6 +65,8 @@ class Product {
     int? lowStockThreshold,
     String? category,
     bool? isPinned,
+    String? imagePath,
+    String? imageUrl,
   }) =>
       Product(
         id: id,
@@ -68,5 +78,7 @@ class Product {
         lowStockThreshold: lowStockThreshold ?? this.lowStockThreshold,
         category: category ?? this.category,
         isPinned: isPinned ?? this.isPinned,
+        imagePath: imagePath ?? this.imagePath,
+        imageUrl: imageUrl ?? this.imageUrl,
       );
 }
