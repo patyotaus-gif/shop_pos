@@ -28,9 +28,10 @@ workflows:
     integrations:
       app_store_connect: pokpok-asc
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: app.pokpok.pos
+      # Skipping environment.ios_signing — Codemagic's preflight check
+      # fails fast if it can't find a matching profile, never giving our
+      # fetch-signing-files --create script a chance to run. Manage
+      # signing entirely through the scripts below instead.
       vars:
         BUNDLE_ID: "app.pokpok.pos"
         APP_STORE_APP_ID: 6772182588
