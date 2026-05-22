@@ -49,11 +49,32 @@ workflows:
       - name: Initialize keychain
         script: |
           keychain initialize
+      - name: Prepare certificate private key
+        script: |
+          # On first run there is no existing cert yet, so the CLI needs a
+          # private key to create one. Use CERTIFICATE_PRIVATE_KEY from
+          # Codemagic env vars if present (recommended after the first
+          # successful build), otherwise generate one on the fly.
+          if [ -n "$CERTIFICATE_PRIVATE_KEY" ]; then
+            echo "$CERTIFICATE_PRIVATE_KEY" > /tmp/cert_key.pem
+            echo "Using CERTIFICATE_PRIVATE_KEY from env"
+          else
+            openssl genrsa -out /tmp/cert_key.pem 2048
+            echo "Generated a fresh 2048-bit RSA private key"
+            echo "After this build, save the key from the build artifacts"
+            echo "into Codemagic env var CERTIFICATE_PRIVATE_KEY (secret)"
+            echo "so subsequent builds reuse the same Apple Distribution cert."
+          fi
       - name: Fetch signing files (auto-create cert + profile if missing)
         script: |
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
+            --certificate-key-path /tmp/cert_key.pem \
             --create
+      - name: Archive the cert private key (for first-run capture)
+        script: |
+          mkdir -p $CM_BUILD_DIR/ios/signing
+          cp /tmp/cert_key.pem $CM_BUILD_DIR/ios/signing/cert_key.pem
       - name: Add certs to keychain
         script: |
           keychain add-certificates
@@ -75,6 +96,7 @@ workflows:
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
+      - ios/signing/cert_key.pem
     publishing:
       app_store_connect:
         auth: integration
