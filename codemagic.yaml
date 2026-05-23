@@ -41,10 +41,13 @@ workflows:
     scripts:
       - name: Set build number
         script: |
-          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APP_ID" || echo 0)
+          # get-latest-build-number covers both TestFlight and App Store,
+          # so we don't reuse a build number that's already in TestFlight
+          # but not yet promoted to App Store.
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-build-number "$APP_STORE_APP_ID" || echo 0)
           cd $CM_BUILD_DIR
           BUILD_NUMBER=$(($LATEST_BUILD_NUMBER + 1))
-          echo "Using build number $BUILD_NUMBER"
+          echo "Latest existing build: $LATEST_BUILD_NUMBER → using $BUILD_NUMBER"
           echo "BUILD_NUMBER=$BUILD_NUMBER" >> $CM_ENV
       - name: Initialize keychain
         script: |
