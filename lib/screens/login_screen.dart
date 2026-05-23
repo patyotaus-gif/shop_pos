@@ -42,6 +42,57 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _forgotPassword() async {
+    final emailCtrl = TextEditingController(text: _emailCtrl.text.trim());
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('รีเซ็ตรหัสผ่าน'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'กรอกอีเมลที่สมัครไว้ ระบบจะส่งลิงก์รีเซ็ตรหัสผ่านไปทางอีเมล',
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: emailCtrl,
+              keyboardType: TextInputType.emailAddress,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'อีเมล',
+                prefixIcon: Icon(Icons.email_outlined),
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('ยกเลิก'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, emailCtrl.text.trim()),
+            child: const Text('ส่งลิงก์'),
+          ),
+        ],
+      ),
+    );
+    if (result == null || result.isEmpty) return;
+    final error = await AuthService.sendPasswordReset(result);
+    if (!mounted) return;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(error ??
+            'ส่งลิงก์ไปที่ $result แล้ว — เช็คอีเมล (รวม spam folder)'),
+        backgroundColor: error != null ? Colors.red : Colors.green,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -143,7 +194,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           : const Text('เข้าสู่ระบบ'),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _loading ? null : _forgotPassword,
+                      child: const Text('ลืมรหัสผ่าน?'),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

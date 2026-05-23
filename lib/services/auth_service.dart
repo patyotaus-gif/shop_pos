@@ -42,4 +42,17 @@ class AuthService {
   }
 
   static Future<void> signOut() => _auth.signOut();
+
+  static Future<String?> sendPasswordReset(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email.trim());
+      return null;
+    } on FirebaseAuthException catch (e) {
+      return switch (e.code) {
+        'user-not-found' => 'ไม่พบบัญชีที่ใช้อีเมลนี้',
+        'invalid-email' => 'รูปแบบอีเมลไม่ถูกต้อง',
+        _ => 'เกิดข้อผิดพลาด: ${e.message}',
+      };
+    }
+  }
 }
