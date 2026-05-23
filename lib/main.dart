@@ -23,14 +23,79 @@ final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.system);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('th_TH', null);
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await NotificationService.init();
-  const groqKey = String.fromEnvironment('GROQ_API_KEY');
-  if (groqKey.isNotEmpty) {
-    GroqService.setApiKey(groqKey);
+
+  // Render the splash immediately so we know the Flutter engine booted —
+  // a frozen white screen on iOS first launch usually means main() is
+  // blocked on an await before runApp ever runs.
+  runApp(const _BootingApp());
+
+  try {
+    await initializeDateFormatting('th_TH', null);
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)
+        .timeout(const Duration(seconds: 15));
+    await NotificationService.init().timeout(const Duration(seconds: 10));
+    const groqKey = String.fromEnvironment('GROQ_API_KEY');
+    if (groqKey.isNotEmpty) {
+      GroqService.setApiKey(groqKey);
+    }
+    runApp(const ShopPosApp());
+  } catch (e, st) {
+    runApp(_BootErrorApp(message: '$e', stack: '$st'));
   }
-  runApp(const ShopPosApp());
+}
+
+class _BootingApp extends StatelessWidget {
+  const _BootingApp();
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: _PokpokSplash(),
+    );
+  }
+}
+
+class _BootErrorApp extends StatelessWidget {
+  const _BootErrorApp({required this.message, required this.stack});
+  final String message;
+  final String stack;
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: const Color(0xFFFFFBF7),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Pokpok POS — startup failed',
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFBE123C)),
+                ),
+                const SizedBox(height: 12),
+                SelectableText(message),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: SelectableText(
+                      stack,
+                      style: const TextStyle(fontSize: 11, fontFamily: 'Courier'),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class ShopPosApp extends StatelessWidget {
