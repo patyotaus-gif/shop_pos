@@ -203,13 +203,37 @@ class _OrderCard extends StatelessWidget {
               children: [
                 Text(_dt.format(order.createdAt),
                     style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                Text('฿${_baht.format(order.total)}',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 15)),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (order.status == OrderStatus.pendingPayment &&
+                        order.finalAmount != order.total)
+                      Text(
+                        'ยอดที่ต้องโอน',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 11,
+                        ),
+                      ),
+                    Text(
+                      '฿${_baht.format(order.status == OrderStatus.pendingPayment ? order.finalAmount : order.total)}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: order.status == OrderStatus.pendingPayment
+                            ? Colors.orange.shade800
+                            : null,
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
             // Action buttons
-            if (order.status == OrderStatus.paid ||
+            if (order.status == OrderStatus.pendingPayment) ...[
+              const SizedBox(height: 10),
+              _PendingPaymentActions(order: order),
+            ] else if (order.status == OrderStatus.paid ||
                 order.status == OrderStatus.accepted ||
                 order.status == OrderStatus.ready) ...[
               const SizedBox(height: 10),
@@ -218,6 +242,88 @@ class _OrderCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _PendingPaymentActions extends StatelessWidget {
+  final ShopOrder order;
+  const _PendingPaymentActions({required this.order});
+
+  Future<void> _confirm(BuildContext context) async {
+    final refCtrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('ยืนยันรับเงินแล้ว?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'ตรวจ ${order.customerName} โอน ฿${order.finalAmount.toStringAsFixed(2)} '
+              'ในแอปธนาคารแล้วหรือยัง?',
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: refCtrl,
+              decoration: const InputDecoration(
+                labelText: 'เลขอ้างอิง (optional)',
+                hintText: 'เช่น เลข trans จาก slip',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('ยกเลิก'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text('ได้รับเงินแล้ว'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await OrderService.confirmPaid(
+      order.id,
+      paymentRef: refCtrl.text.trim().isEmpty ? null : refCtrl.text.trim(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        OutlinedButton(
+          onPressed: () =>
+              OrderService.updateStatus(order.id, OrderStatus.cancelled),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.red,
+            side: const BorderSide(color: Colors.red),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+          ),
+          child: const Text('ยกเลิก', style: TextStyle(fontSize: 13)),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: FilledButton.icon(
+            onPressed: () => _confirm(context),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.green,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+            ),
+            icon: const Icon(Icons.check, size: 18),
+            label: const Text('ได้รับเงินแล้ว', style: TextStyle(fontSize: 13)),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -48,7 +48,22 @@ class ShopOrder {
   final String customerName;
   final String customerPhone;
   final List<OrderItem> items;
+
+  /// Sum of [items] — what the cart says.
   final double total;
+
+  /// The amount the customer is actually instructed to transfer. May differ
+  /// from [total] by 1–99 satang so two parallel orders never collide on the
+  /// same banking notification (see PromptPayQR.uniqueAmountFor).
+  /// Falls back to [total] for legacy orders that didn't carry this field.
+  final double finalAmount;
+
+  /// 'promptpay' (default) or 'stripe' for legacy online orders.
+  final String paymentMethod;
+
+  /// Bank/SlipOK transaction reference once the order is marked paid.
+  final String? paymentRef;
+
   final OrderStatus status;
   final DateTime createdAt;
   final DateTime? paidAt;
@@ -59,10 +74,13 @@ class ShopOrder {
     required this.customerPhone,
     required this.items,
     required this.total,
+    double? finalAmount,
+    this.paymentMethod = 'promptpay',
+    this.paymentRef,
     required this.status,
     required this.createdAt,
     this.paidAt,
-  });
+  }) : finalAmount = finalAmount ?? total;
 
   factory ShopOrder.fromFirestore(Map<String, dynamic> data, String id) =>
       ShopOrder(
@@ -73,6 +91,9 @@ class ShopOrder {
             .map((e) => OrderItem.fromMap(e as Map<String, dynamic>))
             .toList(),
         total: (data['total'] ?? 0).toDouble(),
+        finalAmount: (data['finalAmount'] as num?)?.toDouble(),
+        paymentMethod: data['paymentMethod'] as String? ?? 'promptpay',
+        paymentRef: data['paymentRef'] as String?,
         status: OrderStatus.values.firstWhere(
           (e) => e.name == (data['status'] ?? 'pendingPayment'),
           orElse: () => OrderStatus.pendingPayment,

@@ -127,6 +127,90 @@ exports.createOrderCheckout = onRequest(
 );
 
 // ────────────────────────────────────────────────
+// Online order via PromptPay (no Stripe — money goes straight to shop)
+// ────────────────────────────────────────────────
+exports.createPromptPayOrder = onRequest(
+  { cors: true },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Method Not Allowed" });
+      return;
+    }
+
+    const { shopId, customerName, customerPhone, items } = req.body;
+    if (!shopId || !customerName || !customerPhone || !Array.isArray(items) || items.length === 0) {
+      res.status(400).json({ error: "ข้อมูลไม่ครบ" });
+      return;
+    }
+
+    const total = items.reduce((s, item) => s + item.price * item.quantity, 0);
+    if (total < 20) {
+      res.status(400).json({ error: "ยอดสั่งขั้นต่ำ ฿20" });
+      return;
+    }
+
+    // Look up the shop's PromptPay settings
+    const settingsSnap = await admin
+      .firestore()
+      .collection("shops").doc(shopId)
+      .collection("settings").doc("shop")
+      .get();
+    const settings = settingsSnap.data() || {};
+    const promptpayId = settings.promptpayId;
+    const promptpayName = settings.promptpayName || "";
+
+    if (!promptpayId) {
+      res.status(400).json({
+        error: "ร้านนี้ยังไม่ได้ตั้งค่า PromptPay กรุณาติดต่อร้านโดยตรง",
+      });
+      return;
+    }
+
+    // Create order doc first so its ID seeds the unique cents
+    const orderRef = admin
+      .firestore()
+      .collection("shops").doc(shopId)
+      .collection("orders").doc();
+
+    // Unique cents per order: 1..99 satang. The server computes this
+    // once and writes it to Firestore as finalAmount; both app and web
+    // just read that value back, so the cents derivation only needs to
+    // be deterministic per orderId — not identical across languages.
+    const cents = (hashString(orderRef.id) % 99) + 1;
+    const finalAmount = Math.round((total + cents / 100) * 100) / 100;
+
+    await orderRef.set({
+      customerName,
+      customerPhone,
+      items,
+      total,
+      finalAmount,
+      paymentMethod: "promptpay",
+      status: "pendingPayment",
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    res.json({
+      orderId: orderRef.id,
+      total,
+      finalAmount,
+      promptpayId,
+      promptpayName,
+    });
+  }
+);
+
+// Mirrors Dart's String.hashCode (DJB2-ish) closely enough for our use:
+// we only need the same orderId → same cents mapping on both clients.
+function hashString(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+// ────────────────────────────────────────────────
 // Stripe webhook
 // ────────────────────────────────────────────────
 exports.stripeWebhook = onRequest(

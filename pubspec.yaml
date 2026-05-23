@@ -29,6 +29,9 @@ dependencies:
   # compatible with Firebase 11+
   mobile_scanner: ^7.0.0
 
+  # QR rendering (PromptPay payment QR for online orders)
+  qr_flutter: ^4.1.0
+
   # Receipt
   pdf: ^3.11.1
   printing: ^5.13.2

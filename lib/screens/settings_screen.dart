@@ -17,10 +17,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _taxIdCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
   final _lineUserIdCtrl = TextEditingController();
+  final _promptpayIdCtrl = TextEditingController();
+  final _promptpayNameCtrl = TextEditingController();
   bool _lineNotifyEnabled = false;
   bool _loading = true;
   bool _saving = false;
   bool _savingLine = false;
+  bool _savingPromptpay = false;
 
   @override
   void initState() {
@@ -34,6 +37,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _taxIdCtrl.dispose();
     _addressCtrl.dispose();
     _lineUserIdCtrl.dispose();
+    _promptpayIdCtrl.dispose();
+    _promptpayNameCtrl.dispose();
     super.dispose();
   }
 
@@ -47,11 +52,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _addressCtrl.text = (data['address'] as String?) ?? '';
           _lineUserIdCtrl.text = (data['lineUserId'] as String?) ?? '';
           _lineNotifyEnabled = (data['lineNotifyEnabled'] as bool?) ?? false;
+          _promptpayIdCtrl.text = (data['promptpayId'] as String?) ?? '';
+          _promptpayNameCtrl.text = (data['promptpayName'] as String?) ?? '';
         });
       }
     } catch (_) {
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _savePromptPay() async {
+    final id = _promptpayIdCtrl.text.replaceAll(RegExp(r'[^\d]'), '');
+    if (id.isNotEmpty && id.length != 10 && id.length != 13 && id.length != 15) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'PromptPay ID ต้องเป็นเบอร์ 10 หลัก, บัตรประชาชน 13 หลัก, หรือ e-wallet 15 หลัก',
+          ),
+        ),
+      );
+      return;
+    }
+    setState(() => _savingPromptpay = true);
+    await SettingsService.savePromptPaySettings(
+      promptpayId: id,
+      promptpayName: _promptpayNameCtrl.text.trim(),
+    );
+    if (mounted) {
+      setState(() => _savingPromptpay = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('บันทึก PromptPay แล้ว')),
+      );
     }
   }
 
@@ -220,6 +252,67 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       themeNotifier.value =
                           val ? ThemeMode.dark : ThemeMode.light;
                     },
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+                const Divider(),
+                const SizedBox(height: 16),
+
+                // PromptPay payment section
+                Text('รับเงินออนไลน์ (PromptPay)',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleSmall
+                        ?.copyWith(color: cs.primary, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: cs.primaryContainer.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: cs.primary.withValues(alpha: 0.3)),
+                  ),
+                  child: const Text(
+                    'ลูกค้าที่สั่งของออนไลน์จะเห็น QR PromptPay พร้อมจำนวนเงิน (มีเศษ\nสตางค์ระบุออเดอร์)\nเงินจะเข้าบัญชีร้านโดยตรง — Pokpok ไม่หักค่าธรรมเนียม',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _promptpayIdCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'PromptPay ID',
+                    hintText: 'เบอร์โทร (เช่น 0812345678) หรือเลขบัตรประชาชน',
+                    prefixIcon: Icon(Icons.qr_code_2),
+                    border: OutlineInputBorder(),
+                    helperText: '10 หลัก (เบอร์), 13 หลัก (บัตรประชาชน), หรือ 15 หลัก (e-wallet)',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _promptpayNameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'ชื่อบัญชีผู้รับ',
+                    hintText: 'นาย ก ข',
+                    prefixIcon: Icon(Icons.account_balance_outlined),
+                    border: OutlineInputBorder(),
+                    helperText: 'แสดงในหน้าจ่ายเงินของลูกค้าเพื่อยืนยันความถูกต้อง',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _savingPromptpay ? null : _savePromptPay,
+                    icon: _savingPromptpay
+                        ? const SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.save_outlined),
+                    label: const Text('บันทึก PromptPay'),
                   ),
                 ),
 

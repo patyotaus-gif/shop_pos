@@ -52,4 +52,21 @@ class SettingsService {
     required bool enabled,
   }) =>
       saveSettings({'lineUserId': lineUserId, 'lineNotifyEnabled': enabled});
+
+  static Future<Map<String, String>> getPromptPaySettings() async {
+    final data = await getSettings();
+    return {
+      'promptpayId': data['promptpayId'] as String? ?? '',
+      'promptpayName': data['promptpayName'] as String? ?? '',
+    };
+  }
+
+  static Future<void> savePromptPaySettings({
+    required String promptpayId,
+    required String promptpayName,
+  }) =>
+      saveSettings({
+        'promptpayId': promptpayId,
+        'promptpayName': promptpayName,
+      });
 }

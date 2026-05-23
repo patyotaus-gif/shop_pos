@@ -32,6 +32,13 @@
           "functionId": "createOrderCheckout",
           "region": "asia-southeast1"
         }
+      },
+      {
+        "source": "/api/createPromptPayOrder",
+        "function": {
+          "functionId": "createPromptPayOrder",
+          "region": "asia-southeast1"
+        }
       }
     ]
   }
