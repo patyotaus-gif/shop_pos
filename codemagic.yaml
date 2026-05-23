@@ -32,6 +32,11 @@ workflows:
       # fails fast if it can't find a matching profile, never giving our
       # fetch-signing-files --create script a chance to run. Manage
       # signing entirely through the scripts below instead.
+      groups:
+        # Pulls in CERTIFICATE_PRIVATE_KEY (secret) so fetch-signing-files
+        # can reuse the existing Apple Distribution certificate instead
+        # of hitting Apple's 2-cert-per-account ceiling.
+        - shop_pos
       vars:
         BUNDLE_ID: "app.pokpok.pos"
         APP_STORE_APP_ID: 6772182588
