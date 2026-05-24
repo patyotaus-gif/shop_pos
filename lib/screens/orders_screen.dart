@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models/order.dart';
 import '../services/auth_service.dart';
@@ -77,7 +78,9 @@ class _ShareLinkButton extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed: () {
+                onPressed: () async {
+                  await Clipboard.setData(ClipboardData(text: link));
+                  if (!context.mounted) return;
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('คัดลอกลิงก์แล้ว')),
