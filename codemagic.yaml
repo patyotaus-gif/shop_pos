@@ -113,3 +113,23 @@ workflows:
         # To add an external group later, uncomment and create the group in TestFlight first:
         # beta_groups:
         #   - Internal Testing
+
+  android-apk:
+    name: Android Release APK (debug-signed)
+    instance_type: linux_x2
+    max_build_duration: 60
+    environment:
+      flutter: 3.41.7
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          flutter pub get
+      - name: Build release APK
+        # Uses the default debug keystore — fine for sideloading on the
+        # shop owner's own device. Replace with a release keystore + signing
+        # config when we publish to Play Store.
+        script: |
+          flutter build apk --release
+    artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk
+      - flutter_drive.log
