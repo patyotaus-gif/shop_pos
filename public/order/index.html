@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>สั่งสินค้าออนไลน์</title>
   <link rel="icon" type="image/png" href="/favicon.png" />
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <!-- Self-hosted qrcodejs (davidshimjs) — avoids CDN/CORB blocks -->
+  <script src="qrcode.min.js"></script>
   <style>
     /* ── MODERN DESIGN SYSTEM PROPERTIES ── */
     :root {
@@ -421,7 +422,7 @@
     <p class="pay-subtitle">เปิดแอปธนาคารแล้วสแกน QR ด้านล่าง</p>
 
     <div id="payQrBox">
-      <canvas id="payQrCanvas"></canvas>
+      <div id="payQrCanvas"></div>
     </div>
 
     <div class="pp-amount" id="payAmount">฿0.00</div>
@@ -708,12 +709,14 @@
 
   function showPaymentScreen({ finalAmount, total, promptpayId, promptpayName }) {
     const payload = buildPromptPayPayload(promptpayId, finalAmount);
-    QRCode.toCanvas(
-      document.getElementById('payQrCanvas'),
-      payload,
-      { width: 240, margin: 1, errorCorrectionLevel: 'M' },
-      () => {}
-    );
+    const qrEl = document.getElementById('payQrCanvas');
+    qrEl.innerHTML = '';  // wipe any previous render
+    new QRCode(qrEl, {
+      text: payload,
+      width: 240,
+      height: 240,
+      correctLevel: QRCode.CorrectLevel.M,
+    });
     document.getElementById('payAmount').textContent =
       '฿' + Number(finalAmount).toFixed(2);
     const centsNote = (finalAmount > total)
