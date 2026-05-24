@@ -132,6 +132,17 @@ exports.createOrderCheckout = onRequest(
 exports.createPromptPayOrder = onRequest(
   { cors: true },
   async (req, res) => {
+    // Explicit CORS + nosniff so Chrome's CORB doesn't drop the body
+    // when the response is proxied through Firebase Hosting rewrites.
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type");
+    res.set("X-Content-Type-Options", "nosniff");
+
+    if (req.method === "OPTIONS") {
+      res.status(204).send("");
+      return;
+    }
     if (req.method !== "POST") {
       res.status(405).json({ error: "Method Not Allowed" });
       return;
