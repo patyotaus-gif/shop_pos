@@ -32,6 +32,11 @@ dependencies:
   # QR rendering (PromptPay payment QR for online orders)
   qr_flutter: ^4.1.0
 
+  # Bank notification listener (Android only) — auto-confirm PromptPay
+  # online orders by reading banking app push notifications on the
+  # shop owner's device. Read-only; never transmits raw notifications.
+  notification_listener_service: ^0.3.4
+
   # Receipt
   pdf: ^3.11.1
   printing: ^5.13.2

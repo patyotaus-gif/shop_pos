@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
 import 'services/auth_service.dart';
+import 'services/bank_notification_service.dart';
 import 'services/notification_service.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/login_screen.dart';
@@ -34,6 +35,10 @@ void main() async {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)
         .timeout(const Duration(seconds: 15));
     await NotificationService.init().timeout(const Duration(seconds: 10));
+    // Subscribe to bank notifications (Android only; no-op elsewhere).
+    // Does not request permission — user enables that explicitly from
+    // settings — but if it's already granted we start matching right away.
+    await BankNotificationService.init().timeout(const Duration(seconds: 5));
     const groqKey = String.fromEnvironment('GROQ_API_KEY');
     if (groqKey.isNotEmpty) {
       GroqService.setApiKey(groqKey);

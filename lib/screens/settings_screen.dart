@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/bank_notification_service.dart';
 import '../services/line_service.dart';
 import '../services/settings_service.dart';
 import 'subscription_screen.dart';
@@ -24,6 +27,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _saving = false;
   bool _savingLine = false;
   bool _savingPromptpay = false;
+  bool _bankListenerGranted = false;
 
   @override
   void initState() {
@@ -45,6 +49,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadSettings() async {
     try {
       final data = await SettingsService.getSettings();
+      final granted = await BankNotificationService.isPermissionGranted();
       if (mounted) {
         setState(() {
           _shopNameCtrl.text = (data['name'] as String?) ?? '';
@@ -54,12 +59,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _lineNotifyEnabled = (data['lineNotifyEnabled'] as bool?) ?? false;
           _promptpayIdCtrl.text = (data['promptpayId'] as String?) ?? '';
           _promptpayNameCtrl.text = (data['promptpayName'] as String?) ?? '';
+          _bankListenerGranted = granted;
         });
       }
     } catch (_) {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _toggleBankListener() async {
+    final granted = await BankNotificationService.requestPermission();
+    if (!mounted) return;
+    setState(() => _bankListenerGranted = granted);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(granted
+            ? 'เปิดสิทธิ์อ่าน notification ธนาคารแล้ว — ออเดอร์จะ confirm อัตโนมัติ'
+            : 'ยังไม่ได้รับสิทธิ์ — ลองอีกครั้งใน Settings → Notification access'),
+        backgroundColor: granted ? Colors.green : null,
+      ),
+    );
   }
 
   Future<void> _savePromptPay() async {
@@ -315,6 +335,83 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     label: const Text('บันทึก PromptPay'),
                   ),
                 ),
+
+                if (Platform.isAndroid) ...[
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: _bankListenerGranted
+                          ? Colors.green.withValues(alpha: 0.08)
+                          : Colors.amber.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: _bankListenerGranted
+                            ? Colors.green.withValues(alpha: 0.5)
+                            : Colors.amber.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              _bankListenerGranted
+                                  ? Icons.notifications_active
+                                  : Icons.notifications_off_outlined,
+                              size: 18,
+                              color: _bankListenerGranted
+                                  ? Colors.green.shade700
+                                  : Colors.amber.shade800,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Auto-confirm จาก notification ธนาคาร',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: _bankListenerGranted
+                                    ? Colors.green.shade800
+                                    : Colors.amber.shade900,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'เมื่อเปิดสิทธิ์ แอปจะอ่าน notification "เงินเข้า" จากแอปธนาคาร '
+                          '(K PLUS, SCB EASY, Krungthai NEXT, BBL, TTB, KMA) แล้ว '
+                          'ยืนยันออเดอร์ที่ยอดตรงกันให้อัตโนมัติ\n\n'
+                          '• อ่านเฉพาะแอปธนาคาร — ไม่ส่งเนื้อหา notification ออกจากเครื่อง\n'
+                          '• ปิดเมื่อไหร่ก็ได้ที่ Settings → Notification access',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: _toggleBankListener,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: _bankListenerGranted
+                                  ? Colors.green
+                                  : Colors.amber.shade800,
+                            ),
+                            icon: Icon(
+                              _bankListenerGranted
+                                  ? Icons.check_circle
+                                  : Icons.lock_open,
+                            ),
+                            label: Text(
+                              _bankListenerGranted
+                                  ? 'เปิดอยู่ — กดเพื่อจัดการ'
+                                  : 'เปิดสิทธิ์ Notification access',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
 
                 const SizedBox(height: 32),
                 const Divider(),
