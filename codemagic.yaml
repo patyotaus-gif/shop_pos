@@ -116,7 +116,8 @@ workflows:
 
   android-apk:
     name: Android Release APK (debug-signed)
-    instance_type: linux_x2
+    # No instance_type — defaults to the free-tier Linux runner.
+    # linux_x2 is a paid tier and won't start on the current plan.
     max_build_duration: 60
     environment:
       flutter: 3.41.7
