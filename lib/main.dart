@@ -15,7 +15,6 @@ import 'screens/debt_screen.dart';
 import 'screens/product_form_screen.dart';
 import 'screens/orders_screen.dart';
 import 'screens/chat_screen.dart';
-import 'services/groq_service.dart';
 import 'screens/settings_screen.dart';
 import 'services/order_service.dart';
 import 'widgets/subscription_gate.dart';
@@ -39,10 +38,6 @@ void main() async {
     // Does not request permission — user enables that explicitly from
     // settings — but if it's already granted we start matching right away.
     await BankNotificationService.init().timeout(const Duration(seconds: 5));
-    const groqKey = String.fromEnvironment('GROQ_API_KEY');
-    if (groqKey.isNotEmpty) {
-      GroqService.setApiKey(groqKey);
-    }
     runApp(const ShopPosApp());
   } catch (e, st) {
     runApp(_BootErrorApp(message: '$e', stack: '$st'));

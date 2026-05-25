@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/groq_service.dart';
+import '../services/ai_service.dart';
 import '../services/sale_service.dart';
 import '../services/product_service.dart';
 
@@ -13,7 +13,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final _ctrl = TextEditingController();
   final _scroll = ScrollController();
-  final List<GroqMessage> _history = [];
+  final List<AiMessage> _history = [];
   bool _loading = false;
 
   Future<String> _buildContext() async {
@@ -41,24 +41,25 @@ class _ChatScreenState extends State<ChatScreen> {
     _ctrl.clear();
 
     setState(() {
-      _history.add(GroqMessage(role: 'user', content: text));
+      _history.add(AiMessage(role: 'user', content: text));
       _loading = true;
     });
     _scrollDown();
 
     try {
       final context = await _buildContext();
-      final reply = await GroqService.chat(_history, shopContext: context);
+      final result = await AiService.chat(_history, shopContext: context);
       setState(() {
-        _history.add(GroqMessage(role: 'assistant', content: reply));
+        _history.add(AiMessage(role: 'assistant', content: result.reply));
         _loading = false;
       });
       _scrollDown();
     } catch (e) {
       setState(() {
-        _history.add(GroqMessage(role: 'assistant', content: 'เกิดข้อผิดพลาด: $e'));
+        _history.add(AiMessage(role: 'assistant', content: 'เกิดข้อผิดพลาด: $e'));
         _loading = false;
       });
+      _scrollDown();
     }
   }
 

@@ -11,6 +11,7 @@ const stripeSecretKey = defineSecret("STRIPE_SECRET_KEY");
 const stripeWebhookSecret = defineSecret("STRIPE_WEBHOOK_SECRET");
 const lineChannelAccessToken = defineSecret("LINE_CHANNEL_ACCESS_TOKEN");
 const lineChannelSecret = defineSecret("LINE_CHANNEL_SECRET");
+const geminiApiKey = defineSecret("GEMINI_API_KEY");
 
 const PLANS = {
   monthly: { amount: 29900, days: 30, label: "Shop POS รายเดือน" },
@@ -579,5 +580,126 @@ exports.sendLineMessage = onCall(
     const messages = [{ type: "text", text: message }];
     const ok = await _linePush(lineChannelAccessToken.value(), lineUserId, messages);
     return { success: ok };
+  }
+);
+
+// ────────────────────────────────────────────────
+// AI chat proxy → Google Gemini Flash 8B
+// ────────────────────────────────────────────────
+// Why a proxy instead of calling Gemini from the client?
+//   1. Shop owners never see / manage an API key — frictionless setup.
+//   2. The single platform key stays server-side (no leakage into APKs).
+//   3. We can gate by subscription + per-shop daily quota here.
+//   4. Future tier switching (Gemini → OpenAI for paid plans) is one
+//      function change, no client redeploy.
+//
+// Request:  { history: [{role:'user'|'assistant', content:string}], shopContext?: string }
+// Response: { reply: string, usage: { dailyCount: number, dailyLimit: number } }
+const AI_DAILY_LIMIT_PER_SHOP = 100;
+const AI_MODEL = "gemini-1.5-flash-8b-latest";
+
+exports.aiChat = onCall(
+  { secrets: [geminiApiKey] },
+  async (request) => {
+    if (!request.auth) {
+      throw new Error("Login required");
+    }
+    const shopId = request.auth.uid;
+    const { history, shopContext } = request.data || {};
+    if (!Array.isArray(history) || history.length === 0) {
+      throw new Error("history is required");
+    }
+
+    // Subscription gate — only trial-in-window or active-in-window shops
+    // get to spend our Gemini budget.
+    const shopSnap = await admin.firestore().collection("shops").doc(shopId).get();
+    if (!shopSnap.exists) throw new Error("Shop not found");
+    const shop = shopSnap.data();
+    const now = new Date();
+    const trialOk =
+      shop.subscriptionStatus === "trial" &&
+      shop.trialEndsAt &&
+      shop.trialEndsAt.toDate() > now;
+    const activeOk =
+      shop.subscriptionStatus === "active" &&
+      shop.subscriptionEndsAt &&
+      shop.subscriptionEndsAt.toDate() > now;
+    if (!trialOk && !activeOk) {
+      throw new Error("Subscription not active — please renew to use AI");
+    }
+
+    // Per-shop daily rate limit. Doc id = YYYY-MM-DD so it rolls over
+    // automatically at midnight in the function's region.
+    const today = now.toISOString().slice(0, 10);
+    const usageRef = admin
+      .firestore()
+      .collection("shops").doc(shopId)
+      .collection("aiUsage").doc(today);
+    const usageSnap = await usageRef.get();
+    const dailyCount = usageSnap.exists ? (usageSnap.data().count || 0) : 0;
+    if (dailyCount >= AI_DAILY_LIMIT_PER_SHOP) {
+      throw new Error(
+        `ใช้ AI ครบ ${AI_DAILY_LIMIT_PER_SHOP} ครั้งในวันนี้แล้ว — เริ่มใหม่พรุ่งนี้`
+      );
+    }
+
+    // Build Gemini request. Gemini uses 'model' instead of 'assistant'.
+    const systemPrompt =
+      "คุณเป็นผู้ช่วย AI สำหรับร้านค้าปลีกที่ใช้ระบบ Pokpok POS\n" +
+      "ตอบเป็นภาษาไทย กระชับ ตรงประเด็น ช่วยวิเคราะห์ยอดขาย แนะนำการจัดการร้าน" +
+      (shopContext ? "\n\nข้อมูลร้านวันนี้:\n" + shopContext : "");
+
+    const contents = history.map((m) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: String(m.content || "") }],
+    }));
+
+    const url =
+      "https://generativelanguage.googleapis.com/v1beta/models/" +
+      AI_MODEL +
+      ":generateContent?key=" +
+      geminiApiKey.value();
+    const geminiRes = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents,
+        generationConfig: {
+          maxOutputTokens: 1024,
+          temperature: 0.7,
+        },
+      }),
+    });
+
+    if (!geminiRes.ok) {
+      const errText = await geminiRes.text();
+      console.error("Gemini API error:", geminiRes.status, errText);
+      throw new Error("AI service error — try again in a moment");
+    }
+    const data = await geminiRes.json();
+    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!reply) {
+      console.error("Empty Gemini response:", JSON.stringify(data));
+      throw new Error("AI returned no content");
+    }
+
+    // Bump the daily counter only on a successful call so quota-exhausted
+    // user attempts don't burn budget.
+    await usageRef.set(
+      {
+        count: admin.firestore.FieldValue.increment(1),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    return {
+      reply,
+      usage: {
+        dailyCount: dailyCount + 1,
+        dailyLimit: AI_DAILY_LIMIT_PER_SHOP,
+      },
+    };
   }
 );
