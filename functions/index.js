@@ -1,4 +1,4 @@
-const { onCall, onRequest } = require("firebase-functions/v2/https");
+const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const admin = require("firebase-admin");
 const { defineSecret } = require("firebase-functions/params");
@@ -596,24 +596,28 @@ exports.sendLineMessage = onCall(
 // Request:  { history: [{role:'user'|'assistant', content:string}], shopContext?: string }
 // Response: { reply: string, usage: { dailyCount: number, dailyLimit: number } }
 const AI_DAILY_LIMIT_PER_SHOP = 100;
-const AI_MODEL = "gemini-1.5-flash-8b-latest";
+// Google retired the 1.5 line in 2026; 2.5 Flash Lite is the current
+// equivalent — same price tier, better Thai output, current SDK support.
+const AI_MODEL = "gemini-2.5-flash-lite";
 
 exports.aiChat = onCall(
   { secrets: [geminiApiKey] },
   async (request) => {
     if (!request.auth) {
-      throw new Error("Login required");
+      throw new HttpsError("unauthenticated", "Login required");
     }
     const shopId = request.auth.uid;
     const { history, shopContext } = request.data || {};
     if (!Array.isArray(history) || history.length === 0) {
-      throw new Error("history is required");
+      throw new HttpsError("invalid-argument", "history is required");
     }
 
     // Subscription gate — only trial-in-window or active-in-window shops
     // get to spend our Gemini budget.
     const shopSnap = await admin.firestore().collection("shops").doc(shopId).get();
-    if (!shopSnap.exists) throw new Error("Shop not found");
+    if (!shopSnap.exists) {
+      throw new HttpsError("not-found", "Shop not found");
+    }
     const shop = shopSnap.data();
     const now = new Date();
     const trialOk =
@@ -625,7 +629,10 @@ exports.aiChat = onCall(
       shop.subscriptionEndsAt &&
       shop.subscriptionEndsAt.toDate() > now;
     if (!trialOk && !activeOk) {
-      throw new Error("Subscription not active — please renew to use AI");
+      throw new HttpsError(
+        "failed-precondition",
+        "Subscription not active — please renew to use AI"
+      );
     }
 
     // Per-shop daily rate limit. Doc id = YYYY-MM-DD so it rolls over
@@ -638,7 +645,8 @@ exports.aiChat = onCall(
     const usageSnap = await usageRef.get();
     const dailyCount = usageSnap.exists ? (usageSnap.data().count || 0) : 0;
     if (dailyCount >= AI_DAILY_LIMIT_PER_SHOP) {
-      throw new Error(
+      throw new HttpsError(
+        "resource-exhausted",
         `ใช้ AI ครบ ${AI_DAILY_LIMIT_PER_SHOP} ครั้งในวันนี้แล้ว — เริ่มใหม่พรุ่งนี้`
       );
     }
@@ -675,13 +683,16 @@ exports.aiChat = onCall(
     if (!geminiRes.ok) {
       const errText = await geminiRes.text();
       console.error("Gemini API error:", geminiRes.status, errText);
-      throw new Error("AI service error — try again in a moment");
+      throw new HttpsError(
+        "internal",
+        `AI provider error (${geminiRes.status}): ${errText.slice(0, 200)}`
+      );
     }
     const data = await geminiRes.json();
     const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!reply) {
       console.error("Empty Gemini response:", JSON.stringify(data));
-      throw new Error("AI returned no content");
+      throw new HttpsError("internal", "AI returned no content");
     }
 
     // Bump the daily counter only on a successful call so quota-exhausted
