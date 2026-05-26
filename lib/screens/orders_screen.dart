@@ -147,6 +147,48 @@ class _OrderCard extends StatelessWidget {
         OrderStatus.pendingPayment => Colors.grey,
       };
 
+  void _showSlip(BuildContext context, String url) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(12),
+        child: Stack(
+          children: [
+            InteractiveViewer(
+              minScale: 1,
+              maxScale: 5,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  url,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: Colors.white,
+                    padding: const EdgeInsets.all(40),
+                    child: const Text('โหลดสลิปไม่ได้'),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () => Navigator.pop(ctx),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.black54,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -172,6 +214,32 @@ class _OrderCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (order.autoConfirmed) ...[
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.verified, size: 12, color: Colors.blue),
+                        SizedBox(width: 3),
+                        Text(
+                          'auto',
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                ],
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
@@ -186,6 +254,28 @@ class _OrderCard extends StatelessWidget {
                 ),
               ],
             ),
+            if (order.slipUrl != null) ...[
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () => _showSlip(context, order.slipUrl!),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    order.slipUrl!,
+                    height: 80,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    errorBuilder: (_, __, ___) => Container(
+                      height: 80,
+                      color: Colors.grey.shade200,
+                      alignment: Alignment.center,
+                      child: const Text('โหลดสลิปไม่ได้',
+                          style: TextStyle(color: Colors.grey)),
+                    ),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 10),
             // Items
             ...order.items.map((item) => Padding(

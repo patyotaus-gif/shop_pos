@@ -64,6 +64,16 @@ class ShopOrder {
   /// Bank/SlipOK transaction reference once the order is marked paid.
   final String? paymentRef;
 
+  /// Signed URL of the slip image, set when verifyPromptPaySlip auto-
+  /// confirmed the order. Null for orders confirmed manually or by
+  /// the Android notification listener.
+  final String? slipUrl;
+
+  /// True when the order was confirmed by an automated path (slip
+  /// verify or bank notification) rather than the shop owner tapping
+  /// "ได้รับเงินแล้ว" manually.
+  final bool autoConfirmed;
+
   final OrderStatus status;
   final DateTime createdAt;
   final DateTime? paidAt;
@@ -77,6 +87,8 @@ class ShopOrder {
     double? finalAmount,
     this.paymentMethod = 'promptpay',
     this.paymentRef,
+    this.slipUrl,
+    this.autoConfirmed = false,
     required this.status,
     required this.createdAt,
     this.paidAt,
@@ -94,6 +106,8 @@ class ShopOrder {
         finalAmount: (data['finalAmount'] as num?)?.toDouble(),
         paymentMethod: data['paymentMethod'] as String? ?? 'promptpay',
         paymentRef: data['paymentRef'] as String?,
+        slipUrl: data['slipUrl'] as String?,
+        autoConfirmed: data['autoConfirmed'] as bool? ?? false,
         status: OrderStatus.values.firstWhere(
           (e) => e.name == (data['status'] ?? 'pendingPayment'),
           orElse: () => OrderStatus.pendingPayment,

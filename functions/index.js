@@ -128,6 +128,169 @@ exports.createOrderCheckout = onRequest(
 );
 
 // ────────────────────────────────────────────────
+// PromptPay slip verification (Phase 3 — cross-platform fallback)
+// ────────────────────────────────────────────────
+// Customer transfers via mobile banking, downloads the slip image,
+// uploads it from the order page. We:
+//   1. Decode the QR embedded in the slip (every modern Thai bank slip
+//      has one — it carries amount + tx ref in EMVCo TLV).
+//   2. Verify the amount matches the pending order's finalAmount.
+//   3. Use the QR payload as a unique transaction identifier so the
+//      same slip can't be reused for two orders.
+//   4. Persist the slip to Storage for audit and mark the order paid.
+//
+// This is the iOS-friendly alternative to the Android notification
+// listener; Android shops can use either or both.
+exports.verifyPromptPaySlip = onRequest(
+  { cors: true, memory: "512MiB" },
+  async (req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type");
+    res.set("X-Content-Type-Options", "nosniff");
+
+    if (req.method === "OPTIONS") {
+      res.status(204).send("");
+      return;
+    }
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Method Not Allowed" });
+      return;
+    }
+
+    const { shopId, orderId, slipBase64 } = req.body || {};
+    if (!shopId || !orderId || !slipBase64) {
+      res.status(400).json({ error: "shopId, orderId, slipBase64 required" });
+      return;
+    }
+
+    try {
+      const orderRef = admin
+        .firestore()
+        .collection("shops").doc(shopId)
+        .collection("orders").doc(orderId);
+      const orderSnap = await orderRef.get();
+      if (!orderSnap.exists) {
+        res.status(404).json({ error: "Order not found" });
+        return;
+      }
+      const order = orderSnap.data();
+      if (order.status !== "pendingPayment") {
+        res.json({ success: false, reason: "order already processed" });
+        return;
+      }
+
+      // Strip data: prefix if present, then decode.
+      const cleanBase64 = slipBase64.replace(/^data:image\/\w+;base64,/, "");
+      const buf = Buffer.from(cleanBase64, "base64");
+
+      // Decode QR from image.
+      const Jimp = require("jimp");
+      const jsQR = require("jsqr");
+      const img = await Jimp.read(buf);
+      const qr = jsQR(
+        new Uint8ClampedArray(img.bitmap.data),
+        img.bitmap.width,
+        img.bitmap.height
+      );
+      if (!qr || !qr.data) {
+        res.json({
+          success: false,
+          reason: "QR ในสลิปอ่านไม่ได้ — ลองถ่ายให้ชัดและตรงหน่อย",
+        });
+        return;
+      }
+
+      const slipAmount = parseEmvAmount(qr.data);
+      if (slipAmount == null) {
+        res.json({
+          success: false,
+          reason: "ไม่พบยอดเงินใน QR ของสลิป",
+        });
+        return;
+      }
+
+      const expected = Number(order.finalAmount || order.total);
+      if (Math.abs(slipAmount - expected) > 0.01) {
+        res.json({
+          success: false,
+          reason: `ยอดในสลิปไม่ตรง: สลิป ฿${slipAmount.toFixed(2)} vs ออเดอร์ ฿${expected.toFixed(2)}`,
+        });
+        return;
+      }
+
+      // Use entire QR payload as a tx identifier — collision-resistant
+      // and provider-agnostic (each bank's slip embeds its own ref).
+      const txKey = hashString(qr.data);
+      const usedRef = admin
+        .firestore()
+        .collection("shops").doc(shopId)
+        .collection("usedSlipRefs").doc(String(txKey));
+      const usedSnap = await usedRef.get();
+      if (usedSnap.exists) {
+        res.json({
+          success: false,
+          reason: "สลิปนี้เคยใช้กับออเดอร์อื่นแล้ว",
+        });
+        return;
+      }
+
+      // Persist slip to Storage for audit + give shop owner a link.
+      const fileName = `shops/${shopId}/orderSlips/${orderId}.jpg`;
+      const file = admin.storage().bucket().file(fileName);
+      await file.save(buf, {
+        contentType: "image/jpeg",
+        resumable: false,
+      });
+      // Make it readable via a long-lived signed URL.
+      const [slipUrl] = await file.getSignedUrl({
+        action: "read",
+        expires: "2030-12-31",
+      });
+
+      // Mark paid + record txKey so the same slip can't be replayed.
+      await orderRef.update({
+        status: "paid",
+        paidAt: admin.firestore.FieldValue.serverTimestamp(),
+        paymentRef: `slip:${txKey}`,
+        autoConfirmed: true,
+        slipUrl,
+      });
+      await usedRef.set({
+        orderId,
+        amount: slipAmount,
+        ts: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      res.json({ success: true, txRef: txKey });
+    } catch (e) {
+      console.error("verifyPromptPaySlip error:", e);
+      res.status(500).json({
+        error: "verifyPromptPaySlip failed",
+        message: String(e && e.message ? e.message : e).slice(0, 200),
+      });
+    }
+  }
+);
+
+// Extract amount from an EMVCo PromptPay QR payload (tag "54" = amount).
+function parseEmvAmount(payload) {
+  let i = 0;
+  while (i < payload.length - 4) {
+    const tag = payload.slice(i, i + 2);
+    const len = parseInt(payload.slice(i + 2, i + 4), 10);
+    if (isNaN(len) || i + 4 + len > payload.length) return null;
+    const value = payload.slice(i + 4, i + 4 + len);
+    if (tag === "54") {
+      const n = parseFloat(value);
+      return isNaN(n) ? null : n;
+    }
+    i += 4 + len;
+  }
+  return null;
+}
+
+// ────────────────────────────────────────────────
 // Online order via PromptPay (no Stripe — money goes straight to shop)
 // ────────────────────────────────────────────────
 exports.createPromptPayOrder = onRequest(

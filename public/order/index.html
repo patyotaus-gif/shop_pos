@@ -354,13 +354,30 @@
     .pp-steps ol { padding-left: 20px; }
     .pp-steps li { margin: 4px 0; }
     #payConfirmBtn {
-      width: 100%; background: #16a34a; color: white;
-      border: none; border-radius: var(--radius-md);
-      padding: 14px; font-size: 16px; font-weight: 600;
+      width: 100%; background: white; color: #15803d;
+      border: 1px solid #16a34a; border-radius: var(--radius-md);
+      padding: 12px; font-size: 14px; font-weight: 600;
       cursor: pointer; transition: var(--transition);
       margin-bottom: 8px;
     }
-    #payConfirmBtn:hover { background: #15803d; }
+    #payConfirmBtn:hover { background: #f0fdf4; }
+    #paySlipBtn {
+      width: 100%; background: #2563eb; color: white;
+      border: none; border-radius: var(--radius-md);
+      padding: 14px; font-size: 16px; font-weight: 700;
+      cursor: pointer; transition: var(--transition);
+      margin-bottom: 10px;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    }
+    #paySlipBtn:hover:not(:disabled) { background: #1d4ed8; }
+    #paySlipBtn:disabled { background: #94a3b8; cursor: not-allowed; box-shadow: none; }
+    #paySlipStatus {
+      font-size: 13px; margin: 4px 0 12px;
+      min-height: 18px;
+    }
+    #paySlipStatus.ok { color: #16a34a; font-weight: 600; }
+    #paySlipStatus.err { color: var(--primary); }
+    #paySlipStatus.busy { color: var(--text-muted); }
     #payCancelBtn {
       width: 100%; background: none; border: none;
       color: var(--text-muted); padding: 10px; font-size: 14px;
@@ -442,7 +459,13 @@
       </ol>
     </div>
 
-    <button id="payConfirmBtn" onclick="confirmPaid()">✓ โอนแล้ว — แจ้งร้าน</button>
+    <input type="file" id="slipFileInput" accept="image/*" capture="environment" style="display:none" onchange="uploadSlip(event)" />
+    <button id="paySlipBtn" type="button" onclick="document.getElementById('slipFileInput').click()">
+      📷 อัปโหลดสลิป — ยืนยันอัตโนมัติ
+    </button>
+    <div id="paySlipStatus"></div>
+
+    <button id="payConfirmBtn" onclick="confirmPaid()">✓ โอนแล้ว — แจ้งร้าน (ตรวจด้วยมือ)</button>
     <button id="payCancelBtn" onclick="cancelPay()">ยกเลิกออเดอร์</button>
   </div>
 </div>
@@ -742,6 +765,79 @@
     // 'pendingPayment' on Firestore — the shop owner verifies and flips
     // to 'paid' from their POS app. We just redirect to the thank-you page.
     window.location.href = `/order/success/?order=${pendingOrder.orderId}`;
+  }
+
+  async function uploadSlip(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';  // allow re-picking the same file later
+    if (!file || !pendingOrder) return;
+
+    const slipBtn = document.getElementById('paySlipBtn');
+    const status = document.getElementById('paySlipStatus');
+    slipBtn.disabled = true;
+    slipBtn.innerHTML = '<span class="spinner"></span>กำลังตรวจสลิป...';
+    status.className = 'busy';
+    status.textContent = 'อ่าน QR + ตรวจยอดเงิน...';
+
+    try {
+      // Convert image → base64. Compress large images first so we don't
+      // POST a 10MB payload.
+      const slipBase64 = await fileToBase64Compressed(file, 1600);
+
+      const res = await fetch('/api/verifyPromptPaySlip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shopId,
+          orderId: pendingOrder.orderId,
+          slipBase64,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || data.success === false) {
+        status.className = 'err';
+        status.textContent = data.reason || data.error || 'ตรวจสลิปไม่สำเร็จ';
+        slipBtn.disabled = false;
+        slipBtn.innerHTML = '📷 ลองสลิปใหม่อีกครั้ง';
+        return;
+      }
+
+      status.className = 'ok';
+      status.textContent = '✓ ยืนยันสำเร็จ! กำลังพาคุณไปหน้าออเดอร์...';
+      setTimeout(() => {
+        window.location.href = `/order/success/?order=${pendingOrder.orderId}&auto=1`;
+      }, 1200);
+    } catch (e) {
+      status.className = 'err';
+      status.textContent = 'อัปโหลดล้มเหลว — ลองอีกครั้ง';
+      slipBtn.disabled = false;
+      slipBtn.innerHTML = '📷 อัปโหลดสลิป — ยืนยันอัตโนมัติ';
+    }
+  }
+
+  // Down-scale slips so the server doesn't choke on multi-MB phone photos.
+  function fileToBase64Compressed(file, maxDim) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+          const w = Math.round(img.width * scale);
+          const h = Math.round(img.height * scale);
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          // 0.85 quality JPEG — small but QR codes still parse cleanly.
+          resolve(canvas.toDataURL('image/jpeg', 0.85));
+        };
+        img.onerror = () => reject(new Error('image load failed'));
+        img.src = e.target.result;
+      };
+      reader.onerror = () => reject(new Error('file read failed'));
+      reader.readAsDataURL(file);
+    });
   }
 
   function cancelPay() {

@@ -39,6 +39,13 @@
           "functionId": "createPromptPayOrder",
           "region": "asia-southeast1"
         }
+      },
+      {
+        "source": "/api/verifyPromptPaySlip",
+        "function": {
+          "functionId": "verifyPromptPaySlip",
+          "region": "asia-southeast1"
+        }
       }
     ]
   }
