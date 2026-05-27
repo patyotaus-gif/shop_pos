@@ -50,6 +50,11 @@ app.*.map.json
 .env
 *.env
 
+# Android release signing — NEVER commit these, NEVER lose the .jks
+android/key.properties
+android/*.jks
+android/*.keystore
+
 # Codemagic
 .codemagic-cache/
 
