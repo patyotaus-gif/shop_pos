@@ -265,6 +265,17 @@ class _MainShellState extends State<MainShell> {
           bottomNavigationBar: NavigationBar(
             selectedIndex: _index,
             onDestinationSelected: (i) => setState(() => _index = i),
+            // Tighter sizing — 8 destinations on a phone-width screen
+            // would otherwise overlap labels (especially on Android,
+            // whose default Thai font is wider than iOS).
+            height: 64,
+            labelTextStyle: WidgetStateProperty.resolveWith((states) {
+              final selected = states.contains(WidgetState.selected);
+              return TextStyle(
+                fontSize: 10,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              );
+            }),
             destinations: [
               const NavigationDestination(
                 icon: Icon(Icons.dashboard_outlined),

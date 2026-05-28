@@ -59,17 +59,42 @@ class _TrialBanner extends StatelessWidget {
             ),
             child: Container(
               width: double.infinity,
-              padding:
-                  const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
-              child: Text(
-                daysLeft > 0
-                    ? 'ทดลองใช้ฟรี เหลืออีก $daysLeft วัน — กดเพื่อสมัคร subscription'
-                    : 'วันสุดท้ายของการทดลองใช้ — กดเพื่อสมัคร subscription',
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600),
-                textAlign: TextAlign.center,
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
+              // Single-line layout — Android Thai font rendered wider than
+              // iOS and used to wrap mid-sentence, breaking digit groups
+              // off-pattern. Ellipsis + Row keeps the banner one line on
+              // every device.
+              child: Row(
+                children: [
+                  const Icon(Icons.celebration_outlined,
+                      color: Colors.white, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      daysLeft > 0
+                          ? 'ทดลองใช้ฟรี · เหลือ $daysLeft วัน'
+                          : 'วันสุดท้ายของการทดลองใช้',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const Text(
+                    'สมัครต่อ',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  const Icon(Icons.chevron_right,
+                      color: Colors.white, size: 18),
+                ],
               ),
             ),
           ),

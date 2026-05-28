@@ -668,17 +668,29 @@ class _CheckoutPanel extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              OutlinedButton.icon(
-                onPressed: onDiscount,
-                icon: const Icon(Icons.discount_outlined),
-                label: const Text('ส่วนลด'),
+              // All three buttons share the row evenly (1:1:2) so the
+              // narrowest one ("เชื่อ") still has enough horizontal room
+              // not to wrap on Android, where the default Thai font is
+              // wider than iOS's Thonburi/SF.
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onDiscount,
+                  icon: const Icon(Icons.discount_outlined, size: 18),
+                  label: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text('ส่วนลด', maxLines: 1, softWrap: false),
+                  ),
+                ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: hasItems ? onDebt : null,
-                  icon: const Icon(Icons.person_outline),
-                  label: const Text('เชื่อ'),
+                  icon: const Icon(Icons.person_outline, size: 18),
+                  label: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text('เชื่อ', maxLines: 1, softWrap: false),
+                  ),
                   style: OutlinedButton.styleFrom(foregroundColor: Colors.orange),
                 ),
               ),
@@ -687,8 +699,11 @@ class _CheckoutPanel extends StatelessWidget {
                 flex: 2,
                 child: FilledButton.icon(
                   onPressed: hasItems ? onCheckout : null,
-                  icon: const Icon(Icons.payments_outlined),
-                  label: const Text('ชำระเงิน'),
+                  icon: const Icon(Icons.payments_outlined, size: 18),
+                  label: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text('ชำระเงิน', maxLines: 1, softWrap: false),
+                  ),
                 ),
               ),
             ],
