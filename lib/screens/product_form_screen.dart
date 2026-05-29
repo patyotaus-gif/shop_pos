@@ -32,7 +32,6 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   bool _isPinned = false;
   File? _imageFile;
   bool _removeBackground = false;
-  bool _processingImage = false;
 
   bool get _isEdit => widget.product != null;
 
@@ -75,27 +74,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: source, imageQuality: 90);
     if (picked == null) return;
-    setState(() {
-      _imageFile = File(picked.path);
-      _processingImage = false;
-    });
-  }
-
-  Future<void> _processAndSetImage() async {
-    if (_imageFile == null) return;
-    setState(() => _processingImage = true);
-    try {
-      File result = _imageFile!;
-      if (_removeBackground) {
-        result = await ImageService.removeBackground(result);
-      }
-      setState(() {
-        _imageFile = result;
-        _processingImage = false;
-      });
-    } catch (_) {
-      setState(() => _processingImage = false);
-    }
+    setState(() => _imageFile = File(picked.path));
   }
 
   void _showImageSourceSheet() {
