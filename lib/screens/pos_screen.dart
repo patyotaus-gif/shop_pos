@@ -878,7 +878,7 @@ class _ScannerScreenState extends State<_ScannerScreen>
                     decoration: BoxDecoration(
                       gradient: LinearGradient(colors: [
                         Colors.transparent,
-                        const Color(0xFFBE123C).withValues(alpha: 0.9),
+                        const Color(0xFF7A1F2B).withValues(alpha: 0.9),
                         Colors.transparent,
                       ]),
                     ),
@@ -1012,7 +1012,7 @@ class _OverlayPainter extends CustomPainter {
 
     // Corner brackets
     final p = Paint()
-      ..color = const Color(0xFFBE123C)
+      ..color = const Color(0xFF7A1F2B)
       ..strokeWidth = 3.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;

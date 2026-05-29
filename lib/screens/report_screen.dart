@@ -129,9 +129,9 @@ class _ReportScreenState extends State<ReportScreen>
     final fontBold = await PdfGoogleFonts.notoSansThaiSemiBold();
 
     // ── Colors ──
-    const ruby = PdfColor.fromInt(0xFFBE123C);
-    const rubyLight = PdfColor.fromInt(0xFFFFF1F2);
-    const slate = PdfColor.fromInt(0xFF1E293B);
+    const ruby = PdfColor.fromInt(0xFF7A1F2B);
+    const rubyLight = PdfColor.fromInt(0xFFF0E2E4);
+    const slate = PdfColor.fromInt(0xFF1F1A1B);
     const teal = PdfColor.fromInt(0xFF0F766E);
     const tealLight = PdfColor.fromInt(0xFFF0FDFA);
 

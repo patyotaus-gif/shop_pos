@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -64,7 +65,7 @@ class _BootErrorApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        backgroundColor: const Color(0xFFFFFBF7),
+        backgroundColor: const Color(0xFFF5F1EC),
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -76,7 +77,7 @@ class _BootErrorApp extends StatelessWidget {
                   style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFFBE123C)),
+                      color: Color(0xFF7A1F2B)),
                 ),
                 const SizedBox(height: 12),
                 SelectableText(message),
@@ -111,14 +112,14 @@ class ShopPosApp extends StatelessWidget {
       themeMode: mode,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1E40AF),
+          seedColor: const Color(0xFF7A1F2B),
           brightness: Brightness.light,
         ),
         useMaterial3: true,
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1E40AF),
+          seedColor: const Color(0xFF7A1F2B),
           brightness: Brightness.dark,
         ),
         useMaterial3: true,
@@ -176,9 +177,8 @@ class _PokpokSplashState extends State<_PokpokSplash>
 
   @override
   Widget build(BuildContext context) {
-    const ruby = Color(0xFFBE123C);
-    const slate = Color(0xFF1E293B);
-    const cream = Color(0xFFFFFBF7);
+    const cream = Color(0xFFF5F1EC);
+    const textDark = Color(0xFF1F1A1B);
 
     return Scaffold(
       backgroundColor: cream,
@@ -188,42 +188,23 @@ class _PokpokSplashState extends State<_PokpokSplash>
           children: [
             AnimatedBuilder(
               animation: _anim,
-              builder: (_, __) {
-                final h1 = 28.0 + _anim.value * 28.0;
-                final h2 = 56.0 - _anim.value * 28.0;
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Container(
-                      width: 18,
-                      height: h1,
-                      decoration: BoxDecoration(
-                        color: ruby,
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Container(
-                      width: 18,
-                      height: h2,
-                      decoration: BoxDecoration(
-                        color: slate,
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                    ),
-                  ],
-                );
-              },
+              builder: (_, __) => Transform.scale(
+                scale: 0.96 + _anim.value * 0.06,
+                child: const SizedBox(
+                  width: 110,
+                  height: 110,
+                  child: CustomPaint(painter: _MortarMarkPainter()),
+                ),
+              ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             const Text(
-              'Pokpok',
+              'pokpok',
               style: TextStyle(
                 fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: slate,
-                letterSpacing: 3,
+                fontWeight: FontWeight.w300,
+                color: textDark,
+                letterSpacing: 2,
               ),
             ),
           ],
@@ -231,6 +212,56 @@ class _PokpokSplashState extends State<_PokpokSplash>
       ),
     );
   }
+}
+
+/// Brand mark — burgundy mortar + pestle, geometry mirrored from
+/// assets/brand/01-mark-burgundy.svg (100×100 viewport).
+class _MortarMarkPainter extends CustomPainter {
+  const _MortarMarkPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const burgundy = Color(0xFF7A1F2B);
+    const cream = Color(0xFFF5F1EC);
+    final s = size.width / 100;
+    final fill = Paint()..color = burgundy;
+    final stroke = Paint()
+      ..color = burgundy
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 2 * s;
+
+    // Bowl — bottom half of an ellipse (cx 50, cy 56, rx 36, ry 32)
+    final bowlRect = Rect.fromCenter(
+      center: Offset(50 * s, 56 * s),
+      width: 72 * s,
+      height: 64 * s,
+    );
+    canvas.drawArc(bowlRect, 0, math.pi, true, fill);
+
+    // Pestle — rounded pill from y=6 to y=48, x≈45.5–54.5
+    final pestleRect = Rect.fromLTWH(45.5 * s, 6 * s, 9 * s, 42 * s);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(pestleRect, Radius.circular(4.5 * s)),
+      fill,
+    );
+
+    // Base shelf rect (x 40, y 90, w 20, h 3)
+    final baseRect = Rect.fromLTWH(40 * s, 90 * s, 20 * s, 3 * s);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(baseRect, Radius.circular(1.5 * s)),
+      fill,
+    );
+
+    // Base line under shelf (x 30→70, y 90)
+    canvas.drawLine(Offset(30 * s, 90 * s), Offset(70 * s, 90 * s), stroke);
+
+    // Accent dot inside bowl
+    canvas.drawCircle(Offset(49.5 * s, 42 * s), 2.8 * s, Paint()..color = cream);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class MainShell extends StatefulWidget {

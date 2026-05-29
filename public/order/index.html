@@ -8,51 +8,54 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&family=Inter:wght@600;700;800&display=swap"
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap"
     rel="stylesheet"
   />
   <!-- Self-hosted qrcodejs (davidshimjs) — avoids CDN/CORB blocks -->
   <script src="qrcode.min.js"></script>
   <style>
-    /* ── MODERN DESIGN SYSTEM PROPERTIES ── */
+    /* ── BRAND DESIGN TOKENS (Pokpok burgundy + cream) ── */
     :root {
-      --primary: #be123c;       /* alias of --ruby — legacy code path */
-      --primary-hover: #9f1239;
-      --primary-light: #ffe4e6;
-      --ruby: #be123c;
-      --ruby-dark: #9f1239;
-      --ruby-dim: #fff1f2;
-      --slate: #1e293b;
-      --slate-2: #334155;
-      --slate-3: #475569;
-      --cream: #fffbf7;
-      --cream-2: #fdf5eb;
-      --bg-main: #fdf5eb;       /* cream-2 — alias for legacy refs */
-      --text-main: #0f172a;
-      --text-muted: #64748b;
-      --border-color: rgba(226, 232, 240, 0.8);
+      --burgundy: #7A1F2B;
+      --burgundy-hover: #5C1820;
+      --burgundy-dim: #F0E2E4;
+      --cream: #F5F1EC;
+      --surface: #FFFFFF;
+      --text-dark: #1F1A1B;
+      --text-mid: #6B5E60;
+      --border-color: #E5DDD3;
+
+      /* Aliases for legacy class names — keeps the rest of the CSS intact */
+      --primary: var(--burgundy);
+      --primary-hover: var(--burgundy-hover);
+      --primary-light: var(--burgundy-dim);
+      --bg-main: var(--cream);
+      --text-main: var(--text-dark);
+      --text-muted: var(--text-mid);
+
       --radius-sm: 8px;
       --radius-md: 12px;
       --radius-lg: 20px;
-      --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.04);
-      --shadow-md: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.08);
+      --shadow-sm: 0 2px 8px rgba(31, 26, 27, 0.04);
+      --shadow-md: 0 10px 25px -5px rgba(31, 26, 27, 0.08), 0 8px 10px -6px rgba(31, 26, 27, 0.08);
       --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Sarabun', 'TH Sarabun New', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      background: var(--cream-2);
-      color: var(--text-main);
+      font-family: 'IBM Plex Sans Thai', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-weight: 400;
+      background: var(--cream);
+      color: var(--text-dark);
       -webkit-font-smoothing: antialiased;
     }
 
     /* ── GLASSMORPHISM HEADER ── */
     header {
-      background: rgba(255, 255, 255, 0.7);
+      background: rgba(245, 241, 236, 0.75);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
-      color: var(--slate);
+      color: var(--text-dark);
       padding: 14px 20px;
       position: sticky;
       top: 0;
@@ -66,38 +69,36 @@
     .brand {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       min-width: 0;
     }
     .brand-mark {
-      width: 32px; height: 32px;
-      border-radius: 9px;
-      background: var(--ruby);
-      display: inline-flex; align-items: center; justify-content: center;
-      color: white;
-      font-family: 'Inter', sans-serif;
-      font-weight: 800; font-size: .95rem;
+      width: 36px; height: 36px;
       flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
+    .brand-mark svg { width: 100%; height: 100%; display: block; }
     header h1 {
-      font-size: 16px;
-      font-weight: 700;
-      letter-spacing: -0.025em;
-      color: var(--slate);
+      font-size: 17px;
+      font-weight: 500;
+      letter-spacing: 0.2px;
+      color: var(--text-dark);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
     #cartBtn {
-      background: rgba(255, 255, 255, 0.6);
-      color: var(--slate-2);
+      background: var(--surface);
+      color: var(--text-mid);
       border: 1px solid var(--border-color);
       border-radius: 12px;
       padding: 8px 14px;
-      font-family: 'Sarabun', sans-serif;
+      font-family: 'IBM Plex Sans Thai', sans-serif;
       font-size: 14px;
-      font-weight: 600;
+      font-weight: 500;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -107,32 +108,31 @@
       position: relative;
     }
     #cartBtn:hover {
-      background: white;
-      border-color: rgba(190, 18, 60, 0.25);
-      color: var(--ruby);
+      border-color: var(--burgundy);
+      color: var(--burgundy);
     }
     #cartCount {
-      background: var(--ruby);
-      color: white;
+      background: var(--burgundy);
+      color: var(--cream);
       border-radius: 100px;
       min-width: 20px;
       height: 20px;
       padding: 0 6px;
-      font-family: 'Inter', sans-serif;
+      font-family: 'IBM Plex Sans Thai', sans-serif;
       font-size: 11px;
-      font-weight: 700;
+      font-weight: 600;
       display: flex;
       align-items: center;
       justify-content: center;
       transition: var(--transition);
     }
     #cartBtn:hover #cartCount {
-      background: var(--ruby-dark);
+      background: var(--burgundy-hover);
     }
 
     /* ── UTILITIES STATE ── */
     #loading, #error { text-align: center; padding: 80px 20px; color: var(--text-muted); font-size: 15px; font-weight: 500; }
-    #error { color: #ef4444; background: #fef2f2; border-radius: var(--radius-md); margin: 20px; padding: 20px; }
+    #error { color: var(--burgundy); background: var(--burgundy-dim); border-radius: var(--radius-md); margin: 20px; padding: 20px; }
 
     /* ── PRODUCT GRID & CARDS ── */
     #products {
@@ -144,16 +144,16 @@
       margin: 0 auto;
     }
     .product-card {
-      background-color: var(--cream);
+      background-color: var(--surface);
       border-radius: 14px;
       padding: 14px;
       cursor: pointer;
       box-shadow:
-        0 4px 6px -1px rgba(0, 0, 0, 0.07),
-        0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        0 4px 6px -1px rgba(31, 26, 27, 0.05),
+        0 2px 4px -2px rgba(31, 26, 27, 0.04);
       transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
       position: relative;
-      border: 1px solid rgba(226, 232, 240, 0.6);
+      border: 1px solid var(--border-color);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -161,17 +161,17 @@
     .product-card:hover {
       transform: translateY(-5px);
       box-shadow:
-        0 12px 20px -6px rgba(190, 18, 60, 0.12),
-        0 6px 10px -6px rgba(0, 0, 0, 0.08);
-      border-color: rgba(190, 18, 60, 0.18);
+        0 12px 20px -6px rgba(122, 31, 43, 0.14),
+        0 6px 10px -6px rgba(31, 26, 27, 0.06);
+      border-color: rgba(122, 31, 43, 0.22);
     }
     .product-card:active { transform: scale(0.98) translateY(-2px); }
     .product-card.out-of-stock { opacity: 0.55; cursor: not-allowed; transform: none !important; box-shadow: none !important; filter: grayscale(0.4); }
 
     .product-name {
-      font-weight: 700;
+      font-weight: 500;
       font-size: 15px;
-      color: var(--slate);
+      color: var(--text-dark);
       margin-bottom: 4px;
       line-height: 1.35;
       display: -webkit-box;
@@ -180,50 +180,50 @@
       overflow: hidden;
     }
     .product-category {
-      font-size: 11px; font-weight: 600;
-      color: var(--slate-3);
+      font-size: 11px; font-weight: 500;
+      color: var(--text-mid);
       margin-bottom: 12px;
-      background: rgba(255, 241, 242, 0.7);
+      background: var(--cream);
       width: fit-content;
       padding: 2px 9px;
       border-radius: 100px;
     }
     .product-price {
-      font-family: 'Inter', sans-serif;
-      font-size: 1.25rem;
-      font-weight: 800;
-      color: var(--ruby);
+      font-family: 'IBM Plex Sans Thai', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 500;
+      color: var(--burgundy);
       margin-top: auto;
-      letter-spacing: -.2px;
+      letter-spacing: 0.2px;
     }
     .product-stock {
       font-size: 11px;
-      font-weight: 600;
-      color: var(--slate-3);
+      font-weight: 500;
+      color: var(--text-mid);
       margin-top: 4px;
       display: flex; align-items: center; gap: 4px;
     }
-    .product-stock.low { color: #b45309; }
-    .product-card.out-of-stock .product-stock { color: var(--ruby); font-weight: 700; }
+    .product-stock.low { color: #B45309; }
+    .product-card.out-of-stock .product-stock { color: var(--burgundy); font-weight: 600; }
 
     .qty-badge {
       position: absolute;
       top: -6px;
       right: -6px;
-      background: var(--ruby);
-      color: white;
+      background: var(--burgundy);
+      color: var(--cream);
       border-radius: 100px;
       min-width: 24px;
       height: 24px;
       padding: 0 7px;
-      font-family: 'Inter', sans-serif;
+      font-family: 'IBM Plex Sans Thai', sans-serif;
       font-size: 12px;
-      font-weight: 700;
+      font-weight: 600;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 10px rgba(190, 18, 60, 0.35);
-      border: 2px solid var(--cream-2);
+      box-shadow: 0 4px 10px rgba(122, 31, 43, 0.35);
+      border: 2px solid var(--cream);
       animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
     @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
@@ -233,7 +233,7 @@
       display: none; 
       position: fixed; 
       inset: 0; 
-      background: rgba(15, 23, 42, 0.3); 
+      background: rgba(31, 26, 27, 0.3); 
       backdrop-filter: blur(8px); /* เอฟเฟกต์ฉากหลังเบลอแบบโมเดิร์น */
       z-index: 200; 
     }
@@ -259,7 +259,7 @@
     #cartDrawer.open { transform: translateY(0); }
     #cartOverlay.open { display: block; }
     
-    .drawer-handle { width: 40px; height: 5px; background: #e2e8f0; border-radius: 10px; margin: -8px auto 20px; }
+    .drawer-handle { width: 40px; height: 5px; background: var(--border-color); border-radius: 10px; margin: -8px auto 20px; }
     @media(min-width: 640px) { .drawer-handle { display: none; } }
     .drawer-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; color: var(--text-main); }
     
@@ -283,7 +283,7 @@
       transition: var(--transition);
       color: var(--text-main);
     }
-    .qty-btn:hover { background: var(--bg-main); border-color: #cbd5e1; }
+    .qty-btn:hover { background: var(--bg-main); border-color: #D6CDC2; }
     .qty-btn:active { transform: scale(0.9); }
     .qty-num { font-size: 15px; font-weight: 700; min-width: 24px; text-align: center; color: var(--text-main); }
     
@@ -301,17 +301,17 @@
       cursor: pointer; 
       margin-top: 16px; 
       transition: var(--transition);
-      box-shadow: 0 4px 12px rgba(190, 18, 60, 0.15);
+      box-shadow: 0 4px 12px rgba(122, 31, 43, 0.15);
     }
-    #checkoutBtn:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(190, 18, 60, 0.25); }
-    #checkoutBtn:disabled { background: #cbd5e1; color: #94a3b8; cursor: not-allowed; box-shadow: none; }
+    #checkoutBtn:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(122, 31, 43, 0.25); }
+    #checkoutBtn:disabled { background: #D6CDC2; color: #A89E94; cursor: not-allowed; box-shadow: none; }
 
     /* ── MODAL OVERLAY (ORDER FORM) ── */
     #modalOverlay { 
       display: none; 
       position: fixed; 
       inset: 0; 
-      background: rgba(15, 23, 42, 0.4); 
+      background: rgba(31, 26, 27, 0.4); 
       backdrop-filter: blur(8px);
       z-index: 300; 
       align-items: center; 
@@ -343,20 +343,20 @@
       font-size: 15px; 
       outline: none; 
       transition: var(--transition);
-      background: #f8fafc;
+      background: #FBF8F3;
     }
-    .field input:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 4px var(--primary-light); }
+    .field input:focus { border-color: var(--burgundy); background: white; box-shadow: 0 0 0 4px var(--burgundy-dim); }
     
-    .modal-total { 
-      background: #fff1f2; 
-      border-radius: var(--radius-md); 
-      padding: 14px 16px; 
-      display: flex; 
-      justify-content: space-between; 
-      font-weight: 700; 
-      font-size: 16px; 
-      margin-bottom: 20px; 
-      color: var(--primary);
+    .modal-total {
+      background: var(--burgundy-dim);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      font-weight: 600;
+      font-size: 16px;
+      margin-bottom: 20px;
+      color: var(--burgundy);
     }
     
     #payBtn { 
@@ -370,10 +370,10 @@
       font-weight: 600; 
       cursor: pointer; 
       transition: var(--transition);
-      box-shadow: 0 4px 12px rgba(190, 18, 60, 0.15);
+      box-shadow: 0 4px 12px rgba(122, 31, 43, 0.15);
     }
     #payBtn:hover:not(:disabled) { background: var(--primary-hover); }
-    #payBtn:disabled { background: #cbd5e1; cursor: not-allowed; box-shadow: none; }
+    #payBtn:disabled { background: #D6CDC2; cursor: not-allowed; box-shadow: none; }
     
     #cancelBtn { width: 100%; background: none; border: none; color: var(--text-muted); padding: 12px; font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 8px; transition: var(--transition); border-radius: var(--radius-sm); }
     #cancelBtn:hover { background: var(--bg-main); color: var(--text-main); }
@@ -385,7 +385,7 @@
     /* ── PromptPay payment screen ── */
     #payOverlay {
       position: fixed; inset: 0;
-      background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
+      background: rgba(31, 26, 27, 0.6); backdrop-filter: blur(4px);
       z-index: 200;
       display: none; align-items: center; justify-content: center;
       padding: 20px;
@@ -453,7 +453,7 @@
       box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
     }
     #paySlipBtn:hover:not(:disabled) { background: #1d4ed8; }
-    #paySlipBtn:disabled { background: #94a3b8; cursor: not-allowed; box-shadow: none; }
+    #paySlipBtn:disabled { background: #A89E94; cursor: not-allowed; box-shadow: none; }
     #paySlipStatus {
       font-size: 13px; margin: 4px 0 12px;
       min-height: 18px;
@@ -472,7 +472,15 @@
 
 <header>
   <div class="brand">
-    <span class="brand-mark">P</span>
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <path d="M 14 56 A 36 32 0 0 0 86 56 L 14 56 Z" fill="#7A1F2B"/>
+        <rect x="40" y="90" width="20" height="3" fill="#7A1F2B" rx="1.5"/>
+        <line x1="30" y1="90" x2="70" y2="90" stroke="#7A1F2B" stroke-width="2" stroke-linecap="round"/>
+        <rect x="45.5" y="6" width="9" height="42" fill="#7A1F2B" rx="4.5"/>
+        <circle cx="49.5" cy="42" r="2.8" fill="#F5F1EC"/>
+      </svg>
+    </span>
     <h1 id="shopName">กำลังโหลด...</h1>
   </div>
   <button id="cartBtn" onclick="openCart()">
@@ -619,7 +627,7 @@
   function renderProducts(products) {
     const container = document.getElementById('products');
     if (!products.length) {
-      container.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#9ca3af;padding:40px">ยังไม่มีสินค้า</p>';
+      container.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#A89E94;padding:40px">ยังไม่มีสินค้า</p>';
       return;
     }
     container.innerHTML = products.map(p => {

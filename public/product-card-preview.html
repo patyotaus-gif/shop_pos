@@ -7,37 +7,44 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&family=Inter:wght@600;700;800&display=swap"
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap"
     rel="stylesheet"
   />
   <style>
-    /* ─────────── Design tokens (อิงจาก logo-preview / landing) ─────────── */
+    /* ─────────── Brand tokens (Pokpok burgundy + cream) ─────────── */
     :root {
-      --ruby: #be123c;
-      --ruby-dark: #9f1239;
-      --ruby-dim: #fff1f2;
-      --slate: #1e293b;
-      --slate-2: #334155;
-      --slate-3: #475569;
-      --cream: #fffbf7;
-      --cream-2: #fdf5eb;
-      --border: rgba(226, 232, 240, 0.8);
-      --ink: #0f172a;
+      --burgundy: #7A1F2B;
+      --burgundy-hover: #5C1820;
+      --burgundy-dim: #F0E2E4;
+      --cream: #F5F1EC;
+      --surface: #FFFFFF;
+      --text-dark: #1F1A1B;
+      --text-mid: #6B5E60;
+      --border: #E5DDD3;
+
+      /* legacy aliases used in this preview */
+      --ruby: var(--burgundy);
+      --ruby-dark: var(--burgundy-hover);
+      --slate: var(--text-dark);
+      --slate-2: var(--text-mid);
+      --slate-3: var(--text-mid);
+      --ink: var(--text-dark);
     }
 
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
     body {
-      font-family: 'Sarabun', 'TH Sarabun New', Arial, sans-serif;
-      background: var(--cream-2);
-      color: var(--ink);
+      font-family: 'IBM Plex Sans Thai', system-ui, -apple-system, sans-serif;
+      font-weight: 400;
+      background: var(--cream);
+      color: var(--text-dark);
       line-height: 1.55;
       min-height: 100vh;
     }
 
     /* ─────────── Glassmorphism Header ─────────── */
     .glass-header {
-      background: rgba(255, 255, 255, 0.7);
+      background: rgba(245, 241, 236, 0.75);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       position: sticky;
@@ -58,20 +65,18 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      font-family: 'Inter', sans-serif;
+      font-family: 'IBM Plex Sans Thai', sans-serif;
       font-weight: 800;
       font-size: 1.15rem;
       letter-spacing: -.2px;
-      color: var(--slate);
+      color: var(--text-dark);
     }
     .brand-mark {
-      width: 32px; height: 32px;
-      border-radius: 9px;
-      background: var(--ruby);
+      width: 36px; height: 36px;
       display: inline-flex; align-items: center; justify-content: center;
-      color: white; font-weight: 800; font-size: .95rem;
     }
-    .brand .dot { color: var(--ruby); margin: 0 1px; }
+    .brand-mark svg { width: 100%; height: 100%; display: block; }
+    .brand .dot { color: var(--burgundy); margin: 0 1px; }
 
     .header-actions { display: flex; align-items: center; gap: 8px; }
     .icon-btn {
@@ -83,16 +88,16 @@
       cursor: pointer; transition: all .15s;
       position: relative;
     }
-    .icon-btn:hover { background: white; border-color: rgba(190, 18, 60, 0.25); }
-    .icon-btn svg { width: 20px; height: 20px; stroke: var(--slate-2); }
+    .icon-btn:hover { background: white; border-color: rgba(122, 31, 43, 0.25); }
+    .icon-btn svg { width: 20px; height: 20px; stroke: var(--text-mid); }
     .cart-badge {
       position: absolute; top: -4px; right: -4px;
       min-width: 18px; height: 18px; padding: 0 5px;
       border-radius: 100px;
-      background: var(--ruby); color: white;
+      background: var(--burgundy); color: white;
       font-size: .68rem; font-weight: 700;
       display: inline-flex; align-items: center; justify-content: center;
-      border: 2px solid var(--cream-2);
+      border: 2px solid var(--cream);
     }
 
     /* ─────────── Layout ─────────── */
@@ -104,12 +109,12 @@
     }
     .page-title h1 {
       margin: 0;
-      font-family: 'Inter', sans-serif;
+      font-family: 'IBM Plex Sans Thai', sans-serif;
       font-size: 1.6rem; font-weight: 800; letter-spacing: -.3px;
-      color: var(--slate);
+      color: var(--text-dark);
     }
     .page-title .count {
-      font-size: .88rem; color: var(--slate-3); font-weight: 600;
+      font-size: .88rem; color: var(--text-mid); font-weight: 600;
     }
 
     /* ─────────── Category chips ─────────── */
@@ -123,12 +128,12 @@
       border: 1px solid var(--border);
       background: white;
       font-size: .85rem; font-weight: 600;
-      color: var(--slate-2);
+      color: var(--text-mid);
       cursor: pointer; transition: all .15s;
     }
-    .chip:hover { border-color: rgba(190, 18, 60, 0.35); color: var(--ruby); }
+    .chip:hover { border-color: rgba(122, 31, 43, 0.35); color: var(--burgundy); }
     .chip.active {
-      background: var(--ruby); color: white; border-color: var(--ruby);
+      background: var(--burgundy); color: white; border-color: var(--burgundy);
     }
 
     /* ─────────── Product Card (style ของคุณ + ปรับ) ─────────── */
@@ -139,7 +144,7 @@
     }
 
     .product-card {
-      background-color: var(--cream);
+      background-color: var(--surface);
       box-shadow:
         0 4px 6px -1px rgba(0, 0, 0, 0.07),
         0 2px 4px -2px rgba(0, 0, 0, 0.05);
@@ -155,15 +160,15 @@
     .product-card:hover {
       transform: translateY(-5px);
       box-shadow:
-        0 12px 20px -6px rgba(190, 18, 60, 0.12),
+        0 12px 20px -6px rgba(122, 31, 43, 0.12),
         0 6px 10px -6px rgba(0, 0, 0, 0.08);
-      border-color: rgba(190, 18, 60, 0.18);
+      border-color: rgba(122, 31, 43, 0.18);
     }
 
     .product-card .thumb {
       aspect-ratio: 1 / 1;
       border-radius: 10px;
-      background: var(--cream-2);
+      background: var(--cream);
       display: flex; align-items: center; justify-content: center;
       font-size: 3.2rem; line-height: 1;
       overflow: hidden;
@@ -175,13 +180,13 @@
       position: absolute; top: 10px; left: 10px;
       font-size: .68rem; font-weight: 700;
       padding: 3px 9px; border-radius: 100px;
-      background: var(--ruby); color: white;
+      background: var(--burgundy); color: white;
       letter-spacing: .2px;
     }
-    .product-card .badge.muted { background: var(--slate-3); }
+    .product-card .badge.muted { background: var(--text-mid); }
 
     .product-card h3 {
-      color: var(--slate);
+      color: var(--text-dark);
       margin: 12px 0 0;
       font-weight: 700;
       font-size: 1rem;
@@ -193,14 +198,14 @@
     }
     .product-card .meta {
       margin-top: 4px;
-      font-size: .78rem; color: var(--slate-3); font-weight: 600;
+      font-size: .78rem; color: var(--text-mid); font-weight: 600;
     }
     .product-card .price {
-      color: var(--ruby);
+      color: var(--burgundy);
       font-weight: 800;
       font-size: 1.25rem;
       margin-top: 8px;
-      font-family: 'Inter', sans-serif;
+      font-family: 'IBM Plex Sans Thai', sans-serif;
       letter-spacing: -.2px;
     }
     .product-card .price .currency {
@@ -213,7 +218,7 @@
       padding: 10px 12px;
       border-radius: 10px;
       border: none;
-      background: var(--slate);
+      background: var(--text-dark);
       color: white;
       font-family: 'Sarabun', sans-serif;
       font-size: .9rem; font-weight: 700;
@@ -221,10 +226,10 @@
       transition: background .15s;
       display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     }
-    .product-card .add-btn:hover { background: var(--ruby); }
+    .product-card .add-btn:hover { background: var(--burgundy); }
     .product-card.out .add-btn {
       background: transparent;
-      color: var(--slate-3);
+      color: var(--text-mid);
       border: 1px dashed var(--border);
       cursor: not-allowed;
     }
@@ -238,7 +243,7 @@
       background: rgba(255, 255, 255, 0.55);
       border: 1px solid var(--border);
       font-size: .82rem;
-      color: var(--slate-3);
+      color: var(--text-mid);
       text-align: center;
     }
     .note code {
@@ -264,8 +269,16 @@
   <header class="glass-header">
     <div class="inner">
       <div class="brand">
-        <span class="brand-mark">P</span>
-        <span>Pok<span class="dot">·</span>pok</span>
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <path d="M 14 56 A 36 32 0 0 0 86 56 L 14 56 Z" fill="#7A1F2B"/>
+            <rect x="40" y="90" width="20" height="3" fill="#7A1F2B" rx="1.5"/>
+            <line x1="30" y1="90" x2="70" y2="90" stroke="#7A1F2B" stroke-width="2" stroke-linecap="round"/>
+            <rect x="45.5" y="6" width="9" height="42" fill="#7A1F2B" rx="4.5"/>
+            <circle cx="49.5" cy="42" r="2.8" fill="#F5F1EC"/>
+          </svg>
+        </span>
+        <span>pokpok</span>
       </div>
       <div class="header-actions">
         <button class="icon-btn" aria-label="ค้นหา">

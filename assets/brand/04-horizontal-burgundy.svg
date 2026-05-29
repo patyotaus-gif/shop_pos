@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 480" width="1600" height="480">
+  <g transform="translate(80 80) scale(3.2)">
+    <path d="M 14 56 A 36 32 0 0 0 86 56 L 14 56 Z" fill="#7A1F2B"/>
+    <rect x="40" y="90" width="20" height="3" fill="#7A1F2B" rx="1.5"/>
+    <line x1="30" y1="90" x2="70" y2="90" stroke="#7A1F2B" stroke-width="2" stroke-linecap="round"/>
+    <rect x="45.5" y="6" width="9" height="42" fill="#7A1F2B" rx="4.5"/>
+    <circle cx="49.5" cy="42" r="2.8" fill="#F5F1EC"/>
+  </g>
+  <line x1="460" y1="105" x2="460" y2="374" stroke="#7A1F2B" stroke-width="2" opacity="0.6"/>
+  <text x="510" y="210" font-family="'IBM Plex Sans Thai', 'IBM Plex Sans', system-ui, sans-serif" font-size="170" font-weight="300" fill="#7A1F2B" letter-spacing="2">pokpok</text>
+  <text x="510" y="320" font-family="'IBM Plex Sans Thai', system-ui, sans-serif" font-size="46" font-weight="300" fill="#7A1F2B" letter-spacing="2">ป๊อก ป๊อก</text>
+  <text x="510" y="370" font-family="'IBM Plex Sans Thai', system-ui, sans-serif" font-size="24" font-weight="400" fill="#7A1F2B" letter-spacing="6">POS · ระบบขายหน้าร้าน</text>
+</svg>
