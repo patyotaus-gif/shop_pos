@@ -329,7 +329,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                       ),
                       const SizedBox(width: 8),
                       IconButton.filled(
-                        icon: const Icon(Icons.qr_code_scanner),
+                        icon: const Icon(Icons.barcode_reader),
+                        tooltip: 'สแกนบาร์โค้ด',
                         onPressed: () => setState(() => _scanning = true),
                       ),
                     ],

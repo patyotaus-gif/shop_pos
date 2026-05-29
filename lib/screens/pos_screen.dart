@@ -15,6 +15,7 @@ import '../services/product_service.dart';
 import '../services/sale_service.dart';
 import '../services/settings_service.dart';
 import '../utils/receipt_generator.dart';
+import '../widgets/payment_sheet.dart';
 
 class PosScreen extends StatefulWidget {
   const PosScreen({super.key});
@@ -98,13 +99,15 @@ class _PosScreenState extends State<PosScreen> {
     }
 
     double paid = 0.0;
+    PaymentMethod method = _paymentMethod;
     if (!isDebt) {
-      if (_paymentMethod == PaymentMethod.cash) {
-        paid = await _askPayment();
-        if (paid < 0) return;
-      } else {
-        paid = _total;
-      }
+      // Ask for payment method + amount in one sheet, instead of forcing
+      // the cashier to pick a method before they hit "ชำระเงิน".
+      final result = await showPaymentSheet(context, total: _total);
+      if (result == null) return;
+      method = result.method;
+      paid = result.paid;
+      setState(() => _paymentMethod = method);
     }
 
     try {
@@ -114,7 +117,7 @@ class _PosScreenState extends State<PosScreen> {
         discount: _discount,
         isDebt: isDebt,
         customerName: customerName,
-        paymentMethod: _paymentMethod,
+        paymentMethod: method,
       );
 
       setState(() {
@@ -132,51 +135,6 @@ class _PosScreenState extends State<PosScreen> {
         );
       }
     }
-  }
-
-  Future<double> _askPayment() async {
-    final ctrl = TextEditingController();
-    final result = await showDialog<double>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('รับเงิน'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('ยอดรวม: ฿${_baht.format(_total)}',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: ctrl,
-              keyboardType: TextInputType.number,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'จำนวนเงินที่รับ',
-                prefixText: '฿',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, -1.0), child: const Text('ยกเลิก')),
-          FilledButton(
-            onPressed: () {
-              final v = double.tryParse(ctrl.text) ?? -1;
-              if (v < _total) {
-                ScaffoldMessenger.of(ctx).showSnackBar(
-                  const SnackBar(content: Text('จำนวนเงินไม่พอ')),
-                );
-                return;
-              }
-              Navigator.pop(ctx, v);
-            },
-            child: const Text('ยืนยัน'),
-          ),
-        ],
-      ),
-    );
-    return result ?? -1;
   }
 
   Future<String?> _askCustomerName() async {
@@ -280,7 +238,9 @@ class _PosScreenState extends State<PosScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.qr_code_scanner),
+            // Barcode scanner — was incorrectly using a QR icon.
+            icon: const Icon(Icons.barcode_reader),
+            tooltip: 'สแกนบาร์โค้ด',
             onPressed: _openScanner,
           ),
         ],
@@ -400,22 +360,6 @@ class _PosScreenState extends State<PosScreen> {
                 );
               },
             ),
-          // Payment method selector
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: PaymentMethod.values.map((m) {
-                final selected = _paymentMethod == m;
-                return ChoiceChip(
-                  label: Text(m.label, style: const TextStyle(fontSize: 12)),
-                  selected: selected,
-                  onSelected: (_) => setState(() => _paymentMethod = m),
-                );
-              }).toList(),
-            ),
-          ),
           // Cart
           Expanded(
             child: _cart.isEmpty
