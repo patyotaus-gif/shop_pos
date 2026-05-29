@@ -9,7 +9,17 @@ class ReceiptGenerator {
   static final _date = DateFormat('dd/MM/yyyy HH:mm', 'th_TH');
 
   static Future<void> printReceipt(Sale sale, {String shopName = 'ร้านของชำ'}) async {
-    final pdf = pw.Document();
+    // Load NotoSansThai so Thai characters don't render as tofu boxes
+    // (Helvetica — pdf package's default — has no Thai glyphs at all).
+    final fontRegular = await PdfGoogleFonts.notoSansThaiRegular();
+    final fontBold = await PdfGoogleFonts.notoSansThaiBold();
+
+    final pdf = pw.Document(
+      theme: pw.ThemeData.withFont(
+        base: fontRegular,
+        bold: fontBold,
+      ),
+    );
 
     pdf.addPage(
       pw.Page(
