@@ -322,7 +322,7 @@ class _PosScreenState extends State<PosScreen> {
             },
           ),
           const SizedBox(height: 4),
-          // Pinned products
+          // Pinned products (always horizontal, always visible)
           StreamBuilder<List<Product>>(
             stream: ProductService.watchAll(),
             builder: (ctx, snap) {
@@ -353,6 +353,53 @@ class _PosScreenState extends State<PosScreen> {
               );
             },
           ),
+          // Category-filtered product picker (only when a specific
+          // category is selected — keeps "ทั้งหมด" view clean and lets
+          // pinned + search carry the load there).
+          if (_selectedCategory != 'ทั้งหมด')
+            StreamBuilder<List<Product>>(
+              stream: ProductService.watchAll(),
+              builder: (ctx, snap) {
+                final all = snap.data ?? [];
+                final inCategory = all
+                    .where((p) => p.category == _selectedCategory)
+                    .toList()
+                  ..sort((a, b) => a.name.compareTo(b.name));
+                if (inCategory.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      'ยังไม่มีสินค้าในหมวด "$_selectedCategory"',
+                      style: const TextStyle(
+                          color: Colors.grey, fontSize: 12),
+                    ),
+                  );
+                }
+                return Container(
+                  margin: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 4),
+                  constraints: const BoxConstraints(maxHeight: 160),
+                  child: SingleChildScrollView(
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: inCategory.map((p) {
+                        final outOfStock = p.stock <= 0;
+                        return ActionChip(
+                          label: Text(
+                            '${p.name} · ฿${p.price.toStringAsFixed(0)}'
+                            '${outOfStock ? " (หมด)" : ""}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          onPressed:
+                              outOfStock ? null : () => _addToCart(p),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                );
+              },
+            ),
           // Payment method selector
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
