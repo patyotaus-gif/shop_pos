@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pokpok · Product Card Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700;800&family=Inter:wght@600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    /* ─────────── Design tokens (อิงจาก logo-preview / landing) ─────────── */
+    :root {
+      --ruby: #be123c;
+      --ruby-dark: #9f1239;
+      --ruby-dim: #fff1f2;
+      --slate: #1e293b;
+      --slate-2: #334155;
+      --slate-3: #475569;
+      --cream: #fffbf7;
+      --cream-2: #fdf5eb;
+      --border: rgba(226, 232, 240, 0.8);
+      --ink: #0f172a;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: 'Sarabun', 'TH Sarabun New', Arial, sans-serif;
+      background: var(--cream-2);
+      color: var(--ink);
+      line-height: 1.55;
+      min-height: 100vh;
+    }
+
+    /* ─────────── Glassmorphism Header ─────────── */
+    .glass-header {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      border-bottom: 1px solid var(--border);
+    }
+    .glass-header .inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 800;
+      font-size: 1.15rem;
+      letter-spacing: -.2px;
+      color: var(--slate);
+    }
+    .brand-mark {
+      width: 32px; height: 32px;
+      border-radius: 9px;
+      background: var(--ruby);
+      display: inline-flex; align-items: center; justify-content: center;
+      color: white; font-weight: 800; font-size: .95rem;
+    }
+    .brand .dot { color: var(--ruby); margin: 0 1px; }
+
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+    .icon-btn {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.6);
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all .15s;
+      position: relative;
+    }
+    .icon-btn:hover { background: white; border-color: rgba(190, 18, 60, 0.25); }
+    .icon-btn svg { width: 20px; height: 20px; stroke: var(--slate-2); }
+    .cart-badge {
+      position: absolute; top: -4px; right: -4px;
+      min-width: 18px; height: 18px; padding: 0 5px;
+      border-radius: 100px;
+      background: var(--ruby); color: white;
+      font-size: .68rem; font-weight: 700;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: 2px solid var(--cream-2);
+    }
+
+    /* ─────────── Layout ─────────── */
+    main { max-width: 1120px; margin: 0 auto; padding: 28px 20px 80px; }
+
+    .page-title {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 16px; margin-bottom: 22px;
+    }
+    .page-title h1 {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      font-size: 1.6rem; font-weight: 800; letter-spacing: -.3px;
+      color: var(--slate);
+    }
+    .page-title .count {
+      font-size: .88rem; color: var(--slate-3); font-weight: 600;
+    }
+
+    /* ─────────── Category chips ─────────── */
+    .chips {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      margin-bottom: 22px;
+    }
+    .chip {
+      padding: 7px 14px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      background: white;
+      font-size: .85rem; font-weight: 600;
+      color: var(--slate-2);
+      cursor: pointer; transition: all .15s;
+    }
+    .chip:hover { border-color: rgba(190, 18, 60, 0.35); color: var(--ruby); }
+    .chip.active {
+      background: var(--ruby); color: white; border-color: var(--ruby);
+    }
+
+    /* ─────────── Product Card (style ของคุณ + ปรับ) ─────────── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 18px;
+    }
+
+    .product-card {
+      background-color: var(--cream);
+      box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.07),
+        0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      border-radius: 14px;
+      padding: 14px;
+      transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+      border: 1px solid rgba(226, 232, 240, 0.6);
+      cursor: pointer;
+      display: flex; flex-direction: column;
+      position: relative;
+    }
+
+    .product-card:hover {
+      transform: translateY(-5px);
+      box-shadow:
+        0 12px 20px -6px rgba(190, 18, 60, 0.12),
+        0 6px 10px -6px rgba(0, 0, 0, 0.08);
+      border-color: rgba(190, 18, 60, 0.18);
+    }
+
+    .product-card .thumb {
+      aspect-ratio: 1 / 1;
+      border-radius: 10px;
+      background: var(--cream-2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 3.2rem; line-height: 1;
+      overflow: hidden;
+      position: relative;
+    }
+    .product-card.out .thumb { filter: grayscale(.6); opacity: .6; }
+
+    .product-card .badge {
+      position: absolute; top: 10px; left: 10px;
+      font-size: .68rem; font-weight: 700;
+      padding: 3px 9px; border-radius: 100px;
+      background: var(--ruby); color: white;
+      letter-spacing: .2px;
+    }
+    .product-card .badge.muted { background: var(--slate-3); }
+
+    .product-card h3 {
+      color: var(--slate);
+      margin: 12px 0 0;
+      font-weight: 700;
+      font-size: 1rem;
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .product-card .meta {
+      margin-top: 4px;
+      font-size: .78rem; color: var(--slate-3); font-weight: 600;
+    }
+    .product-card .price {
+      color: var(--ruby);
+      font-weight: 800;
+      font-size: 1.25rem;
+      margin-top: 8px;
+      font-family: 'Inter', sans-serif;
+      letter-spacing: -.2px;
+    }
+    .product-card .price .currency {
+      font-size: .85rem; font-weight: 700; margin-right: 2px;
+    }
+
+    .product-card .add-btn {
+      margin-top: 12px;
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: none;
+      background: var(--slate);
+      color: white;
+      font-family: 'Sarabun', sans-serif;
+      font-size: .9rem; font-weight: 700;
+      cursor: pointer;
+      transition: background .15s;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .product-card .add-btn:hover { background: var(--ruby); }
+    .product-card.out .add-btn {
+      background: transparent;
+      color: var(--slate-3);
+      border: 1px dashed var(--border);
+      cursor: not-allowed;
+    }
+    .product-card .add-btn svg { width: 16px; height: 16px; stroke: currentColor; }
+
+    /* ─────────── Footer note ─────────── */
+    .note {
+      margin-top: 36px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.55);
+      border: 1px solid var(--border);
+      font-size: .82rem;
+      color: var(--slate-3);
+      text-align: center;
+    }
+    .note code {
+      background: var(--ruby-dim);
+      color: var(--ruby-dark);
+      padding: 1px 6px;
+      border-radius: 5px;
+      font-size: .8rem;
+    }
+
+    @media (max-width: 480px) {
+      main { padding: 20px 14px 60px; }
+      .grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+      .product-card { padding: 10px; border-radius: 12px; }
+      .product-card h3 { font-size: .92rem; }
+      .product-card .price { font-size: 1.1rem; }
+      .page-title h1 { font-size: 1.3rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Glassmorphism sticky header -->
+  <header class="glass-header">
+    <div class="inner">
+      <div class="brand">
+        <span class="brand-mark">P</span>
+        <span>Pok<span class="dot">·</span>pok</span>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" aria-label="ค้นหา">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="m21 21-4.3-4.3"></path>
+          </svg>
+        </button>
+        <button class="icon-btn" aria-label="ตะกร้า">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 3h2l2.4 12.1a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"></path>
+            <circle cx="9" cy="20" r="1.5"></circle>
+            <circle cx="18" cy="20" r="1.5"></circle>
+          </svg>
+          <span class="cart-badge">3</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="page-title">
+      <h1>เมนูทั้งหมด</h1>
+      <span class="count">8 รายการ</span>
+    </div>
+
+    <div class="chips">
+      <button class="chip active">ทั้งหมด</button>
+      <button class="chip">อาหาร</button>
+      <button class="chip">เครื่องดื่ม</button>
+      <button class="chip">ของหวาน</button>
+      <button class="chip">ของกินเล่น</button>
+    </div>
+
+    <section class="grid">
+      <article class="product-card">
+        <div class="thumb">🍜<span class="badge">ขายดี</span></div>
+        <h3>ก๋วยเตี๋ยวต้มยำหมูสับ</h3>
+        <div class="meta">เผ็ดน้อย · เส้นเล็ก</div>
+        <div class="price"><span class="currency">฿</span>65</div>
+        <button class="add-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          เพิ่ม
+        </button>
+      </article>
+
+      <article class="product-card">
+        <div class="thumb">🍛</div>
+        <h3>ข้าวกะเพราไก่ไข่ดาว</h3>
+        <div class="meta">เพิ่มไข่ดาวได้</div>
+        <div class="price"><span class="currency">฿</span>70</div>
+        <button class="add-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          เพิ่ม
+        </button>
+      </article>
+
+      <article class="product-card">
+        <div class="thumb">🥤<span class="badge">ใหม่</span></div>
+        <h3>ชาเขียวมัทฉะลาเต้</h3>
+        <div class="meta">ร้อน / เย็น / ปั่น</div>
+        <div class="price"><span class="currency">฿</span>55</div>
+        <button class="add-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          เพิ่ม
+        </button>
+      </article>
+
+      <article class="product-card">
+        <div class="thumb">🍰</div>
+        <h3>ชีสเค้กสตรอว์เบอร์รี</h3>
+        <div class="meta">โฮมเมด · สดทุกวัน</div>
+        <div class="price"><span class="currency">฿</span>95</div>
+        <button class="add-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          เพิ่ม
+        </button>
+      </article>
+
+      <article class="product-card">
+        <div class="thumb">☕</div>
+        <h3>กาแฟดริปคั่วกลาง</h3>
+        <div class="meta">เมล็ดดอยช้าง</div>
+        <div class="price"><span class="currency">฿</span>80</div>
+        <button class="add-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          เพิ่ม
+        </button>
+      </article>
+
+      <article class="product-card">
+        <div class="thumb">🍪</div>
+        <h3>คุกกี้ช็อกโกแลตชิป</h3>
+        <div class="meta">แพ็ค 4 ชิ้น</div>
+        <div class="price"><span class="currency">฿</span>45</div>
+        <button class="add-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          เพิ่ม
+        </button>
+      </article>
+
+      <article class="product-card">
+        <div class="thumb">🍱<span class="badge">ลด 10%</span></div>
+        <h3>ข้าวกล่องเบนโตะรวมมิตร</h3>
+        <div class="meta">สั่งล่วงหน้า 30 นาที</div>
+        <div class="price"><span class="currency">฿</span>120</div>
+        <button class="add-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          เพิ่ม
+        </button>
+      </article>
+
+      <article class="product-card out">
+        <div class="thumb">🥗<span class="badge muted">หมด</span></div>
+        <h3>สลัดอกไก่ย่างน้ำสลัดงา</h3>
+        <div class="meta">หมดวันนี้</div>
+        <div class="price"><span class="currency">฿</span>85</div>
+        <button class="add-btn" disabled>ของหมด</button>
+      </article>
+    </section>
+
+    <p class="note">
+      Preview สำหรับ design review — อิง design tokens จาก <code>public/index.html</code>
+      (<code>--ruby</code>, <code>--slate</code>, <code>--cream</code>) ลอง hover การ์ดเพื่อดู lift effect และเลื่อนหน้าเพื่อดู glass header
+    </p>
+  </main>
+</body>
+</html>
