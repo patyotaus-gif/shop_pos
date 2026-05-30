@@ -1,10 +1,12 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import '../models/shop.dart';
 import '../services/auth_service.dart';
 import '../services/bank_notification_service.dart';
 import '../services/line_service.dart';
 import '../services/settings_service.dart';
+import '../services/shop_service.dart';
 import 'subscription_screen.dart';
 import '../main.dart' show themeNotifier;
 
@@ -28,6 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _savingLine = false;
   bool _savingPromptpay = false;
   bool _bankListenerGranted = false;
+  ShopType _shopType = ShopType.retail;
 
   @override
   void initState() {
@@ -50,6 +53,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final data = await SettingsService.getSettings();
       final granted = await BankNotificationService.isPermissionGranted();
+      final shop = await ShopService.getCurrentShop();
       if (mounted) {
         setState(() {
           _shopNameCtrl.text = (data['name'] as String?) ?? '';
@@ -60,6 +64,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _promptpayIdCtrl.text = (data['promptpayId'] as String?) ?? '';
           _promptpayNameCtrl.text = (data['promptpayName'] as String?) ?? '';
           _bankListenerGranted = granted;
+          _shopType = shop?.shopType ?? ShopType.retail;
         });
       }
     } catch (_) {
@@ -245,6 +250,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2))
                         : const Icon(Icons.save_outlined),
                     label: const Text('บันทึก'),
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+                const Divider(),
+                const SizedBox(height: 16),
+
+                // Shop type — read-only; switching requires data migration
+                // (tables, modifier groups, kitchen tickets), so we ask the
+                // owner to contact support instead of exposing a self-serve
+                // toggle.
+                Text('ประเภทร้าน',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleSmall
+                        ?.copyWith(color: cs.primary, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: cs.outlineVariant),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _shopType == ShopType.restaurant
+                            ? Icons.restaurant_outlined
+                            : Icons.store_outlined,
+                        color: cs.primary,
+                        size: 28,
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _shopType == ShopType.restaurant
+                                  ? 'ร้านอาหาร'
+                                  : 'ขายปลีก',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w700, fontSize: 15),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _shopType == ShopType.restaurant
+                                  ? 'โต๊ะ + ครัว + modifier — เปลี่ยนได้โดยติดต่อทีมงาน'
+                                  : 'ขายของทั่วไป — เปลี่ยนเป็นร้านอาหารได้โดยติดต่อทีมงาน',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: cs.onSurface.withValues(alpha: 0.6)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 

@@ -20,6 +20,7 @@ class ShopService {
   static Future<void> createShop({
     required String name,
     required String email,
+    ShopType shopType = ShopType.retail,
   }) async {
     final trialEndsAt = DateTime.now().add(const Duration(days: 14));
     final shop = Shop(
@@ -27,6 +28,7 @@ class ShopService {
       name: name,
       email: email,
       subscriptionStatus: SubscriptionStatus.trial,
+      shopType: shopType,
       trialEndsAt: trialEndsAt,
       createdAt: DateTime.now(),
     );

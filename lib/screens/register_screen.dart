@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/shop.dart';
 import '../services/auth_service.dart';
 import '../services/shop_service.dart';
 
@@ -15,6 +16,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _confirmPassCtrl = TextEditingController();
+  ShopType _shopType = ShopType.retail;
   bool _loading = false;
   bool _obscure = true;
   String? _error;
@@ -54,6 +56,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       await ShopService.createShop(
         name: _shopNameCtrl.text.trim(),
         email: _emailCtrl.text.trim(),
+        shopType: _shopType,
       );
     } catch (e) {
       setState(() {
@@ -134,6 +137,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   validator: (v) =>
                       (v == null || v.trim().isEmpty) ? 'กรุณากรอกชื่อร้าน' : null,
+                ),
+                const SizedBox(height: 16),
+
+                // ประเภทร้าน — ตัดสิน workflow ของ POS (retail = ขายปลีก
+                // ทั่วไป, restaurant = มีโต๊ะ + ครัว + modifier). เลือกตอน
+                // สมัครครั้งเดียว ปกติไม่เปลี่ยน
+                Text('ประเภทร้าน',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface.withValues(alpha: 0.7))),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ShopTypeCard(
+                        icon: Icons.store_outlined,
+                        label: 'ขายปลีก',
+                        subtitle: 'ของชำ มินิมาร์ท ขายของทั่วไป',
+                        selected: _shopType == ShopType.retail,
+                        onTap: () =>
+                            setState(() => _shopType = ShopType.retail),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _ShopTypeCard(
+                        icon: Icons.restaurant_outlined,
+                        label: 'ร้านอาหาร',
+                        subtitle: 'มีโต๊ะ ครัว เครื่องดื่ม คาเฟ่',
+                        selected: _shopType == ShopType.restaurant,
+                        onTap: () =>
+                            setState(() => _shopType = ShopType.restaurant),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 24),
                 Text('ข้อมูลบัญชี',
@@ -245,6 +284,65 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ShopTypeCard extends StatelessWidget {
+  const _ShopTypeCard({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        decoration: BoxDecoration(
+          color: selected
+              ? cs.primary.withValues(alpha: 0.08)
+              : cs.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? cs.primary : cs.outlineVariant,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon,
+                size: 28,
+                color: selected
+                    ? cs.primary
+                    : cs.onSurface.withValues(alpha: 0.7)),
+            const SizedBox(height: 8),
+            Text(label,
+                style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: selected ? cs.primary : cs.onSurface)),
+            const SizedBox(height: 2),
+            Text(subtitle,
+                style: TextStyle(
+                    fontSize: 11,
+                    color: cs.onSurface.withValues(alpha: 0.6))),
+          ],
         ),
       ),
     );

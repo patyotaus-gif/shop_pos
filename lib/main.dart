@@ -7,7 +7,9 @@ import 'firebase_options.dart';
 import 'services/auth_service.dart';
 import 'services/bank_notification_service.dart';
 import 'services/notification_service.dart';
+import 'models/shop.dart';
 import 'screens/dashboard_screen.dart';
+import 'screens/kitchen_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/pos_screen.dart';
 import 'screens/products_screen.dart';
@@ -17,7 +19,9 @@ import 'screens/product_form_screen.dart';
 import 'screens/orders_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/tables_screen.dart';
 import 'services/order_service.dart';
+import 'services/shop_service.dart';
 import 'widgets/subscription_gate.dart';
 
 final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.system);
@@ -274,92 +278,159 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _index = 0;
 
-  static const _screens = [
-    DashboardScreen(),
-    PosScreen(),
-    ProductsScreen(),
-    ReportScreen(),
-    DebtScreen(),
-    OrdersScreen(),
-    ChatScreen(),
-    SettingsScreen(),
-  ];
-
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder(
-      stream: OrderService.watchNewOrders(),
-      builder: (context, AsyncSnapshot<int> snap) {
-        final newCount = snap.data ?? 0;
-        return Scaffold(
-          body: IndexedStack(index: _index, children: _screens),
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: _index,
-            onDestinationSelected: (i) => setState(() => _index = i),
-            // Tighter sizing — 8 destinations on a phone-width screen
-            // would otherwise overlap labels (especially on Android,
-            // whose default Thai font is wider than iOS).
-            height: 64,
-            labelTextStyle: WidgetStateProperty.resolveWith((states) {
-              final selected = states.contains(WidgetState.selected);
-              return TextStyle(
-                fontSize: 10,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              );
-            }),
-            destinations: [
-              const NavigationDestination(
-                icon: Icon(Icons.dashboard_outlined),
-                selectedIcon: Icon(Icons.dashboard),
+    // Watch the shop doc so the nav reshapes immediately if the owner's
+    // shop type ever changes (today only support can change it, but the
+    // reactive shape keeps the door open for a self-serve toggle later).
+    return StreamBuilder<Shop?>(
+      stream: ShopService.watchCurrentShop(),
+      builder: (context, shopSnap) {
+        final isRestaurant =
+            shopSnap.data?.shopType == ShopType.restaurant;
+
+        return StreamBuilder<int>(
+          stream: OrderService.watchNewOrders(),
+          builder: (context, snap) {
+            final newCount = snap.data ?? 0;
+
+            // Build screens + destinations together so indices stay aligned.
+            // Restaurant mode swaps the POS tab for Tables (entry point of
+            // the table-based flow) and adds Kitchen near the end.
+            final tabs = <_NavTab>[
+              const _NavTab(
+                screen: DashboardScreen(),
+                icon: Icons.dashboard_outlined,
+                selectedIcon: Icons.dashboard,
                 label: 'ภาพรวม',
               ),
-              const NavigationDestination(
-                icon: Icon(Icons.point_of_sale_outlined),
-                selectedIcon: Icon(Icons.point_of_sale),
-                label: 'ขายสินค้า',
-              ),
-              const NavigationDestination(
-                icon: Icon(Icons.inventory_2_outlined),
-                selectedIcon: Icon(Icons.inventory_2),
+              if (isRestaurant)
+                const _NavTab(
+                  screen: TablesScreen(),
+                  icon: Icons.table_restaurant_outlined,
+                  selectedIcon: Icons.table_restaurant,
+                  label: 'โต๊ะ',
+                )
+              else
+                const _NavTab(
+                  screen: PosScreen(),
+                  icon: Icons.point_of_sale_outlined,
+                  selectedIcon: Icons.point_of_sale,
+                  label: 'ขายสินค้า',
+                ),
+              const _NavTab(
+                screen: ProductsScreen(),
+                icon: Icons.inventory_2_outlined,
+                selectedIcon: Icons.inventory_2,
                 label: 'สินค้า',
               ),
-              const NavigationDestination(
-                icon: Icon(Icons.bar_chart_outlined),
-                selectedIcon: Icon(Icons.bar_chart),
+              const _NavTab(
+                screen: ReportScreen(),
+                icon: Icons.bar_chart_outlined,
+                selectedIcon: Icons.bar_chart,
                 label: 'รายงาน',
               ),
-              const NavigationDestination(
-                icon: Icon(Icons.people_outline),
-                selectedIcon: Icon(Icons.people),
+              const _NavTab(
+                screen: DebtScreen(),
+                icon: Icons.people_outline,
+                selectedIcon: Icons.people,
                 label: 'ลูกหนี้',
               ),
-              NavigationDestination(
-                icon: Badge(
-                  isLabelVisible: newCount > 0,
-                  label: Text('$newCount'),
-                  child: const Icon(Icons.shopping_bag_outlined),
-                ),
-                selectedIcon: Badge(
-                  isLabelVisible: newCount > 0,
-                  label: Text('$newCount'),
-                  child: const Icon(Icons.shopping_bag),
-                ),
+              _NavTab(
+                screen: const OrdersScreen(),
+                icon: Icons.shopping_bag_outlined,
+                selectedIcon: Icons.shopping_bag,
                 label: 'Orders',
+                badgeCount: newCount,
               ),
-              const NavigationDestination(
-                icon: Icon(Icons.auto_awesome_outlined),
-                selectedIcon: Icon(Icons.auto_awesome),
+              if (isRestaurant)
+                const _NavTab(
+                  screen: KitchenScreen(),
+                  icon: Icons.soup_kitchen_outlined,
+                  selectedIcon: Icons.soup_kitchen,
+                  label: 'ครัว',
+                ),
+              const _NavTab(
+                screen: ChatScreen(),
+                icon: Icons.auto_awesome_outlined,
+                selectedIcon: Icons.auto_awesome,
                 label: 'AI',
               ),
-              const NavigationDestination(
-                icon: Icon(Icons.settings_outlined),
-                selectedIcon: Icon(Icons.settings),
+              const _NavTab(
+                screen: SettingsScreen(),
+                icon: Icons.settings_outlined,
+                selectedIcon: Icons.settings,
                 label: 'ตั้งค่า',
               ),
-            ],
-          ),
+            ];
+
+            // Clamp in case shop type flipped and the previously selected
+            // index is now out of range.
+            final safeIndex = _index.clamp(0, tabs.length - 1);
+
+            return Scaffold(
+              body: IndexedStack(
+                index: safeIndex,
+                children: tabs.map((t) => t.screen).toList(),
+              ),
+              bottomNavigationBar: NavigationBar(
+                selectedIndex: safeIndex,
+                onDestinationSelected: (i) => setState(() => _index = i),
+                // Tighter sizing — 8 destinations on a phone-width screen
+                // would otherwise overlap labels (especially on Android,
+                // whose default Thai font is wider than iOS). Restaurant
+                // mode adds a 9th, so we keep the same compact metrics.
+                height: 64,
+                labelTextStyle: WidgetStateProperty.resolveWith((states) {
+                  final selected = states.contains(WidgetState.selected);
+                  return TextStyle(
+                    fontSize: 10,
+                    fontWeight:
+                        selected ? FontWeight.w700 : FontWeight.w500,
+                  );
+                }),
+                destinations:
+                    tabs.map((t) => t.toDestination()).toList(),
+              ),
+            );
+          },
         );
       },
+    );
+  }
+}
+
+/// One bottom-nav entry. Pulled out so the conditional restaurant-vs-retail
+/// list stays readable in `_MainShellState.build` and so screens + their
+/// matching `NavigationDestination` can't drift out of sync.
+class _NavTab {
+  const _NavTab({
+    required this.screen,
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    this.badgeCount = 0,
+  });
+
+  final Widget screen;
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  final int badgeCount;
+
+  NavigationDestination toDestination() {
+    if (badgeCount > 0) {
+      return NavigationDestination(
+        icon: Badge(label: Text('$badgeCount'), child: Icon(icon)),
+        selectedIcon:
+            Badge(label: Text('$badgeCount'), child: Icon(selectedIcon)),
+        label: label,
+      );
+    }
+    return NavigationDestination(
+      icon: Icon(icon),
+      selectedIcon: Icon(selectedIcon),
+      label: label,
     );
   }
 }
