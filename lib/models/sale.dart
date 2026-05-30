@@ -74,6 +74,14 @@ class Sale {
   final String? refundReason;
   final String? stripePaymentIntentId;
 
+  /// Service charge added on top of the items subtotal. 0 for retail and
+  /// for restaurants that haven't configured a percentage.
+  final double serviceCharge;
+
+  /// 1 for normal bills; > 1 means the bill was split evenly N ways at
+  /// close time. The receipt shows the per-person figure when > 1.
+  final int splitCount;
+
   const Sale({
     required this.id,
     required this.items,
@@ -89,7 +97,13 @@ class Sale {
     this.refundedAt,
     this.refundReason,
     this.stripePaymentIntentId,
+    this.serviceCharge = 0,
+    this.splitCount = 1,
   });
+
+  /// Sum of line item subtotals — total minus service charge plus discount.
+  /// Useful for receipts that want to show subtotal explicitly.
+  double get itemsSubtotal => total - serviceCharge + discount;
 
   factory Sale.fromFirestore(Map<String, dynamic> data, String id) => Sale(
         id: id,
@@ -111,6 +125,8 @@ class Sale {
         refundedAt: (data['refundedAt'] as Timestamp?)?.toDate(),
         refundReason: data['refundReason'],
         stripePaymentIntentId: data['stripePaymentIntentId'],
+        serviceCharge: (data['serviceCharge'] ?? 0).toDouble(),
+        splitCount: (data['splitCount'] ?? 1) as int,
       );
 
   Map<String, dynamic> toFirestore() => {
@@ -123,5 +139,7 @@ class Sale {
         'isDebt': isDebt,
         'customerName': customerName,
         'paymentMethod': paymentMethod.name,
+        if (serviceCharge > 0) 'serviceCharge': serviceCharge,
+        if (splitCount > 1) 'splitCount': splitCount,
       };
 }

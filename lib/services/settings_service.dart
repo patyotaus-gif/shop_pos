@@ -69,4 +69,14 @@ class SettingsService {
         'promptpayId': promptpayId,
         'promptpayName': promptpayName,
       });
+
+  /// Restaurant-only — % added on top of the items subtotal when closing
+  /// a table tab. 0 means no service charge (default).
+  static Future<double> getServiceChargePercent() async {
+    final data = await getSettings();
+    return (data['serviceChargePercent'] ?? 0).toDouble();
+  }
+
+  static Future<void> saveServiceChargePercent(double percent) =>
+      saveSettings({'serviceChargePercent': percent});
 }

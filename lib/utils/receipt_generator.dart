@@ -64,9 +64,19 @@ class ReceiptGenerator {
               ),
             ),
             pw.Divider(),
+            if (sale.serviceCharge > 0) ...[
+              _row('ค่าสินค้า', _baht.format(sale.itemsSubtotal)),
+              _row('Service charge',
+                  _baht.format(sale.serviceCharge)),
+            ],
             if (sale.discount > 0)
               _row('ส่วนลด', '-${_baht.format(sale.discount)}'),
             _row('รวม', _baht.format(sale.total), bold: true),
+            if (sale.splitCount > 1)
+              _row(
+                'แยก ${sale.splitCount} คน',
+                '${_baht.format(sale.total / sale.splitCount)} / คน',
+              ),
             if (!sale.isDebt) ...[
               _row('รับเงิน', _baht.format(sale.paid)),
               _row('เงินทอน', _baht.format(sale.change)),

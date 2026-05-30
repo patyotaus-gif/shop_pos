@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import '../models/order_modifier.dart';
 import '../models/restaurant_table.dart';
 import '../models/table_order.dart';
+import '../services/settings_service.dart';
 import '../services/table_service.dart';
 import '../widgets/modifier_picker_sheet.dart';
 import '../widgets/payment_sheet.dart';
 import '../widgets/product_picker_sheet.dart';
+import '../widgets/split_bill_sheet.dart';
 
 /// Order workflow for a single table. Three states:
 /// 1. No open tab → big "เปิดออเดอร์" CTA
@@ -120,6 +122,15 @@ class _OpenOrderView extends StatefulWidget {
 
 class _OpenOrderViewState extends State<_OpenOrderView> {
   bool _closing = false;
+  double _serviceChargePercent = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    SettingsService.getServiceChargePercent().then((pct) {
+      if (mounted) setState(() => _serviceChargePercent = pct);
+    });
+  }
 
   Future<void> _addItem() async {
     final picked = await showProductPicker(context);
@@ -145,15 +156,41 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
         widget.order.id, index, current + delta);
   }
 
-  Future<void> _close() async {
+  double get _serviceCharge => _serviceChargePercent <= 0
+      ? 0
+      : widget.order.subtotal * (_serviceChargePercent / 100);
+  double get _grandTotal => widget.order.subtotal + _serviceCharge;
+  bool get _hasPendingItems => widget.order.items
+      .any((i) => i.kitchenStatus == KitchenStatus.pending);
+
+  Future<void> _sendToKitchen() async {
+    try {
+      await TableService.sendToKitchen(widget.order.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ส่งครัวแล้ว'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ส่งครัวไม่สำเร็จ: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _close({int splitCount = 1}) async {
     if (widget.order.items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('ยังไม่มีรายการในออเดอร์')),
       );
       return;
     }
-    final result =
-        await showPaymentSheet(context, total: widget.order.subtotal);
+    final result = await showPaymentSheet(context, total: _grandTotal);
     if (result == null || !mounted) return;
 
     setState(() => _closing = true);
@@ -163,13 +200,16 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
         paid: result.paid,
         discount: 0,
         paymentMethod: result.method,
+        serviceChargePercent: _serviceChargePercent,
+        splitCount: splitCount,
       );
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-                'ปิดบิลโต๊ะ ${widget.order.tableName} สำเร็จ — ฿${widget.order.subtotal.toStringAsFixed(2)}'),
+            content: Text(splitCount > 1
+                ? 'ปิดบิลโต๊ะ ${widget.order.tableName} (แยก $splitCount คน) — ฿${_grandTotal.toStringAsFixed(2)}'
+                : 'ปิดบิลโต๊ะ ${widget.order.tableName} สำเร็จ — ฿${_grandTotal.toStringAsFixed(2)}'),
             backgroundColor: Colors.green,
           ),
         );
@@ -182,6 +222,18 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
         );
       }
     }
+  }
+
+  Future<void> _split() async {
+    if (widget.order.items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ยังไม่มีรายการในออเดอร์')),
+      );
+      return;
+    }
+    final n = await showSplitBillSheet(context, total: _grandTotal);
+    if (n == null || !mounted) return;
+    await _close(splitCount: n);
   }
 
   Future<void> _cancel() async {
@@ -258,9 +310,16 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
                             return '${m.optionName} ($sign฿${m.priceAdjust.toStringAsFixed(0)})';
                           }).join(' · ');
                     return ListTile(
-                      title: Text(item.productName,
-                          style:
-                              const TextStyle(fontWeight: FontWeight.w600)),
+                      title: Row(
+                        children: [
+                          Expanded(
+                            child: Text(item.productName,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600)),
+                          ),
+                          _KitchenStatusChip(status: item.kitchenStatus),
+                        ],
+                      ),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -318,6 +377,44 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Items subtotal — show it explicitly only when a service
+                // charge is being added on top; otherwise the running
+                // "ยอดรวม" is clear enough on its own.
+                if (_serviceCharge > 0) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('ค่าสินค้า',
+                          style: TextStyle(
+                              fontSize: 13,
+                              color:
+                                  cs.onSurface.withValues(alpha: 0.6))),
+                      Text('฿${order.subtotal.toStringAsFixed(2)}',
+                          style: TextStyle(
+                              fontSize: 13,
+                              color:
+                                  cs.onSurface.withValues(alpha: 0.7))),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                          'Service ${_serviceChargePercent.toStringAsFixed(0)}%',
+                          style: TextStyle(
+                              fontSize: 13,
+                              color:
+                                  cs.onSurface.withValues(alpha: 0.6))),
+                      Text('฿${_serviceCharge.toStringAsFixed(2)}',
+                          style: TextStyle(
+                              fontSize: 13,
+                              color:
+                                  cs.onSurface.withValues(alpha: 0.7))),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                ],
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -325,7 +422,7 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
                         style: TextStyle(
                             fontSize: 14,
                             color: cs.onSurface.withValues(alpha: 0.7))),
-                    Text('฿${order.subtotal.toStringAsFixed(2)}',
+                    Text('฿${_grandTotal.toStringAsFixed(2)}',
                         style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w800,
@@ -347,9 +444,41 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
                       ),
                     ),
                     const SizedBox(width: 12),
+                    if (_hasPendingItems)
+                      Expanded(
+                        child: FilledButton.tonalIcon(
+                          onPressed: _closing ? null : _sendToKitchen,
+                          icon: const Icon(Icons.soup_kitchen_outlined),
+                          label: const Text('ส่งครัว'),
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 14),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
                     Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed:
+                            _closing || empty ? null : _split,
+                        icon: const Icon(Icons.call_split),
+                        label: const Text('แยกบิล'),
+                        style: OutlinedButton.styleFrom(
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
                       child: FilledButton.icon(
-                        onPressed: _closing || empty ? null : _close,
+                        onPressed:
+                            _closing || empty ? null : () => _close(),
                         icon: _closing
                             ? const SizedBox(
                                 width: 18,
@@ -384,3 +513,33 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
   }
 }
 
+/// Small pill that mirrors the item's kitchen lifecycle on the cart row.
+/// Pending hides itself (default state — no signal needed); sent shows
+/// amber "ครัวรับแล้ว"; ready shows green "พร้อมเสิร์ฟ".
+class _KitchenStatusChip extends StatelessWidget {
+  const _KitchenStatusChip({required this.status});
+  final KitchenStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    if (status == KitchenStatus.pending) return const SizedBox.shrink();
+    final (label, color) = switch (status) {
+      KitchenStatus.sent => ('ครัวรับแล้ว', Colors.amber.shade700),
+      KitchenStatus.ready => ('พร้อมเสิร์ฟ', Colors.green),
+      KitchenStatus.pending => ('', Colors.transparent),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+            fontSize: 10, color: color, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+}

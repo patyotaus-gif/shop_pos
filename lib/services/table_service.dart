@@ -80,6 +80,16 @@ class TableService {
 
   // ─────────────────────── Open tab workflow ───────────────────────
 
+  /// Watch every open tab across all tables — used by the kitchen
+  /// display to show all in-progress tickets in one place.
+  static Stream<List<TableOrder>> watchOpenOrders() => _tableOrdersCol()
+      .where('status', isEqualTo: 'open')
+      .orderBy('openedAt')
+      .snapshots()
+      .map((s) => s.docs
+          .map((d) => TableOrder.fromFirestore(d.data(), d.id))
+          .toList());
+
   /// Watch the single open order for [tableId] (or null if the table is
   /// available). Uses limit(1) since a table only ever has one open tab.
   static Stream<TableOrder?> watchOpenOrderForTable(String tableId) =>
@@ -160,21 +170,68 @@ class TableService {
     await ref.update({'items': next.map((e) => e.toMap()).toList()});
   }
 
+  /// Move every `pending` item on the tab to `sent` and stamp the time.
+  /// Cashier calls this when the kitchen should start cooking. Items added
+  /// later that are still `pending` can be sent in a subsequent batch.
+  static Future<void> sendToKitchen(String orderId) async {
+    final ref = _tableOrdersCol().doc(orderId);
+    final snap = await ref.get();
+    if (!snap.exists) return;
+    final order = TableOrder.fromFirestore(snap.data()!, snap.id);
+    final now = DateTime.now();
+    final next = order.items
+        .map((i) => i.kitchenStatus == KitchenStatus.pending
+            ? i.copyWith(
+                kitchenStatus: KitchenStatus.sent,
+                sentToKitchenAt: now,
+              )
+            : i)
+        .toList();
+    await ref.update({'items': next.map((e) => e.toMap()).toList()});
+  }
+
+  /// Mark a single item ready (kitchen → cashier). Operates on the index
+  /// inside the order's items array.
+  static Future<void> markItemReady(String orderId, int index) async {
+    final ref = _tableOrdersCol().doc(orderId);
+    final snap = await ref.get();
+    if (!snap.exists) return;
+    final order = TableOrder.fromFirestore(snap.data()!, snap.id);
+    if (index < 0 || index >= order.items.length) return;
+    final next = [...order.items];
+    next[index] = next[index].copyWith(
+      kitchenStatus: KitchenStatus.ready,
+      readyAt: DateTime.now(),
+    );
+    await ref.update({'items': next.map((e) => e.toMap()).toList()});
+  }
+
   /// Close the tab: create a matching Sale, deduct stock, free the table.
   /// Returns the new Sale id. Throws if the tab is empty.
+  ///
+  /// [serviceChargePercent] adds X% on top of the items subtotal. Read
+  /// from settings by the caller — defaults to 0 when not configured.
+  /// [splitCount] > 1 means the bill was split N ways at close; we record
+  /// it on the Sale so the receipt can show the per-person figure but the
+  /// full order stays as a single Sale doc (keeps reports honest).
   static Future<String> closeOrder({
     required TableOrder order,
     required double paid,
     required double discount,
     required PaymentMethod paymentMethod,
+    double serviceChargePercent = 0,
+    int splitCount = 1,
   }) async {
     if (order.items.isEmpty) {
       throw StateError('ไม่มีรายการในออเดอร์');
     }
 
-    final subtotal =
+    final itemsSubtotal =
         order.items.fold<double>(0, (s, i) => s + i.subtotal);
-    final total = subtotal - discount;
+    final serviceCharge = serviceChargePercent <= 0
+        ? 0.0
+        : (itemsSubtotal - discount) * (serviceChargePercent / 100);
+    final total = itemsSubtotal - discount + serviceCharge;
     final change =
         paymentMethod == PaymentMethod.cash ? (paid - total) : 0.0;
 
@@ -200,6 +257,8 @@ class TableService {
       createdAt: DateTime.now(),
       paymentMethod: paymentMethod,
       customerName: 'โต๊ะ ${order.tableName}',
+      serviceCharge: serviceCharge,
+      splitCount: splitCount,
     );
 
     final batch = FirebaseFirestore.instance.batch();

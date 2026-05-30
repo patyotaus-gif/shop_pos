@@ -24,11 +24,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _lineUserIdCtrl = TextEditingController();
   final _promptpayIdCtrl = TextEditingController();
   final _promptpayNameCtrl = TextEditingController();
+  final _serviceChargeCtrl = TextEditingController();
   bool _lineNotifyEnabled = false;
   bool _loading = true;
   bool _saving = false;
   bool _savingLine = false;
   bool _savingPromptpay = false;
+  bool _savingServiceCharge = false;
   bool _bankListenerGranted = false;
   ShopType _shopType = ShopType.retail;
 
@@ -46,6 +48,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _lineUserIdCtrl.dispose();
     _promptpayIdCtrl.dispose();
     _promptpayNameCtrl.dispose();
+    _serviceChargeCtrl.dispose();
     super.dispose();
   }
 
@@ -63,6 +66,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _lineNotifyEnabled = (data['lineNotifyEnabled'] as bool?) ?? false;
           _promptpayIdCtrl.text = (data['promptpayId'] as String?) ?? '';
           _promptpayNameCtrl.text = (data['promptpayName'] as String?) ?? '';
+          final sc = (data['serviceChargePercent'] ?? 0).toDouble();
+          _serviceChargeCtrl.text = sc == 0 ? '' : sc.toStringAsFixed(0);
           _bankListenerGranted = granted;
           _shopType = shop?.shopType ?? ShopType.retail;
         });
@@ -85,6 +90,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: granted ? Colors.green : null,
       ),
     );
+  }
+
+  Future<void> _saveServiceCharge() async {
+    final raw = _serviceChargeCtrl.text.trim();
+    final pct = raw.isEmpty ? 0.0 : double.tryParse(raw);
+    if (pct == null || pct < 0 || pct > 100) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ใส่ตัวเลข 0–100')),
+      );
+      return;
+    }
+    setState(() => _savingServiceCharge = true);
+    try {
+      await SettingsService.saveServiceChargePercent(pct);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(pct == 0
+                ? 'ปิด service charge แล้ว'
+                : 'ตั้ง service charge ${pct.toStringAsFixed(0)}% แล้ว'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('บันทึกไม่สำเร็จ: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _savingServiceCharge = false);
+    }
   }
 
   Future<void> _savePromptPay() async {
@@ -310,6 +348,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                 ),
+
+                // Service charge — restaurant only. Auto-applied to every
+                // table tab on close. Set to 0 to disable.
+                if (_shopType == ShopType.restaurant) ...[
+                  const SizedBox(height: 20),
+                  Text('Service charge',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: cs.primary, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(
+                    'เปอร์เซ็นต์ที่บวกบนยอดสินค้าตอนปิดบิล — ใส่ 0 เพื่อปิด',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: cs.onSurface.withValues(alpha: 0.6)),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _serviceChargeCtrl,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          decoration: const InputDecoration(
+                            labelText: 'เปอร์เซ็นต์',
+                            hintText: '10',
+                            suffixText: '%',
+                            prefixIcon: Icon(Icons.percent),
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      FilledButton.icon(
+                        onPressed:
+                            _savingServiceCharge ? null : _saveServiceCharge,
+                        icon: _savingServiceCharge
+                            ? const SizedBox(
+                                height: 16,
+                                width: 16,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(Icons.save_outlined),
+                        label: const Text('บันทึก'),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 16),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
 
                 const SizedBox(height: 32),
                 const Divider(),
