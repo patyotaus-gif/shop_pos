@@ -5,32 +5,154 @@ import '../models/order.dart';
 import '../services/auth_service.dart';
 import '../services/order_service.dart';
 
-class OrdersScreen extends StatelessWidget {
+/// Top-of-screen filter — replaces the old "รอดำเนินการ / ทั้งหมด" tabs.
+/// `action` is the default because that's what the shop owner opens this
+/// screen for: "what do I need to deal with?".
+enum _OrderFilter { action, pendingPayment, all }
+
+extension _OrderFilterX on _OrderFilter {
+  String get label => switch (this) {
+        _OrderFilter.action => 'ต้องทำต่อ',
+        _OrderFilter.pendingPayment => 'รอชำระ',
+        _OrderFilter.all => 'ทั้งหมด',
+      };
+
+  /// Server-side stream selection — we use the existing watchActive query
+  /// when possible (smaller payload) and fall back to watchAll when the
+  /// chip needs orders outside the active window.
+  bool matches(ShopOrder order) => switch (this) {
+        _OrderFilter.action => const {
+            OrderStatus.pendingPayment,
+            OrderStatus.paid,
+            OrderStatus.accepted,
+            OrderStatus.ready,
+          }.contains(order.status),
+        _OrderFilter.pendingPayment =>
+          order.status == OrderStatus.pendingPayment,
+        _OrderFilter.all => true,
+      };
+}
+
+class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
 
   @override
+  State<OrdersScreen> createState() => _OrdersScreenState();
+}
+
+class _OrdersScreenState extends State<OrdersScreen> {
+  _OrderFilter _filter = _OrderFilter.action;
+
+  @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Orders'),
-          centerTitle: true,
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'รอดำเนินการ'),
-              Tab(text: 'ทั้งหมด'),
+    final cs = Theme.of(context).colorScheme;
+    return Scaffold(
+      appBar: AppBar(title: const Text('Orders'), centerTitle: true),
+      body: Column(
+        children: [
+          // Filter chips — replaces the old TabBar. One row of pills along
+          // the top so it stays out of the way of the order cards.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final f in _OrderFilter.values) ...[
+                    StreamBuilder<List<ShopOrder>>(
+                      stream: OrderService.watchAll(),
+                      builder: (context, snap) {
+                        final count = (snap.data ?? const [])
+                            .where(f.matches)
+                            .length;
+                        return _FilterChip(
+                          label: f.label,
+                          count: count,
+                          selected: _filter == f,
+                          onTap: () => setState(() => _filter = f),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          Divider(height: 1, color: cs.outlineVariant),
+          Expanded(
+            child: _OrderList(
+              stream: OrderService.watchAll(),
+              filter: _filter,
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: _ShareLinkButton(),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.count,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final int count;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: selected ? cs.primary : cs.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(100),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(100),
+        child: Padding(
+          padding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: selected ? cs.onPrimary : cs.onSurface,
+                ),
+              ),
+              if (count > 0) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 6, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? cs.onPrimary.withValues(alpha: 0.2)
+                        : cs.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                  child: Text(
+                    '$count',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: selected ? cs.onPrimary : cs.primary,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
-        body: TabBarView(
-          children: [
-            _OrderList(stream: OrderService.watchActive()),
-            _OrderList(stream: OrderService.watchAll()),
-          ],
-        ),
-        // แสดงลิงก์แชร์ให้ลูกค้า
-        floatingActionButton: _ShareLinkButton(),
       ),
     );
   }
@@ -99,7 +221,8 @@ class _ShareLinkButton extends StatelessWidget {
 
 class _OrderList extends StatelessWidget {
   final Stream<List<ShopOrder>> stream;
-  const _OrderList({required this.stream});
+  final _OrderFilter filter;
+  const _OrderList({required this.stream, required this.filter});
 
   @override
   Widget build(BuildContext context) {
@@ -108,15 +231,23 @@ class _OrderList extends StatelessWidget {
       builder: (ctx, snap) {
         if (snap.hasError) return const Center(child: Text('โหลดข้อมูลไม่สำเร็จ'));
         if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-        final orders = snap.data!;
+        final orders = snap.data!.where(filter.matches).toList();
         if (orders.isEmpty) {
-          return const Center(
+          // Tailor the empty copy to the chip so the user knows whether
+          // there's nothing to do vs. nothing at all.
+          final msg = switch (filter) {
+            _OrderFilter.action => 'ไม่มี order ที่ต้องทำต่อ',
+            _OrderFilter.pendingPayment => 'ไม่มี order รอชำระ',
+            _OrderFilter.all => 'ยังไม่มี order',
+          };
+          return Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.inbox_outlined, size: 64, color: Colors.grey),
-                SizedBox(height: 8),
-                Text('ยังไม่มี order', style: TextStyle(color: Colors.grey)),
+                const Icon(Icons.inbox_outlined,
+                    size: 64, color: Colors.grey),
+                const SizedBox(height: 8),
+                Text(msg, style: const TextStyle(color: Colors.grey)),
               ],
             ),
           );
