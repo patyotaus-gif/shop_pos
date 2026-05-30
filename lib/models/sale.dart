@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'order_modifier.dart';
+
 enum PaymentMethod { cash, transfer, qr, online }
 
 extension PaymentMethodExt on PaymentMethod {
@@ -18,6 +20,7 @@ class SaleItem {
   final double costPrice;
   final int quantity;
   final double subtotal;
+  final List<OrderModifier> modifiers;
 
   const SaleItem({
     required this.productId,
@@ -26,6 +29,7 @@ class SaleItem {
     this.costPrice = 0,
     required this.quantity,
     required this.subtotal,
+    this.modifiers = const [],
   });
 
   double get profit => (price - costPrice) * quantity;
@@ -37,6 +41,9 @@ class SaleItem {
         costPrice: (m['costPrice'] ?? 0).toDouble(),
         quantity: m['quantity'] ?? 1,
         subtotal: (m['subtotal'] ?? 0).toDouble(),
+        modifiers: ((m['modifiers'] as List<dynamic>?) ?? const [])
+            .map((e) => OrderModifier.fromMap(e as Map<String, dynamic>))
+            .toList(),
       );
 
   Map<String, dynamic> toMap() => {
@@ -46,6 +53,8 @@ class SaleItem {
         'costPrice': costPrice,
         'quantity': quantity,
         'subtotal': subtotal,
+        if (modifiers.isNotEmpty)
+          'modifiers': modifiers.map((m) => m.toMap()).toList(),
       };
 }
 

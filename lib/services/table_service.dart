@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../models/order_modifier.dart';
 import '../models/product.dart';
 import '../models/restaurant_table.dart';
 import '../models/sale.dart';
@@ -114,7 +115,9 @@ class TableService {
   }
 
   /// Append [item] to the tab. If the same productId is already there with
-  /// no notes, bump its quantity instead of pushing a duplicate row.
+  /// the same notes AND the same modifier set, bump qty instead of pushing
+  /// a duplicate row — "ก๋วยเตี๋ยวเผ็ดน้อย" stays separate from
+  /// "ก๋วยเตี๋ยวเผ็ดมาก" but two "ก๋วยเตี๋ยวเผ็ดน้อย" merge.
   static Future<void> addItem(
       String orderId, TableOrderItem item) async {
     final ref = _tableOrdersCol().doc(orderId);
@@ -123,7 +126,10 @@ class TableService {
     final order = TableOrder.fromFirestore(snap.data()!, snap.id);
 
     final mergedIndex = order.items.indexWhere(
-      (i) => i.productId == item.productId && i.notes == item.notes,
+      (i) =>
+          i.productId == item.productId &&
+          i.notes == item.notes &&
+          modifiersEqual(i.modifiers, item.modifiers),
     );
     final List<TableOrderItem> next;
     if (mergedIndex >= 0) {
@@ -180,6 +186,7 @@ class TableService {
               costPrice: i.costPrice,
               quantity: i.quantity,
               subtotal: i.subtotal,
+              modifiers: i.modifiers,
             ))
         .toList();
 
@@ -245,13 +252,20 @@ class TableService {
 
   /// Build a [TableOrderItem] from a [Product] — the picker passes Products
   /// in, this normalizes them onto the lighter line-item shape.
-  static TableOrderItem itemFromProduct(Product product, {int quantity = 1}) {
+  static TableOrderItem itemFromProduct(
+    Product product, {
+    int quantity = 1,
+    List<OrderModifier> modifiers = const [],
+    String? notes,
+  }) {
     return TableOrderItem(
       productId: product.id,
       productName: product.name,
       price: product.price,
       costPrice: product.costPrice,
       quantity: quantity,
+      modifiers: modifiers,
+      notes: notes,
     );
   }
 }

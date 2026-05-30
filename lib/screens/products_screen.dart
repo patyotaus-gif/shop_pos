@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/product.dart';
+import '../models/shop.dart';
 import '../services/product_service.dart';
+import '../services/shop_service.dart';
+import 'modifier_groups_screen.dart';
 import 'product_form_screen.dart';
 
 class ProductsScreen extends StatefulWidget {
@@ -20,6 +23,28 @@ class _ProductsScreenState extends State<ProductsScreen> {
       appBar: AppBar(
         title: const Text('สินค้า'),
         centerTitle: true,
+        actions: [
+          // Modifier groups admin lives behind a single icon — only
+          // surfaced for restaurants since retail products don't take
+          // option pickers.
+          StreamBuilder<Shop?>(
+            stream: ShopService.watchCurrentShop(),
+            builder: (context, snap) {
+              if (snap.data?.shopType != ShopType.restaurant) {
+                return const SizedBox.shrink();
+              }
+              return IconButton(
+                tooltip: 'Modifier groups',
+                icon: const Icon(Icons.tune_outlined),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const ModifierGroupsScreen()),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.push(

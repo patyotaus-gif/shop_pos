@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'order_modifier.dart';
+
 /// Lifecycle of a restaurant tab.
 /// - `open`: customer seated, items being added
 /// - `closed`: bill settled → a matching Sale doc exists (linked via saleId)
@@ -15,6 +17,7 @@ class TableOrderItem {
   final double costPrice;
   final int quantity;
   final String? notes;
+  final List<OrderModifier> modifiers;
 
   const TableOrderItem({
     required this.productId,
@@ -23,9 +26,14 @@ class TableOrderItem {
     this.costPrice = 0,
     required this.quantity,
     this.notes,
+    this.modifiers = const [],
   });
 
-  double get subtotal => price * quantity;
+  /// Per-unit price after modifier adjustments (e.g. base ฿65 + เพิ่มไข่ ฿10).
+  double get unitPrice =>
+      price + modifiers.fold<double>(0, (s, m) => s + m.priceAdjust);
+
+  double get subtotal => unitPrice * quantity;
 
   factory TableOrderItem.fromMap(Map<String, dynamic> m) => TableOrderItem(
         productId: m['productId'] ?? '',
@@ -34,6 +42,9 @@ class TableOrderItem {
         costPrice: (m['costPrice'] ?? 0).toDouble(),
         quantity: (m['quantity'] ?? 1) as int,
         notes: m['notes'] as String?,
+        modifiers: ((m['modifiers'] as List<dynamic>?) ?? const [])
+            .map((e) => OrderModifier.fromMap(e as Map<String, dynamic>))
+            .toList(),
       );
 
   Map<String, dynamic> toMap() => {
@@ -43,15 +54,23 @@ class TableOrderItem {
         'costPrice': costPrice,
         'quantity': quantity,
         if (notes != null) 'notes': notes,
+        if (modifiers.isNotEmpty)
+          'modifiers': modifiers.map((m) => m.toMap()).toList(),
       };
 
-  TableOrderItem copyWith({int? quantity, String? notes}) => TableOrderItem(
+  TableOrderItem copyWith({
+    int? quantity,
+    String? notes,
+    List<OrderModifier>? modifiers,
+  }) =>
+      TableOrderItem(
         productId: productId,
         productName: productName,
         price: price,
         costPrice: costPrice,
         quantity: quantity ?? this.quantity,
         notes: notes ?? this.notes,
+        modifiers: modifiers ?? this.modifiers,
       );
 }
 

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../models/order_modifier.dart';
 import '../models/restaurant_table.dart';
 import '../models/table_order.dart';
 import '../services/table_service.dart';
+import '../widgets/modifier_picker_sheet.dart';
 import '../widgets/payment_sheet.dart';
 import '../widgets/product_picker_sheet.dart';
 
@@ -122,7 +124,18 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
   Future<void> _addItem() async {
     final picked = await showProductPicker(context);
     if (picked == null || !mounted) return;
-    final item = TableService.itemFromProduct(picked);
+
+    // If the product has modifier groups, walk the customer through the
+    // picker first. Empty list (no modifiers configured / groups deleted)
+    // → add the item plain.
+    List<OrderModifier> modifiers = const [];
+    if (picked.modifierGroupIds.isNotEmpty) {
+      final picks = await showModifierPicker(context, product: picked);
+      if (picks == null || !mounted) return; // user cancelled the sheet
+      modifiers = picks;
+    }
+
+    final item = TableService.itemFromProduct(picked, modifiers: modifiers);
     await TableService.addItem(widget.order.id, item);
   }
 
@@ -237,14 +250,40 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
                       Divider(height: 1, color: cs.outlineVariant),
                   itemBuilder: (_, i) {
                     final item = order.items[i];
+                    final modifierLine = item.modifiers.isEmpty
+                        ? null
+                        : item.modifiers.map((m) {
+                            if (m.priceAdjust == 0) return m.optionName;
+                            final sign = m.priceAdjust > 0 ? '+' : '';
+                            return '${m.optionName} ($sign฿${m.priceAdjust.toStringAsFixed(0)})';
+                          }).join(' · ');
                     return ListTile(
                       title: Text(item.productName,
-                          style: const TextStyle(fontWeight: FontWeight.w600)),
-                      subtitle: Text(
-                        '฿${item.price.toStringAsFixed(2)} × ${item.quantity} = ฿${item.subtotal.toStringAsFixed(2)}',
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: cs.onSurface.withValues(alpha: 0.6)),
+                          style:
+                              const TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (modifierLine != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text('• $modifierLine',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      color: cs.primary
+                                          .withValues(alpha: 0.85))),
+                            ),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              '฿${item.unitPrice.toStringAsFixed(2)} × ${item.quantity} = ฿${item.subtotal.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color:
+                                      cs.onSurface.withValues(alpha: 0.6)),
+                            ),
+                          ),
+                        ],
                       ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,

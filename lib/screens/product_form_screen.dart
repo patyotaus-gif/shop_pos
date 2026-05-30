@@ -2,9 +2,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import '../models/modifier_group.dart';
 import '../models/product.dart';
+import '../models/shop.dart';
 import '../services/image_service.dart';
+import '../services/modifier_service.dart';
 import '../services/product_service.dart';
+import '../services/shop_service.dart';
 import '../utils/barcode_lookup.dart';
 
 class ProductFormScreen extends StatefulWidget {
@@ -32,6 +36,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   bool _isPinned = false;
   File? _imageFile;
   bool _removeBackground = false;
+  late Set<String> _modifierGroupIds;
 
   bool get _isEdit => widget.product != null;
 
@@ -52,6 +57,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         TextEditingController(text: p?.lowStockThreshold.toString() ?? '5');
     _category = p?.category ?? 'ทั่วไป';
     _isPinned = p?.isPinned ?? false;
+    _modifierGroupIds = {...(p?.modifierGroupIds ?? const <String>[])};
     if (p?.imagePath != null) _imageFile = File(p!.imagePath!);
 
     if (_barcode.text.isNotEmpty && !_isEdit) {
@@ -161,6 +167,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         isPinned: _isPinned,
         imagePath: savedImagePath,
         imageUrl: savedImageUrl,
+        modifierGroupIds: _modifierGroupIds.toList(),
       );
 
       if (_isEdit) {
@@ -408,6 +415,87 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                     title: const Text('ปักหมุดในหน้าขาย'),
                     subtitle: const Text('แสดงในปุ่มลัดหน้า POS'),
                     contentPadding: EdgeInsets.zero,
+                  ),
+                  // Restaurant-only: pick which modifier groups (size,
+                  // spice level, add-ons) attach to this product. Hidden
+                  // for retail shops where modifiers are irrelevant.
+                  StreamBuilder<Shop?>(
+                    stream: ShopService.watchCurrentShop(),
+                    builder: (context, shopSnap) {
+                      if (shopSnap.data?.shopType !=
+                          ShopType.restaurant) {
+                        return const SizedBox.shrink();
+                      }
+                      return StreamBuilder<List<ModifierGroup>>(
+                        stream: ModifierService.watchAll(),
+                        builder: (context, groupSnap) {
+                          final groups = groupSnap.data ?? const [];
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 16),
+                              Text('Modifier groups',
+                                  style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary)),
+                              const SizedBox(height: 4),
+                              Text(
+                                'เลือกตัวเลือกที่ลูกค้าจะปรับได้ตอนสั่ง',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.6)),
+                              ),
+                              const SizedBox(height: 8),
+                              if (groups.isEmpty)
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    'ยังไม่มีกลุ่ม — สร้างที่หน้า "Modifier groups" (ไอคอน 🎛 มุมขวาบนของหน้าสินค้า)',
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.7)),
+                                  ),
+                                )
+                              else
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 4,
+                                  children: groups.map((g) {
+                                    final sel =
+                                        _modifierGroupIds.contains(g.id);
+                                    return FilterChip(
+                                      label: Text(g.name),
+                                      selected: sel,
+                                      onSelected: (v) => setState(() {
+                                        if (v) {
+                                          _modifierGroupIds.add(g.id);
+                                        } else {
+                                          _modifierGroupIds.remove(g.id);
+                                        }
+                                      }),
+                                    );
+                                  }).toList(),
+                                ),
+                            ],
+                          );
+                        },
+                      );
+                    },
                   ),
                   const SizedBox(height: 16),
                   FilledButton(

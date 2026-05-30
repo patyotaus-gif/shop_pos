@@ -11,6 +11,11 @@ class Product {
   final String? imagePath;
   final String? imageUrl;
 
+  /// Restaurant-only: ids of [ModifierGroup]s offered when this product is
+  /// added to an order. Empty for retail products. The picker resolves
+  /// these ids to full ModifierGroup docs at order time.
+  final List<String> modifierGroupIds;
+
   const Product({
     required this.id,
     required this.name,
@@ -23,6 +28,7 @@ class Product {
     this.isPinned = false,
     this.imagePath,
     this.imageUrl,
+    this.modifierGroupIds = const [],
   });
 
   bool get isLowStock => stock <= lowStockThreshold;
@@ -41,6 +47,9 @@ class Product {
         isPinned: data['isPinned'] ?? false,
         imagePath: data['imagePath'],
         imageUrl: data['imageUrl'],
+        modifierGroupIds: ((data['modifierGroupIds'] as List<dynamic>?) ?? const [])
+            .map((e) => e.toString())
+            .toList(),
       );
 
   Map<String, dynamic> toFirestore() => {
@@ -54,6 +63,7 @@ class Product {
         'isPinned': isPinned,
         if (imagePath != null) 'imagePath': imagePath,
         if (imageUrl != null) 'imageUrl': imageUrl,
+        if (modifierGroupIds.isNotEmpty) 'modifierGroupIds': modifierGroupIds,
       };
 
   Product copyWith({
@@ -67,6 +77,7 @@ class Product {
     bool? isPinned,
     String? imagePath,
     String? imageUrl,
+    List<String>? modifierGroupIds,
   }) =>
       Product(
         id: id,
@@ -80,5 +91,6 @@ class Product {
         isPinned: isPinned ?? this.isPinned,
         imagePath: imagePath ?? this.imagePath,
         imageUrl: imageUrl ?? this.imageUrl,
+        modifierGroupIds: modifierGroupIds ?? this.modifierGroupIds,
       );
 }

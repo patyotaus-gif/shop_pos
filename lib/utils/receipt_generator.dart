@@ -35,15 +35,31 @@ class ReceiptGenerator {
             pw.Center(child: pw.Text(_date.format(sale.createdAt), style: const pw.TextStyle(fontSize: 9))),
             pw.Divider(),
             ...sale.items.map(
-              (item) => pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              (item) => pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Expanded(
-                    child: pw.Text('${item.productName} x${item.quantity}',
-                        style: const pw.TextStyle(fontSize: 9)),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Expanded(
+                        child: pw.Text(
+                            '${item.productName} x${item.quantity}',
+                            style: const pw.TextStyle(fontSize: 9)),
+                      ),
+                      pw.Text(_baht.format(item.subtotal),
+                          style: const pw.TextStyle(fontSize: 9)),
+                    ],
                   ),
-                  pw.Text(_baht.format(item.subtotal),
-                      style: const pw.TextStyle(fontSize: 9)),
+                  // Modifiers — indent under the line so the receipt
+                  // makes clear which item they belong to.
+                  if (item.modifiers.isNotEmpty)
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.only(left: 8, top: 1),
+                      child: pw.Text(
+                        '• ${item.modifiers.map((m) => m.priceAdjust == 0 ? m.optionName : '${m.optionName} (${m.priceAdjust > 0 ? '+' : ''}${m.priceAdjust.toStringAsFixed(0)})').join(', ')}',
+                        style: const pw.TextStyle(fontSize: 8),
+                      ),
+                    ),
                 ],
               ),
             ),
