@@ -234,20 +234,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 // Shop info section
-                Text('ข้อมูลร้าน',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleSmall
-                        ?.copyWith(color: cs.primary, fontWeight: FontWeight.bold)),
+                _SectionTitle('ข้อมูลร้าน'),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _shopNameCtrl,
                   decoration: const InputDecoration(
                     labelText: 'ชื่อร้าน',
                     hintText: 'ร้านของชำ',
-                    prefixIcon: Icon(Icons.storefront_outlined),
                     border: OutlineInputBorder(),
-                    helperText: 'ชื่อนี้จะแสดงบนใบเสร็จและรายงาน',
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -256,11 +250,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   keyboardType: TextInputType.number,
                   maxLength: 13,
                   decoration: const InputDecoration(
-                    labelText: 'เลขประจำตัวผู้เสียภาษี',
+                    labelText: 'เลขประจำตัวผู้เสียภาษี (ไม่บังคับ)',
                     hintText: '0000000000000',
-                    prefixIcon: Icon(Icons.badge_outlined),
                     border: OutlineInputBorder(),
-                    helperText: '13 หลัก (ไม่บังคับ)',
                     counterText: '',
                   ),
                 ),
@@ -271,47 +263,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   decoration: const InputDecoration(
                     labelText: 'ที่อยู่ร้าน',
                     hintText: 'เลขที่ ถนน ตำบล อำเภอ จังหวัด รหัสไปรษณีย์',
-                    prefixIcon: Icon(Icons.location_on_outlined),
                     border: OutlineInputBorder(),
-                    helperText: 'แสดงในรายงานสำหรับยื่นภาษี',
                   ),
                 ),
                 const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FilledButton.tonalIcon(
                     onPressed: _saving ? null : _save,
                     icon: _saving
                         ? const SizedBox(
                             height: 16,
                             width: 16,
                             child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Icons.save_outlined),
-                    label: const Text('บันทึก'),
+                        : const Icon(Icons.check, size: 18),
+                    label: const Text('บันทึกข้อมูลร้าน'),
                   ),
                 ),
 
-                const SizedBox(height: 32),
-                const Divider(),
-                const SizedBox(height: 16),
+                const SizedBox(height: 28),
+                const Divider(height: 1),
+                const SizedBox(height: 20),
 
                 // Shop type — read-only; switching requires data migration
                 // (tables, modifier groups, kitchen tickets), so we ask the
                 // owner to contact support instead of exposing a self-serve
                 // toggle.
-                Text('ประเภทร้าน',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleSmall
-                        ?.copyWith(color: cs.primary, fontWeight: FontWeight.bold)),
+                _SectionTitle('ประเภทร้าน'),
                 const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: cs.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: cs.outlineVariant),
-                  ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Row(
                     children: [
                       Icon(
@@ -352,16 +333,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // Service charge — restaurant only. Auto-applied to every
                 // table tab on close. Set to 0 to disable.
                 if (_shopType == ShopType.restaurant) ...[
-                  const SizedBox(height: 20),
-                  Text('Service charge',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: cs.primary, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text(
-                    'เปอร์เซ็นต์ที่บวกบนยอดสินค้าตอนปิดบิล — ใส่ 0 เพื่อปิด',
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: cs.onSurface.withValues(alpha: 0.6)),
+                  const SizedBox(height: 24),
+                  _SectionTitle(
+                    'Service charge',
+                    helper: 'บวกเปอร์เซ็นต์บนยอดสินค้าตอนปิดบิล — 0 = ปิด',
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -375,13 +350,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             labelText: 'เปอร์เซ็นต์',
                             hintText: '10',
                             suffixText: '%',
-                            prefixIcon: Icon(Icons.percent),
                             border: OutlineInputBorder(),
                           ),
                         ),
                       ),
                       const SizedBox(width: 12),
-                      FilledButton.icon(
+                      FilledButton.tonalIcon(
                         onPressed:
                             _savingServiceCharge ? null : _saveServiceCharge,
                         icon: _savingServiceCharge
@@ -390,11 +364,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 width: 16,
                                 child:
                                     CircularProgressIndicator(strokeWidth: 2))
-                            : const Icon(Icons.save_outlined),
+                            : const Icon(Icons.check, size: 18),
                         label: const Text('บันทึก'),
                         style: FilledButton.styleFrom(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 16),
+                              horizontal: 16, vertical: 14),
                         ),
                       ),
                     ],
@@ -701,6 +675,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
+    );
+  }
+}
+
+/// Small section heading + optional helper line. Replaces the repeated
+/// `Text(... titleSmall + primary color)` blocks across this screen so all
+/// section labels look identical and the helper text styling stays in one
+/// place.
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.title, {this.helper});
+  final String title;
+  final String? helper;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.8,
+            color: cs.primary,
+          ),
+        ),
+        if (helper != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            helper!,
+            style: TextStyle(
+              fontSize: 12,
+              color: cs.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

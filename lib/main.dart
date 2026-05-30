@@ -243,8 +243,10 @@ class _MortarMarkPainter extends CustomPainter {
     );
     canvas.drawArc(bowlRect, 0, math.pi, true, fill);
 
-    // Pestle — rounded pill from y=6 to y=48, x≈45.5–54.5
-    final pestleRect = Rect.fromLTWH(45.5 * s, 6 * s, 9 * s, 42 * s);
+    // Pestle — rounded pill from y=6 to y=46, x≈45.5–54.5. Ends with a
+    // small gap above the bowl rim (y=56) so the two shapes read as
+    // distinct elements.
+    final pestleRect = Rect.fromLTWH(45.5 * s, 6 * s, 9 * s, 40 * s);
     canvas.drawRRect(
       RRect.fromRectAndRadius(pestleRect, Radius.circular(4.5 * s)),
       fill,
@@ -260,8 +262,9 @@ class _MortarMarkPainter extends CustomPainter {
     // Base line under shelf (x 30→70, y 90)
     canvas.drawLine(Offset(30 * s, 90 * s), Offset(70 * s, 90 * s), stroke);
 
-    // Accent dot inside bowl
-    canvas.drawCircle(Offset(49.5 * s, 42 * s), 2.8 * s, Paint()..color = cream);
+    // Accent dot inside bowl (centered in the bottom-half ellipse at
+    // y=72; positioned at 70 to read centered to the eye).
+    canvas.drawCircle(Offset(50 * s, 70 * s), 3.6 * s, Paint()..color = cream);
   }
 
   @override
