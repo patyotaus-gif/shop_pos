@@ -1,10 +1,12 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import '../models/hardware_request.dart';
 import '../models/shop.dart';
 import '../services/auth_service.dart';
 import '../services/bank_notification_service.dart';
 import '../services/entitlements.dart';
+import '../services/hardware_service.dart';
 import '../services/line_service.dart';
 import '../services/settings_service.dart';
 import '../services/shop_service.dart';
@@ -304,6 +306,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ],
                     ],
                   ),
+                ),
+
+                // Hardware tracker — only renders when there's an active
+                // shipment (Lite/Full/Restaurant). Solo shops never see it.
+                StreamBuilder<HardwareRequest?>(
+                  stream: HardwareService.watchActive(),
+                  builder: (context, snap) {
+                    final req = snap.data;
+                    if (req == null) return const SizedBox.shrink();
+                    return Column(
+                      children: [
+                        const SizedBox(height: 24),
+                        _SectionTitle('อุปกรณ์ของคุณ'),
+                        const SizedBox(height: 8),
+                        _HardwareTracker(request: req),
+                      ],
+                    );
+                  },
                 ),
 
                 // Service charge — restaurant only. Auto-applied to every
@@ -747,6 +767,106 @@ class _PlanTile extends StatelessWidget {
             const Icon(Icons.chevron_right),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Read-only delivery tracker for the shop's active hardware kit. Mirrors
+/// the status the founder/sales agent advances from their admin tool —
+/// gives the owner a "where's my printer?" answer without a support
+/// message. Shows a 4-step progress bar + deposit/up-front summary.
+class _HardwareTracker extends StatelessWidget {
+  const _HardwareTracker({required this.request});
+  final HardwareRequest request;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final delivered = request.status == HardwareStatus.delivered;
+    final returned = request.status == HardwareStatus.returned;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                delivered
+                    ? Icons.check_circle
+                    : (returned
+                        ? Icons.keyboard_return
+                        : Icons.local_shipping_outlined),
+                color: delivered ? Colors.green.shade600 : cs.primary,
+                size: 22,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(request.status.label,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 14)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(request.kit.label,
+              style: TextStyle(
+                  fontSize: 12,
+                  color: cs.onSurface.withValues(alpha: 0.65))),
+          if (!returned) ...[
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(100),
+              child: LinearProgressIndicator(
+                value: request.status.progress,
+                minHeight: 6,
+                backgroundColor: cs.outlineVariant,
+                color: delivered ? Colors.green.shade600 : cs.primary,
+              ),
+            ),
+          ],
+          if (request.deposit > 0 || request.upfront > 0) ...[
+            const SizedBox(height: 10),
+            if (request.deposit > 0)
+              _kv(context, 'มัดจำ (คืนได้)',
+                  '฿${request.deposit.toStringAsFixed(0)}'),
+            if (request.upfront > 0)
+              _kv(context, 'ค่าอุปกรณ์',
+                  '฿${request.upfront.toStringAsFixed(0)}'),
+          ],
+          if (request.note != null && request.note!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(request.note!,
+                style: TextStyle(
+                    fontSize: 11,
+                    color: cs.onSurface.withValues(alpha: 0.6))),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _kv(BuildContext context, String k, String v) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 1),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(k,
+              style: TextStyle(
+                  fontSize: 12,
+                  color: cs.onSurface.withValues(alpha: 0.6))),
+          Text(v,
+              style:
+                  const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+        ],
       ),
     );
   }

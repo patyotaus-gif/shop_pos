@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/shop.dart';
 import '../services/auth_service.dart';
+import '../services/hardware_service.dart';
 import '../services/shop_service.dart';
 import '../widgets/tier_picker.dart';
 
@@ -60,6 +61,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
         email: _emailCtrl.text.trim(),
         tier: _tier,
       );
+      // For tiers that ship a kit (Lite/Full/Restaurant) queue a hardware
+      // request so the founder/sales agent sees it in their pipeline.
+      // No-op for Solo (BYOD). Best-effort — a failed hardware write
+      // shouldn't block the shop from being created, so it's not in the
+      // same try/return as createShop.
+      await HardwareService.createForSignup(tier: _tier);
     } catch (e) {
       setState(() {
         _loading = false;
