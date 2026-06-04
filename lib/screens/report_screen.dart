@@ -8,9 +8,13 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import '../models/sale.dart';
+import '../models/shop.dart';
+import '../services/entitlements.dart';
 import '../services/sale_service.dart';
 import '../services/settings_service.dart';
+import '../services/shop_service.dart';
 import '../utils/receipt_generator.dart';
+import '../widgets/upgrade_prompt.dart';
 
 class ReportScreen extends StatefulWidget {
   const ReportScreen({super.key});
@@ -557,46 +561,72 @@ class _ReportScreenState extends State<ReportScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('รายงาน'),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.table_chart_outlined),
-            tooltip: 'Export CSV',
-            onPressed: () => _exportCsv(_tab.index),
+    // Advanced reports (P&L margin breakdown + PDF/CSV export) are a
+    // Full/Restaurant feature. Solo/Lite still get the basic on-screen
+    // report (summary cards + transaction list); tapping export nudges
+    // them to upgrade instead.
+    return StreamBuilder<Shop?>(
+      stream: ShopService.watchCurrentShop(),
+      builder: (context, snap) {
+        final tier = snap.data?.tier ?? ShopTier.full;
+        final advanced = Entitlements.canUseAdvancedReports(tier);
+
+        void exportOr(VoidCallback doExport) {
+          if (advanced) {
+            doExport();
+          } else {
+            showUpgradePrompt(context,
+                feature: EntitlementFeature.advancedReports);
+          }
+        }
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('รายงาน'),
+            centerTitle: true,
+            actions: [
+              IconButton(
+                icon: Icon(advanced
+                    ? Icons.table_chart_outlined
+                    : Icons.lock_outline),
+                tooltip: 'Export CSV',
+                onPressed: () => exportOr(() => _exportCsv(_tab.index)),
+              ),
+              IconButton(
+                icon: Icon(advanced
+                    ? Icons.picture_as_pdf_outlined
+                    : Icons.lock_outline),
+                tooltip: 'Export PDF',
+                onPressed: () => exportOr(() => _exportPdf(_tab.index)),
+              ),
+            ],
+            bottom: TabBar(
+              controller: _tab,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              tabs: const [
+                Tab(text: 'วันนี้'),
+                Tab(text: 'เดือนนี้'),
+                Tab(text: 'เดือนที่แล้ว'),
+                Tab(text: 'ปีนี้'),
+                Tab(text: 'กำหนดเอง'),
+              ],
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.picture_as_pdf_outlined),
-            tooltip: 'Export PDF',
-            onPressed: () => _exportPdf(_tab.index),
+          body: TabBarView(
+            controller: _tab,
+            children: List.generate(
+              5,
+              (i) => _SalesReport(
+                rangeBuilder: () => _rangeFor(i),
+                baht: _baht,
+                dateFormat: _dateFmt,
+                advanced: advanced,
+              ),
+            ),
           ),
-        ],
-        bottom: TabBar(
-          controller: _tab,
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
-          tabs: const [
-            Tab(text: 'วันนี้'),
-            Tab(text: 'เดือนนี้'),
-            Tab(text: 'เดือนที่แล้ว'),
-            Tab(text: 'ปีนี้'),
-            Tab(text: 'กำหนดเอง'),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tab,
-        children: List.generate(
-          5,
-          (i) => _SalesReport(
-            rangeBuilder: () => _rangeFor(i),
-            baht: _baht,
-            dateFormat: _dateFmt,
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -616,10 +646,16 @@ class _SalesReport extends StatelessWidget {
   final NumberFormat baht;
   final DateFormat dateFormat;
 
+  /// Full/Restaurant only — shows the profit & margin P&L bar. Basic
+  /// tiers see revenue + bill count + the transaction list without the
+  /// cost/profit breakdown.
+  final bool advanced;
+
   const _SalesReport({
     required this.rangeBuilder,
     required this.baht,
     required this.dateFormat,
+    required this.advanced,
   });
 
   @override
@@ -664,31 +700,71 @@ class _SalesReport extends StatelessWidget {
                         icon: Icons.person_outline, color: Colors.orange),
                   ]),
                   const SizedBox(height: 8),
-                  // P&L bar
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.teal.withValues(alpha: 0.08),
+                  // P&L bar — advanced (Full/Restaurant). Basic tiers see
+                  // a locked teaser that opens the upgrade prompt.
+                  if (advanced)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.teal.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.teal.withValues(alpha: 0.25)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _PLItem(label: 'รายได้สุทธิ', value: '฿${baht.format(netRevenue)}', color: Colors.green),
+                          const Text('−', style: TextStyle(color: Colors.grey)),
+                          _PLItem(label: 'ต้นทุน', value: '฿${baht.format(cogs)}', color: Colors.redAccent),
+                          const Text('=', style: TextStyle(color: Colors.grey)),
+                          _PLItem(
+                            label: 'กำไรขั้นต้น ${margin.toStringAsFixed(1)}%',
+                            value: '฿${baht.format(grossProfit)}',
+                            color: grossProfit >= 0 ? Colors.teal : Colors.red,
+                            bold: true,
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    InkWell(
+                      onTap: () => showUpgradePrompt(context,
+                          feature: EntitlementFeature.advancedReports),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.teal.withValues(alpha: 0.25)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _PLItem(label: 'รายได้สุทธิ', value: '฿${baht.format(netRevenue)}', color: Colors.green),
-                        const Text('−', style: TextStyle(color: Colors.grey)),
-                        _PLItem(label: 'ต้นทุน', value: '฿${baht.format(cogs)}', color: Colors.redAccent),
-                        const Text('=', style: TextStyle(color: Colors.grey)),
-                        _PLItem(
-                          label: 'กำไรขั้นต้น ${margin.toStringAsFixed(1)}%',
-                          value: '฿${baht.format(grossProfit)}',
-                          color: grossProfit >= 0 ? Colors.teal : Colors.red,
-                          bold: true,
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: cs.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: cs.outlineVariant),
                         ),
-                      ],
+                        child: Row(
+                          children: [
+                            Icon(Icons.lock_outline,
+                                size: 18,
+                                color: cs.onSurface.withValues(alpha: 0.5)),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'กำไร–ต้นทุน + ส่งออก PDF/CSV — อยู่ในแผน Full ขึ้นไป',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: cs.onSurface
+                                        .withValues(alpha: 0.7)),
+                              ),
+                            ),
+                            Text('อัพเกรด',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: cs.primary)),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
                   if (refunded.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 6),
