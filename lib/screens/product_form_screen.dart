@@ -5,11 +5,13 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../models/modifier_group.dart';
 import '../models/product.dart';
 import '../models/shop.dart';
+import '../services/entitlements.dart';
 import '../services/image_service.dart';
 import '../services/modifier_service.dart';
 import '../services/product_service.dart';
 import '../services/shop_service.dart';
 import '../utils/barcode_lookup.dart';
+import '../widgets/upgrade_prompt.dart';
 
 class ProductFormScreen extends StatefulWidget {
   final Product? product;
@@ -397,13 +399,40 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                       ),
                       const SizedBox(width: 16),
                       Expanded(
-                        child: TextFormField(
-                          controller: _lowStock,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'แจ้งเตือนเมื่อเหลือ',
-                            border: OutlineInputBorder(),
-                          ),
+                        // Low-stock threshold is part of inventory
+                        // tracking — Solo tier doesn't include that, so
+                        // we disable the field and surface the upgrade
+                        // ask inline. Tap the lock icon for the modal.
+                        child: StreamBuilder<Shop?>(
+                          stream: ShopService.watchCurrentShop(),
+                          builder: (context, snap) {
+                            final tier = snap.data?.tier ?? ShopTier.full;
+                            final enabled = Entitlements.canUseInventory(tier);
+                            return TextFormField(
+                              controller: _lowStock,
+                              keyboardType: TextInputType.number,
+                              enabled: enabled,
+                              decoration: InputDecoration(
+                                labelText: 'แจ้งเตือนเมื่อเหลือ',
+                                border: const OutlineInputBorder(),
+                                helperText: enabled
+                                    ? null
+                                    : 'ใช้ได้ในแผน Lite ขึ้นไป',
+                                suffixIcon: enabled
+                                    ? null
+                                    : IconButton(
+                                        icon: const Icon(
+                                            Icons.lock_outline,
+                                            size: 18),
+                                        onPressed: () => showUpgradePrompt(
+                                          context,
+                                          feature: EntitlementFeature
+                                              .inventory,
+                                        ),
+                                      ),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ],

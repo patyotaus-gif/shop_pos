@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import '../models/shop.dart';
 import '../services/auth_service.dart';
 import '../services/bank_notification_service.dart';
+import '../services/entitlements.dart';
 import '../services/line_service.dart';
 import '../services/settings_service.dart';
 import '../services/shop_service.dart';
+import '../widgets/upgrade_prompt.dart';
 import 'subscription_screen.dart';
 import '../main.dart' show themeNotifier;
 
@@ -293,7 +295,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 8),
                 StreamBuilder<Shop?>(
                   stream: ShopService.watchCurrentShop(),
-                  builder: (context, snap) => _PlanTile(shop: snap.data),
+                  builder: (context, snap) => Column(
+                    children: [
+                      _PlanTile(shop: snap.data),
+                      if (snap.data != null) ...[
+                        const SizedBox(height: 12),
+                        _PlanCapabilities(tier: snap.data!.tier),
+                      ],
+                    ],
+                  ),
                 ),
 
                 // Service charge — restaurant only. Auto-applied to every
@@ -735,6 +745,128 @@ class _PlanTile extends StatelessWidget {
               ),
             ),
             const Icon(Icons.chevron_right),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Per-tier capability checklist. Renders every feature the platform
+/// offers, with a check for the ones included in the owner's tier and a
+/// lock for the ones that need an upgrade. Tapping a lock opens the
+/// upgrade prompt scoped to that specific feature.
+///
+/// Goal: turn the "what am I missing?" question into a one-screen answer
+/// the owner can scan in 5 seconds — and convert that curiosity into a
+/// concrete upgrade ask via the tap target.
+class _PlanCapabilities extends StatelessWidget {
+  const _PlanCapabilities({required this.tier});
+  final ShopTier tier;
+
+  static const _features = [
+    EntitlementFeature.paperReceipt,
+    EntitlementFeature.inventory,
+    EntitlementFeature.customerDb,
+    EntitlementFeature.loyalty,
+    EntitlementFeature.advancedReports,
+    EntitlementFeature.tables,
+    EntitlementFeature.kitchen,
+    EntitlementFeature.multiBranch,
+    EntitlementFeature.apiSync,
+  ];
+
+  bool _has(EntitlementFeature f) => switch (f) {
+        EntitlementFeature.paperReceipt =>
+          Entitlements.canUsePaperReceipt(tier),
+        EntitlementFeature.inventory => Entitlements.canUseInventory(tier),
+        EntitlementFeature.customerDb =>
+          Entitlements.canUseCustomerDb(tier),
+        EntitlementFeature.loyalty => Entitlements.canUseLoyalty(tier),
+        EntitlementFeature.advancedReports =>
+          Entitlements.canUseAdvancedReports(tier),
+        EntitlementFeature.kitchen => Entitlements.canUseKitchen(tier),
+        EntitlementFeature.tables => Entitlements.canUseTables(tier),
+        EntitlementFeature.multiBranch =>
+          Entitlements.canUseMultiBranch(tier),
+        EntitlementFeature.apiSync => Entitlements.canUseApiSync(tier),
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('สิ่งที่มีในแผน',
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                  color: cs.onSurface.withValues(alpha: 0.55))),
+          const SizedBox(height: 6),
+          for (final f in _features)
+            _CapabilityRow(
+              feature: f,
+              included: _has(f),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CapabilityRow extends StatelessWidget {
+  const _CapabilityRow({required this.feature, required this.included});
+  final EntitlementFeature feature;
+  final bool included;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: included
+          ? null
+          : () => showUpgradePrompt(context, feature: feature),
+      borderRadius: BorderRadius.circular(6),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        child: Row(
+          children: [
+            Icon(
+              included ? Icons.check_circle : Icons.lock_outline,
+              size: 16,
+              color: included
+                  ? Colors.green.shade600
+                  : cs.onSurface.withValues(alpha: 0.4),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                feature.label,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: included
+                      ? cs.onSurface
+                      : cs.onSurface.withValues(alpha: 0.5),
+                  decoration:
+                      included ? null : TextDecoration.lineThrough,
+                  decorationColor: cs.onSurface.withValues(alpha: 0.3),
+                ),
+              ),
+            ),
+            if (!included)
+              Text('อัพเกรด',
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: cs.primary)),
           ],
         ),
       ),

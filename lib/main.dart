@@ -20,6 +20,7 @@ import 'screens/orders_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/tables_screen.dart';
+import 'services/entitlements.dart';
 import 'services/order_service.dart';
 import 'services/shop_service.dart';
 import 'widgets/subscription_gate.dart';
@@ -291,6 +292,11 @@ class _MainShellState extends State<MainShell> {
       builder: (context, shopSnap) {
         final isRestaurant =
             shopSnap.data?.shopType == ShopType.restaurant;
+        // Solo tier doesn't include the customer DB / debts feature, so
+        // the ลูกหนี้ tab is hidden for them. Tap on the upgrade
+        // surfaces in Settings nudges them to Lite if they want it back.
+        final tier = shopSnap.data?.tier ?? ShopTier.full;
+        final showDebts = Entitlements.canUseCustomerDb(tier);
 
         return StreamBuilder<int>(
           stream: OrderService.watchNewOrders(),
@@ -333,12 +339,13 @@ class _MainShellState extends State<MainShell> {
                 selectedIcon: Icons.bar_chart,
                 label: 'รายงาน',
               ),
-              const _NavTab(
-                screen: DebtScreen(),
-                icon: Icons.people_outline,
-                selectedIcon: Icons.people,
-                label: 'ลูกหนี้',
-              ),
+              if (showDebts)
+                const _NavTab(
+                  screen: DebtScreen(),
+                  icon: Icons.people_outline,
+                  selectedIcon: Icons.people,
+                  label: 'ลูกหนี้',
+                ),
               _NavTab(
                 screen: const OrdersScreen(),
                 icon: Icons.shopping_bag_outlined,
