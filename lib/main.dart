@@ -360,6 +360,10 @@ class _MainShellState extends State<MainShell> {
                   selectedIcon: Icons.soup_kitchen,
                   label: 'ครัว',
                 ),
+              // Marketplace ("สั่งของ") is reached from a Dashboard card,
+              // not the bottom nav — the bar is already at its tab budget
+              // (8-9), and the GTM plan wants marketplace soft-launched
+              // rather than front-and-center for every shop on day one.
               const _NavTab(
                 screen: ChatScreen(),
                 icon: Icons.auto_awesome_outlined,

@@ -4,6 +4,7 @@ import '../models/product.dart';
 import '../models/sale.dart';
 import '../services/product_service.dart';
 import '../services/sale_service.dart';
+import 'marketplace_home_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -77,6 +78,12 @@ class DashboardScreen extends StatelessWidget {
                 );
               },
             ),
+            const SizedBox(height: 16),
+
+            // Marketplace entry — B2B "สั่งของ". Lives here rather than the
+            // bottom nav (already at its tab budget) and matches the GTM
+            // plan's controlled marketplace rollout.
+            _MarketplaceCard(),
             const SizedBox(height: 16),
 
             // Low stock
@@ -198,6 +205,63 @@ class _TopItem {
   final int qty;
   final double revenue;
   const _TopItem({required this.name, required this.qty, required this.revenue});
+}
+
+/// Entry point to the B2B marketplace ("สั่งของ"). A full-width banner on
+/// the dashboard rather than a bottom-nav tab — keeps the nav within its
+/// tab budget and lets the marketplace stay a deliberate destination.
+class _MarketplaceCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: cs.primary.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => const MarketplaceHomeScreen(),
+        )),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: cs.primary.withValues(alpha: 0.25)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: cs.primary,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.storefront, color: cs.onPrimary),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('สั่งของจาก supplier',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 15)),
+                    const SizedBox(height: 2),
+                    Text('สั่งวัตถุดิบ/สินค้าเข้าร้านผ่านแอป',
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: cs.onSurface.withValues(alpha: 0.6))),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: cs.primary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _BigCard extends StatelessWidget {
