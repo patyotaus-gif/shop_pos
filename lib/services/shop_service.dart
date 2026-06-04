@@ -16,19 +16,28 @@ class ShopService {
     return Shop.fromFirestore(snap.data()!, snap.id);
   }
 
-  /// สร้าง shop document ตอนสมัครสมาชิก — ทดลองใช้ 14 วัน
+  /// สร้าง shop document ตอนสมัครสมาชิก — ทดลองใช้ 60 วัน
+  ///
+  /// 60 วันคือ trial มาตรฐานสำหรับทุก tier — ยาวพอให้ลูกค้าได้ใช้ผ่าน
+  /// monthly cycle (รับเงินเดือน, จ่ายบิล) และตัดสินใจจริงๆ ไม่ใช่แค่
+  /// ลองวันสองวันแล้วลืม. ถ้า founder/sales agent อยากต่อให้ลูกค้า
+  /// บางราย ใช้ trial extension UI ใน Phase D ได้
   static Future<void> createShop({
     required String name,
     required String email,
-    ShopType shopType = ShopType.retail,
+    ShopTier tier = ShopTier.full,
+    ShopType? shopType,
+    int locations = 1,
   }) async {
-    final trialEndsAt = DateTime.now().add(const Duration(days: 14));
+    final trialEndsAt = DateTime.now().add(const Duration(days: 60));
     final shop = Shop(
       id: AuthService.shopId!,
       name: name,
       email: email,
       subscriptionStatus: SubscriptionStatus.trial,
-      shopType: shopType,
+      tier: tier,
+      shopType: shopType ?? tier.derivedShopType,
+      locations: locations,
       trialEndsAt: trialEndsAt,
       createdAt: DateTime.now(),
     );

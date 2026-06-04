@@ -216,7 +216,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           MaterialPageRoute(
                               builder: (_) => const RegisterScreen()),
                         ),
-                        child: const Text('สมัครใช้งานฟรี 14 วัน'),
+                        child: const Text('สมัครใช้งานฟรี 60 วัน'),
                       ),
                     ],
                   ),

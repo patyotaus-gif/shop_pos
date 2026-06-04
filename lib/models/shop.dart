@@ -2,6 +2,27 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum SubscriptionStatus { trial, active, expired }
 
+/// Pricing tier — chosen at signup and used by the entitlements service to
+/// gate features (max users, kitchen display, multi-branch, API sync ฯลฯ).
+/// Order matches "ladder logic" from Solo (cheapest, BYOD) to Restaurant
+/// (full kit + kitchen + multi-branch).
+enum ShopTier { solo, lite, full, restaurant }
+
+extension ShopTierX on ShopTier {
+  String get label => switch (this) {
+        ShopTier.solo => 'Pokpok Solo',
+        ShopTier.lite => 'Pokpok Lite',
+        ShopTier.full => 'Pokpok Full',
+        ShopTier.restaurant => 'Pokpok Restaurant',
+      };
+
+  /// Map tier → ShopType so the existing nav/UI gating (which keys on
+  /// retail vs restaurant) keeps working without a separate `shopType`
+  /// field becoming stale. Only Tier 4 unlocks restaurant features.
+  ShopType get derivedShopType =>
+      this == ShopTier.restaurant ? ShopType.restaurant : ShopType.retail;
+}
+
 /// What kind of business this shop runs. Picked at signup and gates which
 /// POS workflow is shown — retail uses the original immediate-checkout flow,
 /// restaurant uses tables + open tabs + kitchen tickets (PR 2+).
@@ -15,8 +36,10 @@ class Shop {
   final String name;
   final String email;
   final SubscriptionStatus subscriptionStatus;
-  final String plan; // 'monthly' | 'yearly'
+  final String plan; // 'monthly' | 'yearly' — billing cycle, NOT tier
   final ShopType shopType;
+  final ShopTier tier;
+  final int locations; // > 1 only for Restaurant tier (multi-branch)
   final DateTime? trialEndsAt;
   final DateTime? subscriptionEndsAt;
   final DateTime createdAt;
@@ -28,6 +51,8 @@ class Shop {
     required this.subscriptionStatus,
     this.plan = 'monthly',
     this.shopType = ShopType.retail,
+    this.tier = ShopTier.full,
+    this.locations = 1,
     this.trialEndsAt,
     this.subscriptionEndsAt,
     required this.createdAt,
@@ -55,23 +80,43 @@ class Shop {
     return subscriptionEndsAt!.difference(DateTime.now()).inDays.clamp(0, 9999);
   }
 
-  factory Shop.fromFirestore(Map<String, dynamic> data, String id) => Shop(
-        id: id,
-        name: data['name'] ?? '',
-        email: data['email'] ?? '',
-        subscriptionStatus: SubscriptionStatus.values.firstWhere(
-          (e) => e.name == (data['subscriptionStatus'] ?? 'trial'),
-          orElse: () => SubscriptionStatus.trial,
-        ),
-        plan: data['plan'] ?? 'monthly',
-        shopType: ShopType.values.firstWhere(
-          (e) => e.name == (data['shopType'] ?? 'retail'),
-          orElse: () => ShopType.retail,
-        ),
-        trialEndsAt: (data['trialEndsAt'] as Timestamp?)?.toDate(),
-        subscriptionEndsAt: (data['subscriptionEndsAt'] as Timestamp?)?.toDate(),
-        createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      );
+  factory Shop.fromFirestore(Map<String, dynamic> data, String id) {
+    // Backward compat: shops created before the 4-tier model had only
+    // `shopType` (retail/restaurant). Map them onto the closest matching
+    // tier so they keep working without a Firestore migration:
+    //   - shopType=restaurant → tier=restaurant (Tier 4 has the same
+    //     feature set they were paying for)
+    //   - shopType=retail (or missing) → tier=full (Tier 3 was the
+    //     historical ฿299 ≈ ฿599 equivalent — closest experience)
+    final shopType = ShopType.values.firstWhere(
+      (e) => e.name == (data['shopType'] ?? 'retail'),
+      orElse: () => ShopType.retail,
+    );
+    final tier = data['tier'] != null
+        ? ShopTier.values.firstWhere(
+            (e) => e.name == data['tier'],
+            orElse: () => ShopTier.full,
+          )
+        : (shopType == ShopType.restaurant ? ShopTier.restaurant : ShopTier.full);
+
+    return Shop(
+      id: id,
+      name: data['name'] ?? '',
+      email: data['email'] ?? '',
+      subscriptionStatus: SubscriptionStatus.values.firstWhere(
+        (e) => e.name == (data['subscriptionStatus'] ?? 'trial'),
+        orElse: () => SubscriptionStatus.trial,
+      ),
+      plan: data['plan'] ?? 'monthly',
+      shopType: shopType,
+      tier: tier,
+      locations: (data['locations'] ?? 1) as int,
+      trialEndsAt: (data['trialEndsAt'] as Timestamp?)?.toDate(),
+      subscriptionEndsAt: (data['subscriptionEndsAt'] as Timestamp?)?.toDate(),
+      createdAt:
+          (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
 
   Map<String, dynamic> toFirestore() => {
         'name': name,
@@ -79,6 +124,8 @@ class Shop {
         'subscriptionStatus': subscriptionStatus.name,
         'plan': plan,
         'shopType': shopType.name,
+        'tier': tier.name,
+        'locations': locations,
         'trialEndsAt':
             trialEndsAt != null ? Timestamp.fromDate(trialEndsAt!) : null,
         'subscriptionEndsAt': subscriptionEndsAt != null

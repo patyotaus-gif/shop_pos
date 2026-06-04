@@ -52,10 +52,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     // สร้าง shop document ใน Firestore
+    //
+    // Tier เลือกอัตโนมัติจาก shopType ที่ผู้ใช้กดบนหน้า register:
+    //   - ร้านอาหาร → Tier 4 (Restaurant) — ครบ kitchen + tables + branches
+    //   - ขายปลีก    → Tier 3 (Full) — mass-market default, hardware bundle
+    // Tier picker UI เต็มรูปแบบ (เลือก Solo/Lite/Full) มาใน Phase B
     try {
       await ShopService.createShop(
         name: _shopNameCtrl.text.trim(),
         email: _emailCtrl.text.trim(),
+        tier: _shopType == ShopType.restaurant
+            ? ShopTier.restaurant
+            : ShopTier.full,
         shopType: _shopType,
       );
     } catch (e) {
@@ -105,7 +113,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('ทดลองใช้ฟรี 14 วัน',
+                            Text('ทดลองใช้ฟรี 60 วัน',
                                 style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     color: Colors.green.shade800)),

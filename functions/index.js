@@ -13,10 +13,49 @@ const lineChannelAccessToken = defineSecret("LINE_CHANNEL_ACCESS_TOKEN");
 const lineChannelSecret = defineSecret("LINE_CHANNEL_SECRET");
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
 
+// ────────────────────────────────────────────────
+// 4-tier pricing (Pokpok GTM plan)
+// ────────────────────────────────────────────────
+// amounts are in สตางค์ (Stripe API). Restaurant is priced per location
+// — the checkout multiplies amount × locations at session create.
 const PLANS = {
-  monthly: { amount: 29900, days: 30, label: "Shop POS รายเดือน" },
-  yearly:  { amount: 299000, days: 365, label: "Shop POS รายปี" },
+  solo: {
+    monthly: { amount:  19900, days:  30, label: "Pokpok Solo รายเดือน" },
+    yearly:  { amount: 199000, days: 365, label: "Pokpok Solo รายปี" },
+  },
+  lite: {
+    monthly: { amount:  39900, days:  30, label: "Pokpok Lite รายเดือน" },
+    yearly:  { amount: 399000, days: 365, label: "Pokpok Lite รายปี" },
+    // Hardware peripheral bundle (printer + drawer + stand). One-off
+    // up-front charge OR financed across 24 months — Phase D will wire
+    // the financed option through Stripe Subscriptions.
+    hardwareUpfront: 400000,
+  },
+  full: {
+    monthly: { amount:  59900, days:  30, label: "Pokpok Full รายเดือน" },
+    yearly:  { amount: 599000, days: 365, label: "Pokpok Full รายปี" },
+    // Hardware-as-a-service: ฿1,000 deposit (refundable), 36-month term
+    deposit: 100000,
+    termMonths: 36,
+  },
+  restaurant: {
+    // Priced per location — Cloud Function multiplies by `locations`
+    monthly: { amount: 119900, days:  30, label: "Pokpok Restaurant รายเดือน" },
+    yearly:  { amount: 1199000, days: 365, label: "Pokpok Restaurant รายปี" },
+    depositPerLocation: 200000,
+    perLocation: true,
+  },
 };
+
+// Backward compatibility: older clients still send plan='monthly' or
+// 'yearly' without a tier. Default them to Full (Tier 3 was the closest
+// equivalent to the historical ฿299 plan they came from).
+function resolvePlanConfig(tier, billingCycle) {
+  const tierConfig = PLANS[tier] || PLANS.full;
+  return tierConfig[billingCycle] || tierConfig.monthly;
+}
+
+const MARKETPLACE_TAKE_RATE = 0.025; // 2.5% — applied at marketplace order
 
 const SUCCESS_URL = "https://pok-pok.app/payment/success";
 const CANCEL_URL  = "https://pok-pok.app/payment/cancel";
@@ -27,15 +66,38 @@ const CANCEL_URL  = "https://pok-pok.app/payment/cancel";
 exports.createCheckoutSession = onCall(
   { secrets: [stripeSecretKey] },
   async (request) => {
-    const { shopId, plan } = request.data;
+    const {
+      shopId,
+      // New params (Phase A onwards)
+      tier,           // 'solo' | 'lite' | 'full' | 'restaurant'
+      billingCycle,   // 'monthly' | 'yearly'
+      locations,      // restaurant only — defaults to 1
+      // Legacy fallback — older clients sent { plan: 'monthly' | 'yearly' }
+      plan,
+    } = request.data;
 
-    if (!shopId || !PLANS[plan]) {
-      throw new Error("Invalid params: shopId and plan are required");
+    if (!shopId) {
+      throw new Error("shopId is required");
     }
+
+    // Resolve which plan to bill. If a tier is sent, use the new path;
+    // otherwise treat the legacy `plan` as a billingCycle on the Full tier.
+    const resolvedTier = tier || "full";
+    const resolvedCycle = billingCycle || plan || "monthly";
+    const planConfig = resolvePlanConfig(resolvedTier, resolvedCycle);
+
+    if (!planConfig) {
+      throw new Error(`Invalid plan: tier=${resolvedTier}, cycle=${resolvedCycle}`);
+    }
+
+    // Restaurant is per-location — multiply.
+    const locs = Math.max(1, parseInt(locations || 1));
+    const isPerLocation = PLANS[resolvedTier]?.perLocation === true;
+    const unitAmount = isPerLocation ? planConfig.amount * locs : planConfig.amount;
+    const labelSuffix = isPerLocation && locs > 1 ? ` × ${locs} สาขา` : "";
 
     const Stripe = require("stripe");
     const stripe = Stripe(stripeSecretKey.value());
-    const planConfig = PLANS[plan];
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card", "promptpay", "truemoney"],
@@ -43,8 +105,8 @@ exports.createCheckoutSession = onCall(
         {
           price_data: {
             currency: "thb",
-            product_data: { name: planConfig.label },
-            unit_amount: planConfig.amount,
+            product_data: { name: planConfig.label + labelSuffix },
+            unit_amount: unitAmount,
           },
           quantity: 1,
         },
@@ -52,7 +114,13 @@ exports.createCheckoutSession = onCall(
       mode: "payment",
       success_url: SUCCESS_URL,
       cancel_url: CANCEL_URL,
-      metadata: { shopId, plan, type: "subscription" },
+      metadata: {
+        shopId,
+        tier: resolvedTier,
+        billingCycle: resolvedCycle,
+        locations: String(locs),
+        type: "subscription",
+      },
       client_reference_id: shopId,
     });
 
@@ -410,7 +478,8 @@ exports.stripeWebhook = onRequest(
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
-      const { shopId, type, plan, orderId } = session.metadata;
+      const { shopId, type, plan, orderId, tier, billingCycle, locations } =
+        session.metadata;
 
       if (!shopId) {
         console.error("Missing shopId in metadata");
@@ -523,13 +592,22 @@ exports.stripeWebhook = onRequest(
         console.log(`Order ${orderId} paid for shop ${shopId}`);
       } else {
         // ── Subscription payment ──
-        if (!PLANS[plan]) {
-          console.error("Missing or invalid plan in metadata");
+        // Resolve tier + billingCycle from metadata. New checkouts send
+        // both; legacy checkouts only send `plan` (which was a billing
+        // cycle on the old flat-price model) — treat those as Full tier.
+        const resolvedTier = tier || "full";
+        const resolvedCycle = billingCycle || plan || "monthly";
+        const planConfig = resolvePlanConfig(resolvedTier, resolvedCycle);
+
+        if (!planConfig) {
+          console.error(
+            `Invalid plan in metadata: tier=${resolvedTier}, cycle=${resolvedCycle}`
+          );
           res.json({ received: true });
           return;
         }
 
-        const days = PLANS[plan].days;
+        const days = planConfig.days;
         const shopRef = admin.firestore().collection("shops").doc(shopId);
         const shopDoc = await shopRef.get();
 
@@ -550,13 +628,17 @@ exports.stripeWebhook = onRequest(
           {
             subscriptionStatus: "active",
             subscriptionEndsAt: admin.firestore.Timestamp.fromDate(newEndDate),
-            plan,
+            tier: resolvedTier,
+            plan: resolvedCycle, // billing cycle — keep as plan for legacy
+            locations: Math.max(1, parseInt(locations || 1)),
             lastPaymentAt: admin.firestore.FieldValue.serverTimestamp(),
           },
           { merge: true }
         );
 
-        console.log(`Subscription updated for shop ${shopId}: ${plan} until ${newEndDate.toISOString()}`);
+        console.log(
+          `Subscription updated for shop ${shopId}: tier=${resolvedTier} cycle=${resolvedCycle} until ${newEndDate.toISOString()}`
+        );
       }
     }
 
