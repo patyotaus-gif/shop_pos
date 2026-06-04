@@ -285,49 +285,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const Divider(height: 1),
                 const SizedBox(height: 20),
 
-                // Shop type — read-only; switching requires data migration
-                // (tables, modifier groups, kitchen tickets), so we ask the
-                // owner to contact support instead of exposing a self-serve
-                // toggle.
-                _SectionTitle('ประเภทร้าน'),
+                // Plan — current tier + trial/billing status, with a tap
+                // target that opens the full SubscriptionScreen for
+                // upgrade/downgrade. Owner-facing source of truth for
+                // "ฉันใช้แผนไหนอยู่?" and "ทดลองเหลือกี่วัน?"
+                _SectionTitle('แผนปัจจุบัน'),
                 const SizedBox(height: 8),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    children: [
-                      Icon(
-                        _shopType == ShopType.restaurant
-                            ? Icons.restaurant_outlined
-                            : Icons.store_outlined,
-                        color: cs.primary,
-                        size: 28,
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _shopType == ShopType.restaurant
-                                  ? 'ร้านอาหาร'
-                                  : 'ขายปลีก',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w700, fontSize: 15),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _shopType == ShopType.restaurant
-                                  ? 'โต๊ะ + ครัว + modifier — เปลี่ยนได้โดยติดต่อทีมงาน'
-                                  : 'ขายของทั่วไป — เปลี่ยนเป็นร้านอาหารได้โดยติดต่อทีมงาน',
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  color: cs.onSurface.withValues(alpha: 0.6)),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                StreamBuilder<Shop?>(
+                  stream: ShopService.watchCurrentShop(),
+                  builder: (context, snap) => _PlanTile(shop: snap.data),
                 ),
 
                 // Service charge — restaurant only. Auto-applied to every
@@ -675,6 +641,103 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
+    );
+  }
+}
+
+/// Owner-facing summary of the current Pokpok plan — shows tier, billing
+/// status (trial-days-left vs paid-days-left), and tappable to open the
+/// full SubscriptionScreen for upgrade/downgrade. Tier label and price
+/// are pulled from the Shop doc so they reflect any mid-session changes
+/// (e.g. webhook flipping `subscriptionStatus` to active after payment).
+class _PlanTile extends StatelessWidget {
+  const _PlanTile({required this.shop});
+  final Shop? shop;
+
+  static const _monthlyPriceByTier = {
+    ShopTier.solo: 199,
+    ShopTier.lite: 399,
+    ShopTier.full: 599,
+    ShopTier.restaurant: 1199,
+  };
+
+  static const _iconByTier = {
+    ShopTier.solo: Icons.smartphone_outlined,
+    ShopTier.lite: Icons.print_outlined,
+    ShopTier.full: Icons.dashboard_outlined,
+    ShopTier.restaurant: Icons.restaurant_outlined,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    if (shop == null) {
+      return const SizedBox(
+        height: 64,
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+    final s = shop!;
+    final monthly = _monthlyPriceByTier[s.tier] ?? 599;
+    final isRestaurant = s.tier == ShopTier.restaurant;
+    final priceText = isRestaurant
+        ? '฿$monthly/เดือน · ${s.locations} สาขา'
+        : '฿$monthly/เดือน';
+
+    final isTrial = s.subscriptionStatus == SubscriptionStatus.trial;
+    final statusText = isTrial
+        ? 'ทดลองใช้ฟรี — เหลือ ${s.trialDaysLeft} วัน'
+        : (s.subscriptionStatus == SubscriptionStatus.active
+            ? 'จ่ายแล้ว — เหลือ ${s.subscriptionDaysLeft} วัน'
+            : 'หมดอายุแล้ว');
+    final statusColor = isTrial
+        ? Colors.orange.shade700
+        : (s.subscriptionStatus == SubscriptionStatus.active
+            ? Colors.green.shade700
+            : Colors.red);
+
+    return InkWell(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+      ),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        child: Row(
+          children: [
+            Icon(_iconByTier[s.tier] ?? Icons.dashboard_outlined,
+                color: cs.primary, size: 28),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(s.tier.label,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w700, fontSize: 15)),
+                      const SizedBox(width: 8),
+                      Text(priceText,
+                          style: TextStyle(
+                              fontSize: 12,
+                              color:
+                                  cs.onSurface.withValues(alpha: 0.65))),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(statusText,
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: statusColor,
+                          fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
+      ),
     );
   }
 }
