@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import '../models/hardware_request.dart';
 import '../models/shop.dart';
 import '../services/auth_service.dart';
@@ -303,6 +304,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       if (snap.data != null) ...[
                         const SizedBox(height: 12),
                         _PlanCapabilities(tier: snap.data!.tier),
+                        if (snap.data!.referralCode != null) ...[
+                          const SizedBox(height: 12),
+                          _ReferralCard(code: snap.data!.referralCode!),
+                        ],
                       ],
                     ],
                   ),
@@ -866,6 +871,91 @@ class _HardwareTracker extends StatelessWidget {
           Text(v,
               style:
                   const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Share-your-code card. Surfaces the shop's referral code with a copy
+/// button + the "ทั้งคู่ได้ฟรี 30 วัน" hook. The reward is applied
+/// server-side by the applyReferral function when the friend enters this
+/// code at signup.
+class _ReferralCard extends StatelessWidget {
+  const _ReferralCard({required this.code});
+  final String code;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: cs.primary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.primary.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.card_giftcard_outlined,
+                  size: 18, color: cs.primary),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text('แนะนำเพื่อน — ได้ฟรี 30 วันทั้งคู่',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 13)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text('ให้เพื่อนกรอกรหัสนี้ตอนสมัคร แล้วทั้งคุณและเพื่อนได้ทดลองเพิ่มคนละ 30 วัน',
+              style: TextStyle(
+                  fontSize: 11,
+                  color: cs.onSurface.withValues(alpha: 0.65))),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: cs.surface,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: cs.outlineVariant),
+                  ),
+                  child: Text(
+                    code,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 4,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.tonalIcon(
+                onPressed: () async {
+                  await Clipboard.setData(ClipboardData(text: code));
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('คัดลอกรหัสแล้ว')),
+                  );
+                },
+                icon: const Icon(Icons.copy, size: 16),
+                label: const Text('คัดลอก'),
+                style: FilledButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

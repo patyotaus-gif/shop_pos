@@ -18,6 +18,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _confirmPassCtrl = TextEditingController();
+  final _referralCtrl = TextEditingController();
   ShopTier _tier = ShopTier.full; // mass-market default
   bool _loading = false;
   bool _obscure = true;
@@ -29,6 +30,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _emailCtrl.dispose();
     _passCtrl.dispose();
     _confirmPassCtrl.dispose();
+    _referralCtrl.dispose();
     super.dispose();
   }
 
@@ -67,6 +69,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // shouldn't block the shop from being created, so it's not in the
       // same try/return as createShop.
       await HardwareService.createForSignup(tier: _tier);
+      // Redeem referral code if the user entered one. Best-effort: a bad
+      // code just doesn't credit anyone and never blocks signup.
+      if (_referralCtrl.text.trim().isNotEmpty) {
+        await ShopService.applyReferral(_referralCtrl.text);
+      }
     } catch (e) {
       setState(() {
         _loading = false;
@@ -230,6 +237,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     if (v != _passCtrl.text) return 'รหัสผ่านไม่ตรงกัน';
                     return null;
                   },
+                ),
+                const SizedBox(height: 16),
+
+                // Referral code — optional. Both the new shop and the
+                // referrer get +30 trial days (applied server-side).
+                TextFormField(
+                  controller: _referralCtrl,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(
+                    labelText: 'รหัสแนะนำ (ไม่บังคับ)',
+                    hintText: 'ได้รับฟรีเพิ่ม 30 วันทั้งคู่',
+                    prefixIcon: Icon(Icons.card_giftcard_outlined),
+                    border: OutlineInputBorder(),
+                  ),
                 ),
 
                 if (_error != null) ...[

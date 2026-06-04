@@ -959,3 +959,74 @@ exports.aiChat = onCall(
     };
   }
 );
+
+// ────────────────────────────────────────────────
+// Referral — redeem a code at signup
+// ────────────────────────────────────────────────
+// Runs as admin so it can extend BOTH shops' trials (a client can only
+// write its own shop doc). Idempotent: a shop that already has
+// `referredBy` set can't claim a second reward.
+const REFERRAL_BONUS_DAYS = 30;
+
+exports.applyReferral = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Login required");
+  }
+  const shopId = request.auth.uid;
+  const code = String(request.data?.code || "").trim().toUpperCase();
+  if (!code) {
+    throw new HttpsError("invalid-argument", "code is required");
+  }
+
+  const db = admin.firestore();
+  const selfRef = db.collection("shops").doc(shopId);
+  const selfSnap = await selfRef.get();
+  if (!selfSnap.exists) {
+    throw new HttpsError("not-found", "Shop not found");
+  }
+  // Already claimed a referral — no double-dipping.
+  if (selfSnap.data().referredBy) {
+    return { applied: false, reason: "already-referred" };
+  }
+  // Can't refer yourself.
+  if (selfSnap.data().referralCode === code) {
+    return { applied: false, reason: "self" };
+  }
+
+  // Find the referrer by code.
+  const referrerQuery = await db
+    .collection("shops")
+    .where("referralCode", "==", code)
+    .limit(1)
+    .get();
+  if (referrerQuery.empty) {
+    return { applied: false, reason: "code-not-found" };
+  }
+  const referrerRef = referrerQuery.docs[0].ref;
+
+  // Extend both trials by REFERRAL_BONUS_DAYS from their current end (or
+  // from now if already lapsed). Only meaningful while a shop is still on
+  // trial; for an active paid shop we extend the trial end harmlessly but
+  // it won't affect their paid subscriptionEndsAt.
+  const bonusMs = REFERRAL_BONUS_DAYS * 24 * 60 * 60 * 1000;
+  function extend(snap) {
+    const cur = snap.data().trialEndsAt?.toDate();
+    const base = cur && cur > new Date() ? cur : new Date();
+    return admin.firestore.Timestamp.fromDate(
+      new Date(base.getTime() + bonusMs)
+    );
+  }
+
+  const referrerSnap = referrerQuery.docs[0];
+  const batch = db.batch();
+  batch.update(selfRef, {
+    referredBy: code,
+    trialEndsAt: extend(selfSnap),
+  });
+  batch.update(referrerRef, {
+    trialEndsAt: extend(referrerSnap),
+  });
+  await batch.commit();
+
+  return { applied: true, bonusDays: REFERRAL_BONUS_DAYS };
+});

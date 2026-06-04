@@ -44,6 +44,15 @@ class Shop {
   final DateTime? subscriptionEndsAt;
   final DateTime createdAt;
 
+  /// Code other shops enter at signup to credit this shop with a referral.
+  /// Generated once at createShop; shown in Settings to share.
+  final String? referralCode;
+
+  /// The code this shop used at signup (if any). Non-null marks the
+  /// referral reward as already claimed — the applyReferral function
+  /// won't credit twice.
+  final String? referredBy;
+
   const Shop({
     required this.id,
     required this.name,
@@ -56,6 +65,8 @@ class Shop {
     this.trialEndsAt,
     this.subscriptionEndsAt,
     required this.createdAt,
+    this.referralCode,
+    this.referredBy,
   });
 
   bool get isAccessAllowed {
@@ -115,6 +126,8 @@ class Shop {
       subscriptionEndsAt: (data['subscriptionEndsAt'] as Timestamp?)?.toDate(),
       createdAt:
           (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      referralCode: data['referralCode'] as String?,
+      referredBy: data['referredBy'] as String?,
     );
   }
 
@@ -132,5 +145,7 @@ class Shop {
             ? Timestamp.fromDate(subscriptionEndsAt!)
             : null,
         'createdAt': Timestamp.fromDate(createdAt),
+        if (referralCode != null) 'referralCode': referralCode,
+        if (referredBy != null) 'referredBy': referredBy,
       };
 }
