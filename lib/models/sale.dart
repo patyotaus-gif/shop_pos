@@ -82,6 +82,10 @@ class Sale {
   /// close time. The receipt shows the per-person figure when > 1.
   final int splitCount;
 
+  /// Name of the staff member who rang the sale (PIN-based attribution,
+  /// Full/Restaurant tiers). Null when no staff profile was active.
+  final String? staffName;
+
   const Sale({
     required this.id,
     required this.items,
@@ -99,6 +103,7 @@ class Sale {
     this.stripePaymentIntentId,
     this.serviceCharge = 0,
     this.splitCount = 1,
+    this.staffName,
   });
 
   /// Sum of line item subtotals — total minus service charge plus discount.
@@ -127,6 +132,7 @@ class Sale {
         stripePaymentIntentId: data['stripePaymentIntentId'],
         serviceCharge: (data['serviceCharge'] ?? 0).toDouble(),
         splitCount: (data['splitCount'] ?? 1) as int,
+        staffName: data['staffName'] as String?,
       );
 
   Map<String, dynamic> toFirestore() => {
@@ -141,5 +147,6 @@ class Sale {
         'paymentMethod': paymentMethod.name,
         if (serviceCharge > 0) 'serviceCharge': serviceCharge,
         if (splitCount > 1) 'splitCount': splitCount,
+        if (staffName != null) 'staffName': staffName,
       };
 }

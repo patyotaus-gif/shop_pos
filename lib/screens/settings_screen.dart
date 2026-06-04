@@ -12,6 +12,7 @@ import '../services/line_service.dart';
 import '../services/settings_service.dart';
 import '../services/shop_service.dart';
 import '../widgets/upgrade_prompt.dart';
+import 'staff_screen.dart';
 import 'subscription_screen.dart';
 import '../main.dart' show themeNotifier;
 
@@ -326,6 +327,83 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         _SectionTitle('อุปกรณ์ของคุณ'),
                         const SizedBox(height: 8),
                         _HardwareTracker(request: req),
+                      ],
+                    );
+                  },
+                ),
+
+                // Staff — PIN profiles. Full/Restaurant opens management;
+                // Solo/Lite gets a locked tile that opens the upgrade prompt.
+                StreamBuilder<Shop?>(
+                  stream: ShopService.watchCurrentShop(),
+                  builder: (context, snap) {
+                    final tier = snap.data?.tier ?? ShopTier.full;
+                    final allowed = Entitlements.canUseStaff(tier);
+                    return Column(
+                      children: [
+                        const SizedBox(height: 24),
+                        _SectionTitle('พนักงาน'),
+                        const SizedBox(height: 8),
+                        InkWell(
+                          onTap: () {
+                            if (allowed) {
+                              Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => StaffScreen(tier: tier),
+                              ));
+                            } else {
+                              showUpgradePrompt(context,
+                                  feature: EntitlementFeature.multiUser);
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 6),
+                            child: Row(
+                              children: [
+                                Icon(
+                                    allowed
+                                        ? Icons.people_alt_outlined
+                                        : Icons.lock_outline,
+                                    color: cs.primary,
+                                    size: 26),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('จัดการพนักงาน',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 15)),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        allowed
+                                            ? 'เพิ่มพนักงาน + PIN ระบุตัวตนตอนขาย'
+                                            : 'เพิ่มพนักงานหลายคน — อยู่ในแผน Full ขึ้นไป',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: cs.onSurface
+                                                .withValues(alpha: 0.6)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (allowed)
+                                  Icon(Icons.chevron_right,
+                                      color: cs.onSurface
+                                          .withValues(alpha: 0.4))
+                                else
+                                  Text('อัพเกรด',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: cs.primary)),
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
                     );
                   },
@@ -978,6 +1056,7 @@ class _PlanCapabilities extends StatelessWidget {
     EntitlementFeature.paperReceipt,
     EntitlementFeature.inventory,
     EntitlementFeature.customerDb,
+    EntitlementFeature.multiUser,
     EntitlementFeature.loyalty,
     EntitlementFeature.advancedReports,
     EntitlementFeature.tables,
@@ -992,6 +1071,7 @@ class _PlanCapabilities extends StatelessWidget {
         EntitlementFeature.inventory => Entitlements.canUseInventory(tier),
         EntitlementFeature.customerDb =>
           Entitlements.canUseCustomerDb(tier),
+        EntitlementFeature.multiUser => Entitlements.canUseStaff(tier),
         EntitlementFeature.loyalty => Entitlements.canUseLoyalty(tier),
         EntitlementFeature.advancedReports =>
           Entitlements.canUseAdvancedReports(tier),

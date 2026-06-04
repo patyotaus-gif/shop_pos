@@ -61,6 +61,11 @@ service cloud.firestore {
         allow read, write: if isOwner();
       }
 
+      // ── Staff profiles (PIN-based, attribution only) ──
+      match /staff/{staffId} {
+        allow read, write: if isOwner();
+      }
+
       // ── AI usage quota ──
       // เขียนโดย aiChat Function (admin SDK, bypass) เท่านั้น;
       // อนุญาตให้ owner อ่าน เผื่อแสดงโควต้าในแอป

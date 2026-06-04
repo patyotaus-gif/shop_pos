@@ -11,9 +11,13 @@ import 'package:intl/intl.dart';
 import '../models/product.dart';
 import '../models/cart_item.dart';
 import '../models/sale.dart';
+import '../models/staff_member.dart';
+import '../services/entitlements.dart';
 import '../services/product_service.dart';
 import '../services/sale_service.dart';
 import '../services/settings_service.dart';
+import '../services/shop_service.dart';
+import '../services/staff_service.dart';
 import '../utils/receipt_generator.dart';
 import '../widgets/payment_sheet.dart';
 
@@ -30,6 +34,29 @@ class _PosScreenState extends State<PosScreen> {
   double _discount = 0;
   PaymentMethod _paymentMethod = PaymentMethod.cash;
   String _selectedCategory = 'ทั้งหมด';
+
+  // Staff attribution (Full/Restaurant). `_staffEnabled` gates the app-bar
+  // chip; `_activeStaffName` rides along on each sale.
+  bool _staffEnabled = false;
+  String? _activeStaffName;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStaffContext();
+  }
+
+  Future<void> _loadStaffContext() async {
+    final shop = await ShopService.getCurrentShop();
+    final enabled = shop != null && Entitlements.canUseStaff(shop.tier);
+    final active = enabled ? await StaffService.getActive() : null;
+    if (mounted) {
+      setState(() {
+        _staffEnabled = enabled;
+        _activeStaffName = active?.name;
+      });
+    }
+  }
 
   double get _subtotal => _cart.fold(0, (s, e) => s + e.subtotal);
   double get _total => _subtotal - _discount;
@@ -118,6 +145,7 @@ class _PosScreenState extends State<PosScreen> {
         isDebt: isDebt,
         customerName: customerName,
         paymentMethod: method,
+        staffName: _activeStaffName,
       );
 
       setState(() {
@@ -228,6 +256,33 @@ class _PosScreenState extends State<PosScreen> {
     }
   }
 
+  /// Switch the active staff at the till. Lists staff profiles; tapping
+  /// one asks for that staff's 4-digit PIN to confirm (so a cashier can
+  /// only clock in as themselves). Attribution, not hard security.
+  Future<void> _switchStaff() async {
+    final staff = await StaffService.getAll();
+    if (!mounted) return;
+    if (staff.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('ยังไม่มีพนักงาน — เพิ่มได้ที่ ตั้งค่า → พนักงาน')),
+      );
+      return;
+    }
+    final picked = await showModalBottomSheet<StaffMember>(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _StaffPickerSheet(staff: staff),
+    );
+    if (picked != null && mounted) {
+      await StaffService.setActive(picked);
+      setState(() => _activeStaffName = picked.name);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -237,6 +292,17 @@ class _PosScreenState extends State<PosScreen> {
         title: const Text('POS'),
         centerTitle: true,
         actions: [
+          if (_staffEnabled)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: ActionChip(
+                avatar:
+                    Icon(Icons.person_outline, size: 18, color: cs.primary),
+                label: Text(_activeStaffName ?? 'เลือกพนักงาน',
+                    style: const TextStyle(fontSize: 12)),
+                onPressed: _switchStaff,
+              ),
+            ),
           IconButton(
             // Barcode scanner — was incorrectly using a QR icon.
             icon: const Icon(Icons.barcode_reader),
@@ -1036,4 +1102,100 @@ class _OverlayPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_OverlayPainter old) => old.scanRect != scanRect;
+}
+
+/// Staff picker for the POS till. Tap a name → enter their 4-digit PIN →
+/// returns the matched StaffMember (or null on cancel/wrong PIN).
+class _StaffPickerSheet extends StatefulWidget {
+  const _StaffPickerSheet({required this.staff});
+  final List<StaffMember> staff;
+
+  @override
+  State<_StaffPickerSheet> createState() => _StaffPickerSheetState();
+}
+
+class _StaffPickerSheetState extends State<_StaffPickerSheet> {
+  StaffMember? _selected;
+  final _pin = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _pin.dispose();
+    super.dispose();
+  }
+
+  void _confirm() {
+    if (_pin.text.trim() == _selected!.pin) {
+      Navigator.pop(context, _selected);
+    } else {
+      setState(() => _error = 'PIN ไม่ถูกต้อง');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          20, 16, 20, 16 + MediaQuery.of(context).viewInsets.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(_selected == null ? 'ใครกำลังขาย?' : 'ใส่ PIN ของ ${_selected!.name}',
+              style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 12),
+          if (_selected == null)
+            ...widget.staff.map((s) => ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: cs.primary.withValues(alpha: 0.12),
+                    child: Text(
+                      s.name.isNotEmpty ? s.name.characters.first : '?',
+                      style: TextStyle(
+                          color: cs.primary, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  title: Text(s.name),
+                  subtitle: Text(s.role.label),
+                  onTap: () => setState(() => _selected = s),
+                ))
+          else ...[
+            TextField(
+              controller: _pin,
+              keyboardType: TextInputType.number,
+              maxLength: 4,
+              autofocus: true,
+              obscureText: true,
+              onSubmitted: (_) => _confirm(),
+              decoration: InputDecoration(
+                labelText: 'PIN 4 หลัก',
+                errorText: _error,
+                border: const OutlineInputBorder(),
+                counterText: '',
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                TextButton(
+                  onPressed: () => setState(() {
+                    _selected = null;
+                    _pin.clear();
+                    _error = null;
+                  }),
+                  child: const Text('กลับ'),
+                ),
+                const Spacer(),
+                FilledButton(
+                  onPressed: _confirm,
+                  child: const Text('ยืนยัน'),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }

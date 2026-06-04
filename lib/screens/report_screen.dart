@@ -884,6 +884,25 @@ class _SalesReport extends StatelessWidget {
               const Text('รวม', style: TextStyle(fontWeight: FontWeight.bold)),
               Text('฿${bahtFmt.format(sale.total)}', style: const TextStyle(fontWeight: FontWeight.bold)),
             ]),
+            if (sale.staffName != null) ...[
+              const SizedBox(height: 4),
+              Row(children: [
+                Icon(Icons.person_outline,
+                    size: 14,
+                    color: Theme.of(ctx)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6)),
+                const SizedBox(width: 4),
+                Text('ขายโดย ${sale.staffName}',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(ctx)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6))),
+              ]),
+            ],
             const SizedBox(height: 12),
             Row(children: [
               Expanded(

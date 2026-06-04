@@ -29,6 +29,7 @@ class SaleService {
     bool isDebt = false,
     String? customerName,
     PaymentMethod paymentMethod = PaymentMethod.cash,
+    String? staffName,
   }) async {
     final total =
         cart.fold<double>(0, (s, e) => s + e.subtotal) - discount;
@@ -57,6 +58,7 @@ class SaleService {
       isDebt: isDebt,
       customerName: customerName,
       paymentMethod: paymentMethod,
+      staffName: staffName,
     );
 
     final batch = FirebaseFirestore.instance.batch();
@@ -105,6 +107,7 @@ class SaleService {
       isDebt: isDebt,
       customerName: customerName,
       paymentMethod: paymentMethod,
+      staffName: staffName,
     );
   }
 

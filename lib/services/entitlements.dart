@@ -54,6 +54,10 @@ class Entitlements {
   /// Xero / FlowAccount sync, REST API access. Restaurant only.
   static bool canUseApiSync(ShopTier t) => t == ShopTier.restaurant;
 
+  /// Multiple staff profiles (PIN-based attribution). True when the tier
+  /// allows more than one user — Full (3) and Restaurant (unlimited).
+  static bool canUseStaff(ShopTier t) => maxUsers(t) != 1;
+
   /// Human-readable support promise per tier — shown in Settings under
   /// "สิ่งที่มีในแผน".
   static String supportSla(ShopTier t) => switch (t) {
@@ -75,6 +79,7 @@ class Entitlements {
         EntitlementFeature.tables => ShopTier.restaurant,
         EntitlementFeature.multiBranch => ShopTier.restaurant,
         EntitlementFeature.apiSync => ShopTier.restaurant,
+        EntitlementFeature.multiUser => ShopTier.full,
       };
 }
 
@@ -90,6 +95,7 @@ enum EntitlementFeature {
   tables,
   multiBranch,
   apiSync,
+  multiUser,
 }
 
 extension EntitlementFeatureX on EntitlementFeature {
@@ -104,5 +110,6 @@ extension EntitlementFeatureX on EntitlementFeature {
         EntitlementFeature.tables => 'จัดการโต๊ะ',
         EntitlementFeature.multiBranch => 'จัดการหลายสาขา',
         EntitlementFeature.apiSync => 'เชื่อมต่อ Xero / FlowAccount',
+        EntitlementFeature.multiUser => 'เพิ่มพนักงานหลายคน',
       };
 }
