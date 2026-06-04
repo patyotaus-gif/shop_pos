@@ -271,8 +271,8 @@
     .bill-btn { padding: 7px 22px; border-radius: 7px; font-size: .875rem; font-weight: 500; cursor: pointer; border: none; background: transparent; color: var(--ink-3); font-family: 'IBM Plex Sans Thai', sans-serif; transition: all .15s; }
     .bill-btn.on { background: var(--ruby); color: white; font-weight: 600; }
     .save-pill { font-size: .68rem; background: #dcfce7; color: #15803d; padding: 2px 7px; border-radius: 100px; font-weight: 700; margin-left: 4px; }
-    .pricing-cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; max-width: 940px; }
-    .p-card { background: white; border: 1px solid var(--border); border-radius: var(--r); padding: 32px; transition: all .2s; }
+    .pricing-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px,1fr)); gap: 14px; max-width: 1120px; }
+    .p-card { background: white; border: 1px solid var(--border); border-radius: var(--r); padding: 24px 20px; transition: all .2s; }
     .p-card:hover { box-shadow: 0 8px 24px rgba(30,18,18,.08); }
     .p-card.featured { border: 2px solid var(--ruby); position: relative; background: var(--ruby); }
     .p-card.featured .p-sep { border-color: rgba(255,255,255,.2); }
@@ -742,50 +742,65 @@
     <button class="bill-btn" id="by" onclick="setBill('y')">รายปี <span class="save-pill">ประหยัด 17%</span></button>
   </div>
   <div class="pricing-cards">
+    <!-- Solo -->
     <div class="p-card" data-anim data-delay="1">
-      <div class="p-plan">ทดลองใช้</div>
-      <div class="p-price">ฟรี</div>
-      <div class="p-desc">60 วัน ใช้งานได้เต็มระบบ</div>
+      <div class="p-plan">Solo</div>
+      <div class="p-price"><span class="currency">฿</span><span class="p-amt" data-m="199" data-y="1,990">199</span><span class="period p-per"> /เดือน</span></div>
+      <div class="p-desc">ใช้มือถือ/tablet ของตัวเอง</div>
       <hr class="p-sep"/>
       <ul class="p-list">
-        <li>ระบบ POS เต็มรูปแบบ</li>
-        <li>จัดการสต็อก</li>
-        <li>รายงานยอดขาย</li>
-        <li>ออเดอร์ออนไลน์</li>
+        <li>POS ขาย รับเงิน ใบเสร็จดิจิทัล</li>
+        <li>รายงานยอดขายรายวัน</li>
+        <li>QR PromptPay ในตัว</li>
+        <li>สั่งของจาก supplier</li>
       </ul>
-      <a href="#" class="p-btn">เริ่มทดลองใช้ฟรี</a>
+      <a href="#" class="p-btn">เริ่มทดลองฟรี</a>
     </div>
-    <div class="p-card featured" data-anim data-delay="2">
-      <div class="p-card-badge">แนะนำ</div>
-      <div class="p-plan">Pro</div>
-      <div class="p-price"><span class="currency">฿</span><span id="pa">299</span><span class="period" id="pp"> /เดือน</span></div>
-      <div class="p-desc" id="pd">สำหรับร้านค้าทุกขนาด</div>
+    <!-- Lite -->
+    <div class="p-card" data-anim data-delay="2">
+      <div class="p-plan">Lite</div>
+      <div class="p-price"><span class="currency">฿</span><span class="p-amt" data-m="399" data-y="3,990">399</span><span class="period p-per"> /เดือน</span></div>
+      <div class="p-desc">มี tablet แล้ว + ชุดพิมพ์ใบเสร็จ</div>
       <hr class="p-sep"/>
       <ul class="p-list">
-        <li>ระบบ POS เต็มรูปแบบ</li>
+        <li>ทุกอย่างใน Solo</li>
+        <li>ใบเสร็จกระดาษ + ลิ้นชักเงิน</li>
         <li>จัดการสต็อก</li>
-        <li>รายงานและ Dashboard</li>
-        <li>จัดการลูกหนี้</li>
-        <li>ออเดอร์ออนไลน์</li>
-        <li>ส่งออก PDF</li>
-        <li>Cloud backup อัตโนมัติ</li>
+        <li>ฐานข้อมูลลูกค้า</li>
+      </ul>
+      <a href="#" class="p-btn">เริ่มทดลองฟรี</a>
+    </div>
+    <!-- Full (featured) -->
+    <div class="p-card featured" data-anim data-delay="3">
+      <div class="p-card-badge">แนะนำ</div>
+      <div class="p-plan">Full</div>
+      <div class="p-price"><span class="currency">฿</span><span class="p-amt" data-m="599" data-y="5,990">599</span><span class="period p-per"> /เดือน</span></div>
+      <div class="p-desc">ครบชุด hardware ไม่ต้องลงทุนเอง</div>
+      <hr class="p-sep"/>
+      <ul class="p-list">
+        <li>ทุกอย่างใน Lite</li>
+        <li>ชุดอุปกรณ์ครบ (tablet + ปรินเตอร์ + ลิ้นชัก)</li>
+        <li>3 ผู้ใช้ + สะสมแต้มลูกค้า</li>
+        <li>รายงานเชิงลึก + ซ่อมถึงที่ 24 ชม.</li>
       </ul>
       <button class="p-btn ruby">เริ่มใช้งาน</button>
     </div>
-    <div class="p-card" data-anim data-delay="3">
-      <div class="p-plan">Enterprise</div>
-      <div class="p-price" style="font-size:1.8rem">ติดต่อ</div>
-      <div class="p-desc">หลายสาขา หรือความต้องการพิเศษ</div>
+    <!-- Restaurant -->
+    <div class="p-card" data-anim data-delay="4">
+      <div class="p-plan">Restaurant</div>
+      <div class="p-price"><span class="currency">฿</span><span class="p-amt" data-m="1,199" data-y="11,990">1,199</span><span class="period p-per"> /เดือน·สาขา</span></div>
+      <div class="p-desc">ร้านอาหาร หลายสาขา</div>
       <hr class="p-sep"/>
       <ul class="p-list">
-        <li>ทุกอย่างใน Pro</li>
-        <li>หลายสาขา</li>
-        <li>API integration</li>
-        <li>Priority support</li>
+        <li>ทุกอย่างใน Full</li>
+        <li>ครัว + ผังโต๊ะ + แยกบิล</li>
+        <li>หลายสาขา + ผู้ใช้ไม่จำกัด</li>
+        <li>เชื่อม Xero / FlowAccount</li>
       </ul>
-      <a href="mailto:contact@pok-pok.app" class="p-btn">ติดต่อเรา</a>
+      <a href="#" class="p-btn">เริ่มทดลองฟรี</a>
     </div>
   </div>
+  <p class="subtext" style="margin-top:24px">ทุกแผนทดลองฟรี 60 วัน · สั่งของผ่าน marketplace ได้ทุกแผน · ไม่ต้องผูกบัตร</p>
 </section>
 
 <!-- FAQ -->
@@ -913,9 +928,15 @@
   function setBill(t) {
     document.getElementById('bm').classList.toggle('on', t==='m');
     document.getElementById('by').classList.toggle('on', t==='y');
-    document.getElementById('pa').textContent = t==='m' ? '299' : '2,990';
-    document.getElementById('pp').textContent = t==='m' ? ' /เดือน' : ' /ปี';
-    document.getElementById('pd').textContent = t==='m' ? 'สำหรับร้านค้าทุกขนาด' : 'ประหยัดกว่ารายเดือน ฿598 ต่อปี';
+    // Each tier card carries its own data-m / data-y amounts; flip them all.
+    document.querySelectorAll('.p-amt').forEach(el => {
+      el.textContent = t==='m' ? el.dataset.m : el.dataset.y;
+    });
+    document.querySelectorAll('.p-per').forEach(el => {
+      const perLoc = el.textContent.includes('สาขา');
+      const base = t==='m' ? ' /เดือน' : ' /ปี';
+      el.textContent = perLoc ? base + '·สาขา' : base;
+    });
   }
 
   // ── HERO HEADLINE STAGGER ──
