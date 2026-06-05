@@ -12,6 +12,7 @@ import '../services/line_service.dart';
 import '../services/settings_service.dart';
 import '../services/shop_service.dart';
 import '../widgets/upgrade_prompt.dart';
+import 'customers_screen.dart';
 import 'staff_screen.dart';
 import 'subscription_screen.dart';
 import '../main.dart' show themeNotifier;
@@ -382,6 +383,83 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         allowed
                                             ? 'เพิ่มพนักงาน + PIN ระบุตัวตนตอนขาย'
                                             : 'เพิ่มพนักงานหลายคน — อยู่ในแผน Full ขึ้นไป',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: cs.onSurface
+                                                .withValues(alpha: 0.6)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (allowed)
+                                  Icon(Icons.chevron_right,
+                                      color: cs.onSurface
+                                          .withValues(alpha: 0.4))
+                                else
+                                  Text('อัพเกรด',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: cs.primary)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+
+                // Loyalty customers — Full/Restaurant opens the list;
+                // Solo/Lite gets a locked tile → upgrade prompt.
+                StreamBuilder<Shop?>(
+                  stream: ShopService.watchCurrentShop(),
+                  builder: (context, snap) {
+                    final tier = snap.data?.tier ?? ShopTier.full;
+                    final allowed = Entitlements.canUseLoyalty(tier);
+                    return Column(
+                      children: [
+                        const SizedBox(height: 24),
+                        _SectionTitle('ลูกค้าสะสมแต้ม'),
+                        const SizedBox(height: 8),
+                        InkWell(
+                          onTap: () {
+                            if (allowed) {
+                              Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => const CustomersScreen(),
+                              ));
+                            } else {
+                              showUpgradePrompt(context,
+                                  feature: EntitlementFeature.loyalty);
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 6),
+                            child: Row(
+                              children: [
+                                Icon(
+                                    allowed
+                                        ? Icons.card_giftcard_outlined
+                                        : Icons.lock_outline,
+                                    color: cs.primary,
+                                    size: 26),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('สะสมแต้มลูกค้า',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 15)),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        allowed
+                                            ? 'ลูกค้าสะสมแต้มจากยอดซื้อ · ฿25 = 1 แต้ม'
+                                            : 'ระบบสะสมแต้ม — อยู่ในแผน Full ขึ้นไป',
                                         style: TextStyle(
                                             fontSize: 12,
                                             color: cs.onSurface

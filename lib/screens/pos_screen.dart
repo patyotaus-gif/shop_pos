@@ -10,8 +10,10 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:intl/intl.dart';
 import '../models/product.dart';
 import '../models/cart_item.dart';
+import '../models/customer.dart';
 import '../models/sale.dart';
 import '../models/staff_member.dart';
+import '../services/customer_service.dart';
 import '../services/entitlements.dart';
 import '../services/product_service.dart';
 import '../services/sale_service.dart';
@@ -40,21 +42,83 @@ class _PosScreenState extends State<PosScreen> {
   bool _staffEnabled = false;
   String? _activeStaffName;
 
+  // Loyalty (Full/Restaurant). `_loyaltyEnabled` gates the attach-customer
+  // button; `_loyaltyCustomer` is the customer attached to the current
+  // cart, cleared after each sale.
+  bool _loyaltyEnabled = false;
+  Customer? _loyaltyCustomer;
+
   @override
   void initState() {
     super.initState();
-    _loadStaffContext();
+    _loadShopContext();
   }
 
-  Future<void> _loadStaffContext() async {
+  Future<void> _loadShopContext() async {
     final shop = await ShopService.getCurrentShop();
-    final enabled = shop != null && Entitlements.canUseStaff(shop.tier);
-    final active = enabled ? await StaffService.getActive() : null;
+    if (shop == null) return;
+    final staffEnabled = Entitlements.canUseStaff(shop.tier);
+    final active = staffEnabled ? await StaffService.getActive() : null;
     if (mounted) {
       setState(() {
-        _staffEnabled = enabled;
+        _staffEnabled = staffEnabled;
         _activeStaffName = active?.name;
+        _loyaltyEnabled = Entitlements.canUseLoyalty(shop.tier);
       });
+    }
+  }
+
+  /// Attach a loyalty customer to the current cart by phone. Finds an
+  /// existing customer or creates one, then shows their points.
+  Future<void> _attachCustomer() async {
+    final phoneCtrl = TextEditingController();
+    final nameCtrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('ลูกค้าสะสมแต้ม'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: phoneCtrl,
+              keyboardType: TextInputType.phone,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'เบอร์โทร',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(
+                labelText: 'ชื่อ (ถ้าเป็นลูกค้าใหม่)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('ยกเลิก')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('เลือก')),
+        ],
+      ),
+    );
+    if (ok != true || phoneCtrl.text.trim().isEmpty || !mounted) return;
+    final customer = await CustomerService.ensure(
+        phone: phoneCtrl.text, name: nameCtrl.text);
+    if (mounted) {
+      setState(() => _loyaltyCustomer = customer);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(
+                'ลูกค้า ${customer.name} · ${customer.points} แต้ม')),
+      );
     }
   }
 
@@ -146,11 +210,13 @@ class _PosScreenState extends State<PosScreen> {
         customerName: customerName,
         paymentMethod: method,
         staffName: _activeStaffName,
+        loyaltyCustomerId: _loyaltyCustomer?.id,
       );
 
       setState(() {
         _cart.clear();
         _discount = 0;
+        _loyaltyCustomer = null;
       });
 
       if (mounted) {
@@ -451,6 +517,55 @@ class _PosScreenState extends State<PosScreen> {
                     ),
                   ),
           ),
+          // Loyalty customer strip (Full/Restaurant). Tap to attach a
+          // customer by phone so the sale accrues points.
+          if (_loyaltyEnabled)
+            Material(
+              color: _loyaltyCustomer != null
+                  ? cs.primary.withValues(alpha: 0.06)
+                  : cs.surface,
+              child: InkWell(
+                onTap: _attachCustomer,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    border: Border(
+                        top: BorderSide(color: cs.outlineVariant)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.card_giftcard_outlined,
+                          size: 18, color: cs.primary),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _loyaltyCustomer != null
+                              ? '${_loyaltyCustomer!.name} · ${_loyaltyCustomer!.points} แต้ม'
+                              : 'เพิ่มลูกค้าสะสมแต้ม',
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: _loyaltyCustomer != null
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                              color: cs.onSurface),
+                        ),
+                      ),
+                      if (_loyaltyCustomer != null)
+                        GestureDetector(
+                          onTap: () =>
+                              setState(() => _loyaltyCustomer = null),
+                          child: Icon(Icons.close,
+                              size: 18,
+                              color: cs.onSurface.withValues(alpha: 0.5)),
+                        )
+                      else
+                        Icon(Icons.add, size: 18, color: cs.primary),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           // Summary & checkout
           _CheckoutPanel(
             subtotal: _subtotal,

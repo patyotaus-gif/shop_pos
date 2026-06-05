@@ -4,6 +4,7 @@ import '../models/cart_item.dart';
 import '../models/sale.dart';
 import '../models/debt.dart';
 import 'auth_service.dart';
+import 'customer_service.dart';
 import 'notification_service.dart';
 import 'product_service.dart';
 
@@ -30,6 +31,7 @@ class SaleService {
     String? customerName,
     PaymentMethod paymentMethod = PaymentMethod.cash,
     String? staffName,
+    String? loyaltyCustomerId,
   }) async {
     final total =
         cart.fold<double>(0, (s, e) => s + e.subtotal) - discount;
@@ -87,6 +89,17 @@ class SaleService {
     }
 
     await batch.commit();
+
+    // Accrue loyalty points if a customer was attached. Best-effort —
+    // outside the batch so a loyalty hiccup never fails the sale itself.
+    if (loyaltyCustomerId != null) {
+      try {
+        await CustomerService.recordPurchase(
+          customerId: loyaltyCustomerId,
+          spend: total,
+        );
+      } catch (_) {}
+    }
 
     // Check low stock and notify
     for (final item in cart) {

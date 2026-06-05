@@ -66,6 +66,11 @@ service cloud.firestore {
         allow read, write: if isOwner();
       }
 
+      // ── Loyalty customers ──
+      match /customers/{customerId} {
+        allow read, write: if isOwner();
+      }
+
       // ── AI usage quota ──
       // เขียนโดย aiChat Function (admin SDK, bypass) เท่านั้น;
       // อนุญาตให้ owner อ่าน เผื่อแสดงโควต้าในแอป
