@@ -79,6 +79,30 @@ class AdminService {
     return Map<String, dynamic>.from(res.data as Map)['supplierId'] as String;
   }
 
+  /// Create a login-enabled supplier (Firebase Auth account + supplier doc
+  /// whose id is that account's uid). Returns the supplier id. Throws
+  /// 'already-exists' if the email is taken.
+  static Future<String> createSupplierAccount({
+    required String email,
+    required String password,
+    required String name,
+    String category = '',
+    String area = '',
+    String deliveryDays = '',
+    double minOrder = 0,
+  }) async {
+    final res = await _fn('adminCreateSupplierAccount').call({
+      'email': email,
+      'password': password,
+      'name': name,
+      'category': category,
+      'area': area,
+      'deliveryDays': deliveryDays,
+      'minOrder': minOrder,
+    });
+    return Map<String, dynamic>.from(res.data as Map)['supplierId'] as String;
+  }
+
   /// Create (productId == null) or update one catalog line. Returns its id.
   static Future<String> upsertSupplierProduct({
     required String supplierId,

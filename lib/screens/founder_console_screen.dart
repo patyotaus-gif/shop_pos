@@ -497,15 +497,17 @@ class _SupplierEditDialogState extends State<_SupplierEditDialog> {
       text: widget.existing != null
           ? widget.existing!.minOrder.toStringAsFixed(0)
           : '');
+  final _email = TextEditingController();
+  final _password = TextEditingController();
   late bool _active = widget.existing?.active ?? true;
   bool _busy = false;
+
+  bool get _isNew => widget.existing == null;
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.existing == null
-          ? 'เพิ่มซัพพลายเออร์'
-          : 'แก้ไขซัพพลายเออร์'),
+      title: Text(_isNew ? 'เพิ่มซัพพลายเออร์' : 'แก้ไขซัพพลายเออร์'),
       content: SingleChildScrollView(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           _field(_name, 'ชื่อร้านส่ง'),
@@ -514,12 +516,23 @@ class _SupplierEditDialogState extends State<_SupplierEditDialog> {
           _field(_delivery, 'วันที่ส่ง (เช่น จ-ส)'),
           _field(_minOrder, 'ยอดสั่งขั้นต่ำ (บาท)',
               keyboard: TextInputType.number),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('เปิดใช้งาน'),
-            value: _active,
-            onChanged: (v) => setState(() => _active = v),
-          ),
+          if (_isNew) ...[
+            const SizedBox(height: 4),
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text('บัญชีเข้าพอร์ทัล (supplier ใช้ล็อกอิน)',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+            ),
+            const SizedBox(height: 8),
+            _field(_email, 'อีเมล', keyboard: TextInputType.emailAddress),
+            _field(_password, 'รหัสผ่าน (อย่างน้อย 6 ตัว)'),
+          ] else
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('เปิดใช้งาน'),
+              value: _active,
+              onChanged: (v) => setState(() => _active = v),
+            ),
         ]),
       ),
       actions: [
@@ -551,17 +564,36 @@ class _SupplierEditDialogState extends State<_SupplierEditDialog> {
 
   Future<void> _save() async {
     if (_name.text.trim().isEmpty) return;
+    if (_isNew &&
+        (_email.text.trim().isEmpty || _password.text.trim().length < 6)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('กรอกอีเมล + รหัสผ่าน (อย่างน้อย 6 ตัว)')));
+      return;
+    }
     setState(() => _busy = true);
     try {
-      await AdminService.upsertSupplier(
-        supplierId: widget.existing?.id,
-        name: _name.text.trim(),
-        category: _category.text.trim(),
-        area: _area.text.trim(),
-        deliveryDays: _delivery.text.trim(),
-        minOrder: double.tryParse(_minOrder.text.trim()) ?? 0,
-        active: _active,
-      );
+      if (_isNew) {
+        // New suppliers get a portal login account (id == auth uid).
+        await AdminService.createSupplierAccount(
+          email: _email.text.trim(),
+          password: _password.text.trim(),
+          name: _name.text.trim(),
+          category: _category.text.trim(),
+          area: _area.text.trim(),
+          deliveryDays: _delivery.text.trim(),
+          minOrder: double.tryParse(_minOrder.text.trim()) ?? 0,
+        );
+      } else {
+        await AdminService.upsertSupplier(
+          supplierId: widget.existing!.id,
+          name: _name.text.trim(),
+          category: _category.text.trim(),
+          area: _area.text.trim(),
+          deliveryDays: _delivery.text.trim(),
+          minOrder: double.tryParse(_minOrder.text.trim()) ?? 0,
+          active: _active,
+        );
+      }
       if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {

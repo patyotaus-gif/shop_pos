@@ -1371,3 +1371,108 @@ exports.adminUpsertSupplierProduct = onCall(async (request) => {
   );
   return { ok: true, productId: ref.id };
 });
+
+// Create a login-enabled supplier: a Firebase Auth account + a supplier
+// doc whose id IS that account's uid (so security rules can match
+// request.auth.uid == supplierId). The supplier then signs into the web
+// portal to manage their own catalog + orders. Founder-only.
+exports.adminCreateSupplierAccount = onCall(async (request) => {
+  assertFounder(request);
+  const d = request.data || {};
+  const email = String(d.email || "").trim().toLowerCase();
+  const password = String(d.password || "");
+  if (!email || password.length < 6) {
+    throw new HttpsError(
+      "invalid-argument",
+      "email and a password (>=6 chars) are required"
+    );
+  }
+  if (!d.name) {
+    throw new HttpsError("invalid-argument", "name is required");
+  }
+
+  // Create (or reuse) the auth account.
+  let uid;
+  try {
+    const user = await admin.auth().createUser({
+      email,
+      password,
+      displayName: String(d.name),
+    });
+    uid = user.uid;
+  } catch (e) {
+    if (e.code === "auth/email-already-exists") {
+      throw new HttpsError("already-exists", "อีเมลนี้มีบัญชีอยู่แล้ว");
+    }
+    throw new HttpsError("internal", e.message || "createUser failed");
+  }
+
+  await admin
+    .firestore()
+    .collection("suppliers")
+    .doc(uid)
+    .set({
+      name: String(d.name),
+      email,
+      category: String(d.category || ""),
+      area: d.area != null ? String(d.area) : "",
+      deliveryDays: d.deliveryDays != null ? String(d.deliveryDays) : "",
+      minOrder: Number(d.minOrder || 0),
+      lineUserId: d.lineUserId != null ? String(d.lineUserId) : "",
+      active: true,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+  return { ok: true, supplierId: uid };
+});
+
+// Supplier updates one of their incoming orders (accept / ship / cancel)
+// from the web portal. Mirrors the new status to the shop's copy so both
+// sides stay in sync. Caller must own the order (auth.uid == supplierId).
+exports.supplierSetOrderStatus = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Login required");
+  }
+  const uid = request.auth.uid;
+  const orderId = String(request.data?.orderId || "");
+  const status = String(request.data?.status || "");
+  const ALLOWED = ["accepted", "shipped", "cancelled"];
+  if (!orderId || !ALLOWED.includes(status)) {
+    throw new HttpsError(
+      "invalid-argument",
+      "orderId + valid status required"
+    );
+  }
+
+  const db = admin.firestore();
+  const supRef = db
+    .collection("suppliers")
+    .doc(uid)
+    .collection("orders")
+    .doc(orderId);
+  const supSnap = await supRef.get();
+  if (!supSnap.exists) {
+    throw new HttpsError("not-found", "Order not found");
+  }
+  const order = supSnap.data();
+  if (order.status === "delivered" || order.status === "cancelled") {
+    throw new HttpsError("failed-precondition", "ออเดอร์ปิดแล้ว");
+  }
+
+  const patch = { status };
+  const batch = db.batch();
+  batch.set(supRef, patch, { merge: true });
+  if (order.shopId) {
+    batch.set(
+      db
+        .collection("shops")
+        .doc(order.shopId)
+        .collection("marketplaceOrders")
+        .doc(orderId),
+      patch,
+      { merge: true }
+    );
+  }
+  await batch.commit();
+  return { ok: true };
+});

@@ -80,26 +80,35 @@ service cloud.firestore {
     }
 
     // ── Suppliers — top-level, shared across shops (Phase E) ──
-    // Onboarded white-glove by the founder via admin SDK (bypasses
-    // rules), so no client write to the supplier doc / catalog. Any
-    // logged-in shop can browse.
+    // The supplier owns their doc when its id == their auth uid — the
+    // account is created white-glove by the founder via admin SDK
+    // (adminCreateSupplierAccount), then the supplier signs into the web
+    // portal to self-manage profile + catalog. Any logged-in shop can
+    // browse.
     match /suppliers/{supplierId} {
+      function isSupplier() {
+        return request.auth != null && request.auth.uid == supplierId;
+      }
+
       allow read: if request.auth != null;
-      allow write: if false; // admin SDK only
+      // Profile edits by the supplier themselves; create/delete stay
+      // admin-only (founder onboarding).
+      allow update: if isSupplier();
+      allow create, delete: if false; // admin SDK only
 
       match /products/{productId} {
         allow read: if request.auth != null;
-        allow write: if false; // admin SDK only
+        allow write: if isSupplier(); // supplier manages own catalog
       }
 
-      // Supplier-side copy of a marketplace order. The placing shop owns
-      // it (matches shopId) so it can create + later cancel/confirm via
-      // the dual-write. A dedicated supplier app + auth comes later.
+      // Supplier-side copy of a marketplace order, written by the placing
+      // shop via dual-write. Readable/updatable by that shop OR by the
+      // supplier who owns this subcollection (so they can accept/ship).
       match /orders/{orderId} {
         allow create: if request.auth != null
           && request.resource.data.shopId == request.auth.uid;
         allow read, update: if request.auth != null
-          && resource.data.shopId == request.auth.uid;
+          && (resource.data.shopId == request.auth.uid || isSupplier());
         allow delete: if false;
       }
     }

@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pokpok — พอร์ทัลซัพพลายเออร์</title>
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --burgundy: #7A1F2B; --burgundy-hover: #5C1820; --cream: #F5F1EC;
+      --surface: #FFFFFF; --text-dark: #1F1A1B; --text-mid: #6B5E60;
+      --border: #E5DDD3; --green: #059669; --amber: #B45309; --red: #B91C1C;
+      --r: 14px; --r-sm: 9px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; background: var(--cream); color: var(--text-dark); line-height: 1.6; }
+    button { font-family: inherit; cursor: pointer; }
+    input { font-family: inherit; }
+    .hidden { display: none !important; }
+
+    /* ── Login ── */
+    #login-view { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; background: var(--burgundy); }
+    .login-card { background: var(--surface); border-radius: var(--r); padding: 32px 26px; width: 100%; max-width: 360px; box-shadow: 0 20px 40px rgba(0,0,0,.2); }
+    .login-card h1 { font-size: 1.3rem; font-weight: 700; color: var(--burgundy); margin-bottom: 4px; }
+    .login-card p { font-size: .85rem; color: var(--text-mid); margin-bottom: 22px; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: .8rem; font-weight: 600; margin-bottom: 5px; }
+    .field input { width: 100%; padding: 11px 13px; border: 1.5px solid var(--border); border-radius: var(--r-sm); font-size: .95rem; }
+    .field input:focus { outline: none; border-color: var(--burgundy); }
+    .btn-primary { width: 100%; padding: 12px; background: var(--burgundy); color: #fff; border: none; border-radius: var(--r-sm); font-weight: 700; font-size: .95rem; transition: background .15s; }
+    .btn-primary:hover { background: var(--burgundy-hover); }
+    .btn-primary:disabled { opacity: .6; cursor: default; }
+    .err { color: var(--red); font-size: .85rem; margin-top: 12px; min-height: 1em; text-align: center; }
+
+    /* ── App shell ── */
+    header { background: var(--burgundy); color: var(--cream); padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+    header .who { font-weight: 600; }
+    header .who small { display: block; font-weight: 400; opacity: .8; font-size: .72rem; }
+    .btn-ghost { background: rgba(255,255,255,.15); color: var(--cream); border: none; padding: 7px 14px; border-radius: var(--r-sm); font-size: .82rem; font-weight: 600; }
+    .tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 52px; z-index: 40; }
+    .tab { flex: 1; padding: 13px; text-align: center; font-weight: 600; font-size: .9rem; color: var(--text-mid); border: none; background: none; border-bottom: 2.5px solid transparent; }
+    .tab.active { color: var(--burgundy); border-bottom-color: var(--burgundy); }
+    main { max-width: 720px; margin: 0 auto; padding: 16px; }
+    .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .section-head h2 { font-size: 1.05rem; font-weight: 700; }
+    .btn-add { background: var(--burgundy); color: #fff; border: none; padding: 8px 15px; border-radius: var(--r-sm); font-weight: 700; font-size: .85rem; }
+
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; margin-bottom: 10px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .p-name { font-weight: 600; }
+    .p-meta { font-size: .82rem; color: var(--text-mid); margin-top: 2px; }
+    .p-actions { display: flex; gap: 6px; align-items: center; }
+    .icon-btn { background: var(--cream); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: .8rem; font-weight: 600; color: var(--text-dark); }
+    .icon-btn.danger { color: var(--red); }
+    .muted { color: var(--text-mid); text-align: center; padding: 40px 0; }
+
+    /* availability pill */
+    .toggle { display: inline-flex; align-items: center; gap: 6px; font-size: .8rem; font-weight: 600; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; }
+    .dot.on { background: var(--green); } .dot.off { background: #bbb; }
+
+    /* order */
+    .badge { font-size: .72rem; font-weight: 700; padding: 3px 9px; border-radius: 6px; }
+    .b-placed { background: #FEF3C7; color: var(--amber); }
+    .b-accepted { background: #DBEAFE; color: #1D4ED8; }
+    .b-shipped { background: #E0E7FF; color: #4338CA; }
+    .b-delivered { background: #D1FAE5; color: var(--green); }
+    .b-cancelled { background: #FEE2E2; color: var(--red); }
+    .o-items { margin: 10px 0; font-size: .88rem; }
+    .o-items div { display: flex; justify-content: space-between; padding: 2px 0; }
+    .o-total { font-weight: 700; border-top: 1px dashed var(--border); padding-top: 6px; margin-top: 4px; }
+    .o-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .btn-sm { flex: 1; padding: 9px; border-radius: var(--r-sm); font-weight: 700; font-size: .85rem; border: none; }
+    .btn-go { background: var(--burgundy); color: #fff; }
+    .btn-cancel { background: var(--cream); color: var(--red); border: 1px solid var(--border); }
+
+    /* modal */
+    .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 100; }
+    .modal { background: var(--surface); border-radius: var(--r); padding: 22px; width: 100%; max-width: 380px; max-height: 90vh; overflow-y: auto; }
+    .modal h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 16px; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+    .modal-actions button { flex: 1; padding: 11px; border-radius: var(--r-sm); font-weight: 700; border: none; }
+    .btn-save { background: var(--burgundy); color: #fff; }
+    .btn-x { background: var(--cream); color: var(--text-dark); border: 1px solid var(--border); }
+    .switch-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
+  </style>
+</head>
+<body>
+
+<!-- ── LOGIN ── -->
+<div id="login-view">
+  <div class="login-card">
+    <h1>พอร์ทัลซัพพลายเออร์</h1>
+    <p>Pokpok Marketplace — สำหรับร้านส่ง</p>
+    <div class="field">
+      <label>อีเมล</label>
+      <input id="email" type="email" autocomplete="username" />
+    </div>
+    <div class="field">
+      <label>รหัสผ่าน</label>
+      <input id="password" type="password" autocomplete="current-password" />
+    </div>
+    <button class="btn-primary" id="loginBtn">เข้าสู่ระบบ</button>
+    <div class="err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- ── APP ── -->
+<div id="app-view" class="hidden">
+  <header>
+    <div class="who"><span id="supName">—</span><small id="supCat"></small></div>
+    <button class="btn-ghost" id="logoutBtn">ออกจากระบบ</button>
+  </header>
+  <div class="tabs">
+    <button class="tab active" data-tab="orders" id="tabOrders">ออเดอร์</button>
+    <button class="tab" data-tab="catalog" id="tabCatalog">สินค้า</button>
+  </div>
+
+  <main>
+    <!-- Orders -->
+    <section id="orders-panel">
+      <div class="section-head"><h2>ออเดอร์เข้า</h2></div>
+      <div id="ordersList"><div class="muted">กำลังโหลด…</div></div>
+    </section>
+
+    <!-- Catalog -->
+    <section id="catalog-panel" class="hidden">
+      <div class="section-head">
+        <h2>สินค้าของฉัน</h2>
+        <div style="display:flex;gap:8px">
+          <button class="icon-btn" id="editProfileBtn">แก้ไขร้าน</button>
+          <button class="btn-add" id="addProductBtn">+ เพิ่มสินค้า</button>
+        </div>
+      </div>
+      <div id="catalogList"><div class="muted">กำลังโหลด…</div></div>
+    </section>
+  </main>
+</div>
+
+<div id="modalRoot"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut }
+    from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+  import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, setDoc,
+    deleteDoc, onSnapshot, query, orderBy }
+    from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+  import { getFunctions, httpsCallable }
+    from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
+
+  const app = initializeApp({
+    apiKey: "AIzaSyDmY7ZnGfbpB66zb1pJcS2I-NCgUsiu6QA",
+    authDomain: "shop-pos-89294.firebaseapp.com",
+    projectId: "shop-pos-89294",
+    storageBucket: "shop-pos-89294.firebasestorage.app",
+    messagingSenderId: "1010156115465",
+    appId: "1:1010156115465:android:873bb66da2217c4da68ad8",
+  });
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const functions = getFunctions(app, "asia-southeast1");
+
+  const $ = (id) => document.getElementById(id);
+  const baht = (n) => new Intl.NumberFormat("th-TH").format(Math.round(n || 0));
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  let uid = null;
+  let supplier = null;
+  let unsubProducts = null, unsubOrders = null;
+
+  // ── Auth ──
+  $("loginBtn").addEventListener("click", doLogin);
+  $("password").addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
+  async function doLogin() {
+    const btn = $("loginBtn");
+    btn.disabled = true; $("loginErr").textContent = "";
+    try {
+      await signInWithEmailAndPassword(auth, $("email").value.trim(), $("password").value);
+    } catch (e) {
+      $("loginErr").textContent = "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
+    } finally {
+      btn.disabled = false;
+    }
+  }
+  $("logoutBtn").addEventListener("click", () => signOut(auth));
+
+  onAuthStateChanged(auth, async (user) => {
+    cleanup();
+    if (!user) { showLogin(); return; }
+    uid = user.uid;
+    const snap = await getDoc(doc(db, "suppliers", uid));
+    if (!snap.exists()) {
+      $("loginErr").textContent = "บัญชีนี้ยังไม่ได้ลงทะเบียนเป็นซัพพลายเออร์";
+      await signOut(auth);
+      return;
+    }
+    supplier = { id: uid, ...snap.data() };
+    showApp();
+  });
+
+  function cleanup() {
+    if (unsubProducts) { unsubProducts(); unsubProducts = null; }
+    if (unsubOrders) { unsubOrders(); unsubOrders = null; }
+  }
+  function showLogin() {
+    $("app-view").classList.add("hidden");
+    $("login-view").classList.remove("hidden");
+    $("password").value = "";
+  }
+  function showApp() {
+    $("login-view").classList.add("hidden");
+    $("app-view").classList.remove("hidden");
+    $("supName").textContent = supplier.name || "ซัพพลายเออร์";
+    $("supCat").textContent = supplier.category || "";
+    watchOrders();
+    watchProducts();
+  }
+
+  // ── Tabs ──
+  document.querySelectorAll(".tab").forEach((t) =>
+    t.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
+      t.classList.add("active");
+      const tab = t.dataset.tab;
+      $("orders-panel").classList.toggle("hidden", tab !== "orders");
+      $("catalog-panel").classList.toggle("hidden", tab !== "catalog");
+    }));
+
+  // ── Catalog ──
+  function watchProducts() {
+    const q = query(collection(db, `suppliers/${uid}/products`), orderBy("name"));
+    unsubProducts = onSnapshot(q, (snap) => {
+      const el = $("catalogList");
+      if (snap.empty) { el.innerHTML = '<div class="muted">ยังไม่มีสินค้า — กด “เพิ่มสินค้า”</div>'; return; }
+      el.innerHTML = "";
+      snap.forEach((d) => {
+        const p = d.data();
+        const card = document.createElement("div");
+        card.className = "card";
+        const avail = p.available !== false;
+        card.innerHTML = `
+          <div class="row">
+            <div>
+              <div class="p-name">${esc(p.name)}</div>
+              <div class="p-meta">฿${baht(p.price)}/${esc(p.unit || "ชิ้น")} · ขั้นต่ำ ${p.moq || 1}</div>
+              <div class="toggle" style="margin-top:6px"><span class="dot ${avail ? "on" : "off"}"></span>${avail ? "มีของ" : "หมด"}</div>
+            </div>
+            <div class="p-actions">
+              <button class="icon-btn" data-edit="${d.id}">แก้ไข</button>
+              <button class="icon-btn" data-toggle="${d.id}">${avail ? "ปิดขาย" : "เปิดขาย"}</button>
+              <button class="icon-btn danger" data-del="${d.id}">ลบ</button>
+            </div>
+          </div>`;
+        card.querySelector("[data-edit]").onclick = () => productModal(d.id, p);
+        card.querySelector("[data-toggle]").onclick = () =>
+          updateDoc(doc(db, `suppliers/${uid}/products/${d.id}`), { available: !avail });
+        card.querySelector("[data-del]").onclick = async () => {
+          if (confirm(`ลบ "${p.name}" ?`)) await deleteDoc(doc(db, `suppliers/${uid}/products/${d.id}`));
+        };
+        el.appendChild(card);
+      });
+    });
+  }
+
+  $("addProductBtn").addEventListener("click", () => productModal(null, null));
+  $("editProfileBtn").addEventListener("click", profileModal);
+
+  function productModal(id, p) {
+    openModal(`
+      <h3>${id ? "แก้ไขสินค้า" : "เพิ่มสินค้า"}</h3>
+      <div class="field"><label>ชื่อสินค้า</label><input id="m_name" value="${esc(p?.name || "")}"></div>
+      <div class="field"><label>หน่วย (กก., ลัง…)</label><input id="m_unit" value="${esc(p?.unit || "ชิ้น")}"></div>
+      <div class="field"><label>ราคา (บาท)</label><input id="m_price" type="number" value="${p?.price ?? ""}"></div>
+      <div class="field"><label>สั่งขั้นต่ำ</label><input id="m_moq" type="number" value="${p?.moq ?? 1}"></div>
+      <div class="modal-actions">
+        <button class="btn-x" id="m_cancel">ยกเลิก</button>
+        <button class="btn-save" id="m_save">บันทึก</button>
+      </div>`);
+    $("m_cancel").onclick = closeModal;
+    $("m_save").onclick = async () => {
+      const name = $("m_name").value.trim();
+      if (!name) return;
+      const data = {
+        name,
+        unit: $("m_unit").value.trim() || "ชิ้น",
+        price: parseFloat($("m_price").value) || 0,
+        moq: Math.max(1, parseInt($("m_moq").value) || 1),
+        available: p?.available !== false,
+      };
+      if (id) await setDoc(doc(db, `suppliers/${uid}/products/${id}`), data, { merge: true });
+      else await addDoc(collection(db, `suppliers/${uid}/products`), data);
+      closeModal();
+    };
+  }
+
+  function profileModal() {
+    const s = supplier;
+    openModal(`
+      <h3>แก้ไขข้อมูลร้าน</h3>
+      <div class="field"><label>ชื่อร้านส่ง</label><input id="m_name" value="${esc(s.name || "")}"></div>
+      <div class="field"><label>หมวด</label><input id="m_cat" value="${esc(s.category || "")}"></div>
+      <div class="field"><label>พื้นที่จัดส่ง</label><input id="m_area" value="${esc(s.area || "")}"></div>
+      <div class="field"><label>วันที่ส่ง</label><input id="m_days" value="${esc(s.deliveryDays || "")}"></div>
+      <div class="field"><label>ยอดสั่งขั้นต่ำ (บาท)</label><input id="m_min" type="number" value="${s.minOrder ?? 0}"></div>
+      <div class="switch-row"><span>เปิดรับออเดอร์</span>
+        <input type="checkbox" id="m_active" ${s.active !== false ? "checked" : ""}></div>
+      <div class="modal-actions">
+        <button class="btn-x" id="m_cancel">ยกเลิก</button>
+        <button class="btn-save" id="m_save">บันทึก</button>
+      </div>`);
+    $("m_cancel").onclick = closeModal;
+    $("m_save").onclick = async () => {
+      const data = {
+        name: $("m_name").value.trim() || s.name,
+        category: $("m_cat").value.trim(),
+        area: $("m_area").value.trim(),
+        deliveryDays: $("m_days").value.trim(),
+        minOrder: parseFloat($("m_min").value) || 0,
+        active: $("m_active").checked,
+      };
+      await updateDoc(doc(db, "suppliers", uid), data);
+      supplier = { ...supplier, ...data };
+      $("supName").textContent = supplier.name;
+      $("supCat").textContent = supplier.category || "";
+      closeModal();
+    };
+  }
+
+  // ── Orders ──
+  const STATUS = {
+    placed: ["รอรับออเดอร์", "b-placed"],
+    accepted: ["กำลังเตรียมของ", "b-accepted"],
+    shipped: ["กำลังจัดส่ง", "b-shipped"],
+    delivered: ["รับของแล้ว", "b-delivered"],
+    cancelled: ["ยกเลิก", "b-cancelled"],
+  };
+
+  function watchOrders() {
+    const q = query(collection(db, `suppliers/${uid}/orders`), orderBy("createdAt", "desc"));
+    unsubOrders = onSnapshot(q, (snap) => {
+      const el = $("ordersList");
+      if (snap.empty) { el.innerHTML = '<div class="muted">ยังไม่มีออเดอร์</div>'; return; }
+      el.innerHTML = "";
+      snap.forEach((d) => el.appendChild(orderCard(d.id, d.data())));
+    });
+  }
+
+  function orderCard(id, o) {
+    const st = STATUS[o.status] || STATUS.placed;
+    const items = (o.items || []);
+    const total = items.reduce((s, i) => s + (i.price || 0) * (i.quantity || 0), 0);
+    const when = o.createdAt?.toDate ? o.createdAt.toDate() : null;
+    const dateStr = when ? when.toLocaleDateString("th-TH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <div class="row">
+        <div><div class="p-name">${esc(o.shopName || "ร้านค้า")}</div>
+          <div class="p-meta">${dateStr}</div></div>
+        <span class="badge ${st[1]}">${st[0]}</span>
+      </div>
+      <div class="o-items">
+        ${items.map((i) => `<div><span>${esc(i.name)} × ${i.quantity} ${esc(i.unit || "")}</span><span>฿${baht((i.price || 0) * (i.quantity || 0))}</span></div>`).join("")}
+        <div class="o-total"><span>รวม</span><span>฿${baht(total)}</span></div>
+      </div>
+      <div class="o-actions" id="act-${id}"></div>`;
+
+    const act = card.querySelector(`#act-${id}`);
+    const setStatus = async (status, btn) => {
+      btn.disabled = true; btn.textContent = "…";
+      try {
+        await httpsCallable(functions, "supplierSetOrderStatus")({ orderId: id, status });
+      } catch (e) {
+        alert("อัปเดตไม่สำเร็จ: " + (e.message || e));
+        btn.disabled = false;
+      }
+    };
+    if (o.status === "placed") {
+      act.innerHTML = `<button class="btn-sm btn-go" id="acc-${id}">รับออเดอร์</button><button class="btn-sm btn-cancel" id="can-${id}">ปฏิเสธ</button>`;
+      act.querySelector(`#acc-${id}`).onclick = (e) => setStatus("accepted", e.target);
+      act.querySelector(`#can-${id}`).onclick = (e) => setStatus("cancelled", e.target);
+    } else if (o.status === "accepted") {
+      act.innerHTML = `<button class="btn-sm btn-go" id="shp-${id}">จัดส่งแล้ว</button><button class="btn-sm btn-cancel" id="can-${id}">ยกเลิก</button>`;
+      act.querySelector(`#shp-${id}`).onclick = (e) => setStatus("shipped", e.target);
+      act.querySelector(`#can-${id}`).onclick = (e) => setStatus("cancelled", e.target);
+    } else if (o.status === "shipped") {
+      act.innerHTML = `<div class="p-meta">รอร้านค้ายืนยันรับของ</div>`;
+    }
+    return card;
+  }
+
+  // ── Modal helpers ──
+  function openModal(html) {
+    $("modalRoot").innerHTML = `<div class="modal-bg" id="modalBg"><div class="modal">${html}</div></div>`;
+    $("modalBg").addEventListener("click", (e) => { if (e.target.id === "modalBg") closeModal(); });
+  }
+  function closeModal() { $("modalRoot").innerHTML = ""; }
+</script>
+</body>
+</html>
