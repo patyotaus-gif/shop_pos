@@ -27,6 +27,10 @@ import 'widgets/subscription_gate.dart';
 
 final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.system);
 
+/// Brand typeface, bundled in assets and declared in pubspec.yaml. Matches
+/// the pok-pok.app website so the app and web share one identity.
+const _brandFont = 'IBM Plex Sans Thai';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -120,6 +124,7 @@ class ShopPosApp extends StatelessWidget {
           seedColor: const Color(0xFF7A1F2B),
           brightness: Brightness.light,
         ),
+        fontFamily: _brandFont,
         useMaterial3: true,
       ),
       darkTheme: ThemeData(
@@ -127,6 +132,7 @@ class ShopPosApp extends StatelessWidget {
           seedColor: const Color(0xFF7A1F2B),
           brightness: Brightness.dark,
         ),
+        fontFamily: _brandFont,
         useMaterial3: true,
       ),
       home: StreamBuilder<User?>(
