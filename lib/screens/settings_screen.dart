@@ -13,6 +13,7 @@ import '../services/settings_service.dart';
 import '../services/shop_service.dart';
 import '../widgets/upgrade_prompt.dart';
 import 'customers_screen.dart';
+import 'founder_console_screen.dart';
 import 'ops_dashboard_screen.dart';
 import 'staff_screen.dart';
 import 'subscription_screen.dart';
@@ -518,6 +519,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         fontSize: 15)),
                                 SizedBox(height: 2),
                                 Text('MRR · ร้านที่จ่ายเงิน · conversion',
+                                    style: TextStyle(fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                          Icon(Icons.chevron_right,
+                              color: cs.onSurface.withValues(alpha: 0.4)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  InkWell(
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const FounderConsoleScreen(),
+                    )),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 6),
+                      child: Row(
+                        children: [
+                          Icon(Icons.admin_panel_settings_outlined,
+                              color: cs.primary, size: 26),
+                          const SizedBox(width: 14),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('คอนโซลผู้ดูแล',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15)),
+                                SizedBox(height: 2),
+                                Text(
+                                    'จัดการสมาชิก · ฮาร์ดแวร์ · ซัพพลายเออร์',
                                     style: TextStyle(fontSize: 12)),
                               ],
                             ),

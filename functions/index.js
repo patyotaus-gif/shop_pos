@@ -1053,7 +1053,9 @@ exports.applyReferral = onCall(async (request) => {
 // stay per-owner.
 const FOUNDER_EMAILS = ["patyotaus@gmail.com"];
 
-exports.opsMetrics = onCall(async (request) => {
+// Throws unless the caller is signed in as a founder. Every admin/ops
+// callable funnels through here so the allowlist lives in one place.
+function assertFounder(request) {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Login required");
   }
@@ -1061,6 +1063,10 @@ exports.opsMetrics = onCall(async (request) => {
   if (!FOUNDER_EMAILS.includes(email)) {
     throw new HttpsError("permission-denied", "Founder only");
   }
+}
+
+exports.opsMetrics = onCall(async (request) => {
+  assertFounder(request);
 
   const db = admin.firestore();
   const snap = await db.collection("shops").get();
@@ -1132,4 +1138,236 @@ exports.opsMetrics = onCall(async (request) => {
     tierAll,
     tierPaid,
   };
+});
+
+// ────────────────────────────────────────────────
+// Founder admin console — cross-shop management
+// ────────────────────────────────────────────────
+// All callables below are founder-gated (assertFounder) and run with the
+// admin SDK, which bypasses Firestore rules. This is the only place that
+// writes to other shops' docs or to the top-level supplier catalog, so
+// client rules stay locked to per-owner access.
+
+const ADMIN_TIERS = ["solo", "lite", "full", "restaurant"];
+const ADMIN_CYCLES = ["monthly", "yearly"];
+
+// List every shop with the fields the console needs (subscription state +
+// its hardware requests). Sorted newest-first.
+exports.adminListShops = onCall(async (request) => {
+  assertFounder(request);
+  const db = admin.firestore();
+  const snap = await db.collection("shops").orderBy("createdAt", "desc").get();
+
+  const shops = [];
+  for (const doc of snap.docs) {
+    const d = doc.data();
+    // Pull this shop's hardware requests (usually 0-1).
+    const hwSnap = await doc.ref
+      .collection("hardware")
+      .orderBy("createdAt", "desc")
+      .get();
+    const hardware = hwSnap.docs.map((h) => {
+      const hd = h.data();
+      return {
+        id: h.id,
+        kit: hd.kit || "none",
+        status: hd.status || "requested",
+        serialNumber: hd.serialNumber || null,
+        note: hd.note || null,
+      };
+    });
+
+    shops.push({
+      id: doc.id,
+      name: d.name || "",
+      email: d.email || "",
+      tier: d.tier || (d.shopType === "restaurant" ? "restaurant" : "full"),
+      plan: d.plan || "monthly",
+      locations: d.locations || 1,
+      subscriptionStatus: d.subscriptionStatus || "trial",
+      trialEndsAt: d.trialEndsAt?.toDate?.()?.toISOString() || null,
+      subscriptionEndsAt:
+        d.subscriptionEndsAt?.toDate?.()?.toISOString() || null,
+      createdAt: d.createdAt?.toDate?.()?.toISOString() || null,
+      referredBy: d.referredBy || null,
+      hardware,
+    });
+  }
+  return { shops };
+});
+
+// Manually change a shop's subscription. Ops:
+//   extendTrial  — push trialEndsAt out by `days` (from current end or now)
+//   activate     — mark paid for `days`, optionally set tier/cycle/locations
+//   expire       — force-expire immediately
+exports.adminSetSubscription = onCall(async (request) => {
+  assertFounder(request);
+  const { shopId, op } = request.data || {};
+  if (!shopId || !op) {
+    throw new HttpsError("invalid-argument", "shopId and op are required");
+  }
+
+  const db = admin.firestore();
+  const ref = db.collection("shops").doc(shopId);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    throw new HttpsError("not-found", "Shop not found");
+  }
+  const data = snap.data();
+  const now = new Date();
+  const dayMs = 24 * 60 * 60 * 1000;
+
+  if (op === "extendTrial") {
+    const days = Math.max(1, parseInt(request.data.days || 0));
+    if (!days) throw new HttpsError("invalid-argument", "days required");
+    const cur = data.trialEndsAt?.toDate?.();
+    const base = cur && cur > now ? cur : now;
+    await ref.set(
+      {
+        subscriptionStatus: "trial",
+        trialEndsAt: admin.firestore.Timestamp.fromDate(
+          new Date(base.getTime() + days * dayMs)
+        ),
+      },
+      { merge: true }
+    );
+    return { ok: true };
+  }
+
+  if (op === "activate") {
+    const days = Math.max(1, parseInt(request.data.days || 0));
+    if (!days) throw new HttpsError("invalid-argument", "days required");
+    const tier = ADMIN_TIERS.includes(request.data.tier)
+      ? request.data.tier
+      : data.tier || "full";
+    const cycle = ADMIN_CYCLES.includes(request.data.billingCycle)
+      ? request.data.billingCycle
+      : data.plan || "monthly";
+    const locations = Math.max(1, parseInt(request.data.locations || data.locations || 1));
+    const curEnd = data.subscriptionEndsAt?.toDate?.();
+    const base = curEnd && curEnd > now ? curEnd : now;
+    await ref.set(
+      {
+        subscriptionStatus: "active",
+        subscriptionEndsAt: admin.firestore.Timestamp.fromDate(
+          new Date(base.getTime() + days * dayMs)
+        ),
+        tier,
+        plan: cycle,
+        locations,
+      },
+      { merge: true }
+    );
+    return { ok: true };
+  }
+
+  if (op === "expire") {
+    await ref.set(
+      {
+        subscriptionStatus: "expired",
+        subscriptionEndsAt: admin.firestore.Timestamp.fromDate(now),
+      },
+      { merge: true }
+    );
+    return { ok: true };
+  }
+
+  throw new HttpsError("invalid-argument", `Unknown op: ${op}`);
+});
+
+// Advance (or annotate) a shop's hardware shipment. The owner sees the
+// status mirror in Settings; only the founder moves it forward.
+exports.adminSetHardwareStatus = onCall(async (request) => {
+  assertFounder(request);
+  const { shopId, requestId, status } = request.data || {};
+  if (!shopId || !requestId) {
+    throw new HttpsError("invalid-argument", "shopId and requestId required");
+  }
+  const VALID = ["requested", "preparing", "shipped", "delivered", "returned"];
+  if (status && !VALID.includes(status)) {
+    throw new HttpsError("invalid-argument", `Invalid status: ${status}`);
+  }
+
+  const ref = admin
+    .firestore()
+    .collection("shops")
+    .doc(shopId)
+    .collection("hardware")
+    .doc(requestId);
+  if (!(await ref.get()).exists) {
+    throw new HttpsError("not-found", "Hardware request not found");
+  }
+
+  const update = {};
+  if (status) {
+    update.status = status;
+    if (status === "delivered") {
+      update.deliveredAt = admin.firestore.FieldValue.serverTimestamp();
+    }
+  }
+  if (typeof request.data.note === "string") update.note = request.data.note;
+  if (typeof request.data.serialNumber === "string") {
+    update.serialNumber = request.data.serialNumber;
+  }
+  if (Object.keys(update).length === 0) {
+    throw new HttpsError("invalid-argument", "Nothing to update");
+  }
+  await ref.set(update, { merge: true });
+  return { ok: true };
+});
+
+// Create or update a top-level supplier. Pass supplierId to update an
+// existing one; omit it to create with an auto id.
+exports.adminUpsertSupplier = onCall(async (request) => {
+  assertFounder(request);
+  const d = request.data || {};
+  if (!d.name) {
+    throw new HttpsError("invalid-argument", "name is required");
+  }
+  const db = admin.firestore();
+  const ref = d.supplierId
+    ? db.collection("suppliers").doc(String(d.supplierId))
+    : db.collection("suppliers").doc();
+
+  const fields = {
+    name: String(d.name),
+    category: String(d.category || ""),
+    area: d.area != null ? String(d.area) : "",
+    deliveryDays: d.deliveryDays != null ? String(d.deliveryDays) : "",
+    minOrder: Number(d.minOrder || 0),
+    active: d.active !== false,
+  };
+  // Only stamp createdAt on first create.
+  if (!(await ref.get()).exists) {
+    fields.createdAt = admin.firestore.FieldValue.serverTimestamp();
+  }
+  await ref.set(fields, { merge: true });
+  return { ok: true, supplierId: ref.id };
+});
+
+// Create or update one catalog line under a supplier.
+exports.adminUpsertSupplierProduct = onCall(async (request) => {
+  assertFounder(request);
+  const d = request.data || {};
+  if (!d.supplierId || !d.name) {
+    throw new HttpsError("invalid-argument", "supplierId and name required");
+  }
+  const db = admin.firestore();
+  const col = db
+    .collection("suppliers")
+    .doc(String(d.supplierId))
+    .collection("products");
+  const ref = d.productId ? col.doc(String(d.productId)) : col.doc();
+
+  await ref.set(
+    {
+      name: String(d.name),
+      unit: String(d.unit || "ชิ้น"),
+      price: Number(d.price || 0),
+      moq: Math.max(1, parseInt(d.moq || 1)),
+      available: d.available !== false,
+    },
+    { merge: true }
+  );
+  return { ok: true, productId: ref.id };
 });
