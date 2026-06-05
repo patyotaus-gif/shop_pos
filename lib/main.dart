@@ -39,6 +39,11 @@ void main() async {
   // blocked on an await before runApp ever runs.
   runApp(const _BootingApp());
 
+  // Hold the splash for a minimum beat so the mortar-pounding animation
+  // plays in full even on fast cold starts. Init runs concurrently
+  // underneath; we wait on whichever finishes last.
+  final minSplash = Future<void>.delayed(const Duration(seconds: 3));
+
   try {
     await initializeDateFormatting('th_TH', null);
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)
@@ -48,6 +53,7 @@ void main() async {
     // Does not request permission — user enables that explicitly from
     // settings — but if it's already granted we start matching right away.
     await BankNotificationService.init().timeout(const Duration(seconds: 5));
+    await minSplash;
     runApp(const ShopPosApp());
   } catch (e, st) {
     runApp(_BootErrorApp(message: '$e', stack: '$st'));
@@ -166,114 +172,207 @@ class _PokpokSplash extends StatefulWidget {
 }
 
 class _PokpokSplashState extends State<_PokpokSplash>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _anim;
+    with TickerProviderStateMixin {
+  late final AnimationController _loop; // 2s mortar-pounding loop
+  late final AnimationController _intro; // one-shot wordmark fade-in
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
+    _loop = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
-    )..repeat(reverse: true);
-    _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+      duration: const Duration(seconds: 2),
+    )..repeat();
+    _intro = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    )..forward();
   }
 
   @override
   void dispose() {
-    _ctrl.dispose();
+    _loop.dispose();
+    _intro.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    const burgundy = Color(0xFF7A1F2B);
     const cream = Color(0xFFF5F1EC);
-    const textDark = Color(0xFF1F1A1B);
 
     return Scaffold(
-      backgroundColor: cream,
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedBuilder(
-              animation: _anim,
-              builder: (_, __) => Transform.scale(
-                scale: 0.96 + _anim.value * 0.06,
-                child: const SizedBox(
-                  width: 110,
-                  height: 110,
-                  child: CustomPaint(painter: _MortarMarkPainter()),
+      backgroundColor: burgundy,
+      body: Stack(
+        children: [
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 200,
+                  height: 200,
+                  child: AnimatedBuilder(
+                    animation: _loop,
+                    builder: (_, __) =>
+                        CustomPaint(painter: _SplashMarkPainter(_loop.value)),
+                  ),
                 ),
+                const SizedBox(height: 22),
+                FadeTransition(
+                  opacity:
+                      CurvedAnimation(parent: _intro, curve: Curves.easeOut),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'pokpok',
+                        style: TextStyle(
+                          fontSize: 38,
+                          fontWeight: FontWeight.w300,
+                          color: cream,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        'POINT OF SALE',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: cream.withValues(alpha: 0.85),
+                          letterSpacing: 5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Three pulsing loader dots near the bottom edge.
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 56,
+            child: AnimatedBuilder(
+              animation: _loop,
+              builder: (_, __) => Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(3, (i) {
+                  final phase = (_loop.value + i * 0.12) % 1.0;
+                  final o = (0.25 +
+                          0.75 * (0.5 + 0.5 * math.sin(phase * 2 * math.pi)))
+                      .clamp(0.0, 1.0);
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: cream.withValues(alpha: o),
+                    ),
+                  );
+                }),
               ),
             ),
-            const SizedBox(height: 24),
-            const Text(
-              'pokpok',
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w300,
-                color: textDark,
-                letterSpacing: 2,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-/// Brand mark — burgundy mortar + pestle, geometry mirrored from
-/// assets/brand/01-mark-burgundy.svg (100×100 viewport).
-class _MortarMarkPainter extends CustomPainter {
-  const _MortarMarkPainter();
+/// Animated splash mark — a cream mortar + pestle on burgundy. The pestle
+/// pounds twice into the bowl per 2s loop, the bowl squashes on impact and
+/// two ripples pulse out. Geometry + keyframes ported from the
+/// pokpok-splash reference (200×200 viewport).
+class _SplashMarkPainter extends CustomPainter {
+  const _SplashMarkPainter(this.t);
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    const burgundy = Color(0xFF7A1F2B);
-    const cream = Color(0xFFF5F1EC);
-    final s = size.width / 100;
-    final fill = Paint()..color = burgundy;
-    final stroke = Paint()
-      ..color = burgundy
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = 2 * s;
+  /// Loop progress 0..1.
+  final double t;
 
-    // Bowl — bottom half of an ellipse (cx 50, cy 56, rx 36, ry 32)
-    final bowlRect = Rect.fromCenter(
-      center: Offset(50 * s, 56 * s),
-      width: 72 * s,
-      height: 64 * s,
-    );
-    canvas.drawArc(bowlRect, 0, math.pi, true, fill);
-
-    // Pestle — rounded pill from y=6 to y=48, x≈45.5–54.5, with the
-    // accent dot near its lower end.
-    final pestleRect = Rect.fromLTWH(45.5 * s, 6 * s, 9 * s, 42 * s);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(pestleRect, Radius.circular(4.5 * s)),
-      fill,
-    );
-
-    // Base shelf rect (x 40, y 90, w 20, h 3)
-    final baseRect = Rect.fromLTWH(40 * s, 90 * s, 20 * s, 3 * s);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(baseRect, Radius.circular(1.5 * s)),
-      fill,
-    );
-
-    // Base line under shelf (x 30→70, y 90)
-    canvas.drawLine(Offset(30 * s, 90 * s), Offset(70 * s, 90 * s), stroke);
-
-    // Accent dot on the pestle (cream cut-out near its lower end).
-    canvas.drawCircle(Offset(50 * s, 41 * s), 3.4 * s, Paint()..color = cream);
+  /// Piecewise-linear keyframe sampler — [stops] ascending in 0..1.
+  static double _kf(double t, List<double> stops, List<double> values) {
+    if (t <= stops.first) return values.first;
+    if (t >= stops.last) return values.last;
+    for (var i = 0; i < stops.length - 1; i++) {
+      if (t <= stops[i + 1]) {
+        final f = (t - stops[i]) / (stops[i + 1] - stops[i]);
+        return values[i] + (values[i + 1] - values[i]) * f;
+      }
+    }
+    return values.last;
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  void paint(Canvas canvas, Size size) {
+    const cream = Color(0xFFF5F1EC);
+    canvas.scale(size.width / 200);
+    final fill = Paint()..color = cream;
+
+    // ── Ripple (two pulses per loop, behind the bowl) ──
+    final rScale = _kf(
+        t, [0, .16, .30, .35, .45, 1.0], [.35, .35, 1.5, .35, 1.4, 1.4]);
+    final rOpacity = _kf(t, [0, .16, .20, .30, .35, .45, 1.0],
+        [0, 0, .5, 0, .45, 0, 0]);
+    if (rOpacity > 0.01) {
+      canvas.drawCircle(
+        const Offset(100, 120),
+        26 * rScale,
+        Paint()
+          ..color = cream.withValues(alpha: rOpacity.clamp(0.0, 1.0))
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3,
+      );
+    }
+
+    // ── Bowl (squashes around its base on each impact) ──
+    final bScaleX = _kf(t, [0, .10, .19, .25, .35, .40, 1.0],
+        [1, 1, 1.04, 1, 1.025, 1, 1]);
+    final bScaleY = _kf(
+        t, [0, .10, .19, .25, .35, .40, 1.0], [1, 1, .94, 1, .97, 1, 1]);
+    canvas.save();
+    canvas.translate(100, 162);
+    canvas.scale(bScaleX, bScaleY);
+    canvas.translate(-100, -162);
+    canvas.drawArc(
+      Rect.fromCenter(center: const Offset(100, 120), width: 90, height: 84),
+      0,
+      math.pi,
+      true,
+      fill,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+          const Rect.fromLTWH(88, 166, 24, 5), const Radius.circular(2.5)),
+      fill,
+    );
+    canvas.drawLine(
+      const Offset(72, 166),
+      const Offset(128, 166),
+      Paint()
+        ..color = cream
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4
+        ..strokeCap = StrokeCap.round,
+    );
+    canvas.restore();
+
+    // ── Pestle (pounds vertically into the bowl) ──
+    final dy = _kf(t, [0, .10, .19, .26, .35, .41, .48, .70, 1.0],
+        [-52, -52, 0, -22, 0, -9, 0, 0, -52]);
+    canvas.save();
+    canvas.translate(0, dy);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+          const Rect.fromLTWH(92, 52, 16, 68), const Radius.circular(8)),
+      fill,
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _SplashMarkPainter old) => old.t != t;
 }
 
 class MainShell extends StatefulWidget {

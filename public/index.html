@@ -416,9 +416,80 @@
       .feat-bottom { grid-template-columns: 1fr; }
       .footer-top { grid-template-columns: 1fr; }
     }
+    /* ── Brand splash (loading screen, ~3s once per session) ── */
+    #splash {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--burgundy);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      transition: opacity .5s ease;
+    }
+    #splash.hide { opacity: 0; pointer-events: none; }
+    .sp-mark { width: 180px; height: 180px; }
+    @keyframes sp-pound {
+      0%   { transform: translateY(-52px); }
+      10%  { transform: translateY(-52px); animation-timing-function: cubic-bezier(.5,0,.9,.4); }
+      19%  { transform: translateY(0); }
+      26%  { transform: translateY(-22px); animation-timing-function: cubic-bezier(.2,.7,.5,1); }
+      35%  { transform: translateY(0); }
+      41%  { transform: translateY(-9px); }
+      48%  { transform: translateY(0); }
+      70%  { transform: translateY(0); }
+      100% { transform: translateY(-52px); }
+    }
+    @keyframes sp-bowlsquash {
+      0%,10% { transform: scale(1,1); }
+      19%    { transform: scale(1.04,.94); }
+      25%    { transform: scale(1,1); }
+      35%    { transform: scale(1.025,.97); }
+      40%    { transform: scale(1,1); }
+      100%   { transform: scale(1,1); }
+    }
+    @keyframes sp-ripple {
+      0%,16% { transform: scale(.35); opacity: 0; }
+      20%    { opacity: .5; }
+      30%    { transform: scale(1.5); opacity: 0; }
+      35%    { transform: scale(.35); opacity: .45; }
+      45%    { transform: scale(1.4); opacity: 0; }
+      100%   { opacity: 0; }
+    }
+    @keyframes sp-wordin { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
+    @keyframes sp-dot { 0%,80%,100% { opacity: .25; } 40% { opacity: 1; } }
+    .sp-pestle { animation: sp-pound 2s infinite; }
+    .sp-bowl   { animation: sp-bowlsquash 2s infinite; transform-origin: 100px 162px; }
+    .sp-ripple { animation: sp-ripple 2s infinite; transform-origin: 100px 120px; }
+    .sp-word { margin-top: 22px; font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 34px; font-weight: 300; letter-spacing: 1px; color: var(--cream); animation: sp-wordin .7s ease .5s both; }
+    .sp-tag  { margin-top: 5px; font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 12px; letter-spacing: 5px; color: var(--cream); opacity: .85; animation: sp-wordin .7s ease .65s both; }
+    .sp-loader { position: absolute; bottom: 8%; display: flex; gap: 8px; }
+    .sp-loader span { width: 8px; height: 8px; border-radius: 50%; background: var(--cream); }
+    .sp-loader span:nth-child(1) { animation: sp-dot 1.4s infinite; }
+    .sp-loader span:nth-child(2) { animation: sp-dot 1.4s infinite .2s; }
+    .sp-loader span:nth-child(3) { animation: sp-dot 1.4s infinite .4s; }
+    @media (prefers-reduced-motion: reduce) {
+      .sp-pestle, .sp-bowl, .sp-ripple, .sp-loader span { animation: none; }
+      .sp-pestle { transform: translateY(0); }
+    }
   </style>
 </head>
 <body>
+
+<!-- Brand splash (loading screen) -->
+<div id="splash" aria-hidden="true">
+  <svg class="sp-mark" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <circle class="sp-ripple" cx="100" cy="120" r="26" fill="none" stroke="#F5F1EC" stroke-width="3"/>
+    <g class="sp-bowl">
+      <path d="M 55 120 A 45 42 0 0 0 145 120 Z" fill="#F5F1EC"/>
+      <rect x="88" y="166" width="24" height="5" rx="2.5" fill="#F5F1EC"/>
+      <line x1="72" y1="166" x2="128" y2="166" stroke="#F5F1EC" stroke-width="4" stroke-linecap="round"/>
+    </g>
+    <g class="sp-pestle">
+      <rect x="92" y="52" width="16" height="68" rx="8" fill="#F5F1EC"/>
+    </g>
+  </svg>
+  <div class="sp-word">pokpok</div>
+  <div class="sp-tag">POINT OF SALE</div>
+  <div class="sp-loader"><span></span><span></span><span></span></div>
+</div>
 
 <!-- NAVBAR -->
 <nav>
@@ -1069,6 +1140,22 @@
     notifIdx++;
   }
   setTimeout(() => { showNotif(); setInterval(showNotif, 7000); }, 3000);
+</script>
+<script>
+  // Brand splash — hold ~3s, then fade out. Shows once per browser session
+  // so repeat navigation isn't slowed (clear sessionStorage to replay).
+  (function () {
+    var el = document.getElementById('splash');
+    if (!el) return;
+    if (sessionStorage.getItem('pokpok_splash_seen')) { el.remove(); return; }
+    document.body.style.overflow = 'hidden';
+    setTimeout(function () {
+      el.classList.add('hide');
+      document.body.style.overflow = '';
+      sessionStorage.setItem('pokpok_splash_seen', '1');
+      setTimeout(function () { el.remove(); }, 600);
+    }, 3000);
+  })();
 </script>
 </body>
 </html>
