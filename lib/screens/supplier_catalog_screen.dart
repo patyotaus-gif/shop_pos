@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -9,8 +11,17 @@ import '../services/marketplace_service.dart';
 /// per line; a sticky bottom bar shows the running total and submits the
 /// order. Enforces the supplier's min-order before allowing submit.
 class SupplierCatalogScreen extends StatefulWidget {
-  const SupplierCatalogScreen({super.key, required this.supplier});
+  const SupplierCatalogScreen({
+    super.key,
+    required this.supplier,
+    this.initialItems,
+  });
   final Supplier supplier;
+
+  /// When opened via "สั่งซ้ำ", the items from a past order. The cart is
+  /// pre-filled from these once the live catalog loads — reconciled against
+  /// current availability and price (see [_reconcile]).
+  final List<MarketplaceOrderItem>? initialItems;
 
   @override
   State<SupplierCatalogScreen> createState() =>
@@ -25,6 +36,78 @@ class _SupplierCatalogScreenState extends State<SupplierCatalogScreen> {
   // Snapshot of products so we can build order items without re-querying.
   final Map<String, SupplierProduct> _products = {};
   bool _placing = false;
+
+  // "สั่งซ้ำ" reconciliation runs once, after the catalog first loads.
+  bool _reconciled = false;
+
+  // Favorited productIds (live) + productIds ordered before (fetched once).
+  // Drive the "⭐ รายการโปรด" and "🕘 เคยสั่ง" sections at the top.
+  Set<String> _favIds = {};
+  Set<String> _orderedIds = {};
+  StreamSubscription<Set<String>>? _favSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _favSub = MarketplaceService.watchFavoriteIds(widget.supplier.id)
+        .listen((ids) {
+      if (mounted) setState(() => _favIds = ids);
+    });
+    MarketplaceService.previouslyOrderedProductIds(widget.supplier.id)
+        .then((ids) {
+      if (mounted) setState(() => _orderedIds = ids);
+    });
+  }
+
+  @override
+  void dispose() {
+    _favSub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _toggleFavorite(SupplierProduct p) async {
+    final makeFav = !_favIds.contains(p.id);
+    // Optimistic flip so the star responds instantly.
+    setState(() => makeFav ? _favIds.add(p.id) : _favIds.remove(p.id));
+    try {
+      await MarketplaceService.toggleFavorite(
+        supplierId: widget.supplier.id,
+        product: p,
+        makeFavorite: makeFav,
+      );
+    } catch (_) {
+      if (mounted) {
+        setState(() => makeFav ? _favIds.remove(p.id) : _favIds.add(p.id));
+      }
+    }
+  }
+
+  /// Rebuild the cart from [SupplierCatalogScreen.initialItems] against the
+  /// live catalog: keep items that still exist and are in stock (at current
+  /// price + clamped to current MOQ), and tell the shop which ones dropped
+  /// off so they don't silently lose part of their usual order.
+  void _reconcile(List<SupplierProduct> products) {
+    final byId = {for (final p in products) p.id: p};
+    final dropped = <String>[];
+    setState(() {
+      for (final it in widget.initialItems!) {
+        final p = byId[it.productId];
+        if (p == null || !p.available) {
+          dropped.add(it.name);
+          continue;
+        }
+        _products[p.id] = p;
+        _cart[p.id] = it.quantity < p.moq ? p.moq : it.quantity;
+      }
+    });
+    if (dropped.isNotEmpty && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('ไม่มีแล้ว ${dropped.length} รายการ: '
+            '${dropped.join(", ")}'),
+        duration: const Duration(seconds: 5),
+      ));
+    }
+  }
 
   double get _total => _cart.entries.fold<double>(0, (s, e) {
         final p = _products[e.key];
@@ -83,6 +166,60 @@ class _SupplierCatalogScreenState extends State<SupplierCatalogScreen> {
     }
   }
 
+  /// Group the catalog into favorites → previously-ordered → everything
+  /// else, each under its own header. Sections only appear when non-empty,
+  /// so a shop with no history just sees the full list.
+  Widget _buildGroupedList(List<SupplierProduct> products, ColorScheme cs) {
+    final favs = <SupplierProduct>[];
+    final ordered = <SupplierProduct>[];
+    final rest = <SupplierProduct>[];
+    for (final p in products) {
+      if (_favIds.contains(p.id)) {
+        favs.add(p);
+      } else if (_orderedIds.contains(p.id)) {
+        ordered.add(p);
+      } else {
+        rest.add(p);
+      }
+    }
+
+    final children = <Widget>[];
+    void addSection(String? title, List<SupplierProduct> items) {
+      if (items.isEmpty) return;
+      if (title != null) {
+        children.add(Padding(
+          padding: const EdgeInsets.fromLTRB(4, 16, 4, 6),
+          child: Text(title,
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: cs.primary)),
+        ));
+      }
+      for (final p in items) {
+        children.add(_CatalogRow(
+          product: p,
+          quantity: _cart[p.id] ?? 0,
+          isFavorite: _favIds.contains(p.id),
+          onChanged: (q) => _setQty(p, q),
+          onToggleFavorite: () => _toggleFavorite(p),
+        ));
+      }
+    }
+
+    // Only label sections once there's more than one; a single flat list
+    // doesn't need a "สินค้าทั้งหมด" header.
+    final grouped = favs.isNotEmpty || ordered.isNotEmpty;
+    addSection(grouped ? '⭐ รายการโปรด' : null, favs);
+    addSection(grouped ? '🕘 เคยสั่ง' : null, ordered);
+    addSection(grouped ? 'สินค้าทั้งหมด' : null, rest);
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 120),
+      children: children,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -98,6 +235,12 @@ class _SupplierCatalogScreenState extends State<SupplierCatalogScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           final products = snap.data ?? const [];
+          // One-shot reorder reconciliation once the catalog is in hand.
+          if (!_reconciled && widget.initialItems != null) {
+            _reconciled = true;
+            WidgetsBinding.instance
+                .addPostFrameCallback((_) => _reconcile(products));
+          }
           if (products.isEmpty) {
             return Center(
               child: Text('ยังไม่มีสินค้าในแคตตาล็อก',
@@ -105,20 +248,7 @@ class _SupplierCatalogScreenState extends State<SupplierCatalogScreen> {
                       color: cs.onSurface.withValues(alpha: 0.5))),
             );
           }
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 120),
-            itemCount: products.length,
-            separatorBuilder: (_, __) =>
-                Divider(height: 1, color: cs.outlineVariant),
-            itemBuilder: (_, i) {
-              final p = products[i];
-              return _CatalogRow(
-                product: p,
-                quantity: _cart[p.id] ?? 0,
-                onChanged: (q) => _setQty(p, q),
-              );
-            },
-          );
+          return _buildGroupedList(products, cs);
         },
       ),
       bottomSheet: _cart.isEmpty
@@ -141,10 +271,14 @@ class _CatalogRow extends StatelessWidget {
     required this.product,
     required this.quantity,
     required this.onChanged,
+    required this.isFavorite,
+    required this.onToggleFavorite,
   });
   final SupplierProduct product;
   final int quantity;
   final void Function(int) onChanged;
+  final bool isFavorite;
+  final VoidCallback onToggleFavorite;
 
   @override
   Widget build(BuildContext context) {
@@ -156,6 +290,8 @@ class _CatalogRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
         child: Row(
           children: [
+            _Thumb(url: product.imageUrl),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -179,6 +315,18 @@ class _CatalogRow extends StatelessWidget {
                             fontWeight: FontWeight.w600)),
                 ],
               ),
+            ),
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              icon: Icon(
+                isFavorite ? Icons.star : Icons.star_border,
+                color: isFavorite
+                    ? const Color(0xFFE0A500)
+                    : cs.onSurface.withValues(alpha: 0.35),
+                size: 22,
+              ),
+              tooltip: isFavorite ? 'เอาออกจากรายการโปรด' : 'เพิ่มรายการโปรด',
+              onPressed: onToggleFavorite,
             ),
             if (!unavailable)
               quantity == 0
@@ -209,6 +357,42 @@ class _CatalogRow extends StatelessWidget {
                     ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Square product thumbnail with a graceful fallback to a box icon when
+/// the supplier hasn't uploaded a photo (or it fails to load).
+class _Thumb extends StatelessWidget {
+  const _Thumb({this.url});
+  final String? url;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final placeholder = Container(
+      width: 52,
+      height: 52,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(Icons.inventory_2_outlined,
+          size: 24, color: cs.onSurface.withValues(alpha: 0.4)),
+    );
+    if (url == null || url!.isEmpty) return placeholder;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: Image.network(
+        url!,
+        width: 52,
+        height: 52,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => placeholder,
+        loadingBuilder: (context, child, progress) =>
+            progress == null ? child : placeholder,
       ),
     );
   }

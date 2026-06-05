@@ -61,6 +61,13 @@ service cloud.firestore {
         allow read, write: if isOwner();
       }
 
+      // ── Saved supplier products (favorites) — shop's own list ──
+      // Doc id is "{supplierId}_{productId}"; lets the shop re-add staples
+      // fast when reordering. Private to the shop.
+      match /supplierFavorites/{favId} {
+        allow read, write: if isOwner();
+      }
+
       // ── Staff profiles (PIN-based, attribution only) ──
       match /staff/{staffId} {
         allow read, write: if isOwner();

@@ -50,6 +50,9 @@
 
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; margin-bottom: 10px; }
     .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .p-info { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .p-thumb { width: 52px; height: 52px; border-radius: 10px; object-fit: cover; flex-shrink: 0; background: var(--cream); border: 1px solid var(--border); }
+    .p-thumb.ph { display: flex; align-items: center; justify-content: center; font-size: 1.4rem; color: var(--text-mid); }
     .p-name { font-weight: 600; }
     .p-meta { font-size: .82rem; color: var(--text-mid); margin-top: 2px; }
     .p-actions { display: flex; gap: 6px; align-items: center; }
@@ -84,8 +87,16 @@
     .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
     .modal-actions button { flex: 1; padding: 11px; border-radius: var(--r-sm); font-weight: 700; border: none; }
     .btn-save { background: var(--burgundy); color: #fff; }
+    .btn-save:disabled { opacity: .6; cursor: default; }
     .btn-x { background: var(--cream); color: var(--text-dark); border: 1px solid var(--border); }
     .switch-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
+
+    /* image editor in modal */
+    .img-edit { display: flex; align-items: center; gap: 12px; }
+    .img-prev { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; background: var(--cream); border: 1px solid var(--border); flex-shrink: 0; }
+    .img-prev.ph { display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: var(--text-mid); }
+    .img-edit-actions { display: flex; flex-direction: column; gap: 6px; }
+    .muted-sm { font-size: .76rem; color: var(--text-mid); margin-top: 6px; min-height: 1em; }
   </style>
 </head>
 <body>
@@ -147,10 +158,12 @@
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut }
     from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
   import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, setDoc,
-    deleteDoc, onSnapshot, query, orderBy }
+    deleteDoc, deleteField, onSnapshot, query, orderBy }
     from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
   import { getFunctions, httpsCallable }
     from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
+  import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject }
+    from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
 
   const app = initializeApp({
     apiKey: "AIzaSyDmY7ZnGfbpB66zb1pJcS2I-NCgUsiu6QA",
@@ -163,6 +176,34 @@
   const auth = getAuth(app);
   const db = getFirestore(app);
   const functions = getFunctions(app, "asia-southeast1");
+  const storage = getStorage(app);
+
+  // Shrink a picked image to <=800px on its long edge and re-encode as
+  // JPEG ~0.8 — keeps uploads small (fast for shops on 4G, cheap storage).
+  // Returns a Blob.
+  function compressImage(file, maxEdge = 800, quality = 0.8) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let { width, height } = img;
+        if (width > height && width > maxEdge) {
+          height = Math.round(height * maxEdge / width); width = maxEdge;
+        } else if (height > maxEdge) {
+          width = Math.round(width * maxEdge / height); height = maxEdge;
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => blob ? resolve(blob) : reject(new Error("compress failed")),
+          "image/jpeg", quality);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("bad image")); };
+      img.src = url;
+    });
+  }
 
   const $ = (id) => document.getElementById(id);
   const baht = (n) => new Intl.NumberFormat("th-TH").format(Math.round(n || 0));
@@ -243,12 +284,18 @@
         const card = document.createElement("div");
         card.className = "card";
         const avail = p.available !== false;
+        const thumb = p.imageUrl
+          ? `<img class="p-thumb" src="${esc(p.imageUrl)}" alt="" loading="lazy">`
+          : `<div class="p-thumb ph">📦</div>`;
         card.innerHTML = `
           <div class="row">
-            <div>
-              <div class="p-name">${esc(p.name)}</div>
-              <div class="p-meta">฿${baht(p.price)}/${esc(p.unit || "ชิ้น")} · ขั้นต่ำ ${p.moq || 1}</div>
-              <div class="toggle" style="margin-top:6px"><span class="dot ${avail ? "on" : "off"}"></span>${avail ? "มีของ" : "หมด"}</div>
+            <div class="p-info">
+              ${thumb}
+              <div>
+                <div class="p-name">${esc(p.name)}</div>
+                <div class="p-meta">฿${baht(p.price)}/${esc(p.unit || "ชิ้น")} · ขั้นต่ำ ${p.moq || 1}</div>
+                <div class="toggle" style="margin-top:6px"><span class="dot ${avail ? "on" : "off"}"></span>${avail ? "มีของ" : "หมด"}</div>
+              </div>
             </div>
             <div class="p-actions">
               <button class="icon-btn" data-edit="${d.id}">แก้ไข</button>
@@ -271,20 +318,91 @@
   $("editProfileBtn").addEventListener("click", profileModal);
 
   function productModal(id, p) {
+    // local image state for this modal session
+    let pickedBlob = null;   // compressed Blob waiting to upload
+    let removeImage = false; // user tapped "ลบรูป" on an existing image
+    let previewObjUrl = null;
+
+    const hasImg = !!(p && p.imageUrl);
+    const prevInner = hasImg
+      ? `<img class="img-prev" id="m_prev" src="${esc(p.imageUrl)}" alt="">`
+      : `<div class="img-prev ph" id="m_prev">📦</div>`;
+
     openModal(`
       <h3>${id ? "แก้ไขสินค้า" : "เพิ่มสินค้า"}</h3>
       <div class="field"><label>ชื่อสินค้า</label><input id="m_name" value="${esc(p?.name || "")}"></div>
       <div class="field"><label>หน่วย (กก., ลัง…)</label><input id="m_unit" value="${esc(p?.unit || "ชิ้น")}"></div>
       <div class="field"><label>ราคา (บาท)</label><input id="m_price" type="number" value="${p?.price ?? ""}"></div>
       <div class="field"><label>สั่งขั้นต่ำ</label><input id="m_moq" type="number" value="${p?.moq ?? 1}"></div>
+      <div class="field">
+        <label>รูปสินค้า (ไม่บังคับ)</label>
+        <div class="img-edit">
+          ${prevInner}
+          <div class="img-edit-actions">
+            <button type="button" class="icon-btn" id="m_pick">เลือกรูป</button>
+            <button type="button" class="icon-btn danger" id="m_rmimg">ลบรูป</button>
+          </div>
+        </div>
+        <input type="file" id="m_file" accept="image/*" class="hidden">
+        <div class="muted-sm" id="m_imgstatus"></div>
+      </div>
       <div class="modal-actions">
         <button class="btn-x" id="m_cancel">ยกเลิก</button>
         <button class="btn-save" id="m_save">บันทึก</button>
       </div>`);
-    $("m_cancel").onclick = closeModal;
+
+    const setPreview = (src) => {
+      const cur = $("m_prev");
+      const node = src
+        ? Object.assign(document.createElement("img"),
+            { className: "img-prev", id: "m_prev", src })
+        : Object.assign(document.createElement("div"),
+            { className: "img-prev ph", id: "m_prev", textContent: "📦" });
+      cur.replaceWith(node);
+    };
+
+    $("m_pick").onclick = () => $("m_file").click();
+    $("m_file").onchange = async () => {
+      const file = $("m_file").files[0];
+      if (!file) return;
+      $("m_imgstatus").textContent = "กำลังย่อรูป…";
+      try {
+        pickedBlob = await compressImage(file);
+        removeImage = false;
+        if (previewObjUrl) URL.revokeObjectURL(previewObjUrl);
+        previewObjUrl = URL.createObjectURL(pickedBlob);
+        setPreview(previewObjUrl);
+        $("m_imgstatus").textContent =
+          `พร้อมอัป (${Math.round(pickedBlob.size / 1024)} KB)`;
+      } catch (e) {
+        $("m_imgstatus").textContent = "อ่านรูปไม่สำเร็จ ลองรูปอื่น";
+      }
+    };
+    $("m_rmimg").onclick = () => {
+      pickedBlob = null;
+      removeImage = true;
+      if (previewObjUrl) { URL.revokeObjectURL(previewObjUrl); previewObjUrl = null; }
+      $("m_file").value = "";
+      setPreview(null);
+      $("m_imgstatus").textContent = "จะลบรูปเมื่อกดบันทึก";
+    };
+
+    $("m_cancel").onclick = () => {
+      if (previewObjUrl) URL.revokeObjectURL(previewObjUrl);
+      closeModal();
+    };
     $("m_save").onclick = async () => {
       const name = $("m_name").value.trim();
       if (!name) return;
+      const save = $("m_save");
+      save.disabled = true;
+
+      // Resolve the doc ref up front so a brand-new product can own its
+      // image path before the doc is written (id == storage filename).
+      const ref = id
+        ? doc(db, `suppliers/${uid}/products/${id}`)
+        : doc(collection(db, `suppliers/${uid}/products`));
+
       const data = {
         name,
         unit: $("m_unit").value.trim() || "ชิ้น",
@@ -292,9 +410,24 @@
         moq: Math.max(1, parseInt($("m_moq").value) || 1),
         available: p?.available !== false,
       };
-      if (id) await setDoc(doc(db, `suppliers/${uid}/products/${id}`), data, { merge: true });
-      else await addDoc(collection(db, `suppliers/${uid}/products`), data);
-      closeModal();
+
+      try {
+        const imgRef = storageRef(storage, `suppliers/${uid}/products/${ref.id}.jpg`);
+        if (pickedBlob) {
+          $("m_imgstatus").textContent = "กำลังอัปโหลดรูป…";
+          await uploadBytes(imgRef, pickedBlob, { contentType: "image/jpeg" });
+          data.imageUrl = await getDownloadURL(imgRef);
+        } else if (removeImage) {
+          data.imageUrl = deleteField();
+          await deleteObject(imgRef).catch(() => {}); // ok if it never existed
+        }
+        await setDoc(ref, data, { merge: true });
+        if (previewObjUrl) URL.revokeObjectURL(previewObjUrl);
+        closeModal();
+      } catch (e) {
+        $("m_imgstatus").textContent = "บันทึกไม่สำเร็จ: " + (e?.message || e);
+        save.disabled = false;
+      }
     };
   }
 

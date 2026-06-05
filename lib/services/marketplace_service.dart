@@ -40,6 +40,14 @@ class MarketplaceService {
             .toList();
       });
 
+  /// Fetch one supplier by id (used by "reorder" to rebuild the cart from a
+  /// past order). Returns null if the supplier doc no longer exists.
+  static Future<Supplier?> getSupplier(String supplierId) async {
+    final snap = await _suppliersCol().doc(supplierId).get();
+    if (!snap.exists) return null;
+    return Supplier.fromFirestore(snap.data()!, snap.id);
+  }
+
   static Stream<List<SupplierProduct>> watchCatalog(String supplierId) =>
       _suppliersCol()
           .doc(supplierId)
@@ -48,6 +56,65 @@ class MarketplaceService {
           .map((s) => s.docs
               .map((d) => SupplierProduct.fromFirestore(d.data(), d.id))
               .toList());
+
+  // ───────────────────── Favorites / reorder ─────────────────────
+
+  static CollectionReference<Map<String, dynamic>> _favoritesCol() =>
+      FirebaseFirestore.instance
+          .collection('shops')
+          .doc(AuthService.shopId)
+          .collection('supplierFavorites');
+
+  /// Doc id pins a favorite to one supplier+product so the same product
+  /// from two suppliers stays distinct.
+  static String _favId(String supplierId, String productId) =>
+      '${supplierId}_$productId';
+
+  /// Star / unstar a product. Stores a small snapshot for display; the cart
+  /// always rebuilds price/availability from the live catalog.
+  static Future<void> toggleFavorite({
+    required String supplierId,
+    required SupplierProduct product,
+    required bool makeFavorite,
+  }) async {
+    final ref = _favoritesCol().doc(_favId(supplierId, product.id));
+    if (makeFavorite) {
+      await ref.set({
+        'supplierId': supplierId,
+        'productId': product.id,
+        'name': product.name,
+        'createdAt': Timestamp.now(),
+      });
+    } else {
+      await ref.delete();
+    }
+  }
+
+  /// Live set of favorited productIds for one supplier.
+  static Stream<Set<String>> watchFavoriteIds(String supplierId) =>
+      _favoritesCol()
+          .where('supplierId', isEqualTo: supplierId)
+          .snapshots()
+          .map((s) => s.docs
+              .map((d) => d.data()['productId'] as String? ?? '')
+              .where((id) => id.isNotEmpty)
+              .toSet());
+
+  /// productIds the shop has ordered from this supplier before — drives the
+  /// "เคยสั่ง" section. Reads order history once (not a live stream).
+  static Future<Set<String>> previouslyOrderedProductIds(
+      String supplierId) async {
+    final snap =
+        await _shopOrdersCol().where('supplierId', isEqualTo: supplierId).get();
+    final ids = <String>{};
+    for (final doc in snap.docs) {
+      for (final item in (doc.data()['items'] as List<dynamic>? ?? [])) {
+        final id = (item as Map<String, dynamic>)['productId'] as String?;
+        if (id != null && id.isNotEmpty) ids.add(id);
+      }
+    }
+    return ids;
+  }
 
   // ─────────────────────── Order placement ───────────────────────
 

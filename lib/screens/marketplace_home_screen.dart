@@ -279,6 +279,27 @@ class _MyOrderCard extends StatelessWidget {
     }
   }
 
+  /// One-tap reorder: re-open the supplier's catalog with this order's items
+  /// pre-loaded into the cart. The catalog screen reconciles against current
+  /// stock/price. Guards against a supplier that's been removed or paused.
+  Future<void> _reorder(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final supplier = await MarketplaceService.getSupplier(order.supplierId);
+    if (supplier == null || !supplier.active) {
+      messenger.showSnackBar(SnackBar(
+        content: Text('${order.supplierName} ปิดรับออเดอร์ชั่วคราว'),
+      ));
+      return;
+    }
+    navigator.push(MaterialPageRoute(
+      builder: (_) => SupplierCatalogScreen(
+        supplier: supplier,
+        initialItems: order.items,
+      ),
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -345,34 +366,44 @@ class _MyOrderCard extends StatelessWidget {
                       fontWeight: FontWeight.bold, fontSize: 15)),
             ],
           ),
-          if (canCancel || canConfirm) ...[
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                if (canCancel)
-                  OutlinedButton(
-                    onPressed: () => _cancel(context),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                    ),
-                    child:
-                        const Text('ยกเลิก', style: TextStyle(fontSize: 13)),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => _reorder(context),
+                icon: const Icon(Icons.replay, size: 16),
+                label: const Text('สั่งซ้ำ', style: TextStyle(fontSize: 13)),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                ),
+              ),
+              const Spacer(),
+              if (canCancel)
+                OutlinedButton(
+                  onPressed: () => _cancel(context),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
                   ),
-                if (canConfirm)
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: () => _confirmDelivered(context),
-                      icon: const Icon(Icons.check, size: 18),
-                      label: const Text('รับของแล้ว',
-                          style: TextStyle(fontSize: 13)),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.green,
-                      ),
-                    ),
-                  ),
-              ],
+                  child:
+                      const Text('ยกเลิก', style: TextStyle(fontSize: 13)),
+                ),
+            ],
+          ),
+          if (canConfirm) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => _confirmDelivered(context),
+                icon: const Icon(Icons.check, size: 18),
+                label: const Text('รับของแล้ว',
+                    style: TextStyle(fontSize: 13)),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.green,
+                ),
+              ),
             ),
           ],
         ],

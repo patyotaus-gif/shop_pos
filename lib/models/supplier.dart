@@ -84,6 +84,10 @@ class SupplierProduct {
   /// In stock / available right now.
   final bool available;
 
+  /// Product photo URL (optional). Uploaded by the supplier from the web
+  /// portal to `suppliers/{supplierId}/products/{file}` in Storage.
+  final String? imageUrl;
+
   const SupplierProduct({
     required this.id,
     required this.name,
@@ -91,6 +95,7 @@ class SupplierProduct {
     required this.price,
     this.moq = 1,
     this.available = true,
+    this.imageUrl,
   });
 
   factory SupplierProduct.fromFirestore(
@@ -102,6 +107,7 @@ class SupplierProduct {
         price: (data['price'] ?? 0).toDouble(),
         moq: (data['moq'] ?? 1) as int,
         available: data['available'] ?? true,
+        imageUrl: data['imageUrl'] as String?,
       );
 
   Map<String, dynamic> toFirestore() => {
@@ -110,5 +116,6 @@ class SupplierProduct {
         'price': price,
         'moq': moq,
         'available': available,
+        if (imageUrl != null) 'imageUrl': imageUrl,
       };
 }
