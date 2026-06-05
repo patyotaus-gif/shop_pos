@@ -13,6 +13,7 @@ import '../services/settings_service.dart';
 import '../services/shop_service.dart';
 import '../widgets/upgrade_prompt.dart';
 import 'customers_screen.dart';
+import 'ops_dashboard_screen.dart';
 import 'staff_screen.dart';
 import 'subscription_screen.dart';
 import '../main.dart' show themeNotifier;
@@ -486,6 +487,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     );
                   },
                 ),
+
+                // Ops dashboard — founder only. Cross-shop business
+                // metrics (MRR, conversion). The Cloud Function enforces
+                // the same allowlist server-side; this just hides the entry.
+                if (AuthService.isFounder) ...[
+                  const SizedBox(height: 24),
+                  _SectionTitle('ผู้ดูแลระบบ'),
+                  const SizedBox(height: 8),
+                  InkWell(
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const OpsDashboardScreen(),
+                    )),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 6),
+                      child: Row(
+                        children: [
+                          Icon(Icons.insights_outlined,
+                              color: cs.primary, size: 26),
+                          const SizedBox(width: 14),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('ภาพรวมธุรกิจ',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15)),
+                                SizedBox(height: 2),
+                                Text('MRR · ร้านที่จ่ายเงิน · conversion',
+                                    style: TextStyle(fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                          Icon(Icons.chevron_right,
+                              color: cs.onSurface.withValues(alpha: 0.4)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
 
                 // Service charge — restaurant only. Auto-applied to every
                 // table tab on close. Set to 0 to disable.

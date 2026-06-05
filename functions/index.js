@@ -55,6 +55,19 @@ function resolvePlanConfig(tier, billingCycle) {
   return tierConfig[billingCycle] || tierConfig.monthly;
 }
 
+// Monthly-normalised recurring revenue in baht for one shop's plan.
+// Yearly plans are divided by 12; restaurant is per-location. Used by the
+// ops dashboard to sum MRR across paying shops.
+function monthlyRevenueBaht(tier, billingCycle, locations) {
+  const cfg = resolvePlanConfig(tier, billingCycle);
+  if (!cfg) return 0;
+  const locs = Math.max(1, parseInt(locations || 1));
+  const perLoc = PLANS[tier]?.perLocation === true;
+  const amountSatang = perLoc ? cfg.amount * locs : cfg.amount;
+  const baht = amountSatang / 100;
+  return billingCycle === "yearly" ? baht / 12 : baht;
+}
+
 const MARKETPLACE_TAKE_RATE = 0.025; // 2.5% — applied at marketplace order
 
 const SUCCESS_URL = "https://pok-pok.app/payment/success";
@@ -1029,4 +1042,94 @@ exports.applyReferral = onCall(async (request) => {
   await batch.commit();
 
   return { applied: true, bonusDays: REFERRAL_BONUS_DAYS };
+});
+
+// ────────────────────────────────────────────────
+// Ops dashboard — founder-only business metrics
+// ────────────────────────────────────────────────
+// Aggregates across ALL shops (admin SDK bypasses Firestore rules), so it
+// is locked to the founder's account by an email allowlist. No shop owner
+// can call it, and the client never reads other shops directly — rules
+// stay per-owner.
+const FOUNDER_EMAILS = ["patyotaus@gmail.com"];
+
+exports.opsMetrics = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Login required");
+  }
+  const email = String(request.auth.token.email || "").toLowerCase();
+  if (!FOUNDER_EMAILS.includes(email)) {
+    throw new HttpsError("permission-denied", "Founder only");
+  }
+
+  const db = admin.firestore();
+  const snap = await db.collection("shops").get();
+  const now = new Date();
+  const day = 24 * 60 * 60 * 1000;
+
+  let total = 0;
+  let active = 0; // paying, still in window
+  let trialing = 0; // on trial, still in window
+  let expired = 0; // lapsed trial or lapsed subscription
+  let mrr = 0;
+  let new7 = 0;
+  let new30 = 0;
+  let trialsEndingSoon = 0; // trialing & ends within 7 days
+  let referredCount = 0;
+  const tierAll = { solo: 0, lite: 0, full: 0, restaurant: 0 };
+  const tierPaid = { solo: 0, lite: 0, full: 0, restaurant: 0 };
+
+  snap.forEach((doc) => {
+    const d = doc.data();
+    total++;
+    const tier =
+      d.tier || (d.shopType === "restaurant" ? "restaurant" : "full");
+    if (tierAll[tier] !== undefined) tierAll[tier]++;
+
+    const status = d.subscriptionStatus || "trial";
+    const trialEnd = d.trialEndsAt?.toDate?.() || null;
+    const subEnd = d.subscriptionEndsAt?.toDate?.() || null;
+    const createdAt = d.createdAt?.toDate?.() || null;
+
+    const isActive = status === "active" && subEnd && subEnd > now;
+    const isTrialing = status === "trial" && trialEnd && trialEnd > now;
+
+    if (isActive) {
+      active++;
+      if (tierPaid[tier] !== undefined) tierPaid[tier]++;
+      mrr += monthlyRevenueBaht(tier, d.plan || "monthly", d.locations || 1);
+    } else if (isTrialing) {
+      trialing++;
+      if (trialEnd.getTime() - now.getTime() <= 7 * day) trialsEndingSoon++;
+    } else {
+      expired++;
+    }
+
+    if (createdAt) {
+      const age = now.getTime() - createdAt.getTime();
+      if (age <= 7 * day) new7++;
+      if (age <= 30 * day) new30++;
+    }
+    if (d.referredBy) referredCount++;
+  });
+
+  // Rough conversion proxy: of shops that have finished their trial
+  // (now either paying or expired), what fraction are paying. Without a
+  // historical event log this is an approximation, not a cohort metric.
+  const finishedTrial = active + expired;
+  const conversionRate = finishedTrial > 0 ? (active / finishedTrial) * 100 : 0;
+
+  return {
+    generatedAt: now.toISOString(),
+    totals: { total, active, trialing, expired },
+    mrr: Math.round(mrr),
+    arr: Math.round(mrr * 12),
+    arpa: active > 0 ? Math.round(mrr / active) : 0, // avg revenue per account
+    growth: { new7, new30 },
+    trials: { trialing, endingSoon: trialsEndingSoon },
+    conversionRate: Math.round(conversionRate * 10) / 10, // percent, 1 dp
+    referredCount,
+    tierAll,
+    tierPaid,
+  };
 });

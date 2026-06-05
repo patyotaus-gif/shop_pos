@@ -10,6 +10,16 @@ class AuthService {
   /// shopId = Firebase Auth UID — ใช้เป็น key หลักใน Firestore
   static String? get shopId => _auth.currentUser?.uid;
 
+  /// Founder accounts that can see the cross-shop ops dashboard. Kept in
+  /// sync with FOUNDER_EMAILS in functions/index.js (the function enforces
+  /// it server-side; this only decides whether to show the entry).
+  static const _founderEmails = {'patyotaus@gmail.com'};
+
+  static bool get isFounder {
+    final email = _auth.currentUser?.email?.toLowerCase();
+    return email != null && _founderEmails.contains(email);
+  }
+
   static Future<String?> register(String email, String password) async {
     try {
       await _auth.createUserWithEmailAndPassword(
