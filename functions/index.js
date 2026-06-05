@@ -1,4 +1,5 @@
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const admin = require("firebase-admin");
 const { defineSecret } = require("firebase-functions/params");
@@ -1476,3 +1477,57 @@ exports.supplierSetOrderStatus = onCall(async (request) => {
   await batch.commit();
   return { ok: true };
 });
+
+// ────────────────────────────────────────────────
+// Notify a supplier on LINE when a shop places a new order. Fires on the
+// supplier-side copy created by the app's dual-write. Opt-in: the supplier
+// pastes their LINE User ID into the web portal (lineUserId) and can mute
+// with lineNotifyEnabled. Best-effort — a LINE failure never blocks the
+// order, which is already committed by the time this runs.
+// ────────────────────────────────────────────────
+exports.notifySupplierNewOrder = onDocumentCreated(
+  {
+    document: "suppliers/{supplierId}/orders/{orderId}",
+    secrets: [lineChannelAccessToken],
+  },
+  async (event) => {
+    const order = event.data?.data();
+    if (!order) return;
+    // Only the initial "placed" write — ignore any re-creates.
+    if (order.status && order.status !== "placed") return;
+
+    const supplierId = event.params.supplierId;
+    const supSnap = await admin
+      .firestore()
+      .collection("suppliers")
+      .doc(supplierId)
+      .get();
+    const sup = supSnap.data() || {};
+    const lineUserId = sup.lineUserId;
+    if (!lineUserId || sup.lineNotifyEnabled === false) return;
+
+    const items = Array.isArray(order.items) ? order.items : [];
+    const itemCount = items.reduce((s, i) => s + (i.quantity || 0), 0);
+    const subtotal = items.reduce(
+      (s, i) => s + (i.price || 0) * (i.quantity || 0),
+      0
+    );
+    const lines = items
+      .slice(0, 10)
+      .map((i) => `• ${i.name} × ${i.quantity} ${i.unit || ""}`.trim())
+      .join("\n");
+    const more =
+      items.length > 10 ? `\n…และอีก ${items.length - 10} รายการ` : "";
+
+    await _linePush(lineChannelAccessToken.value(), lineUserId, [
+      {
+        type: "text",
+        text:
+          `🛒 ออเดอร์ใหม่จาก ${order.shopName || "ร้านค้า"}\n\n` +
+          `${lines}${more}\n\n` +
+          `รวม ${itemCount} รายการ · ฿${Math.round(subtotal).toLocaleString("th-TH")}\n\n` +
+          `เปิดพอร์ทัลเพื่อรับออเดอร์:\nhttps://pok-pok.app/supplier`,
+      },
+    ]);
+  }
+);
