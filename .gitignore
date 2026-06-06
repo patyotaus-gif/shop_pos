@@ -65,6 +65,10 @@ android/*.keystore
 functions/node_modules/
 node_modules/
 
+# Hosted APK for closed distribution — deployed to Firebase Hosting but
+# too large to track in git (the manifest version.json is committed).
+public/app/*.apk
+
 # Accidentally vendored SDK / junk
 /flutter/
 header*.html
