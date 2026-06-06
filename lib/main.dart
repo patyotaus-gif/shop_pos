@@ -23,7 +23,9 @@ import 'screens/tables_screen.dart';
 import 'services/entitlements.dart';
 import 'services/order_service.dart';
 import 'services/shop_service.dart';
+import 'services/update_service.dart';
 import 'widgets/subscription_gate.dart';
+import 'widgets/update_prompt.dart';
 
 final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.system);
 
@@ -384,6 +386,17 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Closed-distribution Android update check, once per launch. Silent on
+    // failure / when already current / on iOS (TestFlight handles those).
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final info = await UpdateService.checkForUpdate();
+      if (info != null && mounted) showUpdateDialog(context, info);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

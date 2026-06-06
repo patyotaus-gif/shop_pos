@@ -40,6 +40,11 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
+    <!-- Closed-distribution in-app update: lets the app hand a downloaded
+         APK to the system installer (the app isn't on Google Play). The
+         user still confirms "install unknown apps" on first use. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <!-- Required for reading banking app push notifications so the POS
          can auto-confirm online orders. The user explicitly grants this
          under Settings → Notification Access; the app never reads
