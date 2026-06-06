@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 import 'register_screen.dart';
 
@@ -39,6 +40,13 @@ class _LoginScreenState extends State<LoginScreen> {
         _loading = false;
         _error = error;
       });
+    }
+  }
+
+  Future<void> _openLineOA() async {
+    final uri = Uri.parse('https://lin.ee/V8eWC8Tl');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
 
@@ -219,6 +227,17 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: const Text('สมัครใช้งานฟรี 60 วัน'),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 4),
+                  OutlinedButton.icon(
+                    onPressed: _openLineOA,
+                    icon: const Icon(Icons.chat_bubble_outline,
+                        size: 18, color: Color(0xFF06C755)),
+                    label: const Text('สอบถาม / เพิ่มเพื่อนทาง LINE'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF06C755),
+                      side: const BorderSide(color: Color(0xFF06C755)),
+                    ),
                   ),
                 ],
               ),
