@@ -1,8 +1,8 @@
 {
   "version": "1.2.11",
-  "build": 21,
+  "build": 22,
   "url": "https://pok-pok.app/app/pokpok.apk",
   "minSupportedBuild": 1,
   "mandatory": false,
-  "notes": "อัปเดตในแอปได้เลย (ไม่ต้องเข้าเว็บ) + รูปสินค้า supplier + สั่งซ้ำบิลเดิม + รายการโปรด + แจ้งเตือนออเดอร์ผ่าน LINE"
+  "notes": "หน้าเข้าสู่ระบบเป็นแบรนด์ Pokpok + อัปเดตในแอปได้เลย + รูปสินค้า supplier + สั่งซ้ำบิลเดิม + รายการโปรด + แจ้งเตือนออเดอร์ผ่าน LINE"
 }
