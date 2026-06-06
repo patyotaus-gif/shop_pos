@@ -271,7 +271,7 @@
     .bill-btn { padding: 7px 22px; border-radius: 7px; font-size: .875rem; font-weight: 500; cursor: pointer; border: none; background: transparent; color: var(--ink-3); font-family: 'IBM Plex Sans Thai', sans-serif; transition: all .15s; }
     .bill-btn.on { background: var(--ruby); color: white; font-weight: 600; }
     .save-pill { font-size: .68rem; background: #dcfce7; color: #15803d; padding: 2px 7px; border-radius: 100px; font-weight: 700; margin-left: 4px; }
-    .pricing-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px,1fr)); gap: 14px; max-width: 1120px; }
+    .pricing-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px,1fr)); gap: 14px; }
     .p-card { background: white; border: 1px solid var(--border); border-radius: var(--r); padding: 24px 20px; transition: all .2s; }
     .p-card:hover { box-shadow: 0 8px 24px rgba(30,18,18,.08); }
     .p-card.featured { border: 2px solid var(--ruby); position: relative; background: var(--ruby); }
@@ -298,6 +298,28 @@
     .p-btn:hover { border-color: var(--ink-3); }
     .p-btn.ruby { background: white; color: var(--ruby-dark); border-color: white; font-weight: 700; }
     .p-btn.ruby:hover { background: var(--cream); border-color: var(--cream); }
+
+    /* ── MARKETPLACE (B2B) ── */
+    .marketplace { padding: 88px 6%; background: var(--cream); border-bottom: 1px solid var(--border); }
+    .mkt-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-top: 48px; }
+    .mkt-cta { margin-top: 36px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 26px 30px; display: flex; align-items: center; justify-content: space-between; gap: 22px; flex-wrap: wrap; }
+    .mkt-cta-text h3 { font-size: 1.1rem; font-weight: 800; color: var(--ink); margin-bottom: 5px; }
+    .mkt-cta-text p { font-size: .88rem; color: var(--ink-3); max-width: 520px; line-height: 1.6; }
+
+    /* Real-screenshot phone frame — replaces the illustrative mockups so
+       visitors see the actual (mobile) app. */
+    .phone { position: relative; width: 100%; max-width: 290px; margin: 0 auto; background: #14100F; border-radius: 42px; padding: 9px; box-shadow: 0 30px 60px rgba(30,18,18,.24), 0 0 0 1px rgba(0,0,0,.08); }
+    .phone img { display: block; width: 100%; border-radius: 34px; }
+
+    /* Subtle brand wash — softens the wide-desktop whitespace on cream
+       sections without competing with the content. */
+    .hero, .how, .marketplace, .pricing {
+      background-color: var(--cream);
+      background-image:
+        radial-gradient(circle at 0% 0%, rgba(122,31,43,.045), transparent 38%),
+        radial-gradient(circle at 100% 100%, rgba(122,31,43,.035), transparent 40%);
+      background-repeat: no-repeat;
+    }
 
     /* ── CTA ── */
     .cta-section { padding: 96px 6%; background: var(--ruby); text-align: center; position: relative; overflow: hidden; }
@@ -401,6 +423,7 @@
     @media (max-width: 1024px) {
       .feat-top { grid-template-columns: 1fr; }
       .feat-bottom { grid-template-columns: 1fr 1fr; }
+      .mkt-grid { grid-template-columns: 1fr 1fr; }
       .pricing-cards { grid-template-columns: 1fr; max-width: 380px; }
       .preview-grid { grid-template-columns: 1fr; }
       .footer-top { grid-template-columns: 1fr 1fr; }
@@ -414,6 +437,8 @@
       .how-inner { grid-template-columns: 1fr; }
       .online-inner { grid-template-columns: 1fr; }
       .feat-bottom { grid-template-columns: 1fr; }
+      .mkt-grid { grid-template-columns: 1fr; }
+      .mkt-cta { flex-direction: column; align-items: flex-start; }
       .footer-top { grid-template-columns: 1fr; }
     }
     /* ── Brand splash (loading screen, ~3s once per session) ── */
@@ -508,7 +533,9 @@
   <ul class="nav-links">
     <li><a href="#features">ฟีเจอร์</a></li>
     <li><a href="#how">วิธีใช้</a></li>
+    <li><a href="#marketplace">Marketplace</a></li>
     <li><a href="#pricing">ราคา</a></li>
+    <li><a href="/supplier">ร้านส่ง</a></li>
   </ul>
   <div class="nav-end">
     <a href="#" class="btn-ghost">เข้าสู่ระบบ</a>
@@ -521,7 +548,9 @@
 <div class="mobile-nav" id="mobileNav">
   <a href="#features" onclick="toggleMenu()">ฟีเจอร์</a>
   <a href="#how" onclick="toggleMenu()">วิธีใช้</a>
+  <a href="#marketplace" onclick="toggleMenu()">Marketplace</a>
   <a href="#pricing" onclick="toggleMenu()">ราคา</a>
+  <a href="/supplier">พอร์ทัลร้านส่ง</a>
   <a href="#pricing" onclick="toggleMenu()">ทดลองใช้ฟรี</a>
 </div>
 
@@ -555,32 +584,8 @@
 
   <div class="mockup-wrap">
     <div style="padding: 16px 36px 32px;">
-      <div class="mockup">
-        <div class="mockup-bar">
-          <div class="mkdot" style="background:#ef4444"></div>
-          <div class="mkdot" style="background:#f59e0b"></div>
-          <div class="mkdot" style="background:#22c55e"></div>
-          <span style="color:#475569;font-size:.68rem;margin-left:8px;font-weight:500;">Pokpok</span>
-        </div>
-        <div class="mockup-body">
-          <div class="m-header">
-            <span class="m-title">เลือกสินค้า</span>
-            <span class="m-badge">สต็อก live</span>
-          </div>
-          <div class="m-grid">
-            <div class="m-tile"><div class="m-tile-name">น้ำดื่ม</div><div class="m-tile-price">฿8</div><div class="m-tile-stock">เหลือ 48</div></div>
-            <div class="m-tile"><div class="m-tile-name">บะหมี่กึ่ง</div><div class="m-tile-price">฿12</div><div class="m-tile-stock">เหลือ 30</div></div>
-            <div class="m-tile"><div class="m-tile-name">น้ำผลไม้</div><div class="m-tile-price">฿25</div><div class="m-tile-stock">เหลือ 12</div></div>
-          </div>
-          <div class="m-cart">
-            <div class="m-cart-label">รายการ</div>
-            <div class="m-cart-row"><span>น้ำดื่ม × 3</span><span>฿24</span></div>
-            <div class="m-cart-row"><span>น้ำผลไม้ × 1</span><span>฿25</span></div>
-            <hr class="m-cart-sep"/>
-            <div class="m-cart-total"><span class="m-cart-total-l">ยอดรวม</span><span class="m-cart-total-r">฿49</span></div>
-            <button class="m-btn">ชำระเงิน</button>
-          </div>
-        </div>
+      <div class="phone">
+        <img src="/screens/overview.png" alt="หน้าภาพรวมร้านในแอป Pokpok บนมือถือ — ยอดขาย สต็อก และสั่งของจาก supplier" loading="lazy">
       </div>
       <div class="m-float m-float-1">
         <div class="m-float-icon" style="background:#dcfce7;color:#15803d;">+</div>
@@ -740,25 +745,46 @@
       </div>
     </div>
     <div>
-      <div class="order-card">
-        <div class="order-card-header">
-          <div class="order-card-store">ร้านสะดวกซื้อตัวอย่าง</div>
-          <div class="order-card-sub">เลือกสินค้าที่ต้องการ</div>
-        </div>
-        <div class="order-grid">
-          <div class="o-tile sel"><div class="o-tile-name">น้ำดื่ม 600ml</div><div class="o-tile-price">฿8</div></div>
-          <div class="o-tile"><div class="o-tile-name">บะหมี่กึ่งสำเร็จรูป</div><div class="o-tile-price">฿12</div></div>
-          <div class="o-tile sel"><div class="o-tile-name">น้ำผลไม้</div><div class="o-tile-price">฿25</div></div>
-          <div class="o-tile"><div class="o-tile-name">ขนมปัง</div><div class="o-tile-price">฿18</div></div>
-        </div>
-        <div class="order-summary">
-          <div class="order-sum-row"><span>น้ำดื่ม 600ml × 1</span><span>฿8</span></div>
-          <div class="order-sum-row"><span>น้ำผลไม้ × 1</span><span>฿25</span></div>
-          <div class="order-sum-total"><span>รวม</span><span>฿33</span></div>
-        </div>
-        <button class="order-pay-btn">ชำระเงิน ฿33</button>
+      <div class="phone">
+        <img src="/screens/orders.png" alt="หน้าออเดอร์ออนไลน์ในแอป Pokpok — ออเดอร์ลูกค้าเข้ามาแบบเรียลไทม์ พร้อมสถานะ" loading="lazy">
       </div>
     </div>
+  </div>
+</section>
+
+<!-- MARKETPLACE (B2B) -->
+<section class="marketplace" id="marketplace">
+  <div class="eyebrow">Marketplace</div>
+  <h2 class="heading">เติมของเข้าร้าน จบในแอปเดียว</h2>
+  <p class="subtext">เลือกของจากร้านส่งในพื้นที่ เห็นรูปและราคาจริง สั่งซ้ำบิลเดิมได้ในแตะเดียว — ไม่ต้องโทร ไม่ต้องจดออเดอร์</p>
+  <div class="mkt-grid">
+    <div class="feat-card" data-anim data-delay="1">
+      <div class="feat-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+      <div class="feat-name">เห็นรูปก่อนสั่ง</div>
+      <div class="feat-desc">ร้านส่งใส่รูปและรายละเอียดสินค้า แตะดูรูปใหญ่ได้ มั่นใจก่อนสั่ง</div>
+    </div>
+    <div class="feat-card" data-anim data-delay="2">
+      <div class="feat-icon"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg></div>
+      <div class="feat-name">สั่งซ้ำบิลเดิม</div>
+      <div class="feat-desc">ของชุดเดิมทุกสัปดาห์ แตะเดียวดึงทั้งบิล ระบบเช็กราคาล่าสุดให้</div>
+    </div>
+    <div class="feat-card" data-anim data-delay="3">
+      <div class="feat-icon"><svg viewBox="0 0 24 24"><polygon points="12 2 15 8.5 22 9.3 17 14 18.2 21 12 17.5 5.8 21 7 14 2 9.3 9 8.5 12 2"/></svg></div>
+      <div class="feat-name">รายการโปรด + เคยสั่ง</div>
+      <div class="feat-desc">ปักดาวของที่สั่งประจำ ของที่เคยสั่งลอยขึ้นบนสุด หาไว</div>
+    </div>
+    <div class="feat-card" data-anim data-delay="4">
+      <div class="feat-icon"><svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
+      <div class="feat-name">ราคาส่งจริง</div>
+      <div class="feat-desc">เทียบราคาร้านส่ง เห็นยอดสั่งขั้นต่ำชัดเจน เลือกร้านที่คุ้มสุด</div>
+    </div>
+  </div>
+  <div class="mkt-cta">
+    <div class="mkt-cta-text">
+      <h3>เป็นร้านส่งหรือผู้ผลิต?</h3>
+      <p>เปิดร้านบน Pokpok Marketplace — จัดการสินค้าและรับออเดอร์จากร้านค้าได้ในพอร์ทัลของคุณเอง พร้อมแจ้งเตือนออเดอร์ใหม่ผ่าน LINE</p>
+    </div>
+    <a href="/supplier" class="btn-lg btn-lg-ruby">เข้าพอร์ทัลซัพพลายเออร์</a>
   </div>
 </section>
 
@@ -954,7 +980,9 @@
         <li><a href="#features">ฟีเจอร์</a></li>
         <li><a href="#pricing">ราคา</a></li>
         <li><a href="#how">วิธีใช้งาน</a></li>
+        <li><a href="#marketplace">Marketplace</a></li>
         <li><a href="/order">สั่งสินค้าออนไลน์</a></li>
+        <li><a href="/supplier">พอร์ทัลซัพพลายเออร์</a></li>
       </ul>
     </div>
     <div class="footer-col">
