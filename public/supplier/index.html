@@ -28,8 +28,9 @@
     .login-card p { font-size: .85rem; color: var(--text-mid); margin-bottom: 22px; }
     .field { margin-bottom: 14px; }
     .field label { display: block; font-size: .8rem; font-weight: 600; margin-bottom: 5px; }
-    .field input { width: 100%; padding: 11px 13px; border: 1.5px solid var(--border); border-radius: var(--r-sm); font-size: .95rem; }
-    .field input:focus { outline: none; border-color: var(--burgundy); }
+    .field input, .field textarea { width: 100%; padding: 11px 13px; border: 1.5px solid var(--border); border-radius: var(--r-sm); font-size: .95rem; font-family: inherit; }
+    .field input:focus, .field textarea:focus { outline: none; border-color: var(--burgundy); }
+    .field textarea { resize: vertical; min-height: 72px; line-height: 1.5; }
     .btn-primary { width: 100%; padding: 12px; background: var(--burgundy); color: #fff; border: none; border-radius: var(--r-sm); font-weight: 700; font-size: .95rem; transition: background .15s; }
     .btn-primary:hover { background: var(--burgundy-hover); }
     .btn-primary:disabled { opacity: .6; cursor: default; }
@@ -334,6 +335,7 @@
       <div class="field"><label>หน่วย (กก., ลัง…)</label><input id="m_unit" value="${esc(p?.unit || "ชิ้น")}"></div>
       <div class="field"><label>ราคา (บาท)</label><input id="m_price" type="number" value="${p?.price ?? ""}"></div>
       <div class="field"><label>สั่งขั้นต่ำ</label><input id="m_moq" type="number" value="${p?.moq ?? 1}"></div>
+      <div class="field"><label>รายละเอียดสินค้า (ไม่บังคับ)</label><textarea id="m_desc" placeholder="เช่น เกรด ขนาดบรรจุ แหล่งที่มา…">${esc(p?.description || "")}</textarea></div>
       <div class="field">
         <label>รูปสินค้า (ไม่บังคับ)</label>
         <div class="img-edit">
@@ -408,6 +410,7 @@
         unit: $("m_unit").value.trim() || "ชิ้น",
         price: parseFloat($("m_price").value) || 0,
         moq: Math.max(1, parseInt($("m_moq").value) || 1),
+        description: $("m_desc").value.trim(),
         available: p?.available !== false,
       };
 

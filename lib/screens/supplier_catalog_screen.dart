@@ -166,6 +166,105 @@ class _SupplierCatalogScreenState extends State<SupplierCatalogScreen> {
     }
   }
 
+  /// Bottom sheet with a large photo + full description + quick add. Opened
+  /// when the shop taps a product row to inspect it before ordering.
+  void _showProductDetail(SupplierProduct p) {
+    final cs = Theme.of(context).colorScheme;
+    final desc = p.description?.trim() ?? '';
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetCtx) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.6,
+          minChildSize: 0.4,
+          maxChildSize: 0.92,
+          builder: (_, controller) => ListView(
+            controller: controller,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: (p.imageUrl != null && p.imageUrl!.isNotEmpty)
+                      ? Image.network(
+                          p.imageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              _detailPlaceholder(cs),
+                          loadingBuilder: (context, child, progress) =>
+                              progress == null
+                                  ? child
+                                  : _detailPlaceholder(cs),
+                        )
+                      : _detailPlaceholder(cs),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(p.name,
+                  style: const TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 6),
+              Text(
+                '฿${p.price.toStringAsFixed(0)} / ${p.unit}'
+                '${p.moq > 1 ? '  ·  สั่งขั้นต่ำ ${p.moq} ${p.unit}' : ''}',
+                style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: cs.primary),
+              ),
+              if (!p.available) ...[
+                const SizedBox(height: 6),
+                Text('สินค้าหมด',
+                    style: TextStyle(
+                        color: cs.error, fontWeight: FontWeight.w600)),
+              ],
+              if (desc.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text('รายละเอียด',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: cs.onSurface.withValues(alpha: 0.6))),
+                const SizedBox(height: 4),
+                Text(desc,
+                    style: const TextStyle(fontSize: 14, height: 1.5)),
+              ],
+              const SizedBox(height: 20),
+              if (p.available)
+                FilledButton.icon(
+                  onPressed: () {
+                    final current = _cart[p.id] ?? 0;
+                    _setQty(p, current == 0 ? p.moq : current + 1);
+                    Navigator.of(sheetCtx).pop();
+                  },
+                  icon: const Icon(Icons.add_shopping_cart, size: 18),
+                  label: Text(
+                    (_cart[p.id] ?? 0) == 0
+                        ? 'เพิ่มลงตะกร้า'
+                        : 'เพิ่มอีก (ในตะกร้า ${_cart[p.id]})',
+                  ),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _detailPlaceholder(ColorScheme cs) => Container(
+        color: cs.surfaceContainerHighest,
+        alignment: Alignment.center,
+        child: Icon(Icons.inventory_2_outlined,
+            size: 64, color: cs.onSurface.withValues(alpha: 0.3)),
+      );
+
   /// Group the catalog into favorites → previously-ordered → everything
   /// else, each under its own header. Sections only appear when non-empty,
   /// so a shop with no history just sees the full list.
@@ -203,6 +302,7 @@ class _SupplierCatalogScreenState extends State<SupplierCatalogScreen> {
           isFavorite: _favIds.contains(p.id),
           onChanged: (q) => _setQty(p, q),
           onToggleFavorite: () => _toggleFavorite(p),
+          onShowDetail: () => _showProductDetail(p),
         ));
       }
     }
@@ -273,12 +373,14 @@ class _CatalogRow extends StatelessWidget {
     required this.onChanged,
     required this.isFavorite,
     required this.onToggleFavorite,
+    required this.onShowDetail,
   });
   final SupplierProduct product;
   final int quantity;
   final void Function(int) onChanged;
   final bool isFavorite;
   final VoidCallback onToggleFavorite;
+  final VoidCallback onShowDetail;
 
   @override
   Widget build(BuildContext context) {
@@ -290,30 +392,55 @@ class _CatalogRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
         child: Row(
           children: [
-            _Thumb(url: product.imageUrl),
-            const SizedBox(width: 12),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(product.name,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 14)),
-                  const SizedBox(height: 2),
-                  Text(
-                    '฿${product.price.toStringAsFixed(0)} / ${product.unit}'
-                    '${product.moq > 1 ? ' · ขั้นต่ำ ${product.moq}' : ''}',
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: cs.onSurface.withValues(alpha: 0.6)),
-                  ),
-                  if (unavailable)
-                    Text('สินค้าหมด',
-                        style: TextStyle(
-                            fontSize: 11,
-                            color: cs.error,
-                            fontWeight: FontWeight.w600)),
-                ],
+              child: InkWell(
+                onTap: onShowDetail,
+                borderRadius: BorderRadius.circular(10),
+                child: Row(
+                  children: [
+                    _Thumb(url: product.imageUrl),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(product.name,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14)),
+                              ),
+                              if (product.description != null &&
+                                  product.description!.trim().isNotEmpty) ...[
+                                const SizedBox(width: 4),
+                                Icon(Icons.info_outline,
+                                    size: 14,
+                                    color:
+                                        cs.onSurface.withValues(alpha: 0.4)),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '฿${product.price.toStringAsFixed(0)} / ${product.unit}'
+                            '${product.moq > 1 ? ' · ขั้นต่ำ ${product.moq}' : ''}',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: cs.onSurface.withValues(alpha: 0.6)),
+                          ),
+                          if (unavailable)
+                            Text('สินค้าหมด',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: cs.error,
+                                    fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             IconButton(
