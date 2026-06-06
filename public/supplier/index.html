@@ -98,6 +98,8 @@
     .img-prev.ph { display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: var(--text-mid); }
     .img-edit-actions { display: flex; flex-direction: column; gap: 6px; }
     .muted-sm { font-size: .76rem; color: var(--text-mid); margin-top: 6px; min-height: 1em; }
+    .line-setup { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
+    .line-qr { width: 96px; height: 96px; flex-shrink: 0; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
   </style>
 </head>
 <body>
@@ -447,8 +449,15 @@
         <input type="checkbox" id="m_active" ${s.active !== false ? "checked" : ""}></div>
       <div class="field" style="margin-top:6px">
         <label>LINE แจ้งเตือนออเดอร์ใหม่ (ไม่บังคับ)</label>
+        <div class="line-setup">
+          <img src="/line-qr.png" alt="QR แอดไลน์ทางการ Pokpok" class="line-qr">
+          <div class="muted-sm" style="margin:0">
+            1. สแกน QR (ด้วยมืออีกเครื่อง) เพื่อแอดไลน์ทางการ Pokpok<br>
+            2. พิมพ์อะไรก็ได้ บอตจะตอบ <b>User ID</b><br>
+            3. วาง User ID ในช่องด้านล่าง
+          </div>
+        </div>
         <input id="m_line" placeholder="LINE User ID" value="${esc(s.lineUserId || "")}">
-        <div class="muted-sm">แอดไลน์ทางการ Pokpok แล้วพิมพ์อะไรก็ได้ บอตจะตอบ User ID — เอามาวางช่องนี้</div>
       </div>
       <div class="switch-row"><span>เปิดแจ้งเตือน LINE</span>
         <input type="checkbox" id="m_linenotify" ${s.lineNotifyEnabled !== false ? "checked" : ""}></div>
