@@ -23,11 +23,15 @@ import 'screens/tables_screen.dart';
 import 'services/entitlements.dart';
 import 'services/order_service.dart';
 import 'services/shop_service.dart';
+import 'services/theme_service.dart';
 import 'services/update_service.dart';
 import 'widgets/subscription_gate.dart';
 import 'widgets/update_prompt.dart';
 
-final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.system);
+// Default to light — Pokpok is a light-brand design and does not follow
+// the device's system dark setting. Dark is opt-in (Settings), persisted
+// via ThemeService and loaded at startup.
+final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.light);
 
 /// Brand typeface, bundled in assets and declared in pubspec.yaml. Matches
 /// the pok-pok.app website so the app and web share one identity.
@@ -48,6 +52,7 @@ void main() async {
 
   try {
     await initializeDateFormatting('th_TH', null);
+    themeNotifier.value = await ThemeService.load();
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)
         .timeout(const Duration(seconds: 15));
     await NotificationService.init().timeout(const Duration(seconds: 10));

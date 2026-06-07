@@ -11,6 +11,7 @@ import '../services/hardware_service.dart';
 import '../services/line_service.dart';
 import '../services/settings_service.dart';
 import '../services/shop_service.dart';
+import '../services/theme_service.dart';
 import '../widgets/upgrade_prompt.dart';
 import 'customers_screen.dart';
 import 'founder_console_screen.dart';
@@ -632,8 +633,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: const Text('โหมดมืด'),
                     value: mode == ThemeMode.dark,
                     onChanged: (val) {
-                      themeNotifier.value =
-                          val ? ThemeMode.dark : ThemeMode.light;
+                      final m = val ? ThemeMode.dark : ThemeMode.light;
+                      themeNotifier.value = m;
+                      ThemeService.save(m);
                     },
                   ),
                 ),
