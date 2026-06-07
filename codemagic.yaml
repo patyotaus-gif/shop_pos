@@ -98,7 +98,7 @@ workflows:
       - name: Flutter build ipa
         script: |
           flutter build ipa --release \
-            --build-name=1.1.0 \
+            --build-name=1.2.11 \
             --build-number=$BUILD_NUMBER \
             --export-options-plist=/Users/builder/export_options.plist
     artifacts:
@@ -109,10 +109,13 @@ workflows:
       app_store_connect:
         auth: integration
         submit_to_testflight: true
-        # Internal testers (App Store Connect Users group) get builds automatically.
-        # To add an external group later, uncomment and create the group in TestFlight first:
-        # beta_groups:
-        #   - Internal Testing
+        # Auto-deliver to the external public-link group "ร้านค้า" (its
+        # public link is vA1VYAgZ). First build of a new version still goes
+        # through Beta App Review before external testers can install. If
+        # this publish step ever fails on the group name, add the build to
+        # the group manually in App Store Connect instead.
+        beta_groups:
+          - "ร้านค้า"
 
   android-apk:
     name: Android Release APK (debug-signed)
