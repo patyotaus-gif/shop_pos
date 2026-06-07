@@ -772,11 +772,14 @@ exports.lineWebhook = onRequest(
       const userId = event.source?.userId;
       if (!userId) continue;
 
-      // เมื่อ user follow bot → ส่งข้อความต้อนรับ + วิธีเชื่อม
+      // เมื่อ user follow bot → ส่งข้อความต้อนรับ
       if (event.type === "follow") {
         await _lineReply(token, event.replyToken, [{
           type: "text",
-          text: `ยินดีต้อนรับสู่ Pokpok POS 🎉\n\nส่งข้อความใดก็ได้เพื่อรับ LINE User ID ของคุณ แล้วนำไปใส่ใน Settings → การแจ้งเตือน LINE ในแอป Pokpok`
+          text:
+            "ยินดีต้อนรับสู่ Pokpok 🎉\n\n" +
+            "• ร้านค้า/ซัพพลายเออร์ที่ต้องการรับแจ้งเตือนออเดอร์ผ่าน LINE — พิมพ์ \"ID\" เพื่อรับ LINE User ID ของคุณ\n" +
+            "• มีคำถามอื่น ๆ ทักได้เลย ทีมงานจะตอบกลับโดยเร็ว"
         }]);
         continue;
       }
@@ -802,10 +805,29 @@ exports.lineWebhook = onRequest(
           continue;
         }
 
-        // ตอบ userId เพื่อให้ copy ไปใส่ settings
+        // คีย์เวิร์ดขอ User ID — ตอบเฉพาะเมื่อถามตรง ๆ เท่านั้น เพื่อไม่ให้
+        // ลูกค้าทั่วไปที่ทักมาถามได้ User ID งง ๆ กลับไป
+        const idKeywords =
+          ["id", "ไอดี", "รหัส", "userid", "user id", "myid", "my id"];
+        if (idKeywords.includes(text)) {
+          await _lineReply(token, event.replyToken, [{
+            type: "text",
+            text:
+              `LINE User ID ของคุณ:\n${userId}\n\n` +
+              "นำ ID นี้ไปวางใน:\n" +
+              "• แอป Pokpok → ตั้งค่า → การแจ้งเตือน LINE (ร้านค้า)\n" +
+              "• พอร์ทัลซัพพลายเออร์ → แก้ไขร้าน (ซัพพลายเออร์)\n" +
+              "เพื่อรับแจ้งเตือนออเดอร์ใหม่ผ่าน LINE"
+          }]);
+          continue;
+        }
+
+        // ข้อความทั่วไป → ตอบสุภาพ + บอกวิธีขอ User ID
         await _lineReply(token, event.replyToken, [{
           type: "text",
-          text: `LINE User ID ของคุณ:\n${userId}\n\nนำ ID นี้ไปใส่ใน Settings → การแจ้งเตือน LINE ในแอป Pokpok\n\nหรือส่ง "link:SHOP_ID" เพื่อเชื่อมอัตโนมัติ`
+          text:
+            "ขอบคุณที่ติดต่อ Pokpok 🙏\nทีมงานจะตอบกลับโดยเร็วที่สุด\n\n" +
+            "(อยากรับแจ้งเตือนออเดอร์ผ่าน LINE? พิมพ์ \"ID\" เพื่อรับ LINE User ID ของคุณ)"
         }]);
       }
     }
