@@ -43,6 +43,7 @@ class ShopService {
     ShopTier tier = ShopTier.full,
     ShopType? shopType,
     int locations = 1,
+    String? policyVersion,
   }) async {
     final trialEndsAt = DateTime.now().add(const Duration(days: 60));
     final shop = Shop(
@@ -57,7 +58,15 @@ class ShopService {
       createdAt: DateTime.now(),
       referralCode: _generateReferralCode(),
     );
-    await _doc().set(shop.toFirestore());
+    final data = shop.toFirestore();
+    // Record the Terms/Privacy version accepted at signup (PDPA trail).
+    if (policyVersion != null) {
+      data['consent'] = {
+        'policyVersion': policyVersion,
+        'acceptedAt': FieldValue.serverTimestamp(),
+      };
+    }
+    await _doc().set(data);
   }
 
   static Future<void> updateName(String name) async {

@@ -7,6 +7,10 @@ import '../services/hardware_service.dart';
 import '../services/shop_service.dart';
 import '../widgets/tier_picker.dart';
 
+/// Version of the Terms/Privacy the signup flow currently presents. Bump
+/// this whenever the policy pages change so re-consent can be required.
+const kPolicyVersion = '2026-06-07';
+
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -84,6 +88,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         name: _shopNameCtrl.text.trim(),
         email: _emailCtrl.text.trim(),
         tier: _tier,
+        policyVersion: kPolicyVersion,
       );
       // For tiers that ship a kit (Lite/Full/Restaurant) queue a hardware
       // request so the founder/sales agent sees it in their pipeline.
