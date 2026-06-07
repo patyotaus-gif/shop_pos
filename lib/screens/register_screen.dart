@@ -1,4 +1,6 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/shop.dart';
 import '../services/auth_service.dart';
 import '../services/hardware_service.dart';
@@ -22,7 +24,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   ShopTier _tier = ShopTier.full; // mass-market default
   bool _loading = false;
   bool _obscure = true;
+  bool _acceptedTerms = false;
   String? _error;
+
+  late final _termsTap = TapGestureRecognizer()
+    ..onTap = () => _open('https://pok-pok.app/terms');
+  late final _privacyTap = TapGestureRecognizer()
+    ..onTap = () => _open('https://pok-pok.app/privacy');
 
   @override
   void dispose() {
@@ -31,11 +39,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _passCtrl.dispose();
     _confirmPassCtrl.dispose();
     _referralCtrl.dispose();
+    _termsTap.dispose();
+    _privacyTap.dispose();
     super.dispose();
+  }
+
+  Future<void> _open(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
+    if (!_acceptedTerms) {
+      setState(() => _error =
+          'กรุณายอมรับเงื่อนไขการใช้บริการและนโยบายความเป็นส่วนตัว');
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
@@ -251,6 +273,54 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     prefixIcon: Icon(Icons.card_giftcard_outlined),
                     border: OutlineInputBorder(),
                   ),
+                ),
+
+                const SizedBox(height: 8),
+                // Terms + privacy acceptance — required before signup. Links
+                // open the hosted policy pages. Helps establish a lawful
+                // basis under Thailand's PDPA since shops store personal data
+                // (their own + their customers' loyalty/debt records).
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Checkbox(
+                      value: _acceptedTerms,
+                      onChanged: (v) =>
+                          setState(() => _acceptedTerms = v ?? false),
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 13),
+                        child: Text.rich(
+                          TextSpan(
+                            style: TextStyle(
+                                fontSize: 12.5,
+                                height: 1.5,
+                                color:
+                                    cs.onSurface.withValues(alpha: 0.75)),
+                            children: [
+                              const TextSpan(text: 'ฉันยอมรับ '),
+                              TextSpan(
+                                text: 'เงื่อนไขการใช้บริการ',
+                                style: TextStyle(
+                                    color: cs.primary,
+                                    fontWeight: FontWeight.w600),
+                                recognizer: _termsTap,
+                              ),
+                              const TextSpan(text: ' และ '),
+                              TextSpan(
+                                text: 'นโยบายความเป็นส่วนตัว',
+                                style: TextStyle(
+                                    color: cs.primary,
+                                    fontWeight: FontWeight.w600),
+                                recognizer: _privacyTap,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
 
                 if (_error != null) ...[
