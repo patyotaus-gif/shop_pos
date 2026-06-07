@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pokpok — ต่ออายุ / ชำระค่าบริการ</title>
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --burgundy: #7A1F2B; --burgundy-hover: #5C1820; --cream: #F5F1EC;
+      --surface: #FFFFFF; --text-dark: #1F1A1B; --text-mid: #6B5E60;
+      --border: #E5DDD3; --green: #059669; --r: 14px; --r-sm: 9px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; background: var(--cream); color: var(--text-dark); line-height: 1.6; }
+    button { font-family: inherit; cursor: pointer; }
+    input { font-family: inherit; }
+    .hidden { display: none !important; }
+
+    /* Login */
+    #login-view { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; background: var(--burgundy); }
+    .login-card { background: var(--surface); border-radius: var(--r); padding: 32px 26px; width: 100%; max-width: 360px; box-shadow: 0 20px 40px rgba(0,0,0,.2); }
+    .login-card h1 { font-size: 1.3rem; font-weight: 700; color: var(--burgundy); margin-bottom: 4px; }
+    .login-card p { font-size: .85rem; color: var(--text-mid); margin-bottom: 22px; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: .8rem; font-weight: 600; margin-bottom: 5px; }
+    .field input { width: 100%; padding: 11px 13px; border: 1.5px solid var(--border); border-radius: var(--r-sm); font-size: .95rem; }
+    .field input:focus { outline: none; border-color: var(--burgundy); }
+    .btn-primary { width: 100%; padding: 12px; background: var(--burgundy); color: #fff; border: none; border-radius: var(--r-sm); font-weight: 700; font-size: .95rem; }
+    .btn-primary:hover { background: var(--burgundy-hover); }
+    .btn-primary:disabled { opacity: .6; cursor: default; }
+    .err { color: #B91C1C; font-size: .85rem; margin-top: 12px; min-height: 1em; text-align: center; }
+
+    /* App */
+    header { background: var(--burgundy); color: var(--cream); padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; }
+    header .who { font-weight: 600; }
+    header .who small { display: block; font-weight: 400; opacity: .8; font-size: .72rem; }
+    .btn-ghost { background: rgba(255,255,255,.15); color: var(--cream); border: none; padding: 7px 14px; border-radius: var(--r-sm); font-size: .82rem; font-weight: 600; }
+    main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
+    .lead { text-align: center; margin-bottom: 6px; }
+    .lead h2 { font-size: 1.3rem; font-weight: 800; }
+    .lead p { font-size: .9rem; color: var(--text-mid); }
+
+    .billing-switch { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 3px; width: fit-content; margin: 22px auto 26px; gap: 2px; }
+    .bill-btn { padding: 8px 22px; border-radius: 7px; font-size: .9rem; font-weight: 500; border: none; background: transparent; color: var(--text-mid); }
+    .bill-btn.on { background: var(--burgundy); color: #fff; font-weight: 700; }
+    .save-pill { font-size: .68rem; background: #DCFCE7; color: #15803D; padding: 2px 7px; border-radius: 100px; font-weight: 700; margin-left: 4px; }
+
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 14px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 22px 20px; display: flex; flex-direction: column; }
+    .card.featured { border: 2px solid var(--burgundy); }
+    .plan { font-size: .78rem; font-weight: 700; color: var(--text-mid); text-transform: uppercase; letter-spacing: .8px; }
+    .price { font-size: 2.2rem; font-weight: 800; margin: 6px 0 2px; }
+    .price .cur { font-size: 1.1rem; vertical-align: top; }
+    .price .per { font-size: .85rem; color: var(--text-mid); font-weight: 400; }
+    .desc { font-size: .82rem; color: var(--text-mid); min-height: 2.6em; margin-bottom: 14px; }
+    .pay { margin-top: auto; width: 100%; padding: 11px; border-radius: var(--r-sm); font-weight: 700; font-size: .9rem; border: 1.5px solid var(--burgundy); background: transparent; color: var(--burgundy); }
+    .pay:hover { background: var(--burgundy); color: #fff; }
+    .card.featured .pay { background: var(--burgundy); color: #fff; }
+    .pay:disabled { opacity: .6; cursor: default; }
+    .badge { align-self: flex-start; background: var(--burgundy); color: #fff; font-size: .68rem; font-weight: 800; padding: 2px 10px; border-radius: 100px; margin-bottom: 8px; }
+
+    .note { text-align: center; font-size: .8rem; color: var(--text-mid); margin-top: 24px; line-height: 1.7; }
+    .note a { color: var(--burgundy); }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-view">
+  <div class="login-card">
+    <h1>ต่ออายุ Pokpok</h1>
+    <p>เข้าสู่ระบบด้วยบัญชีร้านเดียวกับในแอป</p>
+    <div class="field">
+      <label>อีเมล</label>
+      <input id="email" type="email" autocomplete="username" />
+    </div>
+    <div class="field">
+      <label>รหัสผ่าน</label>
+      <input id="password" type="password" autocomplete="current-password" />
+    </div>
+    <button class="btn-primary" id="loginBtn">เข้าสู่ระบบ</button>
+    <div class="err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-view" class="hidden">
+  <header>
+    <div class="who"><span id="shopName">ร้านของคุณ</span><small id="shopEmail"></small></div>
+    <button class="btn-ghost" id="logoutBtn">ออกจากระบบ</button>
+  </header>
+  <main>
+    <div class="lead">
+      <h2>เลือกแผนเพื่อต่ออายุ</h2>
+      <p>ชำระผ่านบัตร · PromptPay · TrueMoney — เติมเวลาใช้งานทันทีหลังจ่าย</p>
+    </div>
+
+    <div class="billing-switch">
+      <button class="bill-btn on" id="bm" onclick="setBill('monthly')">รายเดือน</button>
+      <button class="bill-btn" id="by" onclick="setBill('yearly')">รายปี <span class="save-pill">ประหยัด ~17%</span></button>
+    </div>
+
+    <div class="cards" id="cards"></div>
+
+    <div class="note">
+      ชำระแล้วระบบจะเติมเวลาให้อัตโนมัติ (รายเดือน +30 วัน · รายปี +365 วัน) — ไม่มีการตัดบัตรอัตโนมัติ<br>
+      มีปัญหาการชำระเงิน? <a href="https://lin.ee/V8eWC8Tl" target="_blank" rel="noopener">ทักไลน์ทีมงาน</a>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut }
+    from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+  import { getFirestore, doc, getDoc }
+    from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+  import { getFunctions, httpsCallable }
+    from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
+
+  const app = initializeApp({
+    apiKey: "AIzaSyDmY7ZnGfbpB66zb1pJcS2I-NCgUsiu6QA",
+    authDomain: "shop-pos-89294.firebaseapp.com",
+    projectId: "shop-pos-89294",
+    storageBucket: "shop-pos-89294.firebasestorage.app",
+    messagingSenderId: "1010156115465",
+    appId: "1:1010156115465:android:873bb66da2217c4da68ad8",
+  });
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const functions = getFunctions(app, "asia-southeast1");
+  const createCheckout = httpsCallable(functions, "createCheckoutSession");
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  // Mirrors functions/index.js PLANS — kept in sync manually.
+  const PLANS = [
+    { tier: "solo", name: "Solo", monthly: 199, yearly: "1,990", desc: "ใช้มือถือ/แท็บเล็ตของตัวเอง POS + รายงาน + PromptPay" },
+    { tier: "lite", name: "Lite", monthly: 399, yearly: "3,990", desc: "มีแท็บเล็ตแล้ว + ชุดพิมพ์ใบเสร็จ + จัดการสต็อก + ฐานลูกค้า" },
+    { tier: "full", name: "Full", monthly: 599, yearly: "5,990", desc: "ครบชุดฮาร์ดแวร์ + 3 ผู้ใช้ + สะสมแต้ม + ซ่อมถึงที่", featured: true },
+    { tier: "restaurant", name: "Restaurant", monthly: "1,199", yearly: "11,990", perLocation: true, desc: "ร้านอาหารหลายสาขา + ครัว + ผังโต๊ะ + แยกบิล" },
+  ];
+
+  let uid = null;
+  let cycle = "monthly";
+  let shopLocations = 1;
+
+  $("loginBtn").addEventListener("click", doLogin);
+  $("password").addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
+  $("logoutBtn").addEventListener("click", () => signOut(auth));
+
+  async function doLogin() {
+    const btn = $("loginBtn");
+    btn.disabled = true; $("loginErr").textContent = "";
+    try {
+      await signInWithEmailAndPassword(auth, $("email").value.trim(), $("password").value);
+    } catch (e) {
+      $("loginErr").textContent = "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      $("app-view").classList.add("hidden");
+      $("login-view").classList.remove("hidden");
+      $("password").value = "";
+      return;
+    }
+    uid = user.uid;
+    $("login-view").classList.add("hidden");
+    $("app-view").classList.remove("hidden");
+    $("shopEmail").textContent = user.email || "";
+    try {
+      const snap = await getDoc(doc(db, "shops", uid));
+      if (snap.exists()) {
+        $("shopName").textContent = snap.data().name || "ร้านของคุณ";
+        shopLocations = Math.max(1, parseInt(snap.data().locations || 1));
+      }
+    } catch (_) {}
+    render();
+  });
+
+  window.setBill = (c) => {
+    cycle = c;
+    $("bm").classList.toggle("on", c === "monthly");
+    $("by").classList.toggle("on", c === "yearly");
+    render();
+  };
+
+  function render() {
+    const el = $("cards");
+    el.innerHTML = "";
+    for (const p of PLANS) {
+      const amt = cycle === "monthly" ? p.monthly : p.yearly;
+      const per = (cycle === "monthly" ? "/เดือน" : "/ปี") + (p.perLocation ? "·สาขา" : "");
+      const card = document.createElement("div");
+      card.className = "card" + (p.featured ? " featured" : "");
+      card.innerHTML = `
+        ${p.featured ? '<span class="badge">แนะนำ</span>' : ""}
+        <div class="plan">${esc(p.name)}</div>
+        <div class="price"><span class="cur">฿</span>${esc(String(amt))}<span class="per"> ${esc(per)}</span></div>
+        <div class="desc">${esc(p.desc)}</div>
+        <button class="pay" data-tier="${p.tier}">ชำระเงิน</button>`;
+      card.querySelector(".pay").onclick = (e) => pay(p.tier, e.currentTarget);
+      el.appendChild(card);
+    }
+  }
+
+  async function pay(tier, btn) {
+    btn.disabled = true; btn.textContent = "กำลังพาไปหน้าชำระเงิน…";
+    try {
+      const res = await createCheckout({
+        shopId: uid,
+        tier,
+        billingCycle: cycle,
+        locations: tier === "restaurant" ? shopLocations : 1,
+      });
+      const url = res.data?.url;
+      if (url) { window.location.href = url; return; }
+      throw new Error("no url");
+    } catch (e) {
+      btn.disabled = false; btn.textContent = "ลองอีกครั้ง";
+      alert("เริ่มการชำระเงินไม่สำเร็จ ลองใหม่อีกครั้ง หรือทักไลน์ทีมงาน");
+    }
+  }
+</script>
+</body>
+</html>
