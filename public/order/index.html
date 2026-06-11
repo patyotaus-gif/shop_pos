@@ -577,6 +577,28 @@
   </div>
 </div>
 
+<!-- App Check (reCAPTCHA v3). This page talks to HTTP functions with plain
+     fetch(), so we run the SDK in a module and expose a best-effort token
+     getter that the script below attaches as an X-Firebase-AppCheck header. -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+  import { getToken } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app-check.js";
+  import { setupAppCheck } from "/appcheck.js";
+
+  const app = initializeApp({
+    apiKey: "AIzaSyDmY7ZnGfbpB66zb1pJcS2I-NCgUsiu6QA",
+    authDomain: "shop-pos-89294.firebaseapp.com",
+    projectId: "shop-pos-89294",
+    storageBucket: "shop-pos-89294.firebasestorage.app",
+    messagingSenderId: "1010156115465",
+    appId: "1:1010156115465:android:873bb66da2217c4da68ad8",
+  });
+  const appCheck = setupAppCheck(app);
+  window.__appCheckToken = async () => {
+    try { return (await getToken(appCheck, false)).token; } catch (_) { return null; }
+  };
+</script>
+
 <script>
   const API_KEY = 'AIzaSyDmY7ZnGfbpB66zb1pJcS2I-NCgUsiu6QA';
   const PROJECT = 'shop-pos-89294';
@@ -586,6 +608,19 @@
   const shopId = params.get('shop');
 
   const cart = {}; // productId -> { id, name, price, stock, quantity }
+
+  // Wrap fetch to attach a Firebase App Check token (reCAPTCHA v3) when the
+  // SDK module above has one ready. Best-effort: during the monitoring phase
+  // a missing token still goes through; once App Check is enforced on these
+  // /api endpoints the token is what keeps real visitors working.
+  async function apiFetch(url, opts = {}) {
+    const headers = { ...(opts.headers || {}) };
+    try {
+      const t = window.__appCheckToken ? await window.__appCheckToken() : null;
+      if (t) headers['X-Firebase-AppCheck'] = t;
+    } catch (_) {}
+    return fetch(url, { ...opts, headers });
+  }
 
   // ── Parse Firestore REST response ──
   function parseValue(v) {
@@ -609,7 +644,7 @@
       // Single endpoint returns the public shop name + products (whitelisted
       // fields only). No public Firestore reads — shop doc + products are
       // owner-only; this server reads them with admin rights.
-      const shopRes = await fetch(`/api/shopPublic?shop=${shopId}`);
+      const shopRes = await apiFetch(`/api/shopPublic?shop=${shopId}`);
       if (!shopRes.ok) { showError('ไม่พบร้านค้านี้'); return; }
       const shopData = await shopRes.json();
       const shopName = shopData.name || 'ร้านค้า';
@@ -806,7 +841,7 @@
     payBtn.innerHTML = '<span class="spinner"></span>กำลังดำเนินการ...';
 
     try {
-      const res = await fetch('/api/createPromptPayOrder', {
+      const res = await apiFetch('/api/createPromptPayOrder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ shopId, customerName: name, customerPhone: phone, items }),
@@ -886,7 +921,7 @@
       // POST a 10MB payload.
       const slipBase64 = await fileToBase64Compressed(file, 1600);
 
-      const res = await fetch('/api/verifyPromptPaySlip', {
+      const res = await apiFetch('/api/verifyPromptPaySlip', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

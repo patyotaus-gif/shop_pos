@@ -121,6 +121,7 @@
     from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
   import { getFunctions, httpsCallable }
     from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
+  import { setupAppCheck } from "/appcheck.js";
 
   const app = initializeApp({
     apiKey: "AIzaSyDmY7ZnGfbpB66zb1pJcS2I-NCgUsiu6QA",
@@ -130,6 +131,8 @@
     messagingSenderId: "1010156115465",
     appId: "1:1010156115465:android:873bb66da2217c4da68ad8",
   });
+  // App Check first, so tokens attach to the createCheckoutSession call below.
+  setupAppCheck(app);
   const auth = getAuth(app);
   const db = getFirestore(app);
   const functions = getFunctions(app, "asia-southeast1");
