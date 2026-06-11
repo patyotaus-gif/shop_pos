@@ -93,6 +93,14 @@ exports.createCheckoutSession = onCall(
     if (!shopId) {
       throw new Error("shopId is required");
     }
+    // Only the signed-in owner may start a checkout for their own shop —
+    // the callable is invoked from the web /subscribe page after login.
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Login required");
+    }
+    if (request.auth.uid !== shopId) {
+      throw new HttpsError("permission-denied", "shopId mismatch");
+    }
 
     // Resolve which plan to bill. If a tier is sent, use the new path;
     // otherwise treat the legacy `plan` as a billingCycle on the Full tier.
@@ -788,22 +796,11 @@ exports.lineWebhook = onRequest(
       if (event.type === "message" && event.message?.type === "text") {
         const text = event.message.text.trim().toLowerCase();
 
-        // รองรับ command เชื่อม shop: "link:SHOP_ID"
-        if (text.startsWith("link:")) {
-          const shopId = text.replace("link:", "").trim();
-          if (shopId) {
-            await admin.firestore()
-              .collection("shops").doc(shopId)
-              .collection("settings").doc("shop")
-              .set({ lineUserId: userId, lineNotifyEnabled: true }, { merge: true });
-
-            await _lineReply(token, event.replyToken, [{
-              type: "text",
-              text: `✅ เชื่อมต่อสำเร็จ!\nร้านค้า ${shopId} จะได้รับแจ้งเตือนออเดอร์ใหม่ผ่าน LINE แล้ว`
-            }]);
-          }
-          continue;
-        }
+        // NOTE: เคยมีคำสั่ง "link:SHOP_ID" ที่เขียน lineUserId ลงร้านโดยตรง
+        // แต่ถอดออกเพราะไม่ได้ยืนยันความเป็นเจ้าของ — ใครรู้ shopId (หลุดจาก
+        // URL หน้าสั่งของ) ก็แย่งการแจ้งเตือนออเดอร์ของร้านอื่นได้. การเชื่อม
+        // LINE ทำผ่านเจ้าของเท่านั้น: พิมพ์ "ID" รับ User ID แล้วเอาไปวางใน
+        // แอป (ตั้งค่า) / พอร์ทัลซัพพลายเออร์ ซึ่งเขียนได้เฉพาะเจ้าของ.
 
         // คีย์เวิร์ดขอ User ID — ตอบเฉพาะเมื่อถามตรง ๆ เท่านั้น เพื่อไม่ให้
         // ลูกค้าทั่วไปที่ทักมาถามได้ User ID งง ๆ กลับไป
