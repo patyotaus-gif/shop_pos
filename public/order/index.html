@@ -606,24 +606,17 @@
   async function init() {
     if (!shopId) { showError('ลิงก์ไม่ถูกต้อง — ไม่พบ shop ID'); return; }
     try {
-      const [shopRes, productsRes] = await Promise.all([
-        // The shop doc is owner-only (holds the owner's email); this
-        // endpoint returns just the public display name.
-        fetch(`/api/shopPublic?shop=${shopId}`),
-        fetch(`${FIRESTORE}/shops/${shopId}/products?key=${API_KEY}&pageSize=200`),
-      ]);
+      // Single endpoint returns the public shop name + products (whitelisted
+      // fields only). No public Firestore reads — shop doc + products are
+      // owner-only; this server reads them with admin rights.
+      const shopRes = await fetch(`/api/shopPublic?shop=${shopId}`);
       if (!shopRes.ok) { showError('ไม่พบร้านค้านี้'); return; }
       const shopData = await shopRes.json();
       const shopName = shopData.name || 'ร้านค้า';
       document.getElementById('shopName').textContent = shopName;
       document.title = `สั่งสินค้า — ${shopName}`;
 
-      const productsData = await productsRes.json();
-      const allProducts = (productsData.documents || []).map(parseDoc);
-      // แสดงเฉพาะสินค้าที่มี stock > 0
-      const products = allProducts.filter(p => p.stock !== undefined);
-
-      renderProducts(products);
+      renderProducts(shopData.products || []);
       document.getElementById('loading').style.display = 'none';
       document.getElementById('products').style.display = 'grid';
     } catch (e) {

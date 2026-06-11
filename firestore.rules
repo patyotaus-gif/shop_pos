@@ -16,9 +16,10 @@ service cloud.firestore {
         return request.auth != null && request.auth.uid == shopId;
       }
 
-      // ลูกค้าอ่านสินค้าได้ (สำหรับหน้าสั่งออนไลน์)
+      // สินค้าอ่านได้เฉพาะเจ้าของ — หน้าสั่งของลูกค้าดึงผ่าน Cloud Function
+      // getShopPublic (whitelist field, ซ่อนราคาทุน) ไม่อ่าน Firestore ตรง
       match /products/{productId} {
-        allow read: if true;
+        allow read: if isOwner();
         allow write: if isOwner();
       }
 

@@ -162,14 +162,38 @@ exports.getShopPublic = onRequest({ cors: true }, async (req, res) => {
     res.status(400).json({ error: "shop required" });
     return;
   }
-  const snap = await admin.firestore().collection("shops").doc(shopId).get();
-  if (!snap.exists) {
+  const db = admin.firestore();
+  const shopSnap = await db.collection("shops").doc(shopId).get();
+  if (!shopSnap.exists) {
     res.status(404).json({ error: "not found" });
     return;
   }
-  const d = snap.data() || {};
-  // Whitelist: only fields safe to show a public customer.
-  res.json({ name: d.name || "ร้านค้า" });
+  const shop = shopSnap.data() || {};
+
+  // Products served here too so the order page makes no public Firestore
+  // reads (App-Check-enforceable later). Whitelist display fields only —
+  // never leak cost price or other internal fields to a customer.
+  const prodSnap = await db
+    .collection("shops")
+    .doc(shopId)
+    .collection("products")
+    .limit(300)
+    .get();
+  const products = [];
+  for (const doc of prodSnap.docs) {
+    const p = doc.data() || {};
+    if (typeof p.stock !== "number") continue;
+    products.push({
+      id: doc.id,
+      name: p.name || "",
+      price: Number(p.price || 0),
+      stock: p.stock,
+      category: p.category || "",
+      imageUrl: p.imageUrl || "",
+    });
+  }
+
+  res.json({ name: shop.name || "ร้านค้า", products });
 });
 
 // ────────────────────────────────────────────────
