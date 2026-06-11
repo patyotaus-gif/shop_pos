@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/shop.dart';
+import '../services/auth_service.dart';
 import '../services/shop_service.dart';
+import '../widgets/app_version_text.dart';
 
 /// Subscription status + renewal screen. Used both as the gated screen when
 /// a trial/subscription lapses and as the "แผนการใช้งาน" destination from
@@ -15,6 +17,25 @@ import '../services/shop_service.dart';
 class SubscriptionScreen extends StatelessWidget {
   const SubscriptionScreen({super.key});
 
+  Future<void> _confirmSignOut(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('ออกจากระบบ?'),
+        content: const Text('คุณจะต้องเข้าสู่ระบบใหม่อีกครั้ง'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('ยกเลิก')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('ออกจากระบบ')),
+        ],
+      ),
+    );
+    if (ok == true) await AuthService.signOut();
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<Shop?>(
@@ -25,6 +46,15 @@ class SubscriptionScreen extends StatelessWidget {
           appBar: AppBar(
             title: const Text('แผนการใช้งาน'),
             centerTitle: true,
+            // The gate shows this screen when access lapses; without this
+            // there's no way out of a logged-in-but-expired account.
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.logout),
+                tooltip: 'ออกจากระบบ',
+                onPressed: () => _confirmSignOut(context),
+              ),
+            ],
           ),
           body: SafeArea(
             child: ListView(
@@ -35,6 +65,8 @@ class SubscriptionScreen extends StatelessWidget {
                 const _RenewOnWebCard(),
                 const SizedBox(height: 16),
                 _MarketplaceFootnote(),
+                const SizedBox(height: 20),
+                const AppVersionText(),
               ],
             ),
           ),

@@ -12,6 +12,7 @@ import '../services/line_service.dart';
 import '../services/settings_service.dart';
 import '../services/shop_service.dart';
 import '../services/theme_service.dart';
+import '../widgets/app_version_text.dart';
 import '../widgets/upgrade_prompt.dart';
 import 'customers_screen.dart';
 import 'founder_console_screen.dart';
@@ -911,6 +912,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         side: const BorderSide(color: Colors.red)),
                   ),
                 ),
+                const SizedBox(height: 20),
+                const AppVersionText(),
+                const SizedBox(height: 8),
               ],
             ),
     );

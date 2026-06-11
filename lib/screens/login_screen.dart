@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
+import '../widgets/app_version_text.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -248,6 +249,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       side: const BorderSide(color: Color(0xFF06C755)),
                     ),
                   ),
+                  const SizedBox(height: 20),
+                  const AppVersionText(),
                 ],
               ),
             ),
