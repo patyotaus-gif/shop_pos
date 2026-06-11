@@ -1,5 +1,7 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -55,6 +57,18 @@ void main() async {
     themeNotifier.value = await ThemeService.load();
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)
         .timeout(const Duration(seconds: 15));
+    // App Check (monitoring) — attests the app to Firebase backends so we
+    // can later enforce that requests come from the real app. Release uses
+    // Play Integrity / App Attest; debug builds use the debug provider.
+    // Wrapped so an attestation hiccup never blocks startup.
+    try {
+      await FirebaseAppCheck.instance.activate(
+        androidProvider:
+            kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
+        appleProvider:
+            kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
+      );
+    } catch (_) {}
     await NotificationService.init().timeout(const Duration(seconds: 10));
     // Subscribe to bank notifications (Android only; no-op elsewhere).
     // Does not request permission — user enables that explicitly from
