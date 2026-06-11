@@ -3,12 +3,11 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     match /shops/{shopId} {
-      // ลูกค้าเปิดหน้าสั่งของด้วย shopId → อ่านร้านทีละร้าน (get) ได้
-      // แต่ปิด list เพื่อกันการดึงรายชื่อร้าน + อีเมลเจ้าของทั้งหมด
-      // (collection enumeration). หมายเหตุ: get ตัวเดียวยังเห็นทั้ง doc —
-      // ถ้าจะซ่อนอีเมลให้มิดต้อง refactor เป็น public-name doc/ฟังก์ชันภายหลัง.
-      allow get: if true;
-      allow list: if false;
+      // shop doc ถือข้อมูลส่วนบุคคล (อีเมลเจ้าของ + สถานะ subscription) →
+      // อ่านได้เฉพาะเจ้าของ. หน้าสั่งของลูกค้าดึงชื่อร้านผ่าน Cloud Function
+      // getShopPublic (/api/shopPublic) ที่คืนเฉพาะ field สาธารณะแทน.
+      // (สินค้าใน subcollection products ยังอ่าน public ได้ — rule แยกด้านล่าง)
+      allow read: if request.auth != null && request.auth.uid == shopId;
       // เฉพาะเจ้าของร้านเท่านั้นที่แก้ไขข้อมูลร้านได้
       allow write: if request.auth != null && request.auth.uid == shopId;
 

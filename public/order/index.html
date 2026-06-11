@@ -607,12 +607,14 @@
     if (!shopId) { showError('ลิงก์ไม่ถูกต้อง — ไม่พบ shop ID'); return; }
     try {
       const [shopRes, productsRes] = await Promise.all([
-        fetch(`${FIRESTORE}/shops/${shopId}?key=${API_KEY}`),
+        // The shop doc is owner-only (holds the owner's email); this
+        // endpoint returns just the public display name.
+        fetch(`/api/shopPublic?shop=${shopId}`),
         fetch(`${FIRESTORE}/shops/${shopId}/products?key=${API_KEY}&pageSize=200`),
       ]);
       if (!shopRes.ok) { showError('ไม่พบร้านค้านี้'); return; }
       const shopData = await shopRes.json();
-      const shopName = shopData.fields?.name?.stringValue || 'ร้านค้า';
+      const shopName = shopData.name || 'ร้านค้า';
       document.getElementById('shopName').textContent = shopName;
       document.title = `สั่งสินค้า — ${shopName}`;
 

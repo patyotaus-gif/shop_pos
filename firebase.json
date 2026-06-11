@@ -36,6 +36,13 @@
     ],
     "rewrites": [
       {
+        "source": "/api/shopPublic",
+        "function": {
+          "functionId": "getShopPublic",
+          "region": "asia-southeast1"
+        }
+      },
+      {
         "source": "/api/createOrderCheckout",
         "function": {
           "functionId": "createOrderCheckout",

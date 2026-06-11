@@ -151,6 +151,28 @@ exports.createCheckoutSession = onCall(
 );
 
 // ────────────────────────────────────────────────
+// Public shop info for the customer order page. The shop doc is locked to
+// its owner (it holds the owner's email + subscription state), so the order
+// page asks this endpoint instead — it returns only the non-PII display
+// fields. No backfill needed since it reads the live shop doc.
+// ────────────────────────────────────────────────
+exports.getShopPublic = onRequest({ cors: true }, async (req, res) => {
+  const shopId = String(req.query.shop || "").trim();
+  if (!shopId) {
+    res.status(400).json({ error: "shop required" });
+    return;
+  }
+  const snap = await admin.firestore().collection("shops").doc(shopId).get();
+  if (!snap.exists) {
+    res.status(404).json({ error: "not found" });
+    return;
+  }
+  const d = snap.data() || {};
+  // Whitelist: only fields safe to show a public customer.
+  res.json({ name: d.name || "ร้านค้า" });
+});
+
+// ────────────────────────────────────────────────
 // Online order checkout (เรียกจากหน้าเว็บลูกค้า)
 // ────────────────────────────────────────────────
 exports.createOrderCheckout = onRequest(
