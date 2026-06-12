@@ -1641,12 +1641,13 @@ exports.notifySupplierNewOrder = onDocumentCreated(
   }
 );
 
-// ── Subscription renewal reminders (reduce churn) ──────────────────────────
-// Runs once a day and nudges shops whose free trial or paid plan is about to
-// lapse (or just lapsed) on a fixed set of day-out buckets. Each shop is
-// notified at most once per (end date, bucket) thanks to a stored dedup key,
-// so scheduler retries or a re-run never double-notify.
-const RENEWAL_BUCKETS = [7, 3, 1, 0]; // days before end (0 = expiry day)
+// ── Subscription renewal + winback reminders (reduce churn) ────────────────
+// Runs once a day. Before expiry it nudges trial/active shops to renew; after
+// expiry it tries to win lapsed shops back. Each shop is notified at most once
+// per (end date, bucket) via a stored dedup key, so scheduler retries or a
+// re-run never double-notify.
+const RENEWAL_BUCKETS = [7, 3, 1, 0];   // days before end (0 = expiry day)
+const WINBACK_BUCKETS = [-3, -14, -30]; // days after expiry
 
 exports.sendRenewalReminders = onSchedule(
   {
@@ -1661,10 +1662,13 @@ exports.sendRenewalReminders = onSchedule(
       now.getFullYear(), now.getMonth(), now.getDate()
     );
 
-    // Only trial/active shops can be "ending soon"; expired ones already lapsed.
+    // trial/active → renewal (before expiry); expired → winback (after). A
+    // still-"active" shop whose end date has passed (status never flipped) also
+    // falls into the winback buckets below, which is what we want.
     const snaps = await Promise.all([
       db.collection("shops").where("subscriptionStatus", "==", "trial").get(),
       db.collection("shops").where("subscriptionStatus", "==", "active").get(),
+      db.collection("shops").where("subscriptionStatus", "==", "expired").get(),
     ]);
 
     let sent = 0;
@@ -1672,9 +1676,11 @@ exports.sendRenewalReminders = onSchedule(
       for (const doc of snap.docs) {
         const shop = doc.data();
         const isTrial = shop.subscriptionStatus === "trial";
-        const endsAt = isTrial
-          ? shop.trialEndsAt?.toDate?.()
-          : shop.subscriptionEndsAt?.toDate?.();
+        // Expired shops may have lapsed from either trial or a paid plan, so
+        // fall back to whichever end date exists.
+        const endsAt = (isTrial
+          ? shop.trialEndsAt
+          : (shop.subscriptionEndsAt ?? shop.trialEndsAt))?.toDate?.();
         if (!endsAt) continue;
 
         // Whole-day countdown from local midnight, so "1 day left" is stable
@@ -1683,14 +1689,20 @@ exports.sendRenewalReminders = onSchedule(
           endsAt.getFullYear(), endsAt.getMonth(), endsAt.getDate()
         );
         const daysLeft = Math.round((endDay - startOfToday) / 86400000);
-        if (!RENEWAL_BUCKETS.includes(daysLeft)) continue;
+        const isWinback = daysLeft < 0;
+        const inBucket = isWinback
+          ? WINBACK_BUCKETS.includes(daysLeft)
+          : RENEWAL_BUCKETS.includes(daysLeft);
+        if (!inBucket) continue;
 
         // The key changes when the owner renews (endsAt moves) or a new bucket
         // is reached, so a given reminder fires exactly once.
         const key = `${endsAt.getTime()}:${daysLeft}`;
         if (shop.lastRenewalReminderKey === key) continue;
 
-        const { title, body } = renewalMessage(isTrial, daysLeft);
+        const { title, body } = isWinback
+          ? winbackMessage(daysLeft)
+          : renewalMessage(isTrial, daysLeft);
 
         // FCM — reuse the existing `new_orders` channel so the push displays on
         // every installed app version (a brand-new channel would be missing on
@@ -1717,9 +1729,10 @@ exports.sendRenewalReminders = onSchedule(
           const lineUserId = setDoc.data()?.lineUserId;
           const lineEnabled = setDoc.data()?.lineNotifyEnabled !== false;
           if (lineUserId && lineEnabled) {
+            const cta = isWinback ? "กลับมาใช้งานที่นี่:" : "ต่ออายุที่นี่:";
             await _linePush(lineChannelAccessToken.value(), lineUserId, [{
               type: "text",
-              text: `${title}\n${body}\n\nต่ออายุที่นี่:\nhttps://pok-pok.app/subscribe`,
+              text: `${title}\n${body}\n\n${cta}\nhttps://pok-pok.app/subscribe`,
             }]);
           }
         } catch (e) {
@@ -1730,9 +1743,21 @@ exports.sendRenewalReminders = onSchedule(
         sent++;
       }
     }
-    console.log(`Renewal reminders sent: ${sent}`);
+    console.log(`Renewal/winback reminders sent: ${sent}`);
   }
 );
+
+// Win-back nudge for shops whose plan lapsed `-daysLeft` days ago. Leads with
+// reassurance that their data is intact to lower the friction of coming back.
+function winbackMessage(daysLeft) {
+  const ago = -daysLeft;
+  return {
+    title: "กลับมาใช้ Pokpok อีกครั้งไหม?",
+    body:
+      `แพ็กเกจหมดมา ${ago} วันแล้ว — ข้อมูลร้าน สินค้า และลูกค้ายังอยู่ครบ ` +
+      `ต่ออายุเมื่อไหร่ใช้ต่อได้ทันที`,
+  };
+}
 
 // Builds the title/body for a renewal nudge. Tone stays gentle — these go to
 // paying customers and people still on the free trial.
