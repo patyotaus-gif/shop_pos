@@ -9,7 +9,7 @@
 import { initializeAppCheck, ReCaptchaV3Provider }
   from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app-check.js";
 
-export const RECAPTCHA_SITE_KEY = "6Ld3oRktAAAAALXvbO67phOApeT3chrI99j4yu6h";
+export const RECAPTCHA_SITE_KEY = "6Ld3oRktAAAAALXvbO67phOApeT3chrl99j4yu6h";
 
 // Attaches App Check tokens to every Firebase SDK call (Firestore, Functions,
 // Storage) made through `app`. Call once, right after initializeApp() and
