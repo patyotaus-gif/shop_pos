@@ -21,6 +21,18 @@ class FounderConsoleScreen extends StatelessWidget {
         appBar: AppBar(
           title: const Text('ผู้ดูแลระบบ'),
           centerTitle: true,
+          actions: [
+            Builder(
+              builder: (context) => IconButton(
+                tooltip: 'จัดการผู้ดูแล',
+                icon: const Icon(Icons.admin_panel_settings_outlined),
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (_) => const _GrantFounderDialog(),
+                ),
+              ),
+            ),
+          ],
           bottom: const TabBar(
             tabs: [
               Tab(text: 'ร้านค้า'),
@@ -848,6 +860,110 @@ class _ErrorView extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ─────────────────────────── Manage founders ───────────────────────────
+
+/// Grant or revoke the founder custom claim by email. The change takes effect
+/// on that user's next token refresh / re-login.
+class _GrantFounderDialog extends StatefulWidget {
+  const _GrantFounderDialog();
+  @override
+  State<_GrantFounderDialog> createState() => _GrantFounderDialogState();
+}
+
+class _GrantFounderDialogState extends State<_GrantFounderDialog> {
+  final _email = TextEditingController();
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    super.dispose();
+  }
+
+  Future<void> _set(bool founder) async {
+    final email = _email.text.trim();
+    if (email.isEmpty) return;
+    setState(() => _busy = true);
+    try {
+      await AdminService.setFounder(email, founder);
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(founder
+            ? 'ให้สิทธิ์ผู้ดูแลแก่ $email แล้ว (ผู้ใช้ต้องล็อกอินใหม่)'
+            : 'ถอนสิทธิ์ผู้ดูแลของ $email แล้ว'),
+      ));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(_friendlyError(e))));
+    }
+  }
+
+  String _friendlyError(Object e) {
+    final m = e.toString();
+    if (m.contains('No user')) return 'ไม่พบบัญชีที่ใช้อีเมลนี้';
+    if (m.contains('bootstrap')) {
+      return 'บัญชีนี้เป็นผู้ดูแลหลัก ถอนสิทธิ์ไม่ได้';
+    }
+    if (m.contains('Founder only') || m.contains('permission-denied')) {
+      return 'เฉพาะผู้ดูแลเท่านั้น';
+    }
+    return 'เกิดข้อผิดพลาด ลองใหม่อีกครั้ง';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('จัดการผู้ดูแลระบบ'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'ให้/ถอนสิทธิ์ผู้ดูแล (founder) ด้วยอีเมลบัญชีที่มีอยู่ '
+            'การเปลี่ยนแปลงมีผลเมื่อผู้ใช้ล็อกอินใหม่',
+            style: TextStyle(fontSize: 13),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _email,
+            enabled: !_busy,
+            keyboardType: TextInputType.emailAddress,
+            autocorrect: false,
+            decoration: const InputDecoration(
+              labelText: 'อีเมล',
+              hintText: 'name@example.com',
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.pop(context),
+          child: const Text('ปิด'),
+        ),
+        TextButton(
+          onPressed: _busy ? null : () => _set(false),
+          child: const Text('ถอนสิทธิ์'),
+        ),
+        FilledButton(
+          onPressed: _busy ? null : () => _set(true),
+          child: _busy
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('ให้สิทธิ์'),
+        ),
+      ],
     );
   }
 }

@@ -1118,19 +1118,62 @@ exports.applyReferral = onCall(async (request) => {
 // is locked to the founder's account by an email allowlist. No shop owner
 // can call it, and the client never reads other shops directly — rules
 // stay per-owner.
+// Bootstrap allowlist — kept so the original founder can never be locked out
+// even if custom claims get cleared. New founders are added via the `founder`
+// custom claim (adminSetFounder), no code deploy needed.
 const FOUNDER_EMAILS = ["patyotaus@gmail.com"];
 
-// Throws unless the caller is signed in as a founder. Every admin/ops
-// callable funnels through here so the allowlist lives in one place.
+// Throws unless the caller is a founder: either carries the `founder` custom
+// claim (the forward path) or is on the bootstrap email allowlist. Every
+// admin/ops callable funnels through here.
 function assertFounder(request) {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Login required");
   }
-  const email = String(request.auth.token.email || "").toLowerCase();
-  if (!FOUNDER_EMAILS.includes(email)) {
-    throw new HttpsError("permission-denied", "Founder only");
+  const token = request.auth.token || {};
+  const email = String(token.email || "").toLowerCase();
+  if (token.founder === true || FOUNDER_EMAILS.includes(email)) {
+    return;
   }
+  throw new HttpsError("permission-denied", "Founder only");
 }
+
+// Grant or revoke the `founder` custom claim on a user (looked up by email).
+// Founder-gated. The claim takes effect on that user's next token refresh /
+// re-login. Bootstrap-allowlist accounts can't be revoked (so the original
+// founder stays an admin no matter what).
+exports.adminSetFounder = onCall(async (request) => {
+  assertFounder(request);
+
+  const email = String(request.data?.email || "").trim().toLowerCase();
+  const founder = request.data?.founder === true;
+  if (!email) {
+    throw new HttpsError("invalid-argument", "email required");
+  }
+
+  let user;
+  try {
+    user = await admin.auth().getUserByEmail(email);
+  } catch (_) {
+    throw new HttpsError("not-found", "No user with that email");
+  }
+
+  if (!founder && FOUNDER_EMAILS.includes(email)) {
+    throw new HttpsError(
+      "failed-precondition",
+      "This is a bootstrap founder and cannot be revoked"
+    );
+  }
+
+  const claims = { ...(user.customClaims || {}) };
+  if (founder) {
+    claims.founder = true;
+  } else {
+    delete claims.founder;
+  }
+  await admin.auth().setCustomUserClaims(user.uid, claims);
+  return { uid: user.uid, email, founder };
+});
 
 exports.opsMetrics = onCall(async (request) => {
   assertFounder(request);

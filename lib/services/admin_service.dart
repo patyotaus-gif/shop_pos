@@ -42,6 +42,11 @@ class AdminService {
   static Future<void> expire(String shopId) =>
       _fn('adminSetSubscription').call({'shopId': shopId, 'op': 'expire'});
 
+  /// Grant or revoke the founder custom claim for the account with [email].
+  /// Takes effect on that user's next token refresh / re-login.
+  static Future<void> setFounder(String email, bool founder) =>
+      _fn('adminSetFounder').call({'email': email, 'founder': founder});
+
   static Future<void> setHardwareStatus(
     String shopId,
     String requestId, {

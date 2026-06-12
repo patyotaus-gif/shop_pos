@@ -169,6 +169,10 @@ class ShopPosApp extends StatelessWidget {
             return const _PokpokSplash();
           }
           if (snap.data == null) return const LoginScreen();
+          // Load the founder custom claim for an already-signed-in user (app
+          // relaunch); signIn() covers the fresh-login path. Fire-and-forget —
+          // UI gates on the cached value once it resolves.
+          AuthService.refreshFounderClaim();
           return const SubscriptionGate(child: MainShell());
         },
       ),
