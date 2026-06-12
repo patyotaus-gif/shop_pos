@@ -1,5 +1,6 @@
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const admin = require("firebase-admin");
 const { defineSecret } = require("firebase-functions/params");
@@ -1596,3 +1597,122 @@ exports.notifySupplierNewOrder = onDocumentCreated(
     ]);
   }
 );
+
+// ── Subscription renewal reminders (reduce churn) ──────────────────────────
+// Runs once a day and nudges shops whose free trial or paid plan is about to
+// lapse (or just lapsed) on a fixed set of day-out buckets. Each shop is
+// notified at most once per (end date, bucket) thanks to a stored dedup key,
+// so scheduler retries or a re-run never double-notify.
+const RENEWAL_BUCKETS = [7, 3, 1, 0]; // days before end (0 = expiry day)
+
+exports.sendRenewalReminders = onSchedule(
+  {
+    schedule: "every day 09:00",
+    timeZone: "Asia/Bangkok",
+    secrets: [lineChannelAccessToken],
+  },
+  async () => {
+    const db = admin.firestore();
+    const now = new Date();
+    const startOfToday = new Date(
+      now.getFullYear(), now.getMonth(), now.getDate()
+    );
+
+    // Only trial/active shops can be "ending soon"; expired ones already lapsed.
+    const snaps = await Promise.all([
+      db.collection("shops").where("subscriptionStatus", "==", "trial").get(),
+      db.collection("shops").where("subscriptionStatus", "==", "active").get(),
+    ]);
+
+    let sent = 0;
+    for (const snap of snaps) {
+      for (const doc of snap.docs) {
+        const shop = doc.data();
+        const isTrial = shop.subscriptionStatus === "trial";
+        const endsAt = isTrial
+          ? shop.trialEndsAt?.toDate?.()
+          : shop.subscriptionEndsAt?.toDate?.();
+        if (!endsAt) continue;
+
+        // Whole-day countdown from local midnight, so "1 day left" is stable
+        // no matter what time of day the job happens to run.
+        const endDay = new Date(
+          endsAt.getFullYear(), endsAt.getMonth(), endsAt.getDate()
+        );
+        const daysLeft = Math.round((endDay - startOfToday) / 86400000);
+        if (!RENEWAL_BUCKETS.includes(daysLeft)) continue;
+
+        // The key changes when the owner renews (endsAt moves) or a new bucket
+        // is reached, so a given reminder fires exactly once.
+        const key = `${endsAt.getTime()}:${daysLeft}`;
+        if (shop.lastRenewalReminderKey === key) continue;
+
+        const { title, body } = renewalMessage(isTrial, daysLeft);
+
+        // FCM — reuse the existing `new_orders` channel so the push displays on
+        // every installed app version (a brand-new channel would be missing on
+        // older installs and silently dropped on Android 8+).
+        if (shop.fcmToken) {
+          try {
+            await admin.messaging().send({
+              token: shop.fcmToken,
+              notification: { title, body },
+              android: {
+                notification: { channelId: "new_orders", priority: "high" },
+              },
+            });
+          } catch (e) {
+            console.error(`renewal FCM failed for ${doc.id}:`, e.message);
+          }
+        }
+
+        // LINE — same opt-in switch as order notifications.
+        try {
+          const setDoc = await db
+            .collection("shops").doc(doc.id)
+            .collection("settings").doc("shop").get();
+          const lineUserId = setDoc.data()?.lineUserId;
+          const lineEnabled = setDoc.data()?.lineNotifyEnabled !== false;
+          if (lineUserId && lineEnabled) {
+            await _linePush(lineChannelAccessToken.value(), lineUserId, [{
+              type: "text",
+              text: `${title}\n${body}\n\nต่ออายุที่นี่:\nhttps://pok-pok.app/subscribe`,
+            }]);
+          }
+        } catch (e) {
+          console.error(`renewal LINE failed for ${doc.id}:`, e.message);
+        }
+
+        await doc.ref.update({ lastRenewalReminderKey: key });
+        sent++;
+      }
+    }
+    console.log(`Renewal reminders sent: ${sent}`);
+  }
+);
+
+// Builds the title/body for a renewal nudge. Tone stays gentle — these go to
+// paying customers and people still on the free trial.
+function renewalMessage(isTrial, daysLeft) {
+  if (daysLeft === 0) {
+    return isTrial
+      ? {
+          title: "ช่วงทดลองใช้หมดวันนี้",
+          body: "สมัครแพ็กเกจวันนี้เพื่อใช้ Pokpok ต่อได้ไม่สะดุด",
+        }
+      : {
+          title: "แพ็กเกจหมดอายุวันนี้",
+          body: "ต่ออายุวันนี้เพื่อใช้งานต่อเนื่อง",
+        };
+  }
+  const when = daysLeft === 1 ? "พรุ่งนี้" : `อีก ${daysLeft} วัน`;
+  return isTrial
+    ? {
+        title: `ทดลองใช้ฟรีเหลือ ${daysLeft} วัน`,
+        body: `ช่วงทดลองจะหมด${when} — สมัครต่อเพื่อใช้งานต่อเนื่อง`,
+      }
+    : {
+        title: `แพ็กเกจจะหมดอายุ${when}`,
+        body: `ต่ออายุก่อนหมด${when} เพื่อใช้งานไม่สะดุด`,
+      };
+}
