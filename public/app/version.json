@@ -1,8 +1,8 @@
 {
-  "version": "1.2.11",
-  "build": 26,
+  "version": "1.2.12",
+  "build": 27,
   "url": "https://pok-pok.app/app/pokpok.apk",
   "minSupportedBuild": 1,
   "mandatory": false,
-  "notes": "ปรับปรุงความปลอดภัย (App Check) + ออกจากระบบได้แม้บัญชีหมดอายุ + แสดงเลขเวอร์ชัน + ต่ออายุผ่านเว็บ + แจ้งเตือนออเดอร์ผ่าน LINE"
+  "notes": "เปลี่ยนชื่อแอปเป็น Pokpok POS + ปรับปรุงเสถียรภาพและความปลอดภัย"
 }
