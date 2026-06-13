@@ -600,10 +600,6 @@
 </script>
 
 <script>
-  const API_KEY = 'AIzaSyDmY7ZnGfbpB66zb1pJcS2I-NCgUsiu6QA';
-  const PROJECT = 'shop-pos-89294';
-  const FIRESTORE = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents`;
-
   const params = new URLSearchParams(window.location.search);
   const shopId = params.get('shop');
 
@@ -620,21 +616,6 @@
       if (t) headers['X-Firebase-AppCheck'] = t;
     } catch (_) {}
     return fetch(url, { ...opts, headers });
-  }
-
-  // ── Parse Firestore REST response ──
-  function parseValue(v) {
-    if (!v) return null;
-    if (v.stringValue !== undefined) return v.stringValue;
-    if (v.integerValue !== undefined) return parseInt(v.integerValue);
-    if (v.doubleValue !== undefined) return parseFloat(v.doubleValue);
-    if (v.booleanValue !== undefined) return v.booleanValue;
-    return null;
-  }
-  function parseDoc(doc) {
-    const result = { id: doc.name.split('/').pop() };
-    for (const [k, v] of Object.entries(doc.fields || {})) result[k] = parseValue(v);
-    return result;
   }
 
   // ── Load shop + products ──
