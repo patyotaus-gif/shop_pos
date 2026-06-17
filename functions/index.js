@@ -811,7 +811,10 @@ function _verifyLineSignature(secret, rawBody, signature) {
 // LINE Webhook — รับ events จาก LINE platform
 // ────────────────────────────────────────────────
 exports.lineWebhook = onRequest(
-  { secrets: [lineChannelAccessToken, lineChannelSecret], rawBody: true },
+  {
+    secrets: [lineChannelAccessToken, lineChannelSecret, geminiApiKey],
+    rawBody: true,
+  },
   async (req, res) => {
     const signature = req.headers["x-line-signature"];
     if (!signature || !_verifyLineSignature(lineChannelSecret.value(), req.rawBody, signature)) {
@@ -866,13 +869,12 @@ exports.lineWebhook = onRequest(
           continue;
         }
 
-        // ข้อความทั่วไป → ตอบสุภาพ + บอกวิธีขอ User ID
-        await _lineReply(token, event.replyToken, [{
-          type: "text",
-          text:
-            "ขอบคุณที่ติดต่อ Pokpok 🙏\nทีมงานจะตอบกลับโดยเร็วที่สุด\n\n" +
-            "(อยากรับแจ้งเตือนออเดอร์ผ่าน LINE? พิมพ์ \"ID\" เพื่อรับ LINE User ID ของคุณ)"
-        }]);
+        // ข้อความทั่วไป → ให้ AI (Gemini) ตอบเป็นผู้ช่วยซัพพอร์ต Pokpok.
+        // ใช้ข้อความดิบ (ไม่ใช่ตัวพิมพ์เล็กที่ normalize ไว้สำหรับ keyword).
+        const aiText = await _lineAiReply(
+          geminiApiKey.value(), userId, event.message.text
+        );
+        await _lineReply(token, event.replyToken, [{ type: "text", text: aiText }]);
       }
     }
 
@@ -1039,6 +1041,78 @@ exports.aiChat = onCall(
     };
   }
 );
+
+// ────────────────────────────────────────────────
+// LINE chat bot — AI auto-reply (Gemini)
+// ────────────────────────────────────────────────
+// Powers the general-message branch of lineWebhook. Replies go out via the
+// (free, unmetered) reply token, so the only cost is Gemini — bounded by a
+// per-LINE-user daily cap since the webhook is a public endpoint.
+const LINE_AI_DAILY_LIMIT = 40;
+const LINE_BOT_SYSTEM_PROMPT =
+  "คุณเป็นผู้ช่วยตอบแชท LINE ของ Pokpok — ระบบ POS ขายหน้าร้าน จัดการสต็อก " +
+  "และรับออเดอร์ออนไลน์ สำหรับร้านค้าปลีกและร้านอาหารในไทย\n" +
+  "- ตอบเป็นภาษาไทย สุภาพ เป็นกันเอง กระชับ (ไม่เกินประมาณ 5 บรรทัด)\n" +
+  "- ช่วยเรื่อง: วิธีใช้แอป ฟีเจอร์ แพ็กเกจ/ราคา การสมัคร การต่ออายุ การเชื่อม LINE การสั่งของออนไลน์\n" +
+  "- แพ็กเกจต่อเดือน: Solo 199 / Lite 399 / Full 599 / Restaurant 1,199 บาท (รายปีคุ้มกว่า) " +
+  "ดูล่าสุด สมัคร และต่ออายุที่ https://pok-pok.app/subscribe\n" +
+  "- ถ้าผู้ใช้อยากรับแจ้งเตือนออเดอร์ผ่าน LINE ให้บอกว่าพิมพ์คำว่า \"ID\" เพื่อรับ LINE User ID\n" +
+  "- ถ้าถูกถามข้อมูลเฉพาะร้าน บัญชี หรือยอดขาย ที่คุณไม่มีข้อมูล อย่าเดาหรือแต่งขึ้น " +
+  "ให้แนะนำให้เปิดดูในแอป Pokpok หรือฝากข้อความไว้ให้ทีมงานติดต่อกลับ";
+
+// Single-turn Gemini call → reply text, or null on any failure (caller falls
+// back to a canned message so the user always gets a reply).
+async function _geminiText(apiKey, systemPrompt, userText) {
+  try {
+    const url =
+      "https://generativelanguage.googleapis.com/v1beta/models/" +
+      AI_MODEL + ":generateContent?key=" + apiKey;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: "user", parts: [{ text: String(userText || "") }] }],
+        generationConfig: { maxOutputTokens: 512, temperature: 0.6 },
+      }),
+    });
+    if (!res.ok) {
+      console.error("Gemini (LINE) error:", res.status,
+        (await res.text()).slice(0, 200));
+      return null;
+    }
+    const data = await res.json();
+    return data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+  } catch (e) {
+    console.error("Gemini (LINE) exception:", e.message);
+    return null;
+  }
+}
+
+// Builds the LINE reply for a free-form message: enforces the daily cap, asks
+// Gemini, and bumps the counter only on a real reply.
+async function _lineAiReply(apiKey, userId, userText) {
+  const usageRef = admin.firestore()
+    .collection("lineAiUsage").doc(userId)
+    .collection("days").doc(new Date().toISOString().slice(0, 10));
+  const used = (await usageRef.get()).data()?.count || 0;
+  if (used >= LINE_AI_DAILY_LIMIT) {
+    return "วันนี้คุยกันเยอะแล้วน้า 😊 ทักใหม่พรุ่งนี้ได้เลย " +
+      "หรือฝากข้อความไว้ เดี๋ยวทีมงานติดต่อกลับ";
+  }
+
+  const reply = await _geminiText(apiKey, LINE_BOT_SYSTEM_PROMPT, userText);
+  if (!reply) {
+    return "ขอบคุณที่ติดต่อ Pokpok 🙏 ทีมงานจะตอบกลับโดยเร็วที่สุด\n" +
+      "(อยากรับแจ้งเตือนออเดอร์ผ่าน LINE? พิมพ์ \"ID\")";
+  }
+
+  await usageRef.set({
+    count: admin.firestore.FieldValue.increment(1),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  }, { merge: true });
+  return reply;
+}
 
 // ────────────────────────────────────────────────
 // Referral — redeem a code at signup
