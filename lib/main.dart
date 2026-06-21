@@ -445,7 +445,11 @@ class _MainShellState extends State<MainShell> {
             // Build screens + destinations together so indices stay aligned.
             // Restaurant mode swaps the POS tab for Tables (entry point of
             // the table-based flow) and adds Kitchen near the end.
-            final tabs = <_NavTab>[
+            // Daily-core actions sit in the bottom bar (≤5 incl. "เพิ่มเติม");
+            // less-frequent screens move into the "เพิ่มเติม" sheet so the bar
+            // isn't overcrowded. The IndexedStack still holds every screen
+            // (primary first, then overflow) so each tab keeps its state.
+            final primaryTabs = <_NavTab>[
               const _NavTab(
                 screen: DashboardScreen(),
                 icon: Icons.dashboard_outlined,
@@ -464,14 +468,41 @@ class _MainShellState extends State<MainShell> {
                   screen: PosScreen(),
                   icon: Icons.point_of_sale_outlined,
                   selectedIcon: Icons.point_of_sale,
-                  label: 'ขายสินค้า',
+                  label: 'ขาย',
                 ),
-              const _NavTab(
-                screen: ProductsScreen(),
-                icon: Icons.inventory_2_outlined,
-                selectedIcon: Icons.inventory_2,
-                label: 'สินค้า',
+              if (isRestaurant)
+                const _NavTab(
+                  screen: KitchenScreen(),
+                  icon: Icons.soup_kitchen_outlined,
+                  selectedIcon: Icons.soup_kitchen,
+                  label: 'ครัว',
+                )
+              else
+                const _NavTab(
+                  screen: ProductsScreen(),
+                  icon: Icons.inventory_2_outlined,
+                  selectedIcon: Icons.inventory_2,
+                  label: 'สินค้า',
+                ),
+              _NavTab(
+                screen: const OrdersScreen(),
+                icon: Icons.shopping_bag_outlined,
+                selectedIcon: Icons.shopping_bag,
+                label: 'Orders',
+                badgeCount: newCount,
               ),
+            ];
+
+            // Overflow — opened from the "เพิ่มเติม" sheet. Marketplace
+            // ("สั่งของ") stays a Dashboard card per the soft-launch plan.
+            final moreTabs = <_NavTab>[
+              if (isRestaurant)
+                const _NavTab(
+                  screen: ProductsScreen(),
+                  icon: Icons.inventory_2_outlined,
+                  selectedIcon: Icons.inventory_2,
+                  label: 'สินค้า',
+                ),
               const _NavTab(
                 screen: ReportScreen(),
                 icon: Icons.bar_chart_outlined,
@@ -485,24 +516,6 @@ class _MainShellState extends State<MainShell> {
                   selectedIcon: Icons.people,
                   label: 'ลูกหนี้',
                 ),
-              _NavTab(
-                screen: const OrdersScreen(),
-                icon: Icons.shopping_bag_outlined,
-                selectedIcon: Icons.shopping_bag,
-                label: 'Orders',
-                badgeCount: newCount,
-              ),
-              if (isRestaurant)
-                const _NavTab(
-                  screen: KitchenScreen(),
-                  icon: Icons.soup_kitchen_outlined,
-                  selectedIcon: Icons.soup_kitchen,
-                  label: 'ครัว',
-                ),
-              // Marketplace ("สั่งของ") is reached from a Dashboard card,
-              // not the bottom nav — the bar is already at its tab budget
-              // (8-9), and the GTM plan wants marketplace soft-launched
-              // rather than front-and-center for every shop on day one.
               const _NavTab(
                 screen: ChatScreen(),
                 icon: Icons.auto_awesome_outlined,
@@ -517,9 +530,15 @@ class _MainShellState extends State<MainShell> {
               ),
             ];
 
+            final tabs = [...primaryTabs, ...moreTabs];
+            final moreOffset = primaryTabs.length;
+
             // Clamp in case shop type flipped and the previously selected
             // index is now out of range.
             final safeIndex = _index.clamp(0, tabs.length - 1);
+            // The bar highlights "เพิ่มเติม" whenever an overflow screen shows.
+            final barSelected =
+                safeIndex < moreOffset ? safeIndex : moreOffset;
 
             return Scaffold(
               body: IndexedStack(
@@ -527,28 +546,70 @@ class _MainShellState extends State<MainShell> {
                 children: tabs.map((t) => t.screen).toList(),
               ),
               bottomNavigationBar: NavigationBar(
-                selectedIndex: safeIndex,
-                onDestinationSelected: (i) => setState(() => _index = i),
-                // Tighter sizing — 8 destinations on a phone-width screen
-                // would otherwise overlap labels (especially on Android,
-                // whose default Thai font is wider than iOS). Restaurant
-                // mode adds a 9th, so we keep the same compact metrics.
-                height: 64,
+                selectedIndex: barSelected,
+                onDestinationSelected: (i) {
+                  if (i < moreOffset) {
+                    setState(() => _index = i);
+                  } else {
+                    _showMoreSheet(moreTabs, moreOffset);
+                  }
+                },
                 labelTextStyle: WidgetStateProperty.resolveWith((states) {
                   final selected = states.contains(WidgetState.selected);
                   return TextStyle(
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight:
                         selected ? FontWeight.w700 : FontWeight.w500,
                   );
                 }),
-                destinations:
-                    tabs.map((t) => t.toDestination()).toList(),
+                destinations: [
+                  ...primaryTabs.map((t) => t.toDestination()),
+                  const NavigationDestination(
+                    icon: Icon(Icons.more_horiz),
+                    selectedIcon: Icon(Icons.more_horiz),
+                    label: 'เพิ่มเติม',
+                  ),
+                ],
               ),
             );
           },
         );
       },
+    );
+  }
+
+  /// Bottom sheet listing the overflow screens. Tapping one switches the
+  /// IndexedStack to it (indices continue after the primary tabs).
+  void _showMoreSheet(List<_NavTab> moreTabs, int offset) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('เพิ่มเติม',
+                    style: TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w700)),
+              ),
+            ),
+            for (var i = 0; i < moreTabs.length; i++)
+              ListTile(
+                leading: Icon(moreTabs[i].icon),
+                title: Text(moreTabs[i].label),
+                selected: _index == offset + i,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  setState(() => _index = offset + i);
+                },
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
     );
   }
 }
