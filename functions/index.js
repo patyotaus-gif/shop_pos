@@ -181,13 +181,23 @@ exports.getShopPublic = onRequest({ cors: true }, async (req, res) => {
     .limit(300)
     .get();
   const products = [];
+  const now = Date.now();
   for (const doc of prodSnap.docs) {
     const p = doc.data() || {};
     if (typeof p.stock !== "number") continue;
+    // Apply the promo price server-side so the cart + order use it and a
+    // tampered client can't dodge it. saleUntil is a Timestamp (no expiry
+    // when absent); originalPrice is sent only when a sale is live, for the
+    // struck-through display.
+    const regular = Number(p.price || 0);
+    const sale = Number(p.salePrice || 0);
+    const until = p.saleUntil?.toMillis?.();
+    const onSale = sale > 0 && sale < regular && (!until || until > now);
     products.push({
       id: doc.id,
       name: p.name || "",
-      price: Number(p.price || 0),
+      price: onSale ? sale : regular,
+      ...(onSale ? { originalPrice: regular } : {}),
       stock: p.stock,
       category: p.category || "",
       imageUrl: p.imageUrl || "",

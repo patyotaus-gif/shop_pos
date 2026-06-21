@@ -11,7 +11,7 @@ class CartItem {
     this.discount = 0,
   });
 
-  double get subtotal => (product.price * quantity) - discount;
+  double get subtotal => (product.effectivePrice * quantity) - discount;
 
   CartItem copyWith({int? quantity, double? discount}) => CartItem(
         product: product,

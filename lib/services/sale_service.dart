@@ -42,7 +42,7 @@ class SaleService {
         .map((e) => SaleItem(
               productId: e.product.id,
               productName: e.product.name,
-              price: e.product.price,
+              price: e.product.effectivePrice,
               costPrice: e.product.costPrice,
               quantity: e.quantity,
               subtotal: e.subtotal,

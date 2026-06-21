@@ -196,6 +196,13 @@
       margin-top: auto;
       letter-spacing: 0.2px;
     }
+    .product-price-original {
+      font-size: 0.85rem;
+      font-weight: 400;
+      color: var(--text-mid);
+      text-decoration: line-through;
+      margin-left: 6px;
+    }
     .product-stock {
       font-size: 11px;
       font-weight: 500;
@@ -671,7 +678,7 @@
             <div class="product-category">${escHtml(p.category || 'ทั่วไป')}</div>
           </div>
           <div>
-            <div class="product-price">฿${Number(p.price).toFixed(2)}</div>
+            <div class="product-price">฿${Number(p.price).toFixed(2)}${p.originalPrice ? `<span class="product-price-original">฿${Number(p.originalPrice).toFixed(2)}</span>` : ''}</div>
             <div class="product-stock${p.stock <= 5 ? ' low' : ''}">
               ${outOfStock ? '❌ หมด' : `📦 เหลือ ${p.stock}`}
             </div>

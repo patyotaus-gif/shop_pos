@@ -320,7 +320,7 @@ class TableService {
     return TableOrderItem(
       productId: product.id,
       productName: product.name,
-      price: product.price,
+      price: product.effectivePrice,
       costPrice: product.costPrice,
       quantity: quantity,
       modifiers: modifiers,

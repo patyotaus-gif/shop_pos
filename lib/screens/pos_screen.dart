@@ -479,7 +479,8 @@ class _PosScreenState extends State<PosScreen> {
                         final outOfStock = p.stock <= 0;
                         return ActionChip(
                           label: Text(
-                            '${p.name} · ฿${p.price.toStringAsFixed(0)}'
+                            '${p.name} · ฿${p.effectivePrice.toStringAsFixed(0)}'
+                            '${p.isOnSale ? " (โปร)" : ""}'
                             '${outOfStock ? " (หมด)" : ""}',
                             style: const TextStyle(fontSize: 12),
                           ),
@@ -672,7 +673,9 @@ class _ProductSearchState extends State<_ProductSearch> {
                               )
                             : null,
                         title: Text(p.name),
-                        subtitle: Text('฿${p.price.toStringAsFixed(2)} · สต็อก ${p.stock}'),
+                        subtitle: Text(p.isOnSale
+                            ? '฿${p.effectivePrice.toStringAsFixed(2)} (ปกติ ฿${p.price.toStringAsFixed(2)}) · สต็อก ${p.stock}'
+                            : '฿${p.price.toStringAsFixed(2)} · สต็อก ${p.stock}'),
                         trailing: Text(p.barcode,
                             style: const TextStyle(fontSize: 11, color: Colors.grey)),
                         onTap: () {
@@ -717,7 +720,7 @@ class _CartItemTile extends StatelessWidget {
               )
             : null,
         title: Text(item.product.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text('฿${baht.format(item.product.price)} × ${item.quantity}'),
+        subtitle: Text('฿${baht.format(item.product.effectivePrice)} × ${item.quantity}'),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [

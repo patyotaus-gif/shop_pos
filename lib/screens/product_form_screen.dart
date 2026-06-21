@@ -29,8 +29,10 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   late final TextEditingController _barcode;
   late final TextEditingController _price;
   late final TextEditingController _costPrice;
+  late final TextEditingController _salePrice;
   late final TextEditingController _stock;
   late final TextEditingController _lowStock;
+  DateTime? _saleUntil;
   late String _category;
   bool _scanning = false;
   bool _lookingUp = false;
@@ -54,6 +56,11 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         text: p?.costPrice != null && p!.costPrice > 0
             ? p.costPrice.toStringAsFixed(2)
             : '');
+    _salePrice = TextEditingController(
+        text: p?.salePrice != null && p!.salePrice! > 0
+            ? p.salePrice!.toStringAsFixed(2)
+            : '');
+    _saleUntil = p?.saleUntil;
     _stock = TextEditingController(text: p?.stock.toString() ?? '0');
     _lowStock =
         TextEditingController(text: p?.lowStockThreshold.toString() ?? '5');
@@ -73,6 +80,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     _barcode.dispose();
     _price.dispose();
     _costPrice.dispose();
+    _salePrice.dispose();
     _stock.dispose();
     _lowStock.dispose();
     super.dispose();
@@ -136,6 +144,21 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     }
   }
 
+  Future<void> _pickSaleUntil() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _saleUntil ?? now.add(const Duration(days: 7)),
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      // โปรหมดตอนสิ้นวันที่เลือก
+      setState(() => _saleUntil =
+          DateTime(picked.year, picked.month, picked.day, 23, 59, 59));
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
@@ -169,6 +192,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         isPinned: _isPinned,
         imagePath: savedImagePath,
         imageUrl: savedImageUrl,
+        // Empty sale-price field → null, which clears any existing sale.
+        salePrice: double.tryParse(_salePrice.text.trim()),
+        saleUntil: _saleUntil,
         modifierGroupIds: _modifierGroupIds.toList(),
       );
 
@@ -378,6 +404,55 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 16),
+                  // ── ราคาโปรโมชัน (ไม่บังคับ) ──
+                  TextFormField(
+                    controller: _salePrice,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'ราคาโปร (ถ้ามี)',
+                      prefixText: '฿',
+                      border: OutlineInputBorder(),
+                      helperText: 'ราคาลดพิเศษ — เว้นว่าง = ขายราคาปกติ',
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return null;
+                      final sp = double.tryParse(v.trim());
+                      if (sp == null) return 'ราคาไม่ถูกต้อง';
+                      final base = double.tryParse(_price.text);
+                      if (base != null && sp >= base) {
+                        return 'ราคาโปรต้องต่ำกว่าราคาขาย';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  InkWell(
+                    onTap: _pickSaleUntil,
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'โปรถึงวันที่ (ถ้ามี)',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.event_outlined),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(_saleUntil == null
+                                ? 'ไม่กำหนด (จนกว่าจะยกเลิก)'
+                                : '${_saleUntil!.day}/${_saleUntil!.month}/${_saleUntil!.year}'),
+                          ),
+                          if (_saleUntil != null)
+                            IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              visualDensity: VisualDensity.compact,
+                              onPressed: () =>
+                                  setState(() => _saleUntil = null),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Row(

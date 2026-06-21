@@ -148,8 +148,15 @@ class _ProductTile extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text('฿${product.price.toStringAsFixed(2)}',
+                Text('฿${product.effectivePrice.toStringAsFixed(2)}',
                     style: const TextStyle(fontWeight: FontWeight.bold)),
+                if (product.isOnSale)
+                  Text('฿${product.price.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey,
+                        decoration: TextDecoration.lineThrough,
+                      )),
                 Text(
                   'สต็อก ${product.stock}',
                   style: TextStyle(
