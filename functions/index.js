@@ -79,7 +79,7 @@ const CANCEL_URL  = "https://pok-pok.app/payment/cancel";
 // Subscription checkout
 // ────────────────────────────────────────────────
 exports.createCheckoutSession = onCall(
-  { secrets: [stripeSecretKey], enforceAppCheck: true },
+  { secrets: [stripeSecretKey] },
   async (request) => {
     const {
       shopId,
@@ -757,7 +757,7 @@ exports.stripeWebhook = onRequest(
 // Refund a sale (Stripe + Firestore)
 // ────────────────────────────────────────────────
 exports.createRefund = onCall(
-  { secrets: [stripeSecretKey], enforceAppCheck: true },
+  { secrets: [stripeSecretKey] },
   async (request) => {
     const { shopId, saleId, reason } = request.data;
     if (!shopId || !saleId) throw new Error("shopId and saleId required");
@@ -924,7 +924,7 @@ exports.lineWebhook = onRequest(
 // sendLineMessage — callable จาก Flutter app
 // ────────────────────────────────────────────────
 exports.sendLineMessage = onCall(
-  { secrets: [lineChannelAccessToken], enforceAppCheck: true },
+  { secrets: [lineChannelAccessToken] },
   async (request) => {
     const { shopId, message, messageType = "text" } = request.data;
     if (!shopId || !message) throw new Error("shopId and message required");
@@ -966,7 +966,7 @@ const AI_DAILY_LIMIT_PER_SHOP = 100;
 const AI_MODEL = "gemini-2.5-flash-lite";
 
 exports.aiChat = onCall(
-  { secrets: [geminiApiKey], enforceAppCheck: true },
+  { secrets: [geminiApiKey] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Login required");
@@ -1160,7 +1160,7 @@ async function _lineAiReply(apiKey, userId, userText) {
 // `referredBy` set can't claim a second reward.
 const REFERRAL_BONUS_DAYS = 30;
 
-exports.applyReferral = onCall({ enforceAppCheck: true }, async (request) => {
+exports.applyReferral = onCall(async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Login required");
   }
@@ -1254,7 +1254,7 @@ function assertFounder(request) {
 // Founder-gated. The claim takes effect on that user's next token refresh /
 // re-login. Bootstrap-allowlist accounts can't be revoked (so the original
 // founder stays an admin no matter what).
-exports.adminSetFounder = onCall({ enforceAppCheck: true }, async (request) => {
+exports.adminSetFounder = onCall(async (request) => {
   assertFounder(request);
 
   const email = String(request.data?.email || "").trim().toLowerCase();
@@ -1287,7 +1287,7 @@ exports.adminSetFounder = onCall({ enforceAppCheck: true }, async (request) => {
   return { uid: user.uid, email, founder };
 });
 
-exports.opsMetrics = onCall({ enforceAppCheck: true }, async (request) => {
+exports.opsMetrics = onCall(async (request) => {
   assertFounder(request);
 
   const db = admin.firestore();
@@ -1375,7 +1375,7 @@ const ADMIN_CYCLES = ["monthly", "yearly"];
 
 // List every shop with the fields the console needs (subscription state +
 // its hardware requests). Sorted newest-first.
-exports.adminListShops = onCall({ enforceAppCheck: true }, async (request) => {
+exports.adminListShops = onCall(async (request) => {
   assertFounder(request);
   const db = admin.firestore();
   const snap = await db.collection("shops").orderBy("createdAt", "desc").get();
@@ -1422,7 +1422,7 @@ exports.adminListShops = onCall({ enforceAppCheck: true }, async (request) => {
 //   extendTrial  — push trialEndsAt out by `days` (from current end or now)
 //   activate     — mark paid for `days`, optionally set tier/cycle/locations
 //   expire       — force-expire immediately
-exports.adminSetSubscription = onCall({ enforceAppCheck: true }, async (request) => {
+exports.adminSetSubscription = onCall(async (request) => {
   assertFounder(request);
   const { shopId, op } = request.data || {};
   if (!shopId || !op) {
@@ -1499,7 +1499,7 @@ exports.adminSetSubscription = onCall({ enforceAppCheck: true }, async (request)
 
 // Advance (or annotate) a shop's hardware shipment. The owner sees the
 // status mirror in Settings; only the founder moves it forward.
-exports.adminSetHardwareStatus = onCall({ enforceAppCheck: true }, async (request) => {
+exports.adminSetHardwareStatus = onCall(async (request) => {
   assertFounder(request);
   const { shopId, requestId, status } = request.data || {};
   if (!shopId || !requestId) {
@@ -1540,7 +1540,7 @@ exports.adminSetHardwareStatus = onCall({ enforceAppCheck: true }, async (reques
 
 // Create or update a top-level supplier. Pass supplierId to update an
 // existing one; omit it to create with an auto id.
-exports.adminUpsertSupplier = onCall({ enforceAppCheck: true }, async (request) => {
+exports.adminUpsertSupplier = onCall(async (request) => {
   assertFounder(request);
   const d = request.data || {};
   if (!d.name) {
@@ -1568,7 +1568,7 @@ exports.adminUpsertSupplier = onCall({ enforceAppCheck: true }, async (request) 
 });
 
 // Create or update one catalog line under a supplier.
-exports.adminUpsertSupplierProduct = onCall({ enforceAppCheck: true }, async (request) => {
+exports.adminUpsertSupplierProduct = onCall(async (request) => {
   assertFounder(request);
   const d = request.data || {};
   if (!d.supplierId || !d.name) {
@@ -1598,7 +1598,7 @@ exports.adminUpsertSupplierProduct = onCall({ enforceAppCheck: true }, async (re
 // doc whose id IS that account's uid (so security rules can match
 // request.auth.uid == supplierId). The supplier then signs into the web
 // portal to manage their own catalog + orders. Founder-only.
-exports.adminCreateSupplierAccount = onCall({ enforceAppCheck: true }, async (request) => {
+exports.adminCreateSupplierAccount = onCall(async (request) => {
   assertFounder(request);
   const d = request.data || {};
   const email = String(d.email || "").trim().toLowerCase();
@@ -1651,7 +1651,7 @@ exports.adminCreateSupplierAccount = onCall({ enforceAppCheck: true }, async (re
 // Supplier updates one of their incoming orders (accept / ship / cancel)
 // from the web portal. Mirrors the new status to the shop's copy so both
 // sides stay in sync. Caller must own the order (auth.uid == supplierId).
-exports.supplierSetOrderStatus = onCall({ enforceAppCheck: true }, async (request) => {
+exports.supplierSetOrderStatus = onCall(async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Login required");
   }
