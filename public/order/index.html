@@ -604,6 +604,11 @@
   window.__appCheckToken = async () => {
     try { return (await getToken(appCheck, false)).token; } catch (_) { return null; }
   };
+  // Start the page only once App Check is ready (this module is deferred, so it
+  // runs after the classic script below has defined init). This guarantees the
+  // first /api/shopPublic call carries a token — required now that the endpoint
+  // enforces App Check.
+  window.init?.();
 </script>
 
 <script>
@@ -971,7 +976,9 @@
     pendingOrder = null;
   }
 
-  init();
+  // init() is kicked off by the App Check module above once a token getter is
+  // ready (so the first /api call carries a token). Do not call it here — that
+  // would race ahead of App Check and 401 against the enforced endpoint.
 </script>
 </body>
 </html>
