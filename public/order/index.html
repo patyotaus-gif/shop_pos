@@ -443,14 +443,6 @@
     }
     .pp-steps ol { padding-left: 20px; }
     .pp-steps li { margin: 4px 0; }
-    #payConfirmBtn {
-      width: 100%; background: white; color: #15803d;
-      border: 1px solid #16a34a; border-radius: var(--radius-md);
-      padding: 12px; font-size: 14px; font-weight: 600;
-      cursor: pointer; transition: var(--transition);
-      margin-bottom: 8px;
-    }
-    #payConfirmBtn:hover { background: #f0fdf4; }
     #paySlipBtn {
       width: 100%; background: #2563eb; color: white;
       border: none; border-radius: var(--radius-md);
@@ -568,18 +560,20 @@
       <ol>
         <li>เปิดแอปธนาคาร → สแกน QR</li>
         <li>ตรวจชื่อผู้รับ + จำนวนเงิน ให้ตรงด้านบน</li>
-        <li>กดยืนยันโอน</li>
-        <li>กลับมากดปุ่ม "โอนแล้ว" ด้านล่าง</li>
+        <li>กดยืนยันโอน + บันทึกสลิป</li>
+        <li>กลับมา <strong>อัปโหลดสลิป</strong> ด้านล่างเพื่อยืนยัน</li>
       </ol>
     </div>
 
     <input type="file" id="slipFileInput" accept="image/*" capture="environment" style="display:none" onchange="uploadSlip(event)" />
     <button id="paySlipBtn" type="button" onclick="document.getElementById('slipFileInput').click()">
-      📷 อัปโหลดสลิป — ยืนยันอัตโนมัติ
+      📷 อัปโหลดสลิปเพื่อยืนยันการชำระเงิน
     </button>
     <div id="paySlipStatus"></div>
+    <p style="font-size:.72rem;color:#6B5E60;line-height:1.5;margin:6px 2px 0">
+      โอนแล้วต้องอัปโหลดสลิปทุกครั้งเพื่อยืนยันออเดอร์ — ระบบตรวจยอดให้อัตโนมัติ
+    </p>
 
-    <button id="payConfirmBtn" onclick="confirmPaid()">✓ โอนแล้ว — แจ้งร้าน (ตรวจด้วยมือ)</button>
     <button id="payCancelBtn" onclick="cancelPay()">ยกเลิกออเดอร์</button>
   </div>
 </div>
@@ -887,14 +881,6 @@
     const digits = String(id).replace(/\D/g, '');
     if (digits.length <= 4) return digits;
     return digits.slice(0, 3) + '*'.repeat(digits.length - 6) + digits.slice(-3);
-  }
-
-  async function confirmPaid() {
-    if (!pendingOrder) return;
-    // Customer signal that they've transferred. The order stays in
-    // 'pendingPayment' on Firestore — the shop owner verifies and flips
-    // to 'paid' from their POS app. We just redirect to the thank-you page.
-    window.location.href = `/order/success/?order=${pendingOrder.orderId}`;
   }
 
   async function uploadSlip(event) {
