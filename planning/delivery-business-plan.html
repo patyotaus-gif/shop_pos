@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pokpok Delivery — สรุปแผนธุรกิจ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --burgundy:#7A1F2B; --burgundy-dim:#F0E2E4; --cream:#F5F1EC; --surface:#fff;
+    --text:#1F1A1B; --mid:#6B5E60; --border:#E5DDD3;
+    --green:#15803d; --green-bg:#e8f5ec; --red:#b91c1c; --red-bg:#fbeaea;
+    --blue:#1d4ed8; --blue-bg:#e8eefc; --amber:#92400e; --amber-bg:#fef3c7;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'IBM Plex Sans Thai',system-ui,sans-serif;background:var(--cream);
+    color:var(--text);padding:28px 16px 70px;line-height:1.6;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:840px;margin:0 auto;}
+  header{text-align:center;margin-bottom:8px;}
+  h1{font-size:24px;font-weight:700;color:var(--burgundy);}
+  .tag{font-size:13px;color:var(--mid);margin-top:4px;}
+  .meta{font-size:12px;color:var(--mid);text-align:center;margin-bottom:24px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+    padding:22px;margin-bottom:16px;box-shadow:0 4px 14px rgba(31,26,27,.04);}
+  h2{font-size:16px;font-weight:700;color:var(--burgundy);margin-bottom:12px;
+    display:flex;align-items:center;gap:8px;}
+  h3{font-size:14px;font-weight:700;margin:14px 0 6px;}
+  p,li{font-size:14px;}
+  ul{padding-left:20px;margin:6px 0;} li{margin:4px 0;}
+  .lead{background:var(--burgundy);color:#fff;border-radius:16px;padding:22px;margin-bottom:16px;}
+  .lead h2{color:#fff;} .lead p{font-size:15px;}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin:8px 0;}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top;}
+  th{color:var(--mid);font-weight:600;}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+  @media(max-width:620px){.kpis{grid-template-columns:1fr 1fr;}}
+  .kpi{background:var(--cream);border-radius:12px;padding:12px;text-align:center;}
+  .kpi .v{font-size:20px;font-weight:700;color:var(--burgundy);}
+  .kpi .k{font-size:11px;color:var(--mid);margin-top:2px;}
+  .good{color:var(--green);} .bad{color:var(--red);}
+  .box{border-radius:12px;padding:14px;margin:10px 0;font-size:13.5px;}
+  .box.warn{background:var(--amber-bg);} .box.warn b{color:var(--amber);}
+  .box.info{background:var(--blue-bg);}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:100px;}
+  .pill.must{background:var(--red-bg);color:var(--red);}
+  .pill.rec{background:var(--amber-bg);color:var(--amber);}
+  .pill.ok{background:var(--green-bg);color:var(--green);}
+  .step{display:flex;gap:12px;margin:10px 0;}
+  .step .n{flex:none;width:26px;height:26px;border-radius:50%;background:var(--burgundy);color:#fff;
+    font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  .note{font-size:12px;color:var(--mid);}
+  @media print{body{background:#fff;padding:0;} .card,.lead{box-shadow:none;break-inside:avoid;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🛵⚡ Pokpok Delivery</h1>
+    <div class="tag">สรุปแผนธุรกิจ — เดลิเวอรีของคนไทย ไม่เก็บค่า GP แพง</div>
+  </header>
+  <div class="meta">ฉบับร่างวางแผน · pilot: อำเภอเมืองศรีสะเกษ · เอกสารภายใน</div>
+
+  <div class="lead">
+    <h2>🎯 วิสัยทัศน์</h2>
+    <p>เดลิเวอรี <b>ของคนไทย 100%</b> ที่ <b>ไม่เก็บค่า GP 30-35%</b> แบบ Grab/LineMan — ทำให้ต้นทุนร้านถูกลง
+    ร้านขายถูกลง ผู้บริโภคได้ของถูกลง ไม่ได้ตั้งใจรวยกว่าเจ้าใหญ่ แต่เพื่อช่วยร้านค้าและผู้บริโภคให้พ้นจากค่าหัวคิวที่สูงเกินไป</p>
+  </div>
+
+  <div class="card">
+    <h2>① จุดยืน / กลยุทธ์</h2>
+    <ul>
+      <li><b>ไม่สู้ Grab ในเกมมาร์เก็ตเพลส</b> (ไรเดอร์เป็นหมื่น/ดีมานด์/เงินเผาตลาด — ทำตามไม่ได้)</li>
+      <li>จุดแข็ง: <b>Pokpok อยู่ใน POS ของร้านอยู่แล้ว</b> + มีหน้าสั่งออนไลน์ + LINE + ฐานลูกค้า</li>
+      <li>โฟกัส <b>ลูกค้าขาประจำ + ช่องทางสั่งตรงของร้าน</b> (ไม่ใช่หาลูกค้าใหม่ให้ร้าน)</li>
+      <li>ประโยคขาย: <b>"ทุกออเดอร์ผ่าน Pokpok แทน Grab = ร้านประหยัด ~30%"</b></li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>② โมเดลการส่ง (zone-based + EV กองกลาง)</h2>
+    <ul>
+      <li><b>แบ่งพื้นที่เป็นเขต</b> — คนขับประจำเขต ส่งให้หลายร้านในเขต (ค่าคนขับหารด้วยออเดอร์รวมทั้งเขต ไม่ใช่ร้านเดียว)</li>
+      <li><b>รถ EV กองกลาง</b> (บริษัทเป็นเจ้าของ) — ไม่มีค่าน้ำมัน, รับคนขับที่ไม่มีรถได้ (พูลคนกว้างขึ้น)</li>
+      <li><b>คนขับ part-time จ่ายรายชั่วโมง</b> (เช่น 55฿/ชม.) ไม่บังคับกะ — เลือกวัน/เวลาเองได้ (เช่น 2 วัน/อาทิตย์)</li>
+      <li><b>เช่ารถ + เงินช่วยค่าเช่า</b> — คนขับเช่ารถจากบริษัทรถ (100฿/8ชม.) ถ้าขับครบ ≥7 ชม. Pokpok ช่วยค่าเช่า 100฿ (จูงใจให้ขับยาวโดยไม่ต้องบังคับ)</li>
+      <li><b>ลูกค้าจองช่วงเวลาส่ง</b> · ไม่มีเงินสดให้คนขับ (จ่ายผ่านระบบ)</li>
+    </ul>
+    <h3>ค่าส่งที่ลูกค้าจ่าย (ขั้นบันได · ร้านปรับเองได้)</h3>
+    <table>
+      <tr><th>มูลค่าออเดอร์</th><th>ค่าส่ง (ค่าตั้งต้น)</th></tr>
+      <tr><td>&lt; 100 ฿</td><td>10 ฿</td></tr>
+      <tr><td>100–149 ฿</td><td>5 ฿</td></tr>
+      <tr><td>≥ 150 ฿</td><td>ฟรี</td></tr>
+    </table>
+    <p class="note">ร้านเลือกได้ว่าจะส่งต่อค่าส่งให้ลูกค้าเต็ม (ร้านจ่ายแค่ค่าธรรมเนียม) หรืออุดหนุนบางส่วน (เพื่อแข่งราคา)</p>
+  </div>
+
+  <div class="card">
+    <h2>③ โครงสร้างบริษัท</h2>
+    <table>
+      <tr><th>บริษัท</th><th>หน้าที่</th><th>รายได้</th></tr>
+      <tr><td><b>Pokpok (แพลตฟอร์ม)</b></td><td>แอป POS + รับออเดอร์ + จ่ายงานคนขับ + จ่ายค่าจ้าง</td><td>ค่าธรรมเนียม <b>% เล็กน้อย (~3%)</b> ต่ำกว่า GP 30% มาก</td></tr>
+      <tr><td><b>บริษัทรถ (แยก)</b></td><td>เป็นเจ้าของฟลีต EV + ประกัน + ปล่อยเช่า</td><td>ค่าเช่ารถจากคนขับ</td></tr>
+    </table>
+    <div class="box info">เหตุผลแยก 2 บริษัท: <b>แยกความเสี่ยง/หนี้สินรถ</b> ออกจากแพลตฟอร์ม + ทำให้ความสัมพันธ์คนขับ "เอนไป contractor" มากขึ้น
+    <br>⚠️ <b>ตอน pilot ยังไม่ต้องตั้ง 2 บริษัท</b> — overhead หนักเกิน ค่อยทำตอนพิสูจน์โมเดลแล้ว</div>
+  </div>
+
+  <div class="card">
+    <h2>④ เศรษฐศาสตร์ (ตัวอย่าง: 120 ออเดอร์/วัน/เขต)</h2>
+    <div class="kpis">
+      <div class="kpi"><div class="v">~23฿</div><div class="k">ต้นทุนส่ง/บิล</div></div>
+      <div class="kpi"><div class="v good">~22฿</div><div class="k">ร้านประหยัด/บิล vs Grab</div></div>
+      <div class="kpi"><div class="v">55฿/ชม.</div><div class="k">คนขับรับสุทธิ</div></div>
+      <div class="kpi"><div class="v">~16,200฿</div><div class="k">Pokpok/เดือน/เขต (3%)</div></div>
+    </div>
+    <h3>การไหลของเงิน (ต่อคนขับ/วัน)</h3>
+    <table>
+      <tr><td>Pokpok จ่ายค่าจ้าง (55×7)</td><td>385 ฿</td></tr>
+      <tr><td>Pokpok ช่วยค่าเช่า (ขับ ≥7 ชม.)</td><td>100 ฿</td></tr>
+      <tr><td>คนขับจ่ายค่าเช่า → บริษัทรถ</td><td class="bad">−100 ฿</td></tr>
+      <tr><td><b>คนขับรับสุทธิ</b></td><td class="good"><b>385 ฿ (55฿/ชม.)</b></td></tr>
+      <tr><td>บริษัทรถ: เช่า 100 − ต้นทุน EV จริง ~72</td><td>+28 ฿/คัน</td></tr>
+    </table>
+    <p class="note">เงินช่วยค่าเช่า ↔ ค่าเช่า วนในกลุ่ม (เจ้าของเดียว) → ต้นทุนกลุ่มจริง = ค่าจ้าง + ต้นทุน EV ·
+    เงินลงทุนรถ ~40,000฿/คัน (อยู่ที่บริษัทรถ) — ลดได้ด้วยการสลับกะใช้รถร่วม</p>
+    <p class="note">เครื่องคิดเลขปรับเล่นได้: <b>delivery-economics.html</b></p>
+  </div>
+
+  <div class="card">
+    <h2>⑤ ความเสี่ยง & สิ่งที่ต้องเช็ค (สำคัญที่สุด)</h2>
+    <table>
+      <tr><th>เรื่อง</th><th>สถานะ / ต้องทำ</th></tr>
+      <tr><td><b>density (ออเดอร์/เขต)</b></td><td><span class="pill must">ตัวตัดสิน</span> โมเดลคุ้มเมื่อเขตมีออเดอร์หนาแน่นพอ — ต้องพิสูจน์ใน pilot ว่าศรีสะเกษทำได้กี่บิล/วัน/เขต</td></tr>
+      <tr><td><b>สถานะคนขับ (ลูกจ้าง vs contractor)</b></td><td><span class="pill must">กฎหมาย</span> รถบริษัท+จ่ายงาน = อาจถูกตีเป็นลูกจ้าง แม้เช่ารถ/รายชั่วโมง → <b>ประกันสังคม+กองทุนเงินทดแทน</b> อาจต้องทำ · ปรึกษานักกฎหมายแรงงาน</td></tr>
+      <tr><td><b>การถือเงินลูกค้า</b></td><td><span class="pill must">กฎหมาย</span> ถ้าถือเงินค่าอาหารเอง = เข้าข่ายใบอนุญาตชำระเงิน ธปท. → <b>pilot ให้ลูกค้าโอนตรงเข้าร้าน</b> เก็บค่าธรรมเนียมแยก</td></tr>
+      <tr><td><b>เก็บค่าธรรมเนียมจากร้าน</b></td><td><span class="pill rec">วิธีแก้</span> ใช้ <b>"เครดิตเติมล่วงหน้า + ล็อกฟีเจอร์ตามยอด"</b> (Pokpok เป็น POS ร้านอยู่แล้ว) → ไม่ต้องตามเก็บ ไม่โดนเบี้ยว</td></tr>
+      <tr><td><b>ประกันรถ</b></td><td><span class="pill must">บังคับ</span> พ.ร.บ. ทุกคัน + <span class="pill rec">ควรมี</span> ภาคสมัครใจ <b>แจ้งใช้เชิงพาณิชย์</b> (ไม่งั้นเคลมไม่ได้)</td></tr>
+      <tr><td><b>VAT 7%</b></td><td><span class="pill ok">ยังไม่ต้อง</span> จดเมื่อรายได้เกิน 1.8 ล้าน/ปี (= ค่าธรรมเนียม ~1.8 ล้าน ≈ GMV 60 ล้าน) → ช่วงแรกไม่ต้องคิด VAT</td></tr>
+      <tr><td><b>ทุนซื้อฟลีต</b></td><td><span class="pill rec">บริหาร</span> ~240,000฿/เขต (6 คัน) → <b>pilot เช่ารถก่อน อย่าซื้อ</b></td></tr>
+      <tr><td><b>คนขับ vs LineMan พีค</b></td><td>ค่าตอบแทนต้องสู้ช่วงมื้ออาหารได้ หรือเล็งคนนอกสายไรเดอร์ (นักเรียน/หารายได้เสริม)</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>⑥ Roadmap — Pilot อำเภอเมืองศรีสะเกษ</h2>
+    <div class="box warn"><b>หลักการ:</b> พิสูจน์ "density + ตัวเลขจริง" ด้วยต้นทุนต่ำสุดก่อน — <b>ทำมือ ไม่ต้องสร้างระบบ/ไม่ต้องตั้ง 2 บริษัท</b></div>
+    <div class="step"><div class="n">1</div><div>เลือก <b>1 เขต</b> (รอบร้านที่รู้จัก) · ร้าน 5-10 · <b>เช่ามอเตอร์ไซค์ไฟฟ้า 1-2 คัน</b></div></div>
+    <div class="step"><div class="n">2</div><div>คนขับ part-time 2-3 คน (จ่ายรายชั่วโมง) · ลูกค้าสั่งผ่านหน้า Pokpok + เลือกช่วงเวลา · <b>โอนตรงเข้าร้าน</b></div></div>
+    <div class="step"><div class="n">3</div><div>จัดงาน/คนขับด้วย LINE group + Excel ไปก่อน (ยังไม่เขียนโค้ด)</div></div>
+    <div class="step"><div class="n">4</div><div>วัด ~1 เดือน: <b>บิล/วัน/เขต · ต้นทุน/บิล vs GP · เวลาส่ง · ความพอใจ 3 ฝ่าย (ร้าน/ลูกค้า/คนขับ) · willingness ร้านเติมเครดิต</b></div></div>
+    <div class="step"><div class="n">5</div><div>ถ้าตัวเลขเวิร์ก → สร้างฟีเจอร์ในแอป (เลือกช่วงส่ง/จองเขต/เครดิตค่าส่ง) + ตั้งโครงสร้างบริษัท/กฎหมายให้ถูก → ขยายเขต</div></div>
+  </div>
+
+  <div class="card">
+    <h2>⑦ คำถาม/การตัดสินใจที่ยังค้าง</h2>
+    <ul>
+      <li>density จริงของศรีสะเกษ — กี่บิล/วัน/เขตที่เป็นไปได้? (ต้องสำรวจ)</li>
+      <li>ค่าตอบแทนคนขับที่คนพื้นที่ยอมรับจริง (ถามไรเดอร์ 2-3 คน)</li>
+      <li>โครงสร้างคนขับให้เป็น contractor ได้จริงไหม (นักกฎหมายแรงงาน)</li>
+      <li>วิธีเก็บค่าธรรมเนียม: เครดิตเติมล่วงหน้า (แนะนำ) vs gateway split-settlement</li>
+      <li>ลูกค้ายอม "ถูกแต่ช้าหน่อย" (รอบเวลา) แค่ไหน</li>
+    </ul>
+  </div>
+
+  <p class="note" style="text-align:center;margin-top:8px">
+    เอกสารร่างวางแผน · ตัวเลขเป็นสมมุติฐาน ต้องเก็บค่าจริงจาก pilot · ปรึกษานักบัญชี/นักกฎหมายก่อนดำเนินการจริง
+  </p>
+</div>
+</body>
+</html>

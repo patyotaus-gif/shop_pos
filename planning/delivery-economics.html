@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pokpok — เครื่องคิดเลขค่าส่ง (รายชั่วโมง + บริษัทรถแยก)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --burgundy: #7A1F2B; --burgundy-dim: #F0E2E4; --cream: #F5F1EC;
+    --surface: #fff; --text: #1F1A1B; --mid: #6B5E60; --border: #E5DDD3;
+    --green: #15803d; --green-bg: #e8f5ec; --red: #b91c1c; --red-bg: #fbeaea;
+    --blue:#1d4ed8; --blue-bg:#e8eefc; --amber:#92400e; --amber-bg:#fef3c7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; background: var(--cream);
+    color: var(--text); padding: 20px 14px 60px; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 820px; margin: 0 auto; }
+  h1 { font-size: 19px; font-weight: 700; color: var(--burgundy); }
+  .sub { font-size: 13px; color: var(--mid); margin: 4px 0 20px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 18px; margin-bottom: 16px; box-shadow: 0 4px 14px rgba(31,26,27,.04); }
+  .card h2 { font-size: 14px; font-weight: 700; margin-bottom: 14px; color: var(--burgundy); }
+  .field { margin-bottom: 16px; }
+  .field label { display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .field label .val { color: var(--burgundy); font-weight: 700; font-size: 15px; }
+  input[type=range] { width: 100%; accent-color: var(--burgundy); height: 26px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  @media(max-width:560px){ .grid2,.grid3 { grid-template-columns: 1fr; } }
+  .stat { background: var(--cream); border-radius: 12px; padding: 12px 14px; }
+  .stat .k { font-size: 12px; color: var(--mid); margin-bottom: 3px; }
+  .stat .v { font-size: 19px; font-weight: 700; }
+  .headline { border-radius: 14px; padding: 16px; text-align: center; margin-bottom: 14px; }
+  .headline.good { background: var(--green-bg); } .headline.bad { background: var(--red-bg); }
+  .headline .big { font-size: 26px; font-weight: 700; }
+  .headline.good .big { color: var(--green); } .headline.bad .big { color: var(--red); }
+  .headline .lbl { font-size: 13px; color: var(--mid); }
+  .row { display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--border); font-size:14px; }
+  .row:last-child { border-bottom: none; }
+  .row .num { font-weight: 600; }
+  .pos { color: var(--green); } .neg { color: var(--red); }
+  .note { font-size: 12px; color: var(--mid); line-height: 1.6; margin-top: 10px; }
+  .pill { display:inline-block; background: var(--burgundy-dim); color: var(--burgundy);
+    font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 100px; }
+  .capex { background: var(--amber-bg); border-radius:14px; padding:16px; text-align:center; }
+  .capex .big { font-size:24px; font-weight:700; color:var(--amber); }
+  .capex .lbl { font-size:13px; color:var(--mid); }
+  .pokrow { background: var(--blue-bg); border-radius:12px; padding:12px 14px; }
+  .sechead { font-size:12px; color:var(--mid); font-weight:600; margin:4px 0 8px; }
+  .flow { background: var(--cream); border-radius:12px; padding:6px 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🛵⚡ เครื่องคิดเลขค่าส่ง — จ่ายรายชั่วโมง + บริษัทรถแยก</h1>
+  <p class="sub">คนขับจ่ายรายชั่วโมง ไม่บังคับกะ · เช่ารถจากบริษัทรถ (Pokpok ช่วยค่าเช่าถ้าขับครบ ชม.) · ลูกค้าจ่ายค่าส่ง · Pokpok เก็บ %</p>
+
+  <div class="card">
+    <h2>① เขต (zone) — ต่อวัน</h2>
+    <div class="grid2">
+      <div class="field">
+        <label>ออเดอร์รวมทั้งเขต / วัน <span class="val"><span id="totV"></span></span></label>
+        <input type="range" id="tot" min="12" max="800" step="6" value="120" />
+      </div>
+      <div class="field">
+        <label>บิลที่ทำได้ / คนขับ / วัน <span class="val"><span id="bpsV"></span></span></label>
+        <input type="range" id="bps" min="6" max="40" step="1" value="21" />
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>② คนขับ — จ่ายรายชั่วโมง (ไม่บังคับกะ)</h2>
+    <div class="grid2">
+      <div class="field">
+        <label>ค่าจ้าง / ชั่วโมง <span class="val"><span id="wageV"></span> ฿</span></label>
+        <input type="range" id="wage" min="40" max="120" step="5" value="55" />
+      </div>
+      <div class="field">
+        <label>ชั่วโมงทำงาน / วัน <span class="val"><span id="hoursV"></span> ชม.</span></label>
+        <input type="range" id="hours" min="1" max="10" step="1" value="7" />
+      </div>
+      <div class="field">
+        <label>Pokpok ช่วยค่าเช่า เมื่อขับ ≥ <span class="val"><span id="subHrsV"></span> ชม.</span></label>
+        <input type="range" id="subHrs" min="4" max="10" step="1" value="7" />
+      </div>
+      <div class="field">
+        <label>เงินช่วยค่าเช่า <span class="val"><span id="subsidyV"></span> ฿</span></label>
+        <input type="range" id="subsidy" min="0" max="150" step="10" value="100" />
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>③ บริษัทรถ — ปล่อยเช่า EV</h2>
+    <div class="field">
+      <label>ค่าเช่ารถ / วัน (คนขับจ่ายให้บริษัทรถ) <span class="val"><span id="rentV"></span> ฿</span></label>
+      <input type="range" id="rent" min="0" max="200" step="10" value="100" />
+    </div>
+    <div class="sechead">ต้นทุนจริงของรถ EV / คัน / วัน</div>
+    <div class="grid3">
+      <div class="field">
+        <label>ราคา/คัน <span class="val"><span id="evPriceV"></span></span></label>
+        <input type="range" id="evPrice" min="15000" max="90000" step="1000" value="40000" />
+      </div>
+      <div class="field">
+        <label>อายุ (ด.) <span class="val"><span id="evLifeV"></span></span></label>
+        <input type="range" id="evLife" min="12" max="60" step="6" value="36" />
+      </div>
+      <div class="field">
+        <label>ไฟ+ซ่อม+ประกัน/วัน <span class="val"><span id="evRunV"></span></span></label>
+        <input type="range" id="evRun" min="0" max="120" step="5" value="35" />
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>④ ค่าส่งที่ลูกค้าจ่าย (ร้านกำหนดเองได้)</h2>
+    <div class="sechead">ค่าส่งแต่ละช่วงมูลค่าออเดอร์ (฿)</div>
+    <div class="grid3">
+      <div class="field"><label>&lt; 100฿ <span class="val"><span id="fee1V"></span></span></label><input type="range" id="fee1" min="0" max="40" step="1" value="10" /></div>
+      <div class="field"><label>100–149฿ <span class="val"><span id="fee2V"></span></span></label><input type="range" id="fee2" min="0" max="40" step="1" value="5" /></div>
+      <div class="field"><label>≥ 150฿ <span class="val"><span id="fee3V"></span></span></label><input type="range" id="fee3" min="0" max="40" step="1" value="0" /></div>
+    </div>
+    <div class="sechead" style="margin-top:6px">สัดส่วนออเดอร์แต่ละช่วง</div>
+    <div class="grid2">
+      <div class="field"><label>% &lt; 100฿ <span class="val"><span id="p1V"></span>%</span></label><input type="range" id="p1" min="0" max="100" step="5" value="30" /></div>
+      <div class="field"><label>% 100–149฿ <span class="val"><span id="p2V"></span>%</span></label><input type="range" id="p2" min="0" max="100" step="5" value="30" /></div>
+    </div>
+    <p class="note" id="mixNote"></p>
+  </div>
+
+  <div class="card">
+    <h2>⑤ เทียบ & Pokpok</h2>
+    <div class="grid3">
+      <div class="field"><label>บิลเฉลี่ย <span class="val"><span id="avgV"></span></span></label><input type="range" id="avg" min="50" max="500" step="10" value="150" /></div>
+      <div class="field"><label>GP Grab <span class="val"><span id="gpV"></span>%</span></label><input type="range" id="gp" min="20" max="40" step="1" value="30" /></div>
+      <div class="field"><label>ค่าธรรมเนียม Pokpok <span class="val"><span id="pokV"></span>%</span></label><input type="range" id="pok" min="0" max="15" step="0.5" value="3" /></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>ภาพเขต / วัน</h2>
+    <div class="grid2">
+      <div class="stat"><div class="k">คนขับ + รถ EV ที่ต้องใช้</div><div class="v" id="drivers">—</div></div>
+      <div class="stat"><div class="k">ต้นทุนส่งรวม (ทั้งกลุ่ม) / วัน</div><div class="v" id="costDay">—</div></div>
+      <div class="stat"><div class="k">ต้นทุนส่ง / บิล</div><div class="v" id="costPer">—</div></div>
+      <div class="stat"><div class="k">ค่าส่งลูกค้าเฉลี่ย / บิล</div><div class="v" id="avgFee">—</div></div>
+    </div>
+    <div class="capex" style="margin-top:14px">
+      <div class="big" id="capex">—</div>
+      <div class="lbl">💰 เงินลงทุนรถ EV (อยู่ที่ "บริษัทรถ" · ครั้งเดียว/เขต)</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>การไหลของเงิน — ต่อคนขับ 1 คน / วัน</h2>
+    <div class="row"><span>Pokpok จ่ายค่าจ้าง (รายชั่วโมง)</span><span class="num" id="fWage">—</span></div>
+    <div class="row"><span>Pokpok จ่ายเงินช่วยค่าเช่า</span><span class="num" id="fSub">—</span></div>
+    <div class="row"><span>คนขับจ่ายค่าเช่า → บริษัทรถ</span><span class="num neg" id="fRent">—</span></div>
+    <div class="row"><span><b>คนขับรับสุทธิ</b></span><span class="num pos" id="fNet">—</span></div>
+    <div class="row"><span>บริษัทรถ: ค่าเช่ารับ − ต้นทุน EV จริง</span><span class="num" id="fCarco">—</span></div>
+    <p class="note">เงินช่วยค่าเช่า ↔ ค่าเช่า วนภายในกลุ่ม (เจ้าของเดียวกัน) → ต้นทุนกลุ่มจริง = ค่าจ้าง + ต้นทุน EV</p>
+  </div>
+
+  <div class="card">
+    <h2>ต่อ 1 บิล — ใครจ่ายเท่าไหร่</h2>
+    <div id="headline" class="headline good">
+      <div class="big" id="saveBig">—</div>
+      <div class="lbl">ร้านประหยัดเทียบ Grab (ต่อบิล)</div>
+    </div>
+    <div class="row"><span>ลูกค้าจ่ายค่าส่ง (เฉลี่ย)</span><span class="num" id="rFee">—</span></div>
+    <div class="row"><span>ร้านช่วยจ่ายค่าส่ง (ส่วนที่ขาด)</span><span class="num" id="rShip">—</span></div>
+    <div class="row"><span>+ ค่าธรรมเนียม Pokpok</span><span class="num" id="rPok">—</span></div>
+    <div class="row"><span><b>ร้านจ่ายรวม</b></span><span class="num" id="rShop">—</span></div>
+    <div class="row"><span>ถ้าใช้ Grab — ร้านเสีย GP</span><span class="num neg" id="rGrab">—</span></div>
+    <p class="note" id="modeNote"></p>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>ฝั่งคนขับ</h2>
+      <div class="grid2">
+        <div class="stat"><div class="k">รับสุทธิ / วัน</div><div class="v" id="drvDay">—</div></div>
+        <div class="stat"><div class="k">/ ชั่วโมง (สุทธิ)</div><div class="v" id="drvHr">—</div></div>
+      </div>
+      <p class="note" id="drvNote"></p>
+    </div>
+    <div class="card">
+      <h2>Pokpok อยู่รอด?</h2>
+      <div class="pokrow" style="margin-bottom:10px"><div class="k" style="font-size:12px;color:var(--mid)">ค่าธรรมเนียม / วัน</div><div id="pokDay" style="font-size:19px;font-weight:700;color:var(--blue)">—</div></div>
+      <div class="pokrow"><div class="k" style="font-size:12px;color:var(--mid)">/ เดือน (1 เขต)</div><div id="pokMonth" style="font-size:19px;font-weight:700;color:var(--blue)">—</div></div>
+    </div>
+  </div>
+
+  <p class="note">
+    <span class="pill">หมายเหตุ</span> สมมุติฐานวางแผน pilot — ปรึกษานักกฎหมายแรงงาน/นักบัญชีเรื่องโครงสร้าง 2 บริษัท + สถานะคนขับ ·
+    ค่าธรรมเนียม Pokpok เป็น % เล็กน้อย <b>ต่ำกว่า GP 30% มาก</b> · เลขประมาณการ ต้องเก็บจริงศรีสะเกษ
+  </p>
+</div>
+
+<script>
+  const baht = (n) => (Math.round(n * 100) / 100).toLocaleString('th-TH', { maximumFractionDigits: 2 });
+  const el = (id) => document.getElementById(id);
+  const ids = ['tot','bps','wage','hours','subHrs','subsidy','rent','evPrice','evLife','evRun','fee1','fee2','fee3','p1','p2','avg','gp','pok'];
+
+  function calc() {
+    const tot=+el('tot').value, bps=+el('bps').value;
+    const wage=+el('wage').value, hours=+el('hours').value, subHrs=+el('subHrs').value, subsidy=+el('subsidy').value;
+    const rent=+el('rent').value, evPrice=+el('evPrice').value, evLife=+el('evLife').value, evRun=+el('evRun').value;
+    const fee1=+el('fee1').value, fee2=+el('fee2').value, fee3=+el('fee3').value;
+    let p1=+el('p1').value, p2=+el('p2').value;
+    const avg=+el('avg').value, gp=+el('gp').value, pokPct=+el('pok').value;
+
+    if (p1 + p2 > 100) { p2 = 100 - p1; el('p2').value = p2; }
+    const p3 = 100 - p1 - p2;
+
+    // labels
+    el('totV').textContent=tot; el('bpsV').textContent=bps;
+    el('wageV').textContent=baht(wage); el('hoursV').textContent=hours;
+    el('subHrsV').textContent=subHrs; el('subsidyV').textContent=baht(subsidy);
+    el('rentV').textContent=baht(rent); el('evPriceV').textContent=baht(evPrice);
+    el('evLifeV').textContent=evLife; el('evRunV').textContent=baht(evRun);
+    el('fee1V').textContent=fee1; el('fee2V').textContent=fee2; el('fee3V').textContent=fee3;
+    el('p1V').textContent=p1; el('p2V').textContent=p2;
+    el('avgV').textContent=baht(avg); el('gpV').textContent=gp; el('pokV').textContent=pokPct;
+    el('mixNote').textContent = `≥ 150฿ = ${p3}% ของออเดอร์`;
+
+    const drivers = Math.max(1, Math.ceil(tot / bps));
+    const evReal = evPrice / (evLife * 30) + evRun;        // ต้นทุน EV จริง/คัน/วัน
+    const wageDay = wage * hours;
+    const subsidyPaid = hours >= subHrs ? subsidy : 0;
+
+    // group cost per driver = ค่าจ้าง + ต้นทุน EV จริง (เช่า↔subsidy วนในกลุ่ม)
+    const groupPerDriver = wageDay + evReal;
+    const costDay = drivers * groupPerDriver;
+    const costPer = costDay / tot;
+    const capex = drivers * evPrice;
+
+    el('drivers').textContent = drivers + ' คน/คัน';
+    el('costDay').textContent = baht(costDay) + ' ฿';
+    el('costPer').textContent = baht(costPer) + ' ฿';
+    el('capex').textContent   = baht(capex) + ' ฿';
+
+    // money flow per driver
+    const driverNet = wageDay + subsidyPaid - rent;
+    const carcoNet = rent - evReal;
+    el('fWage').textContent  = baht(wageDay) + ' ฿';
+    el('fSub').textContent   = baht(subsidyPaid) + ' ฿' + (subsidyPaid===0 ? ' (ขับไม่ถึงเกณฑ์)' : '');
+    el('fRent').textContent  = '−' + baht(rent) + ' ฿';
+    el('fNet').textContent   = baht(driverNet) + ' ฿';
+    el('fCarco').textContent = (carcoNet>=0?'+':'') + baht(carcoNet) + ' ฿';
+
+    // customer fee
+    const avgFee = (p1 * fee1 + p2 * fee2 + p3 * fee3) / 100;
+    el('avgFee').textContent = baht(avgFee) + ' ฿';
+
+    const shipShare = Math.max(0, costPer - avgFee);
+    const pokFee = avg * pokPct / 100;
+    const shopTotal = shipShare + pokFee;
+    const grabGp = avg * gp / 100;
+    const save = grabGp - shopTotal;
+
+    el('rFee').textContent  = baht(avgFee) + ' ฿';
+    el('rShip').textContent = shipShare <= 0 ? '0 ฿ (ลูกค้าจ่ายครบ)' : baht(shipShare) + ' ฿';
+    el('rPok').textContent  = baht(pokFee) + ' ฿ (' + pokPct + '%)';
+    el('rShop').textContent = baht(shopTotal) + ' ฿';
+    el('rGrab').textContent = baht(grabGp) + ' ฿ (' + gp + '%)';
+
+    const hl = el('headline');
+    hl.className = 'headline ' + (save >= 0 ? 'good' : 'bad');
+    el('saveBig').textContent = (save >= 0 ? 'ประหยัด ' : 'แพงกว่า ') + baht(Math.abs(save)) + ' ฿';
+    el('modeNote').textContent = shipShare <= 0
+      ? '✅ ร้านตั้งค่าส่งสูงพอ → ลูกค้าจ่ายค่าส่งครบ ร้านจ่ายแค่ค่าธรรมเนียม'
+      : 'ร้านเลือกแบกค่าส่งบางส่วน (เพื่อให้ลูกค้าจ่ายถูก) — ปรับค่าส่งช่อง ④ ขึ้นได้';
+
+    // driver readout
+    el('drvDay').textContent = baht(driverNet) + ' ฿';
+    el('drvHr').textContent  = baht(driverNet / hours) + ' ฿';
+    el('drvNote').textContent = (driverNet / hours) < 45
+      ? '⚠️ สุทธิ/ชม. ต่ำกว่าค่าแรงขั้นต่ำ (~45฿) — อาจหาคนยาก'
+      : 'สุทธิ/ชม. โอเคสำหรับ part-time (ไม่ต้องมีรถ/น้ำมันเอง)';
+
+    const pokDay = pokFee * tot;
+    el('pokDay').textContent   = baht(pokDay) + ' ฿';
+    el('pokMonth').textContent = baht(pokDay * 30) + ' ฿';
+  }
+
+  ids.forEach((id) => el(id).addEventListener('input', calc));
+  calc();
+</script>
+</body>
+</html>
