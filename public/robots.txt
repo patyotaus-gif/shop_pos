@@ -1,0 +1,13 @@
+# Pokpok — https://pok-pok.app
+User-agent: *
+Allow: /
+
+# ระบบหลังบ้าน / ล็อกอิน / หน้าเฉพาะร้าน / transactional — ไม่ต้องให้ index
+Disallow: /supplier
+Disallow: /order
+Disallow: /payment/
+Disallow: /api/
+Disallow: /logo-preview.html
+Disallow: /product-card-preview.html
+
+Sitemap: https://pok-pok.app/sitemap.xml
