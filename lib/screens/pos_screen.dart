@@ -447,7 +447,8 @@ class _PosScreenState extends State<PosScreen> {
           ),
           // Category-filtered product picker (only when a specific
           // category is selected — keeps "ทั้งหมด" view clean and lets
-          // pinned + search carry the load there).
+          // pinned + search carry the load there). Image cards with promo
+          // badges; tap = add 1 to cart (no sheet — cashier speed).
           if (_selectedCategory != 'ทั้งหมด')
             StreamBuilder<List<Product>>(
               stream: ProductService.watchAll(),
@@ -467,28 +468,23 @@ class _PosScreenState extends State<PosScreen> {
                     ),
                   );
                 }
-                return Container(
-                  margin: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 4),
-                  constraints: const BoxConstraints(maxHeight: 160),
-                  child: SingleChildScrollView(
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: inCategory.map((p) {
-                        final outOfStock = p.stock <= 0;
-                        return ActionChip(
-                          label: Text(
-                            '${p.name} · ฿${p.effectivePrice.toStringAsFixed(0)}'
-                            '${p.isOnSale ? " (โปร)" : ""}'
-                            '${outOfStock ? " (หมด)" : ""}',
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          onPressed:
-                              outOfStock ? null : () => _addToCart(p),
-                        );
-                      }).toList(),
-                    ),
+                return SizedBox(
+                  height: 132,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 4),
+                    itemCount: inCategory.length,
+                    itemBuilder: (ctx, i) {
+                      final p = inCategory[i];
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: _PickerProductCard(
+                          product: p,
+                          onAdd: p.stock <= 0 ? null : () => _addToCart(p),
+                        ),
+                      );
+                    },
                   ),
                 );
               },
@@ -774,6 +770,157 @@ class _CartItemTile extends StatelessWidget {
               onPressed: onRemove,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact product card for the POS category picker. Tap = add 1 to cart.
+/// [onAdd] == null renders the out-of-stock state (faded + "หมด").
+class _PickerProductCard extends StatelessWidget {
+  const _PickerProductCard({required this.product, this.onAdd});
+  final Product product;
+  final VoidCallback? onAdd;
+
+  Widget _fallbackIcon(ColorScheme cs) => Container(
+        color: cs.surfaceContainerHighest,
+        child: Icon(Icons.inventory_2_outlined,
+            size: 24, color: cs.onSurface.withValues(alpha: 0.3)),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final out = onAdd == null;
+    final pct = product.discountPercent;
+
+    Widget image;
+    if (product.imagePath != null) {
+      image = Image.file(
+        File(product.imagePath!),
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _fallbackIcon(cs),
+      );
+    } else if ((product.imageUrl ?? '').isNotEmpty) {
+      image = Image.network(
+        product.imageUrl!,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _fallbackIcon(cs),
+      );
+    } else {
+      image = _fallbackIcon(cs);
+    }
+
+    return SizedBox(
+      width: 110,
+      child: Card(
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onAdd,
+          child: Opacity(
+            opacity: out ? 0.45 : 1,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  height: 64,
+                  width: double.infinity,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      image,
+                      if (pct > 0)
+                        Positioned(
+                          left: 4,
+                          top: 4,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 5, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF7A1F2B),
+                              borderRadius: BorderRadius.circular(100),
+                            ),
+                            child: Text(
+                              'ลด $pct%',
+                              style: const TextStyle(
+                                color: Color(0xFFF5F1EC),
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (out)
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF7A1F2B),
+                              borderRadius: BorderRadius.circular(100),
+                            ),
+                            child: const Text(
+                              'หมด',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(6, 4, 6, 6),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        height: 27,
+                        child: Text(
+                          product.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 11, height: 1.2),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            '฿${product.effectivePrice.toStringAsFixed(0)}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: cs.primary,
+                            ),
+                          ),
+                          if (product.isOnSale)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: Text(
+                                '฿${product.price.toStringAsFixed(0)}',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  decoration: TextDecoration.lineThrough,
+                                  color: cs.onSurface.withValues(alpha: 0.45),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
