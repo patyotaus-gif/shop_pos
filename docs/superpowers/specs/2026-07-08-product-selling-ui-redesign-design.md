@@ -15,7 +15,7 @@
 
 ### File structure (static, no build step)
 
-```
+```text
 public/order/
 ├── index.html      ← markup skeleton + Firebase App Check bootstrap (inline module, as today)
 ├── order.css       ← all styles (moved out of <style>)
@@ -46,7 +46,7 @@ public/order/
 ### Product bottom sheet (new — same pattern as existing cart drawer)
 
 - Thumbnail + promo badges + name + price (+ strikethrough).
-- Horizontal number strip **1 2 3 …** (scrollable, max = actual stock), Woolworths style.
+- Horizontal number strip **1 2 3 …** (scrollable), Woolworths style. Range = 1 to `min(stock, 20)` — 20 keeps the strip usable for high-stock items; customers needing more can tap Add repeatedly or contact the shop.
 - If the product is already in the cart → preselect current quantity; primary button becomes **"อัปเดตเป็น N ชิ้น"**, plus a secondary **"เอาออกจากตะกร้า"** button.
 - Not in cart → primary button **"เพิ่ม N ลงตะกร้า"**.
 - Quantity semantics are **absolute set** (not additive) — simpler for shop customers.
@@ -70,10 +70,10 @@ Only the category product picker changes (the `if (_selectedCategory != 'ทั�
 ## Edge cases (both surfaces)
 
 | Case | Behavior |
-|---|---|
+| --- | --- |
 | Discount % rounding | `round((1 − price/originalPrice) × 100)`; savings = `originalPrice − price` |
 | Sale but discount < 1% or bad data (`originalPrice ≤ price`) | No badge; show normal price |
-| Sheet quantity vs stock | Number strip capped at actual stock; stock 1 → only "1" |
+| Sheet quantity vs stock | Number strip capped at `min(stock, 20)`; stock 1 → only "1" |
 | Image load failure | Fallback cream block + icon (not `display:none`, so the card doesn't collapse) |
 | Special characters in product names | `escHtml` at every render site (web) |
 | Stock lowered after item added to cart | Server re-checks at checkout, as today (untouched) |
