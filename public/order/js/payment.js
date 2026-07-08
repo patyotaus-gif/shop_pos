@@ -1,0 +1,205 @@
+// Order form + PromptPay payment + slip verification.
+// Logic moved VERBATIM from the old public/order/index.html inline script —
+// do not "improve" payload/CRC/compression code here.
+import { shopId, apiFetch } from './util.js';
+import { items } from './cart.js';
+
+let pendingOrder = null;
+
+export function openOrderModal() {
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeOrderModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+export function initPayment() {
+  document.getElementById('payBtn').addEventListener('click', submitOrder);
+  document.getElementById('cancelBtn').addEventListener('click', closeOrderModal);
+  document.getElementById('paySlipBtn').addEventListener('click', () =>
+    document.getElementById('slipFileInput').click());
+  document.getElementById('slipFileInput').addEventListener('change', uploadSlip);
+  document.getElementById('payCancelBtn').addEventListener('click', cancelPay);
+}
+
+// ── PromptPay EMVCo QR payload (mirrors lib/utils/promptpay_qr.dart) ──
+function tlv(tag, value) {
+  return tag + String(value.length).padStart(2, '0') + value;
+}
+export function crc16(data) {
+  let crc = 0xFFFF;
+  for (let i = 0; i < data.length; i++) {
+    crc ^= data.charCodeAt(i) << 8;
+    for (let b = 0; b < 8; b++) {
+      crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
+      crc &= 0xFFFF;
+    }
+  }
+  return crc.toString(16).toUpperCase().padStart(4, '0');
+}
+export function buildPromptPayPayload(rawId, amount) {
+  const digits = String(rawId).replace(/\D/g, '');
+  let tag, value;
+  if (digits.length === 10)      { tag = '01'; value = '0066' + digits.substring(1); }
+  else if (digits.length === 13) { tag = '02'; value = digits; }
+  else if (digits.length === 15) { tag = '03'; value = digits; }
+  else throw new Error('Invalid PromptPay ID length: ' + digits.length);
+
+  let pp = '';
+  pp += tlv('00', '01');
+  pp += tlv('01', amount != null ? '12' : '11');
+  pp += tlv('29', tlv('00', 'A000000677010111') + tlv(tag, value));
+  pp += tlv('58', 'TH');
+  pp += tlv('53', '764');
+  if (amount != null) pp += tlv('54', Number(amount).toFixed(2));
+  pp += '6304' + crc16(pp + '6304');
+  return pp;
+}
+
+// ── Submit order ──
+async function submitOrder() {
+  const name = document.getElementById('customerName').value.trim();
+  const phone = document.getElementById('customerPhone').value.trim();
+  if (!name) { alert('กรุณากรอกชื่อ'); return; }
+  if (!phone) { alert('กรุณากรอกเบอร์โทร'); return; }
+
+  const orderItems = items().map((i) => ({
+    productId: i.id,
+    productName: i.name,
+    price: i.price,
+    quantity: i.quantity,
+  }));
+
+  const payBtn = document.getElementById('payBtn');
+  payBtn.disabled = true;
+  payBtn.innerHTML = '<span class="spinner"></span>กำลังดำเนินการ...';
+
+  try {
+    const res = await apiFetch('/api/createPromptPayOrder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shopId, customerName: name, customerPhone: phone, items: orderItems }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.orderId) {
+      alert('เกิดข้อผิดพลาด: ' + (data.error || 'กรุณาลองใหม่'));
+      return;
+    }
+    pendingOrder = data;
+    closeOrderModal();
+    showPaymentScreen(data);
+  } catch (e) {
+    alert('เชื่อมต่อไม่ได้ กรุณาลองใหม่');
+  } finally {
+    payBtn.disabled = false;
+    payBtn.textContent = 'ชำระเงิน';
+  }
+}
+
+function showPaymentScreen({ finalAmount, total, promptpayId, promptpayName }) {
+  const payload = buildPromptPayPayload(promptpayId, finalAmount);
+  const qrEl = document.getElementById('payQrCanvas');
+  qrEl.innerHTML = '';  // wipe any previous render
+  new QRCode(qrEl, {
+    text: payload,
+    width: 240,
+    height: 240,
+    correctLevel: QRCode.CorrectLevel.M,
+  });
+  document.getElementById('payAmount').textContent =
+    '฿' + Number(finalAmount).toFixed(2);
+  const centsNote = (finalAmount > total)
+    ? `ยอดสินค้า ฿${total.toFixed(2)} + เศษ ${Math.round((finalAmount - total) * 100)} สตางค์ (ใช้แยกออเดอร์)`
+    : '';
+  document.getElementById('payCentsNote').textContent = centsNote;
+  document.getElementById('payReceiver').textContent =
+    promptpayName || 'ผู้รับเงิน';
+  document.getElementById('payReceiverId').textContent =
+    'PromptPay ID: ' + maskPromptPayId(promptpayId);
+  document.getElementById('payOverlay').classList.add('open');
+}
+
+function maskPromptPayId(id) {
+  const digits = String(id).replace(/\D/g, '');
+  if (digits.length <= 4) return digits;
+  return digits.slice(0, 3) + '*'.repeat(digits.length - 6) + digits.slice(-3);
+}
+
+async function uploadSlip(event) {
+  const file = event.target.files?.[0];
+  event.target.value = '';  // allow re-picking the same file later
+  if (!file || !pendingOrder) return;
+
+  const slipBtn = document.getElementById('paySlipBtn');
+  const status = document.getElementById('paySlipStatus');
+  slipBtn.disabled = true;
+  slipBtn.innerHTML = '<span class="spinner"></span>กำลังตรวจสลิป...';
+  status.className = 'busy';
+  status.textContent = 'อ่าน QR + ตรวจยอดเงิน...';
+
+  try {
+    // Convert image → base64. Compress large images first so we don't
+    // POST a 10MB payload.
+    const slipBase64 = await fileToBase64Compressed(file, 1600);
+
+    const res = await apiFetch('/api/verifyPromptPaySlip', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        shopId,
+        orderId: pendingOrder.orderId,
+        slipBase64,
+      }),
+    });
+    const data = await res.json();
+
+    if (!res.ok || data.success === false) {
+      status.className = 'err';
+      status.textContent = data.reason || data.error || 'ตรวจสลิปไม่สำเร็จ';
+      slipBtn.disabled = false;
+      slipBtn.innerHTML = '📷 ลองสลิปใหม่อีกครั้ง';
+      return;
+    }
+
+    status.className = 'ok';
+    status.textContent = '✓ ยืนยันสำเร็จ! กำลังพาคุณไปหน้าออเดอร์...';
+    setTimeout(() => {
+      window.location.href = `/order/success/?order=${pendingOrder.orderId}&auto=1`;
+    }, 1200);
+  } catch (e) {
+    status.className = 'err';
+    status.textContent = 'อัปโหลดล้มเหลว — ลองอีกครั้ง';
+    slipBtn.disabled = false;
+    slipBtn.innerHTML = '📷 อัปโหลดสลิป — ยืนยันอัตโนมัติ';
+  }
+}
+
+// Down-scale slips so the server doesn't choke on multi-MB phone photos.
+function fileToBase64Compressed(file, maxDim) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        // 0.85 quality JPEG — small but QR codes still parse cleanly.
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = () => reject(new Error('image load failed'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('file read failed'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function cancelPay() {
+  if (!confirm('ยกเลิกออเดอร์นี้?')) return;
+  document.getElementById('payOverlay').classList.remove('open');
+  pendingOrder = null;
+}

@@ -12,461 +12,9 @@
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap"
     rel="stylesheet"
   />
+  <link rel="stylesheet" href="/order/order.css" />
   <!-- Self-hosted qrcodejs (davidshimjs) — avoids CDN/CORB blocks -->
   <script src="qrcode.min.js"></script>
-  <style>
-    /* ── BRAND DESIGN TOKENS (Pokpok burgundy + cream) ── */
-    :root {
-      --burgundy: #7A1F2B;
-      --burgundy-hover: #5C1820;
-      --burgundy-dim: #F0E2E4;
-      --cream: #F5F1EC;
-      --surface: #FFFFFF;
-      --text-dark: #1F1A1B;
-      --text-mid: #6B5E60;
-      --border-color: #E5DDD3;
-
-      /* Aliases for legacy class names — keeps the rest of the CSS intact */
-      --primary: var(--burgundy);
-      --primary-hover: var(--burgundy-hover);
-      --primary-light: var(--burgundy-dim);
-      --bg-main: var(--cream);
-      --text-main: var(--text-dark);
-      --text-muted: var(--text-mid);
-
-      --radius-sm: 8px;
-      --radius-md: 12px;
-      --radius-lg: 20px;
-      --shadow-sm: 0 2px 8px rgba(31, 26, 27, 0.04);
-      --shadow-md: 0 10px 25px -5px rgba(31, 26, 27, 0.08), 0 8px 10px -6px rgba(31, 26, 27, 0.08);
-      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'IBM Plex Sans Thai', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      font-weight: 400;
-      background: var(--cream);
-      color: var(--text-dark);
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* ── GLASSMORPHISM HEADER ── */
-    header {
-      background: rgba(245, 241, 236, 0.75);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      color: var(--text-dark);
-      padding: 14px 20px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      border-bottom: 1px solid var(--border-color);
-    }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      min-width: 0;
-    }
-    .brand-mark {
-      width: 36px; height: 36px;
-      flex-shrink: 0;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .brand-mark svg { width: 100%; height: 100%; display: block; }
-    header h1 {
-      font-size: 17px;
-      font-weight: 500;
-      letter-spacing: 0.2px;
-      color: var(--text-dark);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    #cartBtn {
-      background: var(--surface);
-      color: var(--text-mid);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 8px 14px;
-      font-family: 'IBM Plex Sans Thai', sans-serif;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: var(--transition);
-      flex-shrink: 0;
-      position: relative;
-    }
-    #cartBtn:hover {
-      border-color: var(--burgundy);
-      color: var(--burgundy);
-    }
-    #cartCount {
-      background: var(--burgundy);
-      color: var(--cream);
-      border-radius: 100px;
-      min-width: 20px;
-      height: 20px;
-      padding: 0 6px;
-      font-family: 'IBM Plex Sans Thai', sans-serif;
-      font-size: 11px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: var(--transition);
-    }
-    #cartBtn:hover #cartCount {
-      background: var(--burgundy-hover);
-    }
-
-    /* ── UTILITIES STATE ── */
-    #loading, #error { text-align: center; padding: 80px 20px; color: var(--text-muted); font-size: 15px; font-weight: 500; }
-    #error { color: var(--burgundy); background: var(--burgundy-dim); border-radius: var(--radius-md); margin: 20px; padding: 20px; }
-
-    /* ── PRODUCT GRID & CARDS ── */
-    #products {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 18px;
-      padding: 24px 20px;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    .product-card {
-      background-color: var(--surface);
-      border-radius: 14px;
-      padding: 14px;
-      cursor: pointer;
-      box-shadow:
-        0 4px 6px -1px rgba(31, 26, 27, 0.05),
-        0 2px 4px -2px rgba(31, 26, 27, 0.04);
-      transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
-      position: relative;
-      border: 1px solid var(--border-color);
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-    .product-card:hover {
-      transform: translateY(-5px);
-      box-shadow:
-        0 12px 20px -6px rgba(122, 31, 43, 0.14),
-        0 6px 10px -6px rgba(31, 26, 27, 0.06);
-      border-color: rgba(122, 31, 43, 0.22);
-    }
-    .product-card:active { transform: scale(0.98) translateY(-2px); }
-    .product-card.out-of-stock { opacity: 0.55; cursor: not-allowed; transform: none !important; box-shadow: none !important; filter: grayscale(0.4); }
-
-    .product-name {
-      font-weight: 500;
-      font-size: 15px;
-      color: var(--text-dark);
-      margin-bottom: 4px;
-      line-height: 1.35;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-    .product-category {
-      font-size: 11px; font-weight: 500;
-      color: var(--text-mid);
-      margin-bottom: 12px;
-      background: var(--cream);
-      width: fit-content;
-      padding: 2px 9px;
-      border-radius: 100px;
-    }
-    .product-price {
-      font-family: 'IBM Plex Sans Thai', sans-serif;
-      font-size: 1.2rem;
-      font-weight: 500;
-      color: var(--burgundy);
-      margin-top: auto;
-      letter-spacing: 0.2px;
-    }
-    .product-price-original {
-      font-size: 0.85rem;
-      font-weight: 400;
-      color: var(--text-mid);
-      text-decoration: line-through;
-      margin-left: 6px;
-    }
-    .product-stock {
-      font-size: 11px;
-      font-weight: 500;
-      color: var(--text-mid);
-      margin-top: 4px;
-      display: flex; align-items: center; gap: 4px;
-    }
-    .product-stock.low { color: #B45309; }
-    .product-card.out-of-stock .product-stock { color: var(--burgundy); font-weight: 600; }
-
-    .qty-badge {
-      position: absolute;
-      top: -6px;
-      right: -6px;
-      background: var(--burgundy);
-      color: var(--cream);
-      border-radius: 100px;
-      min-width: 24px;
-      height: 24px;
-      padding: 0 7px;
-      font-family: 'IBM Plex Sans Thai', sans-serif;
-      font-size: 12px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 10px rgba(122, 31, 43, 0.35);
-      border: 2px solid var(--cream);
-      animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-    @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
-
-    /* ── DRAWER & OVERLAY (GLASSMORPHISM) ── */
-    #cartOverlay { 
-      display: none; 
-      position: fixed; 
-      inset: 0; 
-      background: rgba(31, 26, 27, 0.3); 
-      backdrop-filter: blur(8px); /* เอฟเฟกต์ฉากหลังเบลอแบบโมเดิร์น */
-      z-index: 200; 
-    }
-    #cartDrawer { 
-      position: fixed; 
-      bottom: 0; 
-      left: 0; 
-      right: 0; 
-      background: white; 
-      border-radius: var(--radius-lg) var(--radius-lg) 0 0; 
-      padding: 24px; 
-      max-height: 85vh; 
-      overflow-y: auto; 
-      z-index: 201; 
-      transform: translateY(100%); 
-      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1); 
-      box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
-    }
-    @media(min-width: 640px) { /* แสดงผลแบบด้านข้างกรณีเปิดบน Tablet/PC */
-      #cartDrawer { top: 0; bottom: 0; right: 0; left: auto; width: 400px; max-height: 100vh; border-radius: var(--radius-lg) 0 0 var(--radius-lg); transform: translateX(100%); }
-      #cartDrawer.open { transform: translateX(0); }
-    }
-    #cartDrawer.open { transform: translateY(0); }
-    #cartOverlay.open { display: block; }
-    
-    .drawer-handle { width: 40px; height: 5px; background: var(--border-color); border-radius: 10px; margin: -8px auto 20px; }
-    @media(min-width: 640px) { .drawer-handle { display: none; } }
-    .drawer-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; color: var(--text-main); }
-    
-    .cart-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border-color); }
-    .cart-item-name { font-size: 14px; font-weight: 600; color: var(--text-main); }
-    .cart-item-price { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
-    
-    .qty-controls { display: flex; align-items: center; gap: 12px; }
-    .qty-btn { 
-      width: 32px; 
-      height: 32px; 
-      border: 1px solid var(--border-color); 
-      border-radius: 50%; 
-      background: white; 
-      cursor: pointer; 
-      font-size: 16px; 
-      font-weight: 600;
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      transition: var(--transition);
-      color: var(--text-main);
-    }
-    .qty-btn:hover { background: var(--bg-main); border-color: #D6CDC2; }
-    .qty-btn:active { transform: scale(0.9); }
-    .qty-num { font-size: 15px; font-weight: 700; min-width: 24px; text-align: center; color: var(--text-main); }
-    
-    .cart-total { display: flex; justify-content: space-between; font-size: 18px; font-weight: 700; padding: 20px 0 4px; color: var(--text-main); }
-    
-    #checkoutBtn { 
-      width: 100%; 
-      background: var(--primary); 
-      color: white; 
-      border: none; 
-      border-radius: var(--radius-md); 
-      padding: 16px; 
-      font-size: 16px; 
-      font-weight: 600; 
-      cursor: pointer; 
-      margin-top: 16px; 
-      transition: var(--transition);
-      box-shadow: 0 4px 12px rgba(122, 31, 43, 0.15);
-    }
-    #checkoutBtn:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(122, 31, 43, 0.25); }
-    #checkoutBtn:disabled { background: #D6CDC2; color: #A89E94; cursor: not-allowed; box-shadow: none; }
-
-    /* ── MODAL OVERLAY (ORDER FORM) ── */
-    #modalOverlay { 
-      display: none; 
-      position: fixed; 
-      inset: 0; 
-      background: rgba(31, 26, 27, 0.4); 
-      backdrop-filter: blur(8px);
-      z-index: 300; 
-      align-items: center; 
-      justify-content: center; 
-      padding: 20px; 
-    }
-    #modalOverlay.open { display: flex; }
-    #modal { 
-      background: white; 
-      border-radius: var(--radius-lg); 
-      padding: 28px; 
-      width: 100%; 
-      max-width: 420px; 
-      box-shadow: var(--shadow-md);
-      animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    @keyframes modalPop { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-    
-    #modal h2 { font-size: 19px; font-weight: 700; margin-bottom: 6px; color: var(--text-main); }
-    #modal .subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
-    
-    .field { margin-bottom: 18px; }
-    .field label { font-size: 13px; font-weight: 600; color: var(--text-main); display: block; margin-bottom: 8px; }
-    .field input { 
-      width: 100%; 
-      border: 1.5px solid var(--border-color); 
-      border-radius: var(--radius-sm); 
-      padding: 12px 14px; 
-      font-size: 15px; 
-      outline: none; 
-      transition: var(--transition);
-      background: #FBF8F3;
-    }
-    .field input:focus { border-color: var(--burgundy); background: white; box-shadow: 0 0 0 4px var(--burgundy-dim); }
-    
-    .modal-total {
-      background: var(--burgundy-dim);
-      border-radius: var(--radius-md);
-      padding: 14px 16px;
-      display: flex;
-      justify-content: space-between;
-      font-weight: 600;
-      font-size: 16px;
-      margin-bottom: 20px;
-      color: var(--burgundy);
-    }
-    
-    #payBtn { 
-      width: 100%; 
-      background: var(--primary); 
-      color: white; 
-      border: none; 
-      border-radius: var(--radius-md); 
-      padding: 16px; 
-      font-size: 16px; 
-      font-weight: 600; 
-      cursor: pointer; 
-      transition: var(--transition);
-      box-shadow: 0 4px 12px rgba(122, 31, 43, 0.15);
-    }
-    #payBtn:hover:not(:disabled) { background: var(--primary-hover); }
-    #payBtn:disabled { background: #D6CDC2; cursor: not-allowed; box-shadow: none; }
-    
-    #cancelBtn { width: 100%; background: none; border: none; color: var(--text-muted); padding: 12px; font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 8px; transition: var(--transition); border-radius: var(--radius-sm); }
-    #cancelBtn:hover { background: var(--bg-main); color: var(--text-main); }
-    
-    .spinner { display: inline-block; width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 8px; vertical-align: middle; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .empty-cart { text-align: center; color: var(--text-muted); padding: 30px 0; font-size: 14px; font-weight: 500; }
-
-    /* ── PromptPay payment screen ── */
-    #payOverlay {
-      position: fixed; inset: 0;
-      background: rgba(31, 26, 27, 0.6); backdrop-filter: blur(4px);
-      z-index: 200;
-      display: none; align-items: center; justify-content: center;
-      padding: 20px;
-    }
-    #payOverlay.open { display: flex; }
-    #payCard {
-      background: white; border-radius: var(--radius-lg);
-      max-width: 420px; width: 100%;
-      padding: 28px 24px;
-      box-shadow: var(--shadow-md);
-      text-align: center;
-      max-height: 90vh; overflow-y: auto;
-    }
-    #payCard h2 {
-      color: var(--primary); font-size: 22px; margin-bottom: 4px;
-    }
-    #payCard .pay-subtitle {
-      color: var(--text-muted); font-size: 14px; margin-bottom: 20px;
-    }
-    #payQrBox {
-      background: white; border: 2px solid var(--border-color);
-      border-radius: var(--radius-md); padding: 16px;
-      display: inline-block; margin-bottom: 16px;
-    }
-    #payQrBox canvas { display: block; }
-    .pp-logo {
-      font-size: 11px; font-weight: 700; color: #00509a;
-      letter-spacing: 2px; margin-bottom: 4px;
-    }
-    .pp-amount {
-      font-size: 32px; font-weight: 800; color: var(--text-main);
-      margin: 12px 0 4px;
-    }
-    .pp-cents-note {
-      font-size: 12px; color: var(--text-muted); margin-bottom: 16px;
-    }
-    .pp-receiver {
-      background: var(--bg-main); border-radius: var(--radius-sm);
-      padding: 10px 14px; margin-bottom: 16px; text-align: left;
-      font-size: 13px;
-    }
-    .pp-receiver strong { display: block; color: var(--text-main); }
-    .pp-receiver span { color: var(--text-muted); }
-    .pp-steps {
-      text-align: left; font-size: 13px; color: var(--text-muted);
-      background: #fef3c7; border-radius: var(--radius-sm);
-      padding: 12px 14px; margin-bottom: 16px;
-    }
-    .pp-steps ol { padding-left: 20px; }
-    .pp-steps li { margin: 4px 0; }
-    #paySlipBtn {
-      width: 100%; background: #2563eb; color: white;
-      border: none; border-radius: var(--radius-md);
-      padding: 14px; font-size: 16px; font-weight: 700;
-      cursor: pointer; transition: var(--transition);
-      margin-bottom: 10px;
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
-    }
-    #paySlipBtn:hover:not(:disabled) { background: #1d4ed8; }
-    #paySlipBtn:disabled { background: #A89E94; cursor: not-allowed; box-shadow: none; }
-    #paySlipStatus {
-      font-size: 13px; margin: 4px 0 12px;
-      min-height: 18px;
-    }
-    #paySlipStatus.ok { color: #16a34a; font-weight: 600; }
-    #paySlipStatus.err { color: var(--primary); }
-    #paySlipStatus.busy { color: var(--text-muted); }
-    #payCancelBtn {
-      width: 100%; background: none; border: none;
-      color: var(--text-muted); padding: 10px; font-size: 14px;
-      cursor: pointer;
-    }
-  </style>
 </head>
 <body>
 
@@ -483,7 +31,7 @@
     </span>
     <h1 id="shopName">กำลังโหลด...</h1>
   </div>
-  <button id="cartBtn" onclick="openCart()">
+  <button id="cartBtn" type="button">
     🛒 ตะกร้า <span id="cartCount">0</span>
   </button>
 </header>
@@ -499,7 +47,8 @@
   <br>ขับเคลื่อนโดย Pokpok
 </footer>
 
-<div id="cartOverlay" onclick="closeCart()"></div>
+<!-- Cart drawer -->
+<div id="cartOverlay"></div>
 <div id="cartDrawer">
   <div class="drawer-handle"></div>
   <div class="drawer-title">ตะกร้าสินค้า</div>
@@ -508,9 +57,20 @@
     <span>ยอดรวม</span>
     <span id="cartTotal">฿0.00</span>
   </div>
-  <button id="checkoutBtn" onclick="openModal()" disabled>สั่งและชำระเงิน</button>
+  <button id="checkoutBtn" type="button" disabled>สั่งและชำระเงิน</button>
 </div>
 
+<!-- Product quantity bottom sheet -->
+<div id="sheetOverlay"></div>
+<div id="productSheet">
+  <div class="drawer-handle"></div>
+  <div id="sheetBody"></div>
+  <div id="sheetQty" class="qty-strip"></div>
+  <button id="sheetPrimary" type="button"></button>
+  <button id="sheetRemove" type="button" hidden>เอาออกจากตะกร้า</button>
+</div>
+
+<!-- Order form modal -->
 <div id="modalOverlay">
   <div id="modal">
     <h2>ข้อมูลผู้สั่ง</h2>
@@ -533,8 +93,8 @@
       <span>ยอดชำระ</span>
       <span id="modalTotal">฿0.00</span>
     </div>
-    <button id="payBtn" onclick="submitOrder()">ชำระเงิน</button>
-    <button id="cancelBtn" onclick="closeModal()">ยกเลิก</button>
+    <button id="payBtn" type="button">ชำระเงิน</button>
+    <button id="cancelBtn" type="button">ยกเลิก</button>
   </div>
 </div>
 
@@ -566,8 +126,8 @@
       </ol>
     </div>
 
-    <input type="file" id="slipFileInput" accept="image/*" capture="environment" style="display:none" onchange="uploadSlip(event)" />
-    <button id="paySlipBtn" type="button" onclick="document.getElementById('slipFileInput').click()">
+    <input type="file" id="slipFileInput" accept="image/*" capture="environment" style="display:none" />
+    <button id="paySlipBtn" type="button">
       📷 อัปโหลดสลิปเพื่อยืนยันการชำระเงิน
     </button>
     <div id="paySlipStatus"></div>
@@ -575,13 +135,18 @@
       โอนแล้วต้องอัปโหลดสลิปทุกครั้งเพื่อยืนยันออเดอร์ — ระบบตรวจยอดให้อัตโนมัติ
     </p>
 
-    <button id="payCancelBtn" onclick="cancelPay()">ยกเลิกออเดอร์</button>
+    <button id="payCancelBtn" type="button">ยกเลิกออเดอร์</button>
   </div>
 </div>
 
+<!-- Page entry. Module scripts execute in document order, so main.js runs
+     first (defines window.__startOrderPage), then the App Check module below
+     starts the page once a token getter is ready. -->
+<script type="module" src="/order/js/main.js"></script>
+
 <!-- App Check (reCAPTCHA v3). This page talks to HTTP functions with plain
      fetch(), so we run the SDK in a module and expose a best-effort token
-     getter that the script below attaches as an X-Firebase-AppCheck header. -->
+     getter that util.js attaches as an X-Firebase-AppCheck header. -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
   import { getToken } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app-check.js";
@@ -599,373 +164,9 @@
   window.__appCheckToken = async () => {
     try { return (await getToken(appCheck, false)).token; } catch (_) { return null; }
   };
-  // Start the page only once App Check is ready (this module is deferred, so it
-  // runs after the classic script below has defined init). This guarantees the
-  // first /api/shopPublic call carries a token — required now that the endpoint
-  // enforces App Check.
-  window.init?.();
-</script>
-
-<script>
-  const params = new URLSearchParams(window.location.search);
-  const shopId = params.get('shop');
-
-  const cart = {}; // productId -> { id, name, price, stock, quantity }
-
-  // Wrap fetch to attach a Firebase App Check token (reCAPTCHA v3) when the
-  // SDK module above has one ready. Best-effort: during the monitoring phase
-  // a missing token still goes through; once App Check is enforced on these
-  // /api endpoints the token is what keeps real visitors working.
-  async function apiFetch(url, opts = {}) {
-    const headers = { ...(opts.headers || {}) };
-    try {
-      const t = window.__appCheckToken ? await window.__appCheckToken() : null;
-      if (t) headers['X-Firebase-AppCheck'] = t;
-    } catch (_) {}
-    return fetch(url, { ...opts, headers });
-  }
-
-  // ── Load shop + products ──
-  async function init() {
-    if (!shopId) { showError('ลิงก์ไม่ถูกต้อง — ไม่พบ shop ID'); return; }
-    try {
-      // Single endpoint returns the public shop name + products (whitelisted
-      // fields only). No public Firestore reads — shop doc + products are
-      // owner-only; this server reads them with admin rights.
-      const shopRes = await apiFetch(`/api/shopPublic?shop=${shopId}`);
-      if (!shopRes.ok) { showError('ไม่พบร้านค้านี้'); return; }
-      const shopData = await shopRes.json();
-      const shopName = shopData.name || 'ร้านค้า';
-      document.getElementById('shopName').textContent = shopName;
-      document.title = `สั่งสินค้า — ${shopName}`;
-
-      renderProducts(shopData.products || []);
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('products').style.display = 'grid';
-    } catch (e) {
-      showError('เกิดข้อผิดพลาดในการโหลดข้อมูล');
-    }
-  }
-
-  function showError(msg) {
-    document.getElementById('loading').style.display = 'none';
-    const el = document.getElementById('error');
-    el.style.display = 'block';
-    el.textContent = msg;
-  }
-
-  // ── Render products ──
-  function renderProducts(products) {
-    const container = document.getElementById('products');
-    if (!products.length) {
-      container.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#A89E94;padding:40px">ยังไม่มีสินค้า</p>';
-      return;
-    }
-    container.innerHTML = products.map(p => {
-      const inCart = cart[p.id]?.quantity || 0;
-      const outOfStock = p.stock <= 0;
-      const imgHtml = p.imageUrl
-        ? `<img src="${p.imageUrl}" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;margin-bottom:10px;" loading="lazy" onerror="this.style.display='none'">`
-        : '';
-      return `
-        <div class="product-card${outOfStock ? ' out-of-stock' : ''}"
-             onclick="${outOfStock ? '' : `addToCart('${p.id}','${escHtml(p.name)}',${p.price},${p.stock})`}"
-             data-id="${p.id}">
-          ${inCart > 0 ? `<div class="qty-badge">${inCart}</div>` : ''}
-          ${imgHtml}
-          <div>
-            <div class="product-name">${escHtml(p.name)}</div>
-            <div class="product-category">${escHtml(p.category || 'ทั่วไป')}</div>
-          </div>
-          <div>
-            <div class="product-price">฿${Number(p.price).toFixed(2)}${p.originalPrice ? `<span class="product-price-original">฿${Number(p.originalPrice).toFixed(2)}</span>` : ''}</div>
-            <div class="product-stock${p.stock <= 5 ? ' low' : ''}">
-              ${outOfStock ? '❌ หมด' : `📦 เหลือ ${p.stock}`}
-            </div>
-          </div>
-        </div>`;
-    }).join('');
-  }
-
-  function escHtml(str) {
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  // ── Cart logic ──
-  function addToCart(id, name, price, stock) {
-    if (cart[id]) {
-      if (cart[id].quantity >= stock) return;
-      cart[id].quantity++;
-    } else {
-      cart[id] = { id, name, price, stock, quantity: 1 };
-    }
-    updateUI();
-  }
-
-  function changeQty(id, delta) {
-    if (!cart[id]) return;
-    cart[id].quantity += delta;
-    if (cart[id].quantity <= 0) delete cart[id];
-    updateUI();
-  }
-
-  function updateUI() {
-    const items = Object.values(cart);
-    const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
-    const count = items.reduce((s, i) => s + i.quantity, 0);
-
-    document.getElementById('cartCount').textContent = count;
-    document.getElementById('cartTotal').textContent = `฿${total.toFixed(2)}`;
-    document.getElementById('modalTotal').textContent = `฿${total.toFixed(2)}`;
-    document.getElementById('checkoutBtn').disabled = items.length === 0;
-
-    // Re-render cart items
-    const cartEl = document.getElementById('cartItems');
-    if (!items.length) {
-      cartEl.innerHTML = '<div class="empty-cart">ยังไม่มีสินค้าในตะกร้า</div>';
-    } else {
-      cartEl.innerHTML = items.map(item => `
-        <div class="cart-item">
-          <div>
-            <div class="cart-item-name">${escHtml(item.name)}</div>
-            <div class="cart-item-price">฿${item.price.toFixed(2)} × ${item.quantity} = ฿${(item.price * item.quantity).toFixed(2)}</div>
-          </div>
-          <div class="qty-controls">
-            <button class="qty-btn" onclick="changeQty('${item.id}',-1)">−</button>
-            <span class="qty-num">${item.quantity}</span>
-            <button class="qty-btn" onclick="changeQty('${item.id}',1)">+</button>
-          </div>
-        </div>`).join('');
-    }
-
-    // อัพเดต badge บนการ์ดสินค้า
-    document.querySelectorAll('.product-card').forEach(card => {
-      const id = card.dataset.id;
-      const qty = cart[id]?.quantity || 0;
-      const existing = card.querySelector('.qty-badge');
-      if (qty > 0) {
-        if (existing) existing.textContent = qty;
-        else {
-          const badge = document.createElement('div');
-          badge.className = 'qty-badge';
-          badge.textContent = qty;
-          card.appendChild(badge);
-        }
-      } else if (existing) {
-        existing.remove();
-      }
-    });
-  }
-
-  function openCart() {
-    document.getElementById('cartDrawer').classList.add('open');
-    document.getElementById('cartOverlay').classList.add('open');
-  }
-  function closeCart() {
-    document.getElementById('cartDrawer').classList.remove('open');
-    document.getElementById('cartOverlay').classList.remove('open');
-  }
-  function openModal() {
-    closeCart();
-    document.getElementById('modalOverlay').classList.add('open');
-  }
-  function closeModal() {
-    document.getElementById('modalOverlay').classList.remove('open');
-  }
-
-  // ── PromptPay EMVCo QR payload (mirrors lib/utils/promptpay_qr.dart) ──
-  function tlv(tag, value) {
-    return tag + String(value.length).padStart(2, '0') + value;
-  }
-  function crc16(data) {
-    let crc = 0xFFFF;
-    for (let i = 0; i < data.length; i++) {
-      crc ^= data.charCodeAt(i) << 8;
-      for (let b = 0; b < 8; b++) {
-        crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
-        crc &= 0xFFFF;
-      }
-    }
-    return crc.toString(16).toUpperCase().padStart(4, '0');
-  }
-  function buildPromptPayPayload(rawId, amount) {
-    const digits = String(rawId).replace(/\D/g, '');
-    let tag, value;
-    if (digits.length === 10)      { tag = '01'; value = '0066' + digits.substring(1); }
-    else if (digits.length === 13) { tag = '02'; value = digits; }
-    else if (digits.length === 15) { tag = '03'; value = digits; }
-    else throw new Error('Invalid PromptPay ID length: ' + digits.length);
-
-    let pp = '';
-    pp += tlv('00', '01');
-    pp += tlv('01', amount != null ? '12' : '11');
-    pp += tlv('29', tlv('00', 'A000000677010111') + tlv(tag, value));
-    pp += tlv('58', 'TH');
-    pp += tlv('53', '764');
-    if (amount != null) pp += tlv('54', Number(amount).toFixed(2));
-    pp += '6304' + crc16(pp + '6304');
-    return pp;
-  }
-
-  // State for the current pending order (so confirm/cancel can act on it)
-  let pendingOrder = null;
-
-  // ── Submit order ──
-  async function submitOrder() {
-    const name = document.getElementById('customerName').value.trim();
-    const phone = document.getElementById('customerPhone').value.trim();
-    if (!name) { alert('กรุณากรอกชื่อ'); return; }
-    if (!phone) { alert('กรุณากรอกเบอร์โทร'); return; }
-
-    const items = Object.values(cart).map(i => ({
-      productId: i.id,
-      productName: i.name,
-      price: i.price,
-      quantity: i.quantity,
-    }));
-
-    const payBtn = document.getElementById('payBtn');
-    payBtn.disabled = true;
-    payBtn.innerHTML = '<span class="spinner"></span>กำลังดำเนินการ...';
-
-    try {
-      const res = await apiFetch('/api/createPromptPayOrder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shopId, customerName: name, customerPhone: phone, items }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.orderId) {
-        alert('เกิดข้อผิดพลาด: ' + (data.error || 'กรุณาลองใหม่'));
-        payBtn.disabled = false;
-        payBtn.textContent = 'ชำระเงิน';
-        return;
-      }
-
-      pendingOrder = data;
-      closeModal();
-      showPaymentScreen(data);
-    } catch (e) {
-      alert('เชื่อมต่อไม่ได้ กรุณาลองใหม่');
-      payBtn.disabled = false;
-      payBtn.textContent = 'ชำระเงิน';
-    } finally {
-      payBtn.disabled = false;
-      payBtn.textContent = 'ชำระเงิน';
-    }
-  }
-
-  function showPaymentScreen({ finalAmount, total, promptpayId, promptpayName }) {
-    const payload = buildPromptPayPayload(promptpayId, finalAmount);
-    const qrEl = document.getElementById('payQrCanvas');
-    qrEl.innerHTML = '';  // wipe any previous render
-    new QRCode(qrEl, {
-      text: payload,
-      width: 240,
-      height: 240,
-      correctLevel: QRCode.CorrectLevel.M,
-    });
-    document.getElementById('payAmount').textContent =
-      '฿' + Number(finalAmount).toFixed(2);
-    const centsNote = (finalAmount > total)
-      ? `ยอดสินค้า ฿${total.toFixed(2)} + เศษ ${Math.round((finalAmount - total) * 100)} สตางค์ (ใช้แยกออเดอร์)`
-      : '';
-    document.getElementById('payCentsNote').textContent = centsNote;
-    document.getElementById('payReceiver').textContent =
-      promptpayName || 'ผู้รับเงิน';
-    document.getElementById('payReceiverId').textContent =
-      'PromptPay ID: ' + maskPromptPayId(promptpayId);
-    document.getElementById('payOverlay').classList.add('open');
-  }
-
-  function maskPromptPayId(id) {
-    const digits = String(id).replace(/\D/g, '');
-    if (digits.length <= 4) return digits;
-    return digits.slice(0, 3) + '*'.repeat(digits.length - 6) + digits.slice(-3);
-  }
-
-  async function uploadSlip(event) {
-    const file = event.target.files?.[0];
-    event.target.value = '';  // allow re-picking the same file later
-    if (!file || !pendingOrder) return;
-
-    const slipBtn = document.getElementById('paySlipBtn');
-    const status = document.getElementById('paySlipStatus');
-    slipBtn.disabled = true;
-    slipBtn.innerHTML = '<span class="spinner"></span>กำลังตรวจสลิป...';
-    status.className = 'busy';
-    status.textContent = 'อ่าน QR + ตรวจยอดเงิน...';
-
-    try {
-      // Convert image → base64. Compress large images first so we don't
-      // POST a 10MB payload.
-      const slipBase64 = await fileToBase64Compressed(file, 1600);
-
-      const res = await apiFetch('/api/verifyPromptPaySlip', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          shopId,
-          orderId: pendingOrder.orderId,
-          slipBase64,
-        }),
-      });
-      const data = await res.json();
-
-      if (!res.ok || data.success === false) {
-        status.className = 'err';
-        status.textContent = data.reason || data.error || 'ตรวจสลิปไม่สำเร็จ';
-        slipBtn.disabled = false;
-        slipBtn.innerHTML = '📷 ลองสลิปใหม่อีกครั้ง';
-        return;
-      }
-
-      status.className = 'ok';
-      status.textContent = '✓ ยืนยันสำเร็จ! กำลังพาคุณไปหน้าออเดอร์...';
-      setTimeout(() => {
-        window.location.href = `/order/success/?order=${pendingOrder.orderId}&auto=1`;
-      }, 1200);
-    } catch (e) {
-      status.className = 'err';
-      status.textContent = 'อัปโหลดล้มเหลว — ลองอีกครั้ง';
-      slipBtn.disabled = false;
-      slipBtn.innerHTML = '📷 อัปโหลดสลิป — ยืนยันอัตโนมัติ';
-    }
-  }
-
-  // Down-scale slips so the server doesn't choke on multi-MB phone photos.
-  function fileToBase64Compressed(file, maxDim) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-          const w = Math.round(img.width * scale);
-          const h = Math.round(img.height * scale);
-          const canvas = document.createElement('canvas');
-          canvas.width = w; canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          // 0.85 quality JPEG — small but QR codes still parse cleanly.
-          resolve(canvas.toDataURL('image/jpeg', 0.85));
-        };
-        img.onerror = () => reject(new Error('image load failed'));
-        img.src = e.target.result;
-      };
-      reader.onerror = () => reject(new Error('file read failed'));
-      reader.readAsDataURL(file);
-    });
-  }
-
-  function cancelPay() {
-    if (!confirm('ยกเลิกออเดอร์นี้?')) return;
-    document.getElementById('payOverlay').classList.remove('open');
-    pendingOrder = null;
-  }
-
-  // init() is kicked off by the App Check module above once a token getter is
-  // ready (so the first /api call carries a token). Do not call it here — that
-  // would race ahead of App Check and 401 against the enforced endpoint.
+  // Start the page only once App Check is ready. This guarantees the first
+  // /api/shopPublic call carries a token — the endpoint enforces App Check.
+  window.__startOrderPage?.();
 </script>
 </body>
 </html>

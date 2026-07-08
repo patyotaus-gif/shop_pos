@@ -54,6 +54,16 @@ class Product {
   /// otherwise the normal price.
   double get effectivePrice => isOnSale ? salePrice! : price;
 
+  /// Rounded percent off while a sale is active — for "ลด X%" badges.
+  /// 0 when there is no active sale or the discount rounds below 1%.
+  /// Keep in sync with promoInfo() in public/order/js/catalog.js — the web
+  /// badge derives the same percent from price/originalPrice.
+  int get discountPercent {
+    if (!isOnSale) return 0;
+    final pct = ((1 - salePrice! / price) * 100).round();
+    return pct < 1 ? 0 : pct;
+  }
+
   double get profit => effectivePrice - costPrice;
   double get profitMargin =>
       effectivePrice > 0 ? (profit / effectivePrice) * 100 : 0;

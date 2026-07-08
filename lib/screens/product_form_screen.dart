@@ -136,6 +136,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     setState(() => _lookingUp = true);
     final result = await BarcodeLookup.lookup(_barcode.text);
     setState(() => _lookingUp = false);
+    if (!mounted) return;
     if (result != null && _name.text.isEmpty) {
       setState(() => _name.text = result['name'] ?? '');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -173,8 +174,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
 
       if (_imageFile != null) {
         File toSave = _imageFile!;
-        if (_removeBackground)
+        if (_removeBackground) {
           toSave = await ImageService.removeBackground(toSave);
+        }
         final result = await ImageService.saveProduct(toSave, shopId, tempId);
         savedImagePath = result.localPath;
         savedImageUrl = result.imageUrl;
@@ -385,8 +387,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                           ),
                           validator: (v) {
                             if (v!.isEmpty) return 'กรุณากรอกราคา';
-                            if (double.tryParse(v) == null)
+                            if (double.tryParse(v) == null) {
                               return 'ราคาไม่ถูกต้อง';
+                            }
                             return null;
                           },
                         ),

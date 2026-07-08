@@ -159,11 +159,13 @@ class _DebtTile extends StatelessWidget {
               child: StreamBuilder<List<Sale>>(
                 stream: SaleService.watchByCustomer(debt.customerName),
                 builder: (ctx, snap) {
-                  if (!snap.hasData)
+                  if (!snap.hasData) {
                     return const Center(child: CircularProgressIndicator());
+                  }
                   final sales = snap.data!;
-                  if (sales.isEmpty)
+                  if (sales.isEmpty) {
                     return const Center(child: Text('ยังไม่มีประวัติ'));
+                  }
                   final totalSpent = sales
                       .where((s) => !s.isRefunded)
                       .fold<double>(0, (a, s) => a + s.total);
