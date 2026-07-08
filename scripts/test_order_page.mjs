@@ -36,3 +36,16 @@ assert.equal(items().length, 1, 'qty 0 removes the item');
 assert.ok(changes >= 5, 'listeners fire on every change');
 
 console.log('✓ util.js + cart.js tests passed');
+
+// ── catalog.js promoInfo ──
+const { promoInfo } = await import('../public/order/js/catalog.js');
+
+assert.deepEqual(promoInfo(10, 20), { percent: 50, saving: 10 });
+assert.deepEqual(promoInfo(1.25, 3), { percent: 58, saving: 1.75 });
+assert.equal(promoInfo(10, undefined), null, 'no originalPrice → no promo');
+assert.equal(promoInfo(10, 0), null);
+assert.equal(promoInfo(20, 20), null, 'equal price → no promo');
+assert.equal(promoInfo(25, 20), null, 'originalPrice below price → no promo');
+assert.equal(promoInfo(996, 1000), null, 'rounds to 0% → no badge');
+
+console.log('✓ catalog.js promoInfo tests passed');
