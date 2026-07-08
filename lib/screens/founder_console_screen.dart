@@ -16,7 +16,7 @@ class FounderConsoleScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('ผู้ดูแลระบบ'),
@@ -37,11 +37,12 @@ class FounderConsoleScreen extends StatelessWidget {
             tabs: [
               Tab(text: 'ร้านค้า'),
               Tab(text: 'ซัพพลายเออร์'),
+              Tab(text: 'แผน & บิล'),
             ],
           ),
         ),
         body: const TabBarView(
-          children: [_ShopsTab(), _SuppliersTab()],
+          children: [_ShopsTab(), _SuppliersTab(), _BillingTab()],
         ),
       ),
     );
@@ -964,6 +965,396 @@ class _GrantFounderDialogState extends State<_GrantFounderDialog> {
               : const Text('ให้สิทธิ์'),
         ),
       ],
+    );
+  }
+}
+
+// ─────────────────────────── Billing tab ───────────────────────────
+// Plan catalog (config/plans) + company PromptPay account + recent
+// subscription payments. Every write goes through founder-gated callables
+// (adminUpsertPlans / adminSetBilling).
+
+const _kTierOrder = ['solo', 'lite', 'full', 'restaurant'];
+
+/// Mirrors functions/plans.js DEFAULT_TIERS — shown when config/plans
+/// doesn't exist yet (first run before the founder saves anything).
+const Map<String, Map<String, dynamic>> _kDefaultTiers = {
+  'solo': {
+    'name': 'Solo',
+    'desc': 'ใช้มือถือ/แท็บเล็ตของตัวเอง POS + รายงาน + PromptPay',
+    'enabled': true,
+    'monthly': {'amount': 19900},
+    'yearly': {'amount': 199000},
+  },
+  'lite': {
+    'name': 'Lite',
+    'desc': 'มีแท็บเล็ตแล้ว + ชุดพิมพ์ใบเสร็จ + จัดการสต็อก + ฐานลูกค้า',
+    'enabled': true,
+    'monthly': {'amount': 39900},
+    'yearly': {'amount': 399000},
+  },
+  'full': {
+    'name': 'Full',
+    'desc': 'ครบชุดฮาร์ดแวร์ + 3 ผู้ใช้ + สะสมแต้ม + ซ่อมถึงที่',
+    'enabled': true,
+    'featured': true,
+    'monthly': {'amount': 59900},
+    'yearly': {'amount': 599000},
+  },
+  'restaurant': {
+    'name': 'Restaurant',
+    'desc': 'ร้านอาหารหลายสาขา + ครัว + ผังโต๊ะ + แยกบิล',
+    'enabled': true,
+    'perLocation': true,
+    'monthly': {'amount': 119900},
+    'yearly': {'amount': 1199000},
+  },
+};
+
+class _BillingTab extends StatefulWidget {
+  const _BillingTab();
+
+  @override
+  State<_BillingTab> createState() => _BillingTabState();
+}
+
+class _TierForm {
+  _TierForm(Map<String, dynamic> t)
+      : name = TextEditingController(text: (t['name'] ?? '') as String),
+        desc = TextEditingController(text: (t['desc'] ?? '') as String),
+        monthly = TextEditingController(
+            text: '${(((t['monthly'] as Map?)?['amount'] ?? 0) as num) ~/ 100}'),
+        yearly = TextEditingController(
+            text: '${(((t['yearly'] as Map?)?['amount'] ?? 0) as num) ~/ 100}'),
+        enabled = t['enabled'] != false,
+        featured = t['featured'] == true;
+
+  final TextEditingController name;
+  final TextEditingController desc;
+  final TextEditingController monthly; // บาท (แปลงเป็นสตางค์ตอนบันทึก)
+  final TextEditingController yearly;
+  bool enabled;
+  bool featured;
+
+  void dispose() {
+    name.dispose();
+    desc.dispose();
+    monthly.dispose();
+    yearly.dispose();
+  }
+
+  Map<String, dynamic> toTier() => {
+        'name': name.text.trim(),
+        'desc': desc.text.trim(),
+        'enabled': enabled,
+        'featured': featured,
+        'monthly': {'amount': (int.tryParse(monthly.text.trim()) ?? 0) * 100},
+        'yearly': {'amount': (int.tryParse(yearly.text.trim()) ?? 0) * 100},
+      };
+}
+
+class _BillingTabState extends State<_BillingTab> {
+  bool _loading = true;
+  String? _error;
+
+  final Map<String, _TierForm> _forms = {};
+  final _ppId = TextEditingController();
+  final _ppName = TextEditingController();
+  final _lineId = TextEditingController();
+  List<Map<String, dynamic>> _payments = const [];
+
+  bool _savingPlans = false;
+  bool _savingBilling = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    for (final f in _forms.values) {
+      f.dispose();
+    }
+    _ppId.dispose();
+    _ppName.dispose();
+    _lineId.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      // Plan catalog — readable by any signed-in user per rules.
+      Map<String, dynamic> tiers = Map.of(_kDefaultTiers);
+      final snap = await FirebaseFirestore.instance
+          .collection('config')
+          .doc('plans')
+          .get();
+      final data = snap.data();
+      if (data != null && data['tiers'] is Map) {
+        tiers = Map<String, dynamic>.from(data['tiers'] as Map);
+      }
+      for (final f in _forms.values) {
+        f.dispose();
+      }
+      _forms.clear();
+      for (final key in _kTierOrder) {
+        final t = tiers[key];
+        _forms[key] = _TierForm(t is Map
+            ? Map<String, dynamic>.from(t)
+            : Map<String, dynamic>.from(_kDefaultTiers[key]!));
+      }
+
+      final billing = await AdminService.getBilling();
+      _ppId.text = (billing['promptpayId'] ?? '') as String;
+      _ppName.text = (billing['promptpayName'] ?? '') as String;
+      _lineId.text = (billing['founderLineUserId'] ?? '') as String;
+
+      _payments = await AdminService.listSubscriptionPayments();
+
+      if (mounted) setState(() => _loading = false);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = '$e';
+        });
+      }
+    }
+  }
+
+  Future<void> _savePlans() async {
+    for (final entry in _forms.entries) {
+      final f = entry.value;
+      if (f.name.text.trim().isEmpty ||
+          (int.tryParse(f.monthly.text.trim()) ?? 0) <= 0 ||
+          (int.tryParse(f.yearly.text.trim()) ?? 0) <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('แผน ${entry.key}: กรอกชื่อ + ราคาให้ครบ (จำนวนเต็มบาท)'),
+          backgroundColor: Colors.red,
+        ));
+        return;
+      }
+    }
+    setState(() => _savingPlans = true);
+    try {
+      await AdminService.upsertPlans(
+          {for (final e in _forms.entries) e.key: e.value.toTier()});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('บันทึกแผนแล้ว — มีผลกับหน้าเว็บทันที')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('บันทึกไม่สำเร็จ: $e'), backgroundColor: Colors.red));
+      }
+    } finally {
+      if (mounted) setState(() => _savingPlans = false);
+    }
+  }
+
+  Future<void> _saveBilling() async {
+    setState(() => _savingBilling = true);
+    try {
+      await AdminService.setBilling(
+        promptpayId: _ppId.text.trim(),
+        promptpayName: _ppName.text.trim(),
+        founderLineUserId: _lineId.text.trim(),
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('บันทึกบัญชีรับเงินแล้ว')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('บันทึกไม่สำเร็จ: $e'), backgroundColor: Colors.red));
+      }
+    } finally {
+      if (mounted) setState(() => _savingBilling = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_error != null) {
+      return _ErrorView(message: _error!, onRetry: _load);
+    }
+    final cs = Theme.of(context).colorScheme;
+
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // ── บัญชีรับเงินบริษัท ──
+          Text('บัญชีรับเงิน (PromptPay บริษัท)',
+              style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text('ใช้รับค่าต่ออายุจากร้านค้า + แจ้งเตือน LINE เมื่อมีการจ่าย',
+              style: TextStyle(
+                  fontSize: 12, color: cs.onSurface.withValues(alpha: 0.6))),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _ppId,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'PromptPay ID (เบอร์ 10 หลัก / บัตร ปชช. 13 หลัก)',
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _ppName,
+            decoration: const InputDecoration(
+              labelText: 'ชื่อบัญชีผู้รับ (โชว์ให้คนจ่ายเช็ค)',
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _lineId,
+            decoration: const InputDecoration(
+              labelText: 'LINE userId ของ founder (รับแจ้งเตือนจ่ายเงิน)',
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 10),
+          FilledButton.icon(
+            onPressed: _savingBilling ? null : _saveBilling,
+            icon: const Icon(Icons.save_outlined, size: 18),
+            label: Text(_savingBilling ? 'กำลังบันทึก…' : 'บันทึกบัญชีรับเงิน'),
+          ),
+          const Divider(height: 36),
+
+          // ── แผน & ราคา ──
+          Text('แผน & ราคา', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text('แก้แล้วมีผลกับหน้า pok-pok.app/subscribe และการคิดเงินทันที (ราคาเป็นบาท)',
+              style: TextStyle(
+                  fontSize: 12, color: cs.onSurface.withValues(alpha: 0.6))),
+          const SizedBox(height: 8),
+          for (final key in _kTierOrder) _tierCard(key, _forms[key]!),
+          const SizedBox(height: 8),
+          FilledButton.icon(
+            onPressed: _savingPlans ? null : _savePlans,
+            icon: const Icon(Icons.save_outlined, size: 18),
+            label: Text(_savingPlans ? 'กำลังบันทึก…' : 'บันทึกแผนทั้งหมด'),
+          ),
+          const Divider(height: 36),
+
+          // ── การชำระล่าสุด (PromptPay) ──
+          Text('ต่ออายุผ่าน PromptPay ล่าสุด',
+              style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          if (_payments.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text('ยังไม่มีรายการ',
+                  style:
+                      TextStyle(color: cs.onSurface.withValues(alpha: 0.5))),
+            )
+          else
+            for (final p in _payments) _paymentTile(p),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _tierCard(String key, _TierForm f) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      child: ExpansionTile(
+        title: Text('${_tierLabel(key)}'
+            ' · ฿${f.monthly.text}/ด · ฿${f.yearly.text}/ป'
+            '${f.enabled ? '' : ' (ปิดขาย)'}'),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+        children: [
+          TextField(
+            controller: f.name,
+            decoration: const InputDecoration(
+                labelText: 'ชื่อแผน', border: OutlineInputBorder(), isDense: true),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: f.desc,
+            maxLines: 2,
+            decoration: const InputDecoration(
+                labelText: 'คำอธิบาย', border: OutlineInputBorder(), isDense: true),
+          ),
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(
+              child: TextField(
+                controller: f.monthly,
+                keyboardType: TextInputType.number,
+                onChanged: (_) => setState(() {}),
+                decoration: const InputDecoration(
+                    labelText: 'รายเดือน (บาท)',
+                    prefixText: '฿',
+                    border: OutlineInputBorder(),
+                    isDense: true),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextField(
+                controller: f.yearly,
+                keyboardType: TextInputType.number,
+                onChanged: (_) => setState(() {}),
+                decoration: const InputDecoration(
+                    labelText: 'รายปี (บาท)',
+                    prefixText: '฿',
+                    border: OutlineInputBorder(),
+                    isDense: true),
+              ),
+            ),
+          ]),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: const Text('เปิดขาย'),
+            value: f.enabled,
+            onChanged: (v) => setState(() => f.enabled = v),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: const Text('ป้าย "แนะนำ"'),
+            value: f.featured,
+            onChanged: (v) => setState(() => f.featured = v),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _paymentTile(Map<String, dynamic> p) {
+    final paid = p['status'] == 'paid';
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(
+        paid ? Icons.check_circle : Icons.hourglass_empty,
+        color: paid ? Colors.green : Colors.orange,
+        size: 20,
+      ),
+      title: Text(
+          '${p['shopName'] ?? p['shopId']} · ${_tierLabel('${p['tier']}')} '
+          '${p['billingCycle'] == 'yearly' ? 'รายปี' : 'รายเดือน'}'),
+      subtitle: Text(
+          '฿${(p['finalAmount'] as num?)?.toStringAsFixed(2) ?? '-'} · ${_date(p['paidAt'] ?? p['createdAt'])} · ${p['status']}'),
     );
   }
 }

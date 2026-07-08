@@ -108,6 +108,40 @@ class AdminService {
     return Map<String, dynamic>.from(res.data as Map)['supplierId'] as String;
   }
 
+  /// Company billing config (PromptPay account + founder LINE id) —
+  /// rules deny client reads, so the console prefetches via callable.
+  static Future<Map<String, dynamic>> getBilling() async {
+    final res = await _fn('adminGetBilling').call();
+    return Map<String, dynamic>.from((res.data as Map?) ?? {});
+  }
+
+  static Future<void> setBilling({
+    required String promptpayId,
+    String promptpayName = '',
+    String founderLineUserId = '',
+  }) =>
+      _fn('adminSetBilling').call({
+        'promptpayId': promptpayId,
+        'promptpayName': promptpayName,
+        'founderLineUserId': founderLineUserId,
+      });
+
+  /// Replace the whole plan catalog (config/plans). Server-side
+  /// validateTiers whitelists the shape; days/perLocation are fixed.
+  static Future<void> upsertPlans(Map<String, dynamic> tiers) =>
+      _fn('adminUpsertPlans').call({'tiers': tiers});
+
+  /// Recent subscription payments (PromptPay rail) for the audit list.
+  static Future<List<Map<String, dynamic>>> listSubscriptionPayments(
+      {int limit = 20}) async {
+    final res =
+        await _fn('adminListSubscriptionPayments').call({'limit': limit});
+    final data = Map<String, dynamic>.from(res.data as Map);
+    return ((data['payments'] as List?) ?? const [])
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList(growable: false);
+  }
+
   /// Create (productId == null) or update one catalog line. Returns its id.
   static Future<String> upsertSupplierProduct({
     required String supplierId,

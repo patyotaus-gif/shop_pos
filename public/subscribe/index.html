@@ -9,6 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Self-hosted qrcodejs (shared with /order) -->
+  <script src="/order/qrcode.min.js"></script>
   <style>
     :root {
       --burgundy: #7A1F2B; --burgundy-hover: #5C1820; --cream: #F5F1EC;
@@ -66,6 +68,62 @@
 
     .note { text-align: center; font-size: .8rem; color: var(--text-mid); margin-top: 24px; line-height: 1.7; }
     .note a { color: var(--burgundy); }
+
+    .pay-card-link {
+      width: 100%; margin-top: 8px; padding: 8px;
+      background: none; border: none; color: var(--text-mid);
+      font-size: .8rem; text-decoration: underline; cursor: pointer;
+    }
+    .pay-card-link:hover { color: var(--burgundy); }
+    .pay-card-link:disabled { opacity: .5; cursor: default; }
+
+    /* ── PromptPay overlay ── */
+    #ppOverlay {
+      position: fixed; inset: 0;
+      background: rgba(31, 26, 27, .55); backdrop-filter: blur(4px);
+      z-index: 300;
+      display: none; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    #ppOverlay.open { display: flex; }
+    #ppCard {
+      background: #fff; border-radius: var(--r);
+      max-width: 420px; width: 100%;
+      padding: 26px 22px; text-align: center;
+      max-height: 92vh; overflow-y: auto;
+    }
+    #ppCard h2 { color: var(--burgundy); font-size: 1.25rem; margin-bottom: 2px; }
+    .pp-sub { color: var(--text-mid); font-size: .85rem; margin-bottom: 16px; }
+    #ppQrBox {
+      background: #fff; border: 2px solid var(--border);
+      border-radius: var(--r-sm); padding: 14px;
+      display: inline-block; margin-bottom: 12px;
+    }
+    .pp-amount { font-size: 1.9rem; font-weight: 800; margin: 6px 0 0; }
+    .pp-note { font-size: .75rem; color: var(--text-mid); margin-bottom: 12px; }
+    .pp-receiver {
+      background: var(--cream); border-radius: var(--r-sm);
+      padding: 9px 13px; margin-bottom: 14px; text-align: left; font-size: .82rem;
+    }
+    .pp-receiver strong { display: block; }
+    .pp-receiver span { color: var(--text-mid); }
+    #ppSlipBtn {
+      width: 100%; background: #2563eb; color: #fff;
+      border: none; border-radius: var(--r-sm);
+      padding: 13px; font-size: .95rem; font-weight: 700; cursor: pointer;
+      margin-bottom: 8px;
+    }
+    #ppSlipBtn:hover:not(:disabled) { background: #1d4ed8; }
+    #ppSlipBtn:disabled { opacity: .6; cursor: default; }
+    #ppStatus { font-size: .82rem; min-height: 1.2em; margin-bottom: 8px; }
+    #ppStatus.ok { color: var(--green); font-weight: 700; }
+    #ppStatus.err { color: #B91C1C; }
+    #ppStatus.busy { color: var(--text-mid); }
+    #ppCancel {
+      width: 100%; background: none; border: none;
+      color: var(--text-mid); padding: 9px; font-size: .85rem; cursor: pointer;
+    }
+    .pp-success-date { font-size: 1rem; font-weight: 700; color: var(--green); margin: 8px 0 14px; }
   </style>
 </head>
 <body>
@@ -97,7 +155,7 @@
   <main>
     <div class="lead">
       <h2>เลือกแผนเพื่อต่ออายุ</h2>
-      <p>ชำระผ่านบัตร · PromptPay · TrueMoney — เติมเวลาใช้งานทันทีหลังจ่าย</p>
+      <p>ชำระผ่านบัตร · PromptPay — เติมเวลาใช้งานทันทีหลังจ่าย</p>
     </div>
 
     <div class="billing-switch">
@@ -114,6 +172,33 @@
   </main>
 </div>
 
+<!-- PromptPay direct payment overlay -->
+<div id="ppOverlay">
+  <div id="ppCard">
+    <div id="ppPayView">
+      <h2>สแกนเพื่อชำระเงิน</h2>
+      <p class="pp-sub" id="ppPlanLabel">—</p>
+      <div id="ppQrBox"><div id="ppQr"></div></div>
+      <div class="pp-amount" id="ppAmount">฿0.00</div>
+      <p class="pp-note">โอนให้ตรงยอดรวมเศษสตางค์ — ระบบใช้แยกรายการ</p>
+      <div class="pp-receiver">
+        <strong id="ppReceiver">—</strong>
+        <span id="ppReceiverId">PromptPay ID: —</span>
+      </div>
+      <input type="file" id="ppSlipFile" accept="image/*" capture="environment" style="display:none" />
+      <button id="ppSlipBtn" type="button">📷 อัปโหลดสลิปเพื่อยืนยัน</button>
+      <div id="ppStatus"></div>
+      <button id="ppCancel" type="button">ยกเลิก</button>
+    </div>
+    <div id="ppDoneView" class="hidden">
+      <h2>✓ ต่ออายุสำเร็จ</h2>
+      <p class="pp-sub">ระบบเติมเวลาให้เรียบร้อยแล้ว</p>
+      <div class="pp-success-date" id="ppNewEnd">—</div>
+      <button class="btn-primary" id="ppDoneBtn" type="button">เสร็จสิ้น</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut }
@@ -122,7 +207,9 @@
     from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
   import { getFunctions, httpsCallable }
     from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
+  import { getToken } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app-check.js";
   import { setupAppCheck } from "/appcheck.js";
+  import { buildPromptPayPayload } from "/js/promptpay-qr.js";
 
   const app = initializeApp({
     apiKey: "AIzaSyDfkL865SPzygJ0Kcqb4l0UaoXaSuz63F0",
@@ -132,32 +219,47 @@
     messagingSenderId: "1010156115465",
     appId: "1:1010156115465:web:01f80dfe21f2767ea68ad8",
   });
-  // App Check first, so tokens attach to the createCheckoutSession call below.
-  setupAppCheck(app);
+  // App Check first, so tokens attach to the callables + slip verify below.
+  const appCheck = setupAppCheck(app);
   const auth = getAuth(app);
   const db = getFirestore(app);
   const functions = getFunctions(app, "asia-southeast1");
   const createCheckout = httpsCallable(functions, "createCheckoutSession");
+  const createSubPayment = httpsCallable(functions, "createSubscriptionPayment");
 
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const fmtBaht = (satang) => (satang / 100).toLocaleString("en-US");
 
-  // Mirrors functions/index.js PLANS — kept in sync manually.
-  const PLANS = [
-    { tier: "solo", name: "Solo", monthly: 199, yearly: "1,990", desc: "ใช้มือถือ/แท็บเล็ตของตัวเอง POS + รายงาน + PromptPay" },
-    { tier: "lite", name: "Lite", monthly: 399, yearly: "3,990", desc: "มีแท็บเล็ตแล้ว + ชุดพิมพ์ใบเสร็จ + จัดการสต็อก + ฐานลูกค้า" },
-    { tier: "full", name: "Full", monthly: 599, yearly: "5,990", desc: "ครบชุดฮาร์ดแวร์ + 3 ผู้ใช้ + สะสมแต้ม + ซ่อมถึงที่", featured: true },
-    { tier: "restaurant", name: "Restaurant", monthly: "1,199", yearly: "11,990", perLocation: true, desc: "ร้านอาหารหลายสาขา + ครัว + ผังโต๊ะ + แยกบิล" },
-  ];
+  const TIER_ORDER = ["solo", "lite", "full", "restaurant"];
+
+  // Fallback when config/plans doesn't exist yet — mirrors
+  // functions/plans.js DEFAULT_TIERS (the server falls back the same way).
+  const FALLBACK_TIERS = {
+    solo: { name: "Solo", desc: "ใช้มือถือ/แท็บเล็ตของตัวเอง POS + รายงาน + PromptPay", enabled: true,
+            monthly: { amount: 19900 }, yearly: { amount: 199000 } },
+    lite: { name: "Lite", desc: "มีแท็บเล็ตแล้ว + ชุดพิมพ์ใบเสร็จ + จัดการสต็อก + ฐานลูกค้า", enabled: true,
+            monthly: { amount: 39900 }, yearly: { amount: 399000 } },
+    full: { name: "Full", desc: "ครบชุดฮาร์ดแวร์ + 3 ผู้ใช้ + สะสมแต้ม + ซ่อมถึงที่", enabled: true, featured: true,
+            monthly: { amount: 59900 }, yearly: { amount: 599000 } },
+    restaurant: { name: "Restaurant", desc: "ร้านอาหารหลายสาขา + ครัว + ผังโต๊ะ + แยกบิล", enabled: true, perLocation: true,
+                  monthly: { amount: 119900 }, yearly: { amount: 1199000 } },
+  };
 
   let uid = null;
   let cycle = "monthly";
   let shopLocations = 1;
+  let tiers = FALLBACK_TIERS;
+  let pendingPayment = null;
 
   $("loginBtn").addEventListener("click", doLogin);
   $("password").addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
   $("logoutBtn").addEventListener("click", () => signOut(auth));
+  $("ppSlipBtn").addEventListener("click", () => $("ppSlipFile").click());
+  $("ppSlipFile").addEventListener("change", uploadSlip);
+  $("ppCancel").addEventListener("click", closePromptPay);
+  $("ppDoneBtn").addEventListener("click", () => location.reload());
 
   async function doLogin() {
     const btn = $("loginBtn");
@@ -189,6 +291,11 @@
         shopLocations = Math.max(1, parseInt(snap.data().locations || 1));
       }
     } catch (_) {}
+    // Plan catalog — editable from the founder console (config/plans).
+    try {
+      const planSnap = await getDoc(doc(db, "config", "plans"));
+      if (planSnap.exists() && planSnap.data().tiers) tiers = planSnap.data().tiers;
+    } catch (_) {}
     render();
   });
 
@@ -202,23 +309,138 @@
   function render() {
     const el = $("cards");
     el.innerHTML = "";
-    for (const p of PLANS) {
-      const amt = cycle === "monthly" ? p.monthly : p.yearly;
+    for (const tierKey of TIER_ORDER) {
+      const p = tiers[tierKey];
+      if (!p || p.enabled === false) continue;
+      const amt = fmtBaht((cycle === "monthly" ? p.monthly : p.yearly).amount);
       const per = (cycle === "monthly" ? "/เดือน" : "/ปี") + (p.perLocation ? "·สาขา" : "");
       const card = document.createElement("div");
       card.className = "card" + (p.featured ? " featured" : "");
       card.innerHTML = `
         ${p.featured ? '<span class="badge">แนะนำ</span>' : ""}
         <div class="plan">${esc(p.name)}</div>
-        <div class="price"><span class="cur">฿</span>${esc(String(amt))}<span class="per"> ${esc(per)}</span></div>
+        <div class="price"><span class="cur">฿</span>${esc(amt)}<span class="per"> ${esc(per)}</span></div>
         <div class="desc">${esc(p.desc)}</div>
-        <button class="pay" data-tier="${p.tier}">ชำระเงิน</button>`;
-      card.querySelector(".pay").onclick = (e) => pay(p.tier, e.currentTarget);
+        <button class="pay" data-tier="${esc(tierKey)}">จ่ายด้วย PromptPay</button>
+        <button class="pay-card-link" data-tier="${esc(tierKey)}">หรือจ่ายด้วยบัตรเครดิต</button>`;
+      card.querySelector(".pay").onclick = (e) => payPromptPay(tierKey, e.currentTarget);
+      card.querySelector(".pay-card-link").onclick = (e) => payCard(tierKey, e.currentTarget);
       el.appendChild(card);
     }
   }
 
-  async function pay(tier, btn) {
+  // ── PromptPay direct (0% fees — primary rail) ──
+  async function payPromptPay(tier, btn) {
+    btn.disabled = true; btn.textContent = "กำลังสร้างรายการ…";
+    try {
+      const res = await createSubPayment({ tier, billingCycle: cycle });
+      pendingPayment = res.data;
+      showPromptPay(pendingPayment);
+    } catch (e) {
+      alert(e?.message || "เริ่มการชำระเงินไม่สำเร็จ ลองใหม่อีกครั้ง หรือทักไลน์ทีมงาน");
+    } finally {
+      btn.disabled = false; btn.textContent = "จ่ายด้วย PromptPay";
+    }
+  }
+
+  function showPromptPay({ finalAmount, promptpayId, promptpayName, planLabel }) {
+    $("ppPayView").classList.remove("hidden");
+    $("ppDoneView").classList.add("hidden");
+    $("ppPlanLabel").textContent = planLabel || "";
+    const qrEl = $("ppQr");
+    qrEl.innerHTML = "";
+    new QRCode(qrEl, {
+      text: buildPromptPayPayload(promptpayId, finalAmount),
+      width: 220, height: 220,
+      correctLevel: QRCode.CorrectLevel.M,
+    });
+    $("ppAmount").textContent = "฿" + Number(finalAmount).toFixed(2);
+    $("ppReceiver").textContent = promptpayName || "ผู้รับเงิน";
+    $("ppReceiverId").textContent = "PromptPay ID: " + maskId(promptpayId);
+    $("ppStatus").textContent = ""; $("ppStatus").className = "";
+    $("ppSlipBtn").disabled = false;
+    $("ppSlipBtn").textContent = "📷 อัปโหลดสลิปเพื่อยืนยัน";
+    $("ppOverlay").classList.add("open");
+  }
+
+  function closePromptPay() {
+    $("ppOverlay").classList.remove("open");
+    pendingPayment = null;
+  }
+
+  function maskId(id) {
+    const digits = String(id).replace(/\D/g, "");
+    if (digits.length <= 4) return digits;
+    return digits.slice(0, 3) + "*".repeat(digits.length - 6) + digits.slice(-3);
+  }
+
+  async function uploadSlip(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !pendingPayment) return;
+
+    const btn = $("ppSlipBtn");
+    const status = $("ppStatus");
+    btn.disabled = true; btn.textContent = "กำลังตรวจสลิป…";
+    status.className = "busy"; status.textContent = "อ่าน QR + ตรวจยอดเงิน…";
+
+    try {
+      const slipBase64 = await fileToBase64Compressed(file, 1600);
+      const headers = { "Content-Type": "application/json" };
+      try {
+        const t = await getToken(appCheck, false);
+        if (t?.token) headers["X-Firebase-AppCheck"] = t.token;
+      } catch (_) {}
+      const res = await fetch("/api/verifySubscriptionSlip", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ paymentId: pendingPayment.paymentId, slipBase64 }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.success === false) {
+        status.className = "err";
+        status.textContent = data.reason || data.error || "ตรวจสลิปไม่สำเร็จ";
+        btn.disabled = false; btn.textContent = "📷 ลองสลิปใหม่อีกครั้ง";
+        return;
+      }
+      const endDate = new Date(data.newEndsAt);
+      $("ppNewEnd").textContent = "ใช้งานได้ถึง " + endDate.toLocaleDateString("th-TH", {
+        year: "numeric", month: "long", day: "numeric",
+      });
+      $("ppPayView").classList.add("hidden");
+      $("ppDoneView").classList.remove("hidden");
+    } catch (e) {
+      status.className = "err";
+      status.textContent = "อัปโหลดล้มเหลว — ลองอีกครั้ง";
+      btn.disabled = false; btn.textContent = "📷 อัปโหลดสลิปเพื่อยืนยัน";
+    }
+  }
+
+  // Down-scale slips so the server doesn't choke on multi-MB phone photos.
+  function fileToBase64Compressed(file, maxDim) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+          const w = Math.round(img.width * scale);
+          const h = Math.round(img.height * scale);
+          const canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL("image/jpeg", 0.85));
+        };
+        img.onerror = () => reject(new Error("image load failed"));
+        img.src = e.target.result;
+      };
+      reader.onerror = () => reject(new Error("file read failed"));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ── Card via Stripe (secondary rail) ──
+  async function payCard(tier, btn) {
     btn.disabled = true; btn.textContent = "กำลังพาไปหน้าชำระเงิน…";
     try {
       const res = await createCheckout({
@@ -231,7 +453,7 @@
       if (url) { window.location.href = url; return; }
       throw new Error("no url");
     } catch (e) {
-      btn.disabled = false; btn.textContent = "ลองอีกครั้ง";
+      btn.disabled = false; btn.textContent = "หรือจ่ายด้วยบัตรเครดิต";
       alert("เริ่มการชำระเงินไม่สำเร็จ ลองใหม่อีกครั้ง หรือทักไลน์ทีมงาน");
     }
   }

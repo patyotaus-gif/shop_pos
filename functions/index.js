@@ -18,56 +18,66 @@ const geminiApiKey = defineSecret("GEMINI_API_KEY");
 // ────────────────────────────────────────────────
 // 4-tier pricing (Pokpok GTM plan)
 // ────────────────────────────────────────────────
-// amounts are in สตางค์ (Stripe API). Restaurant is priced per location
-// — the checkout multiplies amount × locations at session create.
-const PLANS = {
-  solo: {
-    monthly: { amount:  19900, days:  30, label: "Pokpok Solo รายเดือน" },
-    yearly:  { amount: 199000, days: 365, label: "Pokpok Solo รายปี" },
-  },
-  lite: {
-    monthly: { amount:  39900, days:  30, label: "Pokpok Lite รายเดือน" },
-    yearly:  { amount: 399000, days: 365, label: "Pokpok Lite รายปี" },
-    // Hardware peripheral bundle (printer + drawer + stand). One-off
-    // up-front charge OR financed across 24 months — Phase D will wire
-    // the financed option through Stripe Subscriptions.
-    hardwareUpfront: 400000,
-  },
-  full: {
-    monthly: { amount:  59900, days:  30, label: "Pokpok Full รายเดือน" },
-    yearly:  { amount: 599000, days: 365, label: "Pokpok Full รายปี" },
-    // Hardware-as-a-service: ฿1,000 deposit (refundable), 36-month term
-    deposit: 100000,
-    termMonths: 36,
-  },
-  restaurant: {
-    // Priced per location — Cloud Function multiplies by `locations`
-    monthly: { amount: 119900, days:  30, label: "Pokpok Restaurant รายเดือน" },
-    yearly:  { amount: 1199000, days: 365, label: "Pokpok Restaurant รายปี" },
-    depositPerLocation: 200000,
-    perLocation: true,
-  },
-};
+// The editable catalog lives in Firestore `config/plans` (founder console
+// writes it via adminUpsertPlans). functions/plans.js carries the pure
+// helpers + hardcoded defaults used when that doc doesn't exist yet.
+const {
+  DEFAULT_TIERS,
+  resolvePlanConfig,
+  monthlyRevenueBaht,
+  validateTiers,
+} = require("./plans");
 
-// Backward compatibility: older clients still send plan='monthly' or
-// 'yearly' without a tier. Default them to Full (Tier 3 was the closest
-// equivalent to the historical ฿299 plan they came from).
-function resolvePlanConfig(tier, billingCycle) {
-  const tierConfig = PLANS[tier] || PLANS.full;
-  return tierConfig[billingCycle] || tierConfig.monthly;
+// 60s in-memory cache — plan reads happen on every checkout/webhook.
+let _plansCache = { tiers: null, at: 0 };
+async function getPlans() {
+  const now = Date.now();
+  if (_plansCache.tiers && now - _plansCache.at < 60000) return _plansCache.tiers;
+  try {
+    const snap = await admin.firestore().doc("config/plans").get();
+    const tiers = snap.exists && snap.data().tiers ? snap.data().tiers : DEFAULT_TIERS;
+    _plansCache = { tiers, at: now };
+    return tiers;
+  } catch (e) {
+    console.error("getPlans failed, using cache/defaults:", e);
+    return _plansCache.tiers || DEFAULT_TIERS;
+  }
 }
 
-// Monthly-normalised recurring revenue in baht for one shop's plan.
-// Yearly plans are divided by 12; restaurant is per-location. Used by the
-// ops dashboard to sum MRR across paying shops.
-function monthlyRevenueBaht(tier, billingCycle, locations) {
-  const cfg = resolvePlanConfig(tier, billingCycle);
-  if (!cfg) return 0;
-  const locs = Math.max(1, parseInt(locations || 1));
-  const perLoc = PLANS[tier]?.perLocation === true;
-  const amountSatang = perLoc ? cfg.amount * locs : cfg.amount;
-  const baht = amountSatang / 100;
-  return billingCycle === "yearly" ? baht / 12 : baht;
+// Company receiving account + founder notification target. Never exposed
+// to clients directly (rules deny all) — promptpayId/Name travel only in
+// createSubscriptionPayment's response.
+async function getBilling() {
+  const snap = await admin.firestore().doc("config/billing").get();
+  return snap.exists ? snap.data() : {};
+}
+
+// Extend a shop's subscription after a verified payment (Stripe webhook
+// or PromptPay slip). Stacks on top of remaining time. Returns the new
+// end date.
+async function applySubscriptionPayment(shopId, tier, billingCycle, locations, planConfig) {
+  const shopRef = admin.firestore().collection("shops").doc(shopId);
+  const shopDoc = await shopRef.get();
+
+  let baseDate = new Date();
+  if (shopDoc.exists) {
+    const existingEnd = shopDoc.data().subscriptionEndsAt?.toDate();
+    if (existingEnd && existingEnd > baseDate) baseDate = existingEnd;
+  }
+  const newEndDate = new Date(baseDate.getTime() + planConfig.days * 24 * 60 * 60 * 1000);
+
+  await shopRef.set(
+    {
+      subscriptionStatus: "active",
+      subscriptionEndsAt: admin.firestore.Timestamp.fromDate(newEndDate),
+      tier,
+      plan: billingCycle, // billing cycle — keep as plan for legacy
+      locations: Math.max(1, parseInt(locations || 1)),
+      lastPaymentAt: admin.firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+  return newEndDate;
 }
 
 const MARKETPLACE_TAKE_RATE = 0.025; // 2.5% — applied at marketplace order
@@ -107,7 +117,11 @@ exports.createCheckoutSession = onCall(
     // otherwise treat the legacy `plan` as a billingCycle on the Full tier.
     const resolvedTier = tier || "full";
     const resolvedCycle = billingCycle || plan || "monthly";
-    const planConfig = resolvePlanConfig(resolvedTier, resolvedCycle);
+    const tiers = await getPlans();
+    if (tiers[resolvedTier] && tiers[resolvedTier].enabled === false) {
+      throw new HttpsError("failed-precondition", "แผนนี้ปิดรับสมัครชั่วคราว");
+    }
+    const planConfig = resolvePlanConfig(tiers, resolvedTier, resolvedCycle);
 
     if (!planConfig) {
       throw new Error(`Invalid plan: tier=${resolvedTier}, cycle=${resolvedCycle}`);
@@ -115,7 +129,7 @@ exports.createCheckoutSession = onCall(
 
     // Restaurant is per-location — multiply.
     const locs = Math.max(1, parseInt(locations || 1));
-    const isPerLocation = PLANS[resolvedTier]?.perLocation === true;
+    const isPerLocation = tiers[resolvedTier]?.perLocation === true;
     const unitAmount = isPerLocation ? planConfig.amount * locs : planConfig.amount;
     const labelSuffix = isPerLocation && locs > 1 ? ` × ${locs} สาขา` : "";
 
@@ -123,7 +137,7 @@ exports.createCheckoutSession = onCall(
     const stripe = Stripe(stripeSecretKey.value());
 
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card", "promptpay", "truemoney"],
+      payment_method_types: ["card", "promptpay"],
       line_items: [
         {
           price_data: {
@@ -279,7 +293,7 @@ exports.createOrderCheckout = onRequest(
     const stripe = Stripe(stripeSecretKey.value());
 
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card", "promptpay", "truemoney"],
+      payment_method_types: ["card", "promptpay"],
       line_items: items.map((item) => ({
         price_data: {
           currency: "thb",
@@ -704,7 +718,7 @@ exports.stripeWebhook = onRequest(
         // cycle on the old flat-price model) — treat those as Full tier.
         const resolvedTier = tier || "full";
         const resolvedCycle = billingCycle || plan || "monthly";
-        const planConfig = resolvePlanConfig(resolvedTier, resolvedCycle);
+        const planConfig = resolvePlanConfig(await getPlans(), resolvedTier, resolvedCycle);
 
         if (!planConfig) {
           console.error(
@@ -714,33 +728,12 @@ exports.stripeWebhook = onRequest(
           return;
         }
 
-        const days = planConfig.days;
-        const shopRef = admin.firestore().collection("shops").doc(shopId);
-        const shopDoc = await shopRef.get();
-
-        let baseDate = new Date();
-        if (shopDoc.exists) {
-          const data = shopDoc.data();
-          const existingEnd = data.subscriptionEndsAt?.toDate();
-          if (existingEnd && existingEnd > baseDate) {
-            baseDate = existingEnd;
-          }
-        }
-
-        const newEndDate = new Date(
-          baseDate.getTime() + days * 24 * 60 * 60 * 1000
-        );
-
-        await shopRef.set(
-          {
-            subscriptionStatus: "active",
-            subscriptionEndsAt: admin.firestore.Timestamp.fromDate(newEndDate),
-            tier: resolvedTier,
-            plan: resolvedCycle, // billing cycle — keep as plan for legacy
-            locations: Math.max(1, parseInt(locations || 1)),
-            lastPaymentAt: admin.firestore.FieldValue.serverTimestamp(),
-          },
-          { merge: true }
+        const newEndDate = await applySubscriptionPayment(
+          shopId,
+          resolvedTier,
+          resolvedCycle,
+          Math.max(1, parseInt(locations || 1)),
+          planConfig
         );
 
         console.log(
@@ -1307,6 +1300,7 @@ exports.opsMetrics = onCall(async (request) => {
   const tierAll = { solo: 0, lite: 0, full: 0, restaurant: 0 };
   const tierPaid = { solo: 0, lite: 0, full: 0, restaurant: 0 };
 
+  const tiersCatalog = await getPlans();
   snap.forEach((doc) => {
     const d = doc.data();
     total++;
@@ -1325,7 +1319,7 @@ exports.opsMetrics = onCall(async (request) => {
     if (isActive) {
       active++;
       if (tierPaid[tier] !== undefined) tierPaid[tier]++;
-      mrr += monthlyRevenueBaht(tier, d.plan || "monthly", d.locations || 1);
+      mrr += monthlyRevenueBaht(tiersCatalog, tier, d.plan || "monthly", d.locations || 1);
     } else if (isTrialing) {
       trialing++;
       if (trialEnd.getTime() - now.getTime() <= 7 * day) trialsEndingSoon++;
@@ -1896,3 +1890,304 @@ function renewalMessage(isTrial, daysLeft) {
         body: `ต่ออายุก่อนหมด${when} เพื่อใช้งานไม่สะดุด`,
       };
 }
+
+// ────────────────────────────────────────────────
+// Subscription payment — direct PromptPay (0% fees)
+// ────────────────────────────────────────────────
+// Primary rail replacing Stripe for Thai shops: the shop owner pays the
+// company PromptPay account, uploads the slip, and the subscription
+// extends instantly via the same slip pipeline the shop-order flow uses.
+
+exports.createSubscriptionPayment = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Login required");
+  }
+  const shopId = request.auth.uid;
+  const { tier, billingCycle } = request.data || {};
+  if (!ADMIN_TIERS.includes(tier) || !ADMIN_CYCLES.includes(billingCycle)) {
+    throw new HttpsError("invalid-argument", "tier/billingCycle ไม่ถูกต้อง");
+  }
+
+  const tiers = await getPlans();
+  const tierCfg = tiers[tier];
+  if (!tierCfg || tierCfg.enabled === false) {
+    throw new HttpsError("failed-precondition", "แผนนี้ปิดรับสมัครชั่วคราว");
+  }
+  const planConfig = resolvePlanConfig(tiers, tier, billingCycle);
+
+  const billing = await getBilling();
+  if (!billing.promptpayId) {
+    throw new HttpsError(
+      "failed-precondition",
+      "ระบบยังไม่ได้ตั้งค่าบัญชีรับเงิน — กรุณาทักไลน์ทีมงาน"
+    );
+  }
+
+  const shopSnap = await admin.firestore().collection("shops").doc(shopId).get();
+  const shopData = shopSnap.exists ? shopSnap.data() : {};
+  const locations = tierCfg.perLocation === true
+    ? Math.max(1, parseInt(shopData.locations || 1))
+    : 1;
+
+  const amount = (planConfig.amount * locations) / 100; // satang → baht
+
+  // Unique cents per payment (1..99 satang) so concurrent payers to the
+  // same account stay distinguishable — same trick as shop orders.
+  const payRef = admin.firestore().collection("subscriptionPayments").doc();
+  const cents = (hashString(payRef.id) % 99) + 1;
+  const finalAmount = Math.round((amount + cents / 100) * 100) / 100;
+
+  await payRef.set({
+    shopId,
+    shopName: shopData.name || "",
+    tier,
+    billingCycle,
+    locations,
+    amount,
+    finalAmount,
+    status: "pendingPayment",
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    expiresAt: admin.firestore.Timestamp.fromDate(
+      new Date(Date.now() + 2 * 60 * 60 * 1000)
+    ),
+  });
+
+  return {
+    paymentId: payRef.id,
+    amount,
+    finalAmount,
+    promptpayId: billing.promptpayId,
+    promptpayName: billing.promptpayName || "",
+    planLabel: planConfig.label + (locations > 1 ? ` × ${locations} สาขา` : ""),
+  };
+});
+
+// Verify the uploaded transfer slip for a subscription payment, then
+// extend the subscription. Mirrors verifyPromptPaySlip (shop orders):
+// decode QR → match amount → replay guard → audit copy → apply.
+exports.verifySubscriptionSlip = onRequest(
+  { cors: true, memory: "512MiB", secrets: [lineChannelAccessToken] },
+  async (req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type, X-Firebase-AppCheck");
+    res.set("X-Content-Type-Options", "nosniff");
+
+    if (req.method === "OPTIONS") {
+      res.status(204).send("");
+      return;
+    }
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Method Not Allowed" });
+      return;
+    }
+    if (!(await _verifyAppCheck(req, res))) return;
+
+    const { paymentId, slipBase64 } = req.body || {};
+    if (!paymentId || !slipBase64) {
+      res.status(400).json({ error: "paymentId, slipBase64 required" });
+      return;
+    }
+
+    try {
+      const payRef = admin.firestore().collection("subscriptionPayments").doc(paymentId);
+      const paySnap = await payRef.get();
+      if (!paySnap.exists) {
+        res.status(404).json({ error: "Payment not found" });
+        return;
+      }
+      const pay = paySnap.data();
+      if (pay.status !== "pendingPayment") {
+        res.json({ success: false, reason: "รายการนี้ถูกดำเนินการไปแล้ว" });
+        return;
+      }
+      const expires = pay.expiresAt?.toDate?.();
+      if (expires && expires < new Date()) {
+        await payRef.update({ status: "expired" });
+        res.json({ success: false, reason: "รายการหมดอายุ — กรุณาเริ่มใหม่อีกครั้ง" });
+        return;
+      }
+
+      const cleanBase64 = slipBase64.replace(/^data:image\/\w+;base64,/, "");
+      const buf = Buffer.from(cleanBase64, "base64");
+
+      const Jimp = require("jimp");
+      const jsQR = require("jsqr");
+      const img = await Jimp.read(buf);
+      const qr = jsQR(
+        new Uint8ClampedArray(img.bitmap.data),
+        img.bitmap.width,
+        img.bitmap.height
+      );
+      if (!qr || !qr.data) {
+        res.json({
+          success: false,
+          reason: "QR ในสลิปอ่านไม่ได้ — ลองถ่ายให้ชัดและตรงหน่อย",
+        });
+        return;
+      }
+
+      const slipAmount = parseEmvAmount(qr.data);
+      if (slipAmount == null) {
+        res.json({ success: false, reason: "ไม่พบยอดเงินใน QR ของสลิป" });
+        return;
+      }
+      const expected = Number(pay.finalAmount);
+      if (Math.abs(slipAmount - expected) > 0.01) {
+        res.json({
+          success: false,
+          reason: `ยอดในสลิปไม่ตรง: สลิป ฿${slipAmount.toFixed(2)} vs รายการ ฿${expected.toFixed(2)}`,
+        });
+        return;
+      }
+
+      const txKey = hashString(qr.data);
+      const usedRef = admin
+        .firestore()
+        .collection("usedSubscriptionSlipRefs").doc(String(txKey));
+      const usedSnap = await usedRef.get();
+      if (usedSnap.exists) {
+        res.json({ success: false, reason: "สลิปนี้เคยใช้ไปแล้ว" });
+        return;
+      }
+
+      // Audit copy of the slip.
+      const fileName = `billing/slips/${paymentId}.jpg`;
+      const file = admin.storage().bucket().file(fileName);
+      await file.save(buf, { contentType: "image/jpeg", resumable: false });
+      const [slipUrl] = await file.getSignedUrl({
+        action: "read",
+        expires: "2030-12-31",
+      });
+
+      // Extend the subscription with the plan values frozen on the doc.
+      const planConfig = resolvePlanConfig(await getPlans(), pay.tier, pay.billingCycle);
+      const newEnd = await applySubscriptionPayment(
+        pay.shopId, pay.tier, pay.billingCycle, pay.locations, planConfig
+      );
+
+      await payRef.update({
+        status: "paid",
+        paidAt: admin.firestore.FieldValue.serverTimestamp(),
+        paymentRef: `slip:${txKey}`,
+        slipUrl,
+      });
+      await usedRef.set({
+        paymentId,
+        shopId: pay.shopId,
+        amount: slipAmount,
+        ts: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // Founder alert on every payment (owner-chosen fraud mitigation:
+      // auto-approve + human eyeball each slip). Best-effort.
+      try {
+        const billing = await getBilling();
+        if (billing.founderLineUserId) {
+          await _linePush(lineChannelAccessToken.value(), billing.founderLineUserId, [{
+            type: "text",
+            text:
+              `💰 ต่ออายุสำเร็จ (PromptPay)\n` +
+              `ร้าน: ${pay.shopName || pay.shopId}\n` +
+              `แผน: ${pay.tier} ${pay.billingCycle}` +
+              (pay.locations > 1 ? ` ×${pay.locations} สาขา` : "") + `\n` +
+              `ยอด: ฿${expected.toFixed(2)}\n` +
+              `ใช้ได้ถึง: ${newEnd.toISOString().slice(0, 10)}\n` +
+              `สลิป: ${slipUrl}`,
+          }]);
+        } else {
+          console.warn("founderLineUserId unset — subscription payment not notified");
+        }
+      } catch (e) {
+        console.error("founder notify failed:", e);
+      }
+
+      res.json({ success: true, newEndsAt: newEnd.toISOString() });
+    } catch (e) {
+      console.error("verifySubscriptionSlip error:", e);
+      res.status(500).json({
+        error: "verifySubscriptionSlip failed",
+        message: String(e && e.message ? e.message : e).slice(0, 200),
+      });
+    }
+  }
+);
+
+// ────────────────────────────────────────────────
+// Admin: plan catalog + billing config (founder console)
+// ────────────────────────────────────────────────
+
+exports.adminUpsertPlans = onCall(async (request) => {
+  assertFounder(request);
+  let tiers;
+  try {
+    tiers = validateTiers(request.data?.tiers);
+  } catch (e) {
+    throw new HttpsError("invalid-argument", e.message);
+  }
+  await admin.firestore().doc("config/plans").set({
+    tiers,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedBy: request.auth.uid,
+  });
+  _plansCache = { tiers: null, at: 0 }; // bust this instance's cache
+  return { ok: true };
+});
+
+exports.adminSetBilling = onCall(async (request) => {
+  assertFounder(request);
+  const { promptpayId, promptpayName, founderLineUserId } = request.data || {};
+  const digits = String(promptpayId || "").replace(/\D/g, "");
+  if (![10, 13, 15].includes(digits.length)) {
+    throw new HttpsError(
+      "invalid-argument",
+      "PromptPay ID ต้องเป็นเบอร์ 10 หลัก / บัตรประชาชน 13 หลัก / e-wallet 15 หลัก"
+    );
+  }
+  await admin.firestore().doc("config/billing").set(
+    {
+      promptpayId: digits,
+      promptpayName: String(promptpayName || "").trim(),
+      founderLineUserId: String(founderLineUserId || "").trim(),
+    },
+    { merge: true }
+  );
+  return { ok: true };
+});
+
+// Founder console needs to read config/billing (rules deny client reads)
+// to prefill the editor.
+exports.adminGetBilling = onCall(async (request) => {
+  assertFounder(request);
+  return await getBilling();
+});
+
+// Last N subscription payments for the console's audit list.
+exports.adminListSubscriptionPayments = onCall(async (request) => {
+  assertFounder(request);
+  const limit = Math.min(50, Math.max(1, parseInt(request.data?.limit || 20)));
+  const snap = await admin
+    .firestore()
+    .collection("subscriptionPayments")
+    .orderBy("createdAt", "desc")
+    .limit(limit)
+    .get();
+  return {
+    payments: snap.docs.map((d) => {
+      const p = d.data();
+      return {
+        id: d.id,
+        shopId: p.shopId,
+        shopName: p.shopName || "",
+        tier: p.tier,
+        billingCycle: p.billingCycle,
+        locations: p.locations || 1,
+        finalAmount: p.finalAmount,
+        status: p.status,
+        createdAt: p.createdAt?.toDate?.()?.toISOString() || null,
+        paidAt: p.paidAt?.toDate?.()?.toISOString() || null,
+        slipUrl: p.slipUrl || null,
+      };
+    }),
+  };
+});

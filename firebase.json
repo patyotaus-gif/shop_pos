@@ -62,6 +62,13 @@
           "functionId": "verifyPromptPaySlip",
           "region": "asia-southeast1"
         }
+      },
+      {
+        "source": "/api/verifySubscriptionSlip",
+        "function": {
+          "functionId": "verifySubscriptionSlip",
+          "region": "asia-southeast1"
+        }
       }
     ]
   }
