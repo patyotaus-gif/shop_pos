@@ -188,6 +188,7 @@ class _PosScreenState extends State<PosScreen> {
       customerName = await _askCustomerName();
       if (customerName == null) return;
     }
+    if (!mounted) return;
 
     double paid = 0.0;
     PaymentMethod method = _paymentMethod;

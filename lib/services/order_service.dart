@@ -22,9 +22,13 @@ class OrderService {
         // Pending payment first (needs attention), then by created time.
         orders.sort((a, b) {
           if (a.status == OrderStatus.pendingPayment &&
-              b.status != OrderStatus.pendingPayment) return -1;
+              b.status != OrderStatus.pendingPayment) {
+            return -1;
+          }
           if (b.status == OrderStatus.pendingPayment &&
-              a.status != OrderStatus.pendingPayment) return 1;
+              a.status != OrderStatus.pendingPayment) {
+            return 1;
+          }
           return a.createdAt.compareTo(b.createdAt);
         });
         return orders;

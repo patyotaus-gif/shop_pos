@@ -255,7 +255,7 @@ class _ReportScreenState extends State<ReportScreen>
                 pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
                   pw.Text('รายงานการขาย',
                       style: ts(11, bold: true, color: PdfColors.white)),
-                  pw.Text('$title',
+                  pw.Text(title,
                       style: ts(9, color: PdfColor.fromInt(0xFFFFCDD2))),
                   pw.Text(
                       '${_dayFmt.format(range.start)} – ${_dayFmt.format(range.end)}',
