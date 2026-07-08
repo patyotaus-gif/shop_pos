@@ -22,6 +22,7 @@ import '../services/shop_service.dart';
 import '../services/staff_service.dart';
 import '../utils/receipt_generator.dart';
 import '../widgets/payment_sheet.dart';
+import '../widgets/product_image.dart';
 
 class PosScreen extends StatefulWidget {
   const PosScreen({super.key});
@@ -659,14 +660,13 @@ class _ProductSearchState extends State<_ProductSearch> {
               children: _results
                   .map((p) => ListTile(
                         dense: true,
-                        leading: p.imagePath != null
-                            ? ClipRRect(
+                        leading: (p.imagePath != null ||
+                                (p.imageUrl ?? '').isNotEmpty)
+                            ? ProductImage(
+                                product: p,
+                                width: 40,
+                                height: 40,
                                 borderRadius: BorderRadius.circular(6),
-                                child: Image.file(
-                                  File(p.imagePath!),
-                                  width: 40, height: 40, fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Icon(Icons.image_not_supported, size: 40),
-                                ),
                               )
                             : null,
                         title: Text(p.name),
@@ -706,14 +706,13 @@ class _CartItemTile extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
-        leading: item.product.imagePath != null
-            ? ClipRRect(
+        leading: (item.product.imagePath != null ||
+                (item.product.imageUrl ?? '').isNotEmpty)
+            ? ProductImage(
+                product: item.product,
+                width: 44,
+                height: 44,
                 borderRadius: BorderRadius.circular(6),
-                child: Image.file(
-                  File(item.product.imagePath!),
-                  width: 44, height: 44, fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox(width: 44),
-                ),
               )
             : null,
         title: Text(item.product.name, style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -784,34 +783,14 @@ class _PickerProductCard extends StatelessWidget {
   final Product product;
   final VoidCallback? onAdd;
 
-  Widget _fallbackIcon(ColorScheme cs) => Container(
-        color: cs.surfaceContainerHighest,
-        child: Icon(Icons.inventory_2_outlined,
-            size: 24, color: cs.onSurface.withValues(alpha: 0.3)),
-      );
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final out = onAdd == null;
     final pct = product.discountPercent;
 
-    Widget image;
-    if (product.imagePath != null) {
-      image = Image.file(
-        File(product.imagePath!),
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _fallbackIcon(cs),
-      );
-    } else if ((product.imageUrl ?? '').isNotEmpty) {
-      image = Image.network(
-        product.imageUrl!,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _fallbackIcon(cs),
-      );
-    } else {
-      image = _fallbackIcon(cs);
-    }
+    // Local file → cloud imageUrl → placeholder (see ProductImage).
+    final Widget image = ProductImage(product: product);
 
     return SizedBox(
       width: 110,
