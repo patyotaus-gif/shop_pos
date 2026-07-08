@@ -9,6 +9,8 @@ let sheetQtySelected = 1;
 
 // Promo badge math. Badge only when originalPrice > price and the rounded
 // percent is at least 1 (guards tiny/garbage discounts).
+// Keep in sync with Product.discountPercent (lib/models/product.dart) — the
+// POS badge derives the same percent from salePrice/price.
 export function promoInfo(price, originalPrice) {
   const orig = Number(originalPrice || 0);
   const p = Number(price || 0);
