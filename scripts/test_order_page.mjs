@@ -49,3 +49,28 @@ assert.equal(promoInfo(25, 20), null, 'originalPrice below price → no promo');
 assert.equal(promoInfo(996, 1000), null, 'rounds to 0% → no badge');
 
 console.log('✓ catalog.js promoInfo tests passed');
+
+// ── payment.js — PromptPay payload (moved verbatim; verify it still works) ──
+const { crc16, buildPromptPayPayload } = await import('../public/order/js/payment.js');
+
+// CRC-16/CCITT-FALSE known-answer test
+assert.equal(crc16('123456789'), '29B1');
+
+// Phone (10 digits) → tag 01, 0066 + drop leading 0
+const phone = buildPromptPayPayload('081-234-5678', 100);
+assert.ok(phone.startsWith('000201010212'), 'static header + dynamic (amount) type');
+assert.ok(phone.includes('0016A000000677010111'), 'PromptPay AID');
+assert.ok(phone.includes('01130066812345678'), 'phone proxy value');
+assert.ok(phone.includes('5802TH'), 'country TH');
+assert.ok(phone.includes('5303764'), 'currency 764');
+assert.ok(phone.includes('5406100.00'), 'amount 100.00');
+assert.match(phone, /6304[0-9A-F]{4}$/, 'trailing CRC');
+
+// National ID (13 digits) → tag 02
+const nid = buildPromptPayPayload('1234567890123', 50);
+assert.ok(nid.includes('02131234567890123'), 'national-id proxy');
+
+// Invalid length throws
+assert.throws(() => buildPromptPayPayload('12345', 10));
+
+console.log('✓ payment.js PromptPay tests passed');
