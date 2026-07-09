@@ -13,6 +13,7 @@ import 'models/shop.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/kitchen_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/order_qr_screen.dart';
 import 'screens/pos_screen.dart';
 import 'screens/products_screen.dart';
 import 'screens/report_screen.dart';
@@ -521,6 +522,12 @@ class _MainShellState extends State<MainShell> {
                 icon: Icons.auto_awesome_outlined,
                 selectedIcon: Icons.auto_awesome,
                 label: 'AI',
+              ),
+              const _NavTab(
+                screen: OrderQrScreen(),
+                icon: Icons.qr_code_2_outlined,
+                selectedIcon: Icons.qr_code_2,
+                label: 'QR สั่งอาหาร',
               ),
               const _NavTab(
                 screen: SettingsScreen(),

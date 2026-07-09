@@ -342,6 +342,21 @@ class _OrderCard extends StatelessWidget {
                       Text(order.customerPhone,
                           style: const TextStyle(
                               color: Colors.grey, fontSize: 13)),
+                      // QR-link context: โต๊ะ / รับกลับบ้าน
+                      if (order.tableName != null ||
+                          order.orderType == 'takeaway')
+                        Padding(
+                          padding: const EdgeInsets.only(top: 3),
+                          child: Text(
+                            order.tableName != null
+                                ? '🍽️ โต๊ะ ${order.tableName}'
+                                : '🛍️ รับกลับบ้าน',
+                            style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF7A1F2B)),
+                          ),
+                        ),
                     ],
                   ),
                 ),

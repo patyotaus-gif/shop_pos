@@ -78,6 +78,10 @@ class ShopOrder {
   final DateTime createdAt;
   final DateTime? paidAt;
 
+  /// QR-link context tags (display-only): 'takeaway' | 'dineInPrepaid'.
+  final String? orderType;
+  final String? tableName;
+
   const ShopOrder({
     required this.id,
     required this.customerName,
@@ -92,6 +96,8 @@ class ShopOrder {
     required this.status,
     required this.createdAt,
     this.paidAt,
+    this.orderType,
+    this.tableName,
   }) : finalAmount = finalAmount ?? total;
 
   factory ShopOrder.fromFirestore(Map<String, dynamic> data, String id) =>
@@ -114,5 +120,7 @@ class ShopOrder {
         ),
         createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         paidAt: (data['paidAt'] as Timestamp?)?.toDate(),
+        orderType: data['orderType'] as String?,
+        tableName: data['tableName'] as String?,
       );
 }

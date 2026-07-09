@@ -32,6 +32,23 @@ class ImageService {
     return (localPath: localPath, imageUrl: imageUrl);
   }
 
+  /// Shop logo (QR center + future receipts): compress → Storage
+  /// `shops/{shopId}/logo.jpg` → returns the download URL.
+  static Future<String> saveShopLogo(File file, String shopId) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final destPath = '${dir.path}/shop_logo.jpg';
+    final compressed = await FlutterImageCompress.compressAndGetFile(
+      file.absolute.path,
+      destPath,
+      quality: 85,
+      minWidth: 400,
+      minHeight: 400,
+    );
+    final ref = FirebaseStorage.instance.ref('shops/$shopId/logo.jpg');
+    await ref.putFile(File(compressed?.path ?? file.path));
+    return ref.getDownloadURL();
+  }
+
   // ตัดพื้นหลังออก — sample สี 4 มุม แล้ว flood-fill ทำให้โปร่งแสง
   static Future<File> removeBackground(File file, {int tolerance = 40}) async {
     final bytes = await file.readAsBytes();
