@@ -6,6 +6,15 @@ import { addOne, getQty, setQty, onCartChange } from './cart.js';
 const byId = {};      // productId -> product from shopPublic
 let sheetProduct = null; // product currently shown in the sheet
 let sheetQtySelected = 1;
+let allProducts = [];
+let selectedCategory = 'ทั้งหมด';
+
+// Pure category filter (Node-tested). 'ทั้งหมด' passes everything;
+// products without a category group under 'ทั่วไป'.
+export function filterByCategory(products, category) {
+  if (category === 'ทั้งหมด') return products;
+  return products.filter((p) => (p.category || 'ทั่วไป') === category);
+}
 
 // Promo badge math. Badge only when originalPrice > price and the rounded
 // percent is at least 1 (guards tiny/garbage discounts).
@@ -23,6 +32,13 @@ export function promoInfo(price, originalPrice) {
 const meta = (p) => ({ name: p.name, price: p.price, stock: p.stock });
 
 export function initCatalog() {
+  document.getElementById('catBar').addEventListener('click', (e) => {
+    const chip = e.target.closest('.cat-chip');
+    if (!chip) return;
+    selectedCategory = chip.dataset.cat;
+    renderCategoryBar();
+    renderGrid(filterByCategory(allProducts, selectedCategory));
+  });
   document.getElementById('products').addEventListener('click', (e) => {
     const card = e.target.closest('.product-card');
     if (!card) return;
@@ -55,8 +71,29 @@ export function initCatalog() {
 }
 
 export function renderProducts(products) {
-  const container = document.getElementById('products');
+  allProducts = products;
   for (const p of products) byId[p.id] = p;
+  renderCategoryBar();
+  renderGrid(filterByCategory(products, selectedCategory));
+}
+
+// Horizontal chip strip above the grid. Hidden when the shop effectively
+// has a single category.
+function renderCategoryBar() {
+  const bar = document.getElementById('catBar');
+  const cats = [...new Set(allProducts.map((p) => p.category || 'ทั่วไป'))];
+  if (cats.length <= 1) {
+    bar.hidden = true;
+    return;
+  }
+  bar.hidden = false;
+  bar.innerHTML = ['ทั้งหมด', ...cats].map((c) =>
+    `<button class="cat-chip${c === selectedCategory ? ' selected' : ''}" type="button" data-cat="${escHtml(c)}">${escHtml(c)}</button>`
+  ).join('');
+}
+
+function renderGrid(products) {
+  const container = document.getElementById('products');
   if (!products.length) {
     container.innerHTML =
       '<p style="grid-column:1/-1;text-align:center;color:#A89E94;padding:40px">ยังไม่มีสินค้า</p>';

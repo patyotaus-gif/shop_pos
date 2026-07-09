@@ -2,9 +2,17 @@
 // time so the Node smoke test (scripts/test_order_page.mjs) can load it.
 
 // `location` is absent in Node — guard so tests can import this module.
-export const shopId = typeof location === 'undefined'
-  ? null
-  : new URLSearchParams(location.search).get('shop');
+const _params = typeof location === 'undefined'
+  ? new URLSearchParams('')
+  : new URLSearchParams(location.search);
+export const shopId = _params.get('shop');
+// Table-QR / takeaway-QR context (see spec: table-qr-ordering).
+export const tableParam = _params.get('table');
+export const takeawayParam = _params.get('mode') === 'takeaway';
+
+// Resolved once by main.js after shopPublic answers; read by payment.js /
+// tableorder.js. mode: 'normal' | 'takeaway' | 'dineIn' | 'prepaidTable'.
+export const orderContext = { mode: 'normal', table: null };
 
 export function escHtml(str) {
   return String(str)

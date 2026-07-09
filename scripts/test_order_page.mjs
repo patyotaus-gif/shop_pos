@@ -74,3 +74,33 @@ assert.ok(nid.includes('02131234567890123'), 'national-id proxy');
 assert.throws(() => buildPromptPayPayload('12345', 10));
 
 console.log('✓ payment.js PromptPay tests passed');
+
+// ── catalog.js filterByCategory ──
+const { filterByCategory } = await import('../public/order/js/catalog.js');
+const prods = [
+  { id: '1', category: 'เครื่องดื่ม' },
+  { id: '2', category: 'ของทานเล่น' },
+  { id: '3', category: '' },
+];
+assert.equal(filterByCategory(prods, 'ทั้งหมด').length, 3);
+assert.deepEqual(filterByCategory(prods, 'เครื่องดื่ม').map(p => p.id), ['1']);
+assert.deepEqual(filterByCategory(prods, 'ทั่วไป').map(p => p.id), ['3'], 'empty category groups as ทั่วไป');
+
+// ── upsell.js pickUpsell ──
+const { pickUpsell } = await import('../public/order/js/upsell.js');
+const menu = [
+  { id: 'a', stock: 5, pinned: true },
+  { id: 'b', stock: 5, originalPrice: 20, price: 10 },
+  { id: 'c', stock: 5 },                          // ไม่ปักหมุด ไม่มีโปร → ไม่แนะนำ
+  { id: 'd', stock: 0, pinned: true },            // หมด → ไม่แนะนำ
+  { id: 'e', stock: 5, pinned: true },
+  { id: 'f', stock: 5, originalPrice: 9, price: 5 },
+  { id: 'g', stock: 5, pinned: true },
+];
+const picks = pickUpsell(menu, ['e']);            // e อยู่ในตะกร้าแล้ว
+assert.equal(picks.length, 4, 'capped at 4');
+assert.ok(!picks.some(p => p.id === 'c' || p.id === 'd' || p.id === 'e'));
+assert.ok(picks[0].pinned && picks[1].pinned, 'pinned first');
+assert.deepEqual(pickUpsell([{ id: 'x', stock: 3 }], []), [], 'no candidates');
+
+console.log('✓ category filter + upsell picker tests passed');

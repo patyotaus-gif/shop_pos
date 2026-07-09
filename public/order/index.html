@@ -30,6 +30,7 @@
       </svg>
     </span>
     <h1 id="shopName">กำลังโหลด...</h1>
+    <span id="modeBadge" class="mode-badge" hidden></span>
   </div>
   <button id="cartBtn" type="button">
     🛒 ตะกร้า <span id="cartCount">0</span>
@@ -38,6 +39,7 @@
 
 <div id="loading">กำลังโหลดสินค้า...</div>
 <div id="error" style="display:none"></div>
+<div id="catBar" class="cat-bar" hidden></div>
 <div id="products" style="display:none"></div>
 
 <footer style="text-align:center;padding:28px 16px;color:#6B5E60;font-size:.78rem;line-height:1.8">
@@ -68,6 +70,34 @@
   <div id="sheetQty" class="qty-strip"></div>
   <button id="sheetPrimary" type="button"></button>
   <button id="sheetRemove" type="button" hidden>เอาออกจากตะกร้า</button>
+</div>
+
+<!-- Pre-checkout upsell sheet -->
+<div id="upsellOverlay"></div>
+<div id="upsellSheet">
+  <div class="drawer-handle"></div>
+  <div class="drawer-title">สั่งนี่เพิ่มไหม? 😋</div>
+  <div id="upsellItems"></div>
+  <button id="upsellSkip" type="button">ไปชำระเงินต่อ</button>
+</div>
+
+<!-- Dine-in: send to kitchen (no payment) -->
+<div id="kitchenOverlay">
+  <div id="kitchenCard">
+    <div id="kitchenView">
+      <h2>ยืนยันส่งเข้าครัว</h2>
+      <div id="kitchenItems"></div>
+      <textarea id="kitchenNote" rows="2" maxlength="200"
+        placeholder="หมายเหตุถึงร้าน (เช่น ไม่เผ็ด, ไม่ใส่ผัก)"></textarea>
+      <div id="kitchenStatus"></div>
+      <button id="kitchenSendBtn" type="button">🍽️ ส่งออเดอร์เข้าครัว</button>
+    </div>
+    <div id="kitchenDone" class="hidden">
+      <h2>✓ ส่งเข้าครัวแล้ว</h2>
+      <p class="kitchen-done-sub">สั่งเพิ่มได้เลย รายการจะเข้าโต๊ะเดิม<br>ชำระเงินกับพนักงานตอนปิดโต๊ะ</p>
+      <button id="kitchenDoneBtn" type="button">สั่งเพิ่ม</button>
+    </div>
+  </div>
 </div>
 
 <!-- Order form modal -->

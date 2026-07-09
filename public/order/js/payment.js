@@ -1,7 +1,7 @@
 // Order form + PromptPay payment + slip verification.
 // Logic moved VERBATIM from the old public/order/index.html inline script —
 // do not "improve" payload/CRC/compression code here.
-import { shopId, apiFetch } from './util.js';
+import { shopId, apiFetch, orderContext } from './util.js';
 import { items } from './cart.js';
 // Payload builder now lives in the shared module (also used by /subscribe);
 // re-exported so this module's interface (and its Node tests) is unchanged.
@@ -48,7 +48,21 @@ async function submitOrder() {
     const res = await apiFetch('/api/createPromptPayOrder', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ shopId, customerName: name, customerPhone: phone, items: orderItems }),
+      body: JSON.stringify({
+        shopId,
+        customerName: name,
+        customerPhone: phone,
+        items: orderItems,
+        // Context tags from QR links (display-only on the shop side).
+        ...(orderContext.mode === 'takeaway' ? { orderType: 'takeaway' } : {}),
+        ...(orderContext.mode === 'prepaidTable' && orderContext.table
+          ? {
+              orderType: 'dineInPrepaid',
+              tableId: orderContext.table.id,
+              tableName: orderContext.table.name,
+            }
+          : {}),
+      }),
     });
     const data = await res.json();
     if (!res.ok || !data.orderId) {
