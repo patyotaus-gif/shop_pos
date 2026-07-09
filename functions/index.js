@@ -239,10 +239,36 @@ exports.getShopPublic = onRequest({ cors: true }, async (req, res) => {
       stock: p.stock,
       category: p.category || "",
       imageUrl: p.imageUrl || "",
+      // Upsell popup material: pinned products are the shop's own picks.
+      ...(p.isPinned === true ? { pinned: true } : {}),
     });
   }
 
-  res.json({ name: shop.name || "ร้านค้า", products });
+  const out = { name: shop.name || "ร้านค้า", products };
+
+  // Table-QR mode: ?table=<id> asks for the dine-in context too. Unknown
+  // table → 404 so the page can tell the customer to call staff instead of
+  // creating orphan orders.
+  const tableId = String(req.query.table || "").trim();
+  if (tableId) {
+    const tableSnap = await db
+      .collection("shops").doc(shopId)
+      .collection("tables").doc(tableId)
+      .get();
+    if (!tableSnap.exists) {
+      res.status(404).json({ error: "table_not_found" });
+      return;
+    }
+    const settingsSnap = await db
+      .collection("shops").doc(shopId)
+      .collection("settings").doc("shop")
+      .get();
+    out.table = { id: tableId, name: tableSnap.data().name || "" };
+    out.tableOrderMode =
+      settingsSnap.data()?.tableOrderMode === "prepaid" ? "prepaid" : "dineIn";
+  }
+
+  res.json(out);
 });
 
 // ────────────────────────────────────────────────
@@ -501,11 +527,15 @@ exports.createPromptPayOrder = onRequest(
     }
     if (!(await _verifyAppCheck(req, res))) return;
 
-    const { shopId, customerName, customerPhone, items } = req.body;
+    const { shopId, customerName, customerPhone, items, tableId, tableName, orderType } = req.body;
     if (!shopId || !customerName || !customerPhone || !Array.isArray(items) || items.length === 0) {
       res.status(400).json({ error: "ข้อมูลไม่ครบ" });
       return;
     }
+    // Optional context tags from QR links (display-only).
+    const safeOrderType = ["takeaway", "dineInPrepaid"].includes(orderType)
+      ? orderType
+      : null;
 
     const total = items.reduce((s, item) => s + item.price * item.quantity, 0);
     if (total < 20) {
@@ -552,6 +582,9 @@ exports.createPromptPayOrder = onRequest(
       paymentMethod: "promptpay",
       status: "pendingPayment",
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      ...(safeOrderType ? { orderType: safeOrderType } : {}),
+      ...(tableId ? { tableId: String(tableId).slice(0, 64) } : {}),
+      ...(tableName ? { tableName: String(tableName).slice(0, 64) } : {}),
     });
 
     res.json({
@@ -2191,3 +2224,179 @@ exports.adminListSubscriptionPayments = onCall(async (request) => {
     }),
   };
 });
+
+// ────────────────────────────────────────────────
+// Table QR ordering — order to kitchen, pay later
+// ────────────────────────────────────────────────
+// Customers scan a per-table QR (/order/?shop=X&table=Y) and send items
+// straight onto the table's open tab. No auth (guests) — guarded by App
+// Check, a restaurant-tier check, per-table cooldown, and line caps.
+// Prices are resolved server-side; client prices are never trusted.
+const { effectivePriceOf, sanitizeTableOrderItems } = require("./tableorder");
+
+exports.createTableOrder = onRequest(
+  { cors: true, secrets: [lineChannelAccessToken] },
+  async (req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type, X-Firebase-AppCheck");
+    res.set("X-Content-Type-Options", "nosniff");
+
+    if (req.method === "OPTIONS") {
+      res.status(204).send("");
+      return;
+    }
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Method Not Allowed" });
+      return;
+    }
+    if (!(await _verifyAppCheck(req, res))) return;
+
+    const { shopId, tableId } = req.body || {};
+    if (!shopId || !tableId) {
+      res.status(400).json({ error: "shopId, tableId required" });
+      return;
+    }
+
+    let items;
+    try {
+      items = sanitizeTableOrderItems(req.body.items);
+    } catch (e) {
+      res.status(400).json({ error: e.message });
+      return;
+    }
+
+    try {
+      const db = admin.firestore();
+      const shopRef = db.collection("shops").doc(shopId);
+      const shopSnap = await shopRef.get();
+      if (!shopSnap.exists) {
+        res.status(404).json({ error: "ไม่พบร้านค้า" });
+        return;
+      }
+      // Table ordering is a Restaurant-tier feature — reject leaked links.
+      if ((shopSnap.data().tier || "") !== "restaurant") {
+        res.status(403).json({ error: "ร้านนี้ไม่ได้เปิดสั่งผ่านโต๊ะ" });
+        return;
+      }
+
+      const settingsSnap = await shopRef
+        .collection("settings").doc("shop").get();
+      const autoSend = settingsSnap.data()?.tableOrderAutoSend === true;
+
+      // Resolve prices server-side (sale price honored). Unknown product
+      // ids are rejected — the menu the customer saw came from shopPublic.
+      const now = new Date();
+      const priced = [];
+      for (const it of items) {
+        const prodSnap = await shopRef
+          .collection("products").doc(it.productId).get();
+        if (!prodSnap.exists) {
+          res.status(400).json({ error: "มีสินค้าที่ไม่พบในเมนู — รีเฟรชหน้าแล้วลองใหม่" });
+          return;
+        }
+        const p = prodSnap.data();
+        priced.push({
+          productId: it.productId,
+          productName: p.name || "",
+          price: effectivePriceOf(p, now),
+          costPrice: Number(p.costPrice || 0),
+          quantity: it.quantity,
+          ...(it.notes ? { notes: it.notes } : {}),
+          kitchenStatus: autoSend ? "sent" : "pending",
+          ...(autoSend
+            ? { sentToKitchenAt: admin.firestore.Timestamp.fromDate(now) }
+            : {}),
+        });
+      }
+
+      const tableRef = shopRef.collection("tables").doc(String(tableId));
+      const result = await db.runTransaction(async (tx) => {
+        const tableSnap = await tx.get(tableRef);
+        if (!tableSnap.exists) return { error: "ไม่พบโต๊ะนี้ — แจ้งพนักงาน" };
+        const table = tableSnap.data();
+
+        // Per-table cooldown: one web round per 45s stops QR spam.
+        const lastAt = table.lastWebOrderAt?.toMillis?.() || 0;
+        if (Date.now() - lastAt < 45000) {
+          return { error: "เพิ่งส่งออเดอร์ไปเมื่อครู่ — รอสักครู่แล้วสั่งเพิ่มได้เลย" };
+        }
+
+        let orderRef;
+        if (table.currentOrderId) {
+          orderRef = shopRef.collection("tableOrders").doc(table.currentOrderId);
+          const orderSnap = await tx.get(orderRef);
+          if (orderSnap.exists && orderSnap.data().status === "open") {
+            const existing = orderSnap.data().items || [];
+            if (existing.length + priced.length > 60) {
+              return { error: "รายการในโต๊ะเต็ม — แจ้งพนักงาน" };
+            }
+            tx.update(orderRef, { items: [...existing, ...priced] });
+            tx.update(tableRef, {
+              lastWebOrderAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            return { orderId: orderRef.id, appended: true };
+          }
+        }
+
+        // No open tab — start one and occupy the table (same shape
+        // TableService.openOrder writes, plus webOrigin for the audit).
+        orderRef = shopRef.collection("tableOrders").doc();
+        tx.set(orderRef, {
+          tableId: String(tableId),
+          tableName: table.name || "",
+          items: priced,
+          status: "open",
+          openedAt: admin.firestore.Timestamp.fromDate(now),
+          webOrigin: true,
+        });
+        tx.update(tableRef, {
+          status: "occupied",
+          currentOrderId: orderRef.id,
+          lastWebOrderAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        return { orderId: orderRef.id, appended: false };
+      });
+
+      if (result.error) {
+        res.status(429).json({ error: result.error });
+        return;
+      }
+
+      // Notify the owner — same channels as paid online orders.
+      const itemCount = priced.reduce((s, i) => s + i.quantity, 0);
+      const tableName = (await tableRef.get()).data()?.name || tableId;
+      try {
+        const fcmToken = shopSnap.data().fcmToken;
+        if (fcmToken) {
+          await admin.messaging().send({
+            token: fcmToken,
+            notification: {
+              title: "🍽️ ออเดอร์ใหม่จากโต๊ะ!",
+              body: `โต๊ะ ${tableName} · ${itemCount} รายการ`,
+            },
+            android: { notification: { channelId: "new_orders", priority: "high" } },
+          });
+        }
+        const lineUserId = settingsSnap.data()?.lineUserId;
+        const lineEnabled = settingsSnap.data()?.lineNotifyEnabled !== false;
+        if (lineUserId && lineEnabled) {
+          await _linePush(lineChannelAccessToken.value(), lineUserId, [{
+            type: "text",
+            text: `🍽️ ออเดอร์ใหม่จากโต๊ะ ${tableName}\n${itemCount} รายการ — เปิดแอป Pokpok ดูรายละเอียด`,
+          }]);
+        }
+      } catch (e) {
+        console.error("table order notify failed:", e);
+      }
+
+      res.json({ success: true, orderId: result.orderId, appended: result.appended });
+    } catch (e) {
+      console.error("createTableOrder error:", e);
+      res.status(500).json({
+        error: "createTableOrder failed",
+        message: String(e && e.message ? e.message : e).slice(0, 200),
+      });
+    }
+  }
+);

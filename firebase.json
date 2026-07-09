@@ -69,6 +69,13 @@
           "functionId": "verifySubscriptionSlip",
           "region": "asia-southeast1"
         }
+      },
+      {
+        "source": "/api/createTableOrder",
+        "function": {
+          "functionId": "createTableOrder",
+          "region": "asia-southeast1"
+        }
       }
     ]
   }
