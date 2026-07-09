@@ -244,7 +244,16 @@ exports.getShopPublic = onRequest({ cors: true }, async (req, res) => {
     });
   }
 
+  // Shop settings — for the /order header banner (logoUrl) and, when a table
+  // QR is scanned, the dine-in mode. One read, reused below.
+  const settingsSnap = await db
+    .collection("shops").doc(shopId)
+    .collection("settings").doc("shop")
+    .get();
+  const settings = settingsSnap.data() || {};
+
   const out = { name: shop.name || "ร้านค้า", products };
+  if (settings.logoUrl) out.logoUrl = settings.logoUrl;
 
   // Table-QR mode: ?table=<id> asks for the dine-in context too. Unknown
   // table → 404 so the page can tell the customer to call staff instead of
@@ -259,13 +268,9 @@ exports.getShopPublic = onRequest({ cors: true }, async (req, res) => {
       res.status(404).json({ error: "table_not_found" });
       return;
     }
-    const settingsSnap = await db
-      .collection("shops").doc(shopId)
-      .collection("settings").doc("shop")
-      .get();
     out.table = { id: tableId, name: tableSnap.data().name || "" };
     out.tableOrderMode =
-      settingsSnap.data()?.tableOrderMode === "prepaid" ? "prepaid" : "dineIn";
+      settings.tableOrderMode === "prepaid" ? "prepaid" : "dineIn";
   }
 
   res.json(out);
@@ -1504,6 +1509,11 @@ exports.adminSetSubscription = onCall(async (request) => {
         tier,
         plan: cycle,
         locations,
+        // Keep shopType in sync with the tier so nav gating (Tables/Kitchen,
+        // which keys on shopType) reflects a Restaurant upgrade. Without
+        // this, a shop upgraded from retail keeps shopType="retail" and
+        // never sees the restaurant screens.
+        shopType: tier === "restaurant" ? "restaurant" : "retail",
       },
       { merge: true }
     );

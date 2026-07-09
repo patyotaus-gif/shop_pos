@@ -2,12 +2,14 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
+import 'package:image_picker/image_picker.dart';
 import '../models/hardware_request.dart';
 import '../models/shop.dart';
 import '../services/auth_service.dart';
 import '../services/bank_notification_service.dart';
 import '../services/entitlements.dart';
 import '../services/hardware_service.dart';
+import '../services/image_service.dart';
 import '../services/line_service.dart';
 import '../services/settings_service.dart';
 import '../services/shop_service.dart';
@@ -44,6 +46,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _savingServiceCharge = false;
   bool _bankListenerGranted = false;
   ShopType _shopType = ShopType.retail;
+  String? _logoUrl;
+  bool _savingLogo = false;
 
   @override
   void initState() {
@@ -81,11 +85,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _serviceChargeCtrl.text = sc == 0 ? '' : sc.toStringAsFixed(0);
           _bankListenerGranted = granted;
           _shopType = shop?.shopType ?? ShopType.retail;
+          _logoUrl = data['logoUrl'] as String?;
         });
       }
     } catch (_) {
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// Shop logo → shown as the head-band banner on the customer /order page.
+  Future<void> _pickLogo() async {
+    final picked =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
+    final shopId = AuthService.shopId;
+    if (picked == null || shopId == null) return;
+    setState(() => _savingLogo = true);
+    try {
+      final url = await ImageService.saveShopLogo(File(picked.path), shopId);
+      await SettingsService.saveSettings({'logoUrl': url});
+      if (mounted) setState(() => _logoUrl = url);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('อัปโหลดโลโก้ไม่สำเร็จ: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _savingLogo = false);
+    }
+  }
+
+  Future<void> _removeLogo() async {
+    setState(() => _savingLogo = true);
+    try {
+      await SettingsService.saveSettings({'logoUrl': ''});
+      if (mounted) setState(() => _logoUrl = null);
+    } finally {
+      if (mounted) setState(() => _savingLogo = false);
     }
   }
 
@@ -276,6 +312,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     hintText: 'เลขที่ ถนน ตำบล อำเภอ จังหวัด รหัสไปรษณีย์',
                     border: OutlineInputBorder(),
                   ),
+                ),
+                const SizedBox(height: 16),
+                // Shop logo → head-band banner on the customer /order page.
+                Row(
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(8),
+                        image: (_logoUrl?.isNotEmpty ?? false)
+                            ? DecorationImage(
+                                image: NetworkImage(_logoUrl!),
+                                fit: BoxFit.contain)
+                            : null,
+                      ),
+                      child: (_logoUrl?.isNotEmpty ?? false)
+                          ? null
+                          : Icon(Icons.storefront_outlined,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.3)),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'โลโก้ร้าน — แสดงเป็นแบนเนอร์บนหน้าสั่งของออนไลน์',
+                        style: TextStyle(fontSize: 13),
+                      ),
+                    ),
+                    if (_savingLogo)
+                      const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                    else ...[
+                      if (_logoUrl?.isNotEmpty ?? false)
+                        IconButton(
+                          tooltip: 'ลบโลโก้',
+                          icon: const Icon(Icons.delete_outline),
+                          onPressed: _removeLogo,
+                        ),
+                      TextButton(
+                        onPressed: _pickLogo,
+                        child: Text(
+                            (_logoUrl?.isNotEmpty ?? false) ? 'เปลี่ยน' : 'เพิ่มโลโก้'),
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 12),
                 Align(

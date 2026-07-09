@@ -1,15 +1,10 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
-import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../models/restaurant_table.dart';
 import '../services/auth_service.dart';
 import '../services/entitlements.dart';
-import '../services/image_service.dart';
 import '../services/settings_service.dart';
 import '../services/shop_service.dart';
 import '../services/table_service.dart';
@@ -31,8 +26,12 @@ class _OrderQrScreenState extends State<OrderQrScreen> {
   bool _isRestaurant = false;
   String _mode = 'dineIn';
   bool _autoSend = false;
-  String? _logoUrl;
   bool _busy = false;
+
+  // QR center logo is always the Pokpok mark — brand consistency on every
+  // printed QR. Shop logos live on the /order banner (set in Settings), not
+  // here.
+  static const _qrLogoAsset = 'assets/icon/icon.png';
 
   String get _baseUrl => 'https://pok-pok.app/order/?shop=$_shopId';
   String get _takeawayUrl => '$_baseUrl&mode=takeaway';
@@ -55,13 +54,8 @@ class _OrderQrScreenState extends State<OrderQrScreen> {
           shop != null && Entitlements.canUseTables(shop.tier);
       _mode = settings['tableOrderMode'] == 'prepaid' ? 'prepaid' : 'dineIn';
       _autoSend = settings['tableOrderAutoSend'] == true;
-      _logoUrl = settings['logoUrl'] as String?;
     });
   }
-
-  ImageProvider get _logoProvider => (_logoUrl?.isNotEmpty ?? false)
-      ? NetworkImage(_logoUrl!) as ImageProvider
-      : const AssetImage('assets/icon/icon.png');
 
   Widget _qr(String data, {double size = 150}) => QrImageView(
         data: data,
@@ -69,29 +63,9 @@ class _OrderQrScreenState extends State<OrderQrScreen> {
         // EC level H tolerates the ≤20% center logo without breaking scans.
         errorCorrectionLevel: QrErrorCorrectLevel.H,
         backgroundColor: Colors.white,
-        embeddedImage: _logoProvider,
+        embeddedImage: const AssetImage(_qrLogoAsset),
         embeddedImageStyle: QrEmbeddedImageStyle(size: Size(size * .18, size * .18)),
       );
-
-  Future<void> _pickLogo() async {
-    final picked =
-        await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (picked == null || _shopId == null) return;
-    setState(() => _busy = true);
-    try {
-      final url =
-          await ImageService.saveShopLogo(File(picked.path), _shopId!);
-      await SettingsService.saveSettings({'logoUrl': url});
-      if (mounted) setState(() => _logoUrl = url);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('อัปโหลดโลโก้ไม่สำเร็จ: $e')));
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
 
   Future<void> _saveMode(String mode) async {
     setState(() => _mode = mode);
@@ -103,24 +77,15 @@ class _OrderQrScreenState extends State<OrderQrScreen> {
     await SettingsService.saveSettings({'tableOrderAutoSend': v});
   }
 
-  Future<Uint8List?> _logoBytes() async {
-    final url = _logoUrl;
-    if (url == null || url.isEmpty) return null;
-    try {
-      final res = await http.get(Uri.parse(url));
-      return res.statusCode == 200 ? res.bodyBytes : null;
-    } catch (_) {
-      return null;
-    }
-  }
-
   Future<void> _exportPdf(List<({String label, String url})> entries) async {
     setState(() => _busy = true);
     try {
+      final logo =
+          (await rootBundle.load(_qrLogoAsset)).buffer.asUint8List();
       await QrPdfGenerator.printQrSheets(
         shopName: _shopName,
         entries: entries,
-        logoBytes: await _logoBytes(),
+        logoBytes: logo,
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -143,26 +108,6 @@ class _OrderQrScreenState extends State<OrderQrScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           if (_busy) const LinearProgressIndicator(),
-          // ── โลโก้กลาง QR ──
-          Row(children: [
-            CircleAvatar(
-                radius: 22, backgroundImage: _logoProvider),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                (_logoUrl?.isNotEmpty ?? false)
-                    ? 'โลโก้ร้านแสดงกลาง QR ทุกใบ'
-                    : 'ยังไม่มีโลโก้ร้าน — ใช้โลโก้ Pokpok ไปก่อน',
-                style: const TextStyle(fontSize: 13),
-              ),
-            ),
-            TextButton(
-              onPressed: _busy ? null : _pickLogo,
-              child: const Text('เปลี่ยนโลโก้'),
-            ),
-          ]),
-          const Divider(height: 28),
-
           // ── Takeaway ──
           Text('สั่งกลับบ้าน (Takeaway)',
               style: Theme.of(context).textTheme.titleMedium),

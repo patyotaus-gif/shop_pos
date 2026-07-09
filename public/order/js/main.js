@@ -55,6 +55,16 @@ async function start() {
     document.getElementById('shopName').textContent = shopName;
     document.title = `สั่งสินค้า — ${shopName}`;
 
+    // Shop logo → full-width head-band banner (set from Settings).
+    if (data.logoUrl) {
+      const banner = document.getElementById('shopBanner');
+      const img = document.getElementById('shopBannerImg');
+      img.alt = shopName;
+      img.onerror = () => { banner.hidden = true; };
+      img.src = data.logoUrl;
+      banner.hidden = false;
+    }
+
     // Context badge + checkout label per mode.
     const badge = document.getElementById('modeBadge');
     if (orderContext.table) {

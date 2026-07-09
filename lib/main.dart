@@ -430,12 +430,15 @@ class _MainShellState extends State<MainShell> {
     return StreamBuilder<Shop?>(
       stream: ShopService.watchCurrentShop(),
       builder: (context, shopSnap) {
-        final isRestaurant =
-            shopSnap.data?.shopType == ShopType.restaurant;
+        // Gate restaurant screens on tier — the single source of truth,
+        // consistent with the QR screen + Entitlements. (Gating on the
+        // shopType field let a console-upgraded shop keep shopType="retail"
+        // and never see Tables/Kitchen.)
+        final tier = shopSnap.data?.tier ?? ShopTier.full;
+        final isRestaurant = tier == ShopTier.restaurant;
         // Solo tier doesn't include the customer DB / debts feature, so
         // the ลูกหนี้ tab is hidden for them. Tap on the upgrade
         // surfaces in Settings nudges them to Lite if they want it back.
-        final tier = shopSnap.data?.tier ?? ShopTier.full;
         final showDebts = Entitlements.canUseCustomerDb(tier);
 
         return StreamBuilder<int>(
