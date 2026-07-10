@@ -35,6 +35,34 @@ assert.equal(items().length, 1, 'qty 0 removes the item');
 
 assert.ok(changes >= 5, 'listeners fire on every change');
 
+// ── cart.js line identity (add-ons) ──
+const { addLine, lineKey } = cartMod;
+setQty('p1', 0); // clear
+assert.equal(items().length, 0);
+
+// same product, different option sets → separate lines
+addLine({ id: 'd', name: 'ข้าวผัด', price: 60, stock: 10,
+  optionIds: ['egg'], modifiers: [{ optionName: 'ไข่ดาว' }], notes: 'ไม่ผัก' }, 1);
+addLine({ id: 'd', name: 'ข้าวผัด', price: 50, stock: 10,
+  optionIds: [], modifiers: [], notes: '' }, 2);
+assert.equal(items().length, 2, 'different options → separate lines');
+assert.equal(getQty('d'), 3, 'getQty sums across a product\'s lines');
+assert.equal(total(), 60 * 1 + 50 * 2);
+
+// re-adding the same option set merges into the same line
+addLine({ id: 'd', name: 'ข้าวผัด', price: 60, stock: 10, optionIds: ['egg'],
+  modifiers: [{ optionName: 'ไข่ดาว' }], notes: '' }, 1);
+assert.equal(items().length, 2, 'same options merge');
+assert.equal(getQty('d'), 4);
+
+// lineKey order-independent
+assert.equal(lineKey('x', ['b', 'a']), lineKey('x', ['a', 'b']));
+assert.equal(lineKey('x', []), 'x');
+
+// stock cap across lines
+addLine({ id: 'd', name: 'ข้าวผัด', price: 50, stock: 10, optionIds: [] }, 100);
+assert.equal(getQty('d'), 10, 'total product qty capped at stock');
+
 console.log('✓ util.js + cart.js tests passed');
 
 // ── catalog.js promoInfo ──

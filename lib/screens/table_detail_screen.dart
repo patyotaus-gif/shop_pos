@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../models/order_modifier.dart';
 import '../models/restaurant_table.dart';
 import '../models/table_order.dart';
 import '../services/settings_service.dart';
@@ -136,17 +135,16 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
     final picked = await showProductPicker(context);
     if (picked == null || !mounted) return;
 
-    // If the product has modifier groups, walk the customer through the
-    // picker first. Empty list (no modifiers configured / groups deleted)
-    // → add the item plain.
-    List<OrderModifier> modifiers = const [];
-    if (picked.modifierGroupIds.isNotEmpty) {
-      final picks = await showModifierPicker(context, product: picked);
-      if (picks == null || !mounted) return; // user cancelled the sheet
-      modifiers = picks;
-    }
+    // Always open the picker: it collects modifier choices (if the product
+    // has groups) plus an optional kitchen note for any dish.
+    final pick = await showModifierPicker(context, product: picked);
+    if (pick == null || !mounted) return; // user cancelled the sheet
 
-    final item = TableService.itemFromProduct(picked, modifiers: modifiers);
+    final item = TableService.itemFromProduct(
+      picked,
+      modifiers: pick.modifiers,
+      notes: pick.notes,
+    );
     await TableService.addItem(widget.order.id, item);
   }
 
@@ -331,6 +329,16 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
                                       fontSize: 11,
                                       color: cs.primary
                                           .withValues(alpha: 0.85))),
+                            ),
+                          if (item.notes != null && item.notes!.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text('โน้ต: ${item.notes}',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      fontStyle: FontStyle.italic,
+                                      color: cs.onSurface
+                                          .withValues(alpha: 0.7))),
                             ),
                           Padding(
                             padding: const EdgeInsets.only(top: 2),

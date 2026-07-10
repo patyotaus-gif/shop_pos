@@ -5,18 +5,22 @@ import '../models/order_modifier.dart';
 import '../models/product.dart';
 import '../services/modifier_service.dart';
 
-/// Bottom sheet shown when a product with modifierGroupIds is picked.
-/// Walks the customer through each group (radio or checkbox depending on
-/// `multiSelect`) and returns the selected modifier snapshots ready to be
-/// attached to a TableOrderItem. Returns null on cancel.
+/// Result of the picker: the chosen modifier snapshots + an optional
+/// free-text note to the kitchen (e.g. "ไม่ใส่ผัก").
+typedef ModifierPick = ({List<OrderModifier> modifiers, String? notes});
+
+/// Bottom sheet shown when adding a product to an order. Walks the customer
+/// through each modifier group (radio or checkbox depending on `multiSelect`)
+/// and collects an optional note. Opens even for products with no groups —
+/// then it shows just the note field + Add. Returns null on cancel.
 ///
 /// Required groups must have at least one option selected before "Add"
-/// becomes active. Optional groups can be skipped entirely.
-Future<List<OrderModifier>?> showModifierPicker(
+/// becomes active.
+Future<ModifierPick?> showModifierPicker(
   BuildContext context, {
   required Product product,
 }) {
-  return showModalBottomSheet<List<OrderModifier>>(
+  return showModalBottomSheet<ModifierPick>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Theme.of(context).colorScheme.surface,
@@ -39,11 +43,20 @@ class _ModifierPickerSheetState extends State<_ModifierPickerSheet> {
   Future<List<ModifierGroup>>? _future;
   // groupId → set of selected optionIds
   final Map<String, Set<String>> _selected = {};
+  final _notesCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _future = ModifierService.getByIds(widget.product.modifierGroupIds);
+    _future = widget.product.modifierGroupIds.isEmpty
+        ? Future.value(const <ModifierGroup>[])
+        : ModifierService.getByIds(widget.product.modifierGroupIds);
+  }
+
+  @override
+  void dispose() {
+    _notesCtrl.dispose();
+    super.dispose();
   }
 
   double _previewPrice(List<ModifierGroup> groups) {
@@ -54,7 +67,7 @@ class _ModifierPickerSheetState extends State<_ModifierPickerSheet> {
         if (picks.contains(o.id)) total += o.priceAdjust;
       }
     }
-    return total;
+    return total < 0 ? 0 : total;
   }
 
   bool _canSubmit(List<ModifierGroup> groups) {
@@ -97,7 +110,11 @@ class _ModifierPickerSheetState extends State<_ModifierPickerSheet> {
         }
       }
     }
-    Navigator.pop(context, selected);
+    final note = _notesCtrl.text.trim();
+    Navigator.pop(context, (
+      modifiers: selected,
+      notes: note.isEmpty ? null : note,
+    ));
   }
 
   @override
@@ -114,15 +131,7 @@ class _ModifierPickerSheetState extends State<_ModifierPickerSheet> {
           if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          final groups = snap.data ?? const [];
-          if (groups.isEmpty) {
-            // Product had ids that resolve to nothing (deleted groups).
-            // Just return no modifiers — caller will add the item plain.
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              Navigator.pop(context, const <OrderModifier>[]);
-            });
-            return const SizedBox.shrink();
-          }
+          final groups = snap.data ?? const <ModifierGroup>[];
           final canSubmit = _canSubmit(groups);
           final preview = _previewPrice(groups);
 
@@ -170,22 +179,41 @@ class _ModifierPickerSheetState extends State<_ModifierPickerSheet> {
                   ),
                 ),
                 Expanded(
-                  child: ListView.builder(
+                  child: ListView(
                     controller: scrollCtrl,
                     padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-                    itemCount: groups.length,
-                    itemBuilder: (_, i) => _GroupSection(
-                      group: groups[i],
-                      selected: _selected[groups[i].id] ?? const <String>{},
-                      onToggle: (optionId) => _toggle(groups[i], optionId),
-                    ),
+                    children: [
+                      for (final g in groups)
+                        _GroupSection(
+                          group: g,
+                          selected: _selected[g.id] ?? const <String>{},
+                          onToggle: (optionId) => _toggle(g, optionId),
+                        ),
+                      // Free-text note to the kitchen — always available.
+                      const Padding(
+                        padding: EdgeInsets.only(top: 4, bottom: 6),
+                        child: Text('หมายเหตุถึงครัว',
+                            style: TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.w700)),
+                      ),
+                      TextField(
+                        controller: _notesCtrl,
+                        maxLength: 200,
+                        maxLines: 2,
+                        decoration: const InputDecoration(
+                          hintText: 'เช่น ไม่ใส่ผัก, ไม่เผ็ด, แยกน้ำจิ้ม',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                          counterText: '',
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 SafeArea(
                   top: false,
                   child: Container(
-                    padding:
-                        const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
                     decoration: BoxDecoration(
                       color: cs.surface,
                       border:
@@ -216,8 +244,8 @@ class _ModifierPickerSheetState extends State<_ModifierPickerSheet> {
                             icon: const Icon(Icons.add),
                             label: const Text('เพิ่มเข้าตะกร้า'),
                             style: FilledButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 14),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 14),
                             ),
                           ),
                         ),

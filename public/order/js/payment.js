@@ -35,9 +35,9 @@ async function submitOrder() {
 
   const orderItems = items().map((i) => ({
     productId: i.id,
-    productName: i.name,
-    price: i.price,
     quantity: i.quantity,
+    optionIds: i.optionIds || [],
+    ...(i.notes ? { notes: i.notes } : {}),
   }));
 
   const payBtn = document.getElementById('payBtn');

@@ -1,13 +1,39 @@
 // Product grid cards + product quantity bottom sheet.
 // DOM-free at import time (Node smoke test imports this module).
 import { escHtml, fmtBaht } from './util.js';
-import { addOne, getQty, setQty, onCartChange } from './cart.js';
+import { addOne, getQty, addLine, onCartChange } from './cart.js';
 
 const byId = {};      // productId -> product from shopPublic
 let sheetProduct = null; // product currently shown in the sheet
 let sheetQtySelected = 1;
+let sheetSel = {};       // groupId -> Set(optionIds) chosen in the open sheet
 let allProducts = [];
 let selectedCategory = 'ทั้งหมด';
+
+// Selected option snapshots + price adjust for the open sheet.
+function sheetModifiers() {
+  const p = sheetProduct;
+  const mods = [];
+  let adjust = 0;
+  for (const g of p?.modifierGroups || []) {
+    const picks = sheetSel[g.id] || new Set();
+    for (const o of g.options) {
+      if (picks.has(o.id)) {
+        mods.push({ groupId: g.id, groupName: g.name, optionId: o.id,
+          optionName: o.name, priceAdjust: o.priceAdjust });
+        adjust += Number(o.priceAdjust || 0);
+      }
+    }
+  }
+  return { mods, adjust };
+}
+
+function sheetRequiredMet() {
+  for (const g of sheetProduct?.modifierGroups || []) {
+    if (g.required && !(sheetSel[g.id]?.size)) return false;
+  }
+  return true;
+}
 
 // Pure category filter (Node-tested). 'ทั้งหมด' passes everything;
 // products without a category group under 'ทั่วไป'.
@@ -57,14 +83,35 @@ export function initCatalog() {
     sheetQtySelected = Number(btn.dataset.q);
     renderSheetQty();
   });
-  document.getElementById('sheetPrimary').addEventListener('click', () => {
-    if (!sheetProduct) return;
-    setQty(sheetProduct.id, sheetQtySelected, meta(sheetProduct));
-    closeProductSheet();
+  // Modifier option toggles (radio/checkbox) inside the sheet.
+  document.getElementById('sheetBody').addEventListener('click', (e) => {
+    const opt = e.target.closest('.opt-row');
+    if (!opt || !sheetProduct) return;
+    const g = sheetProduct.modifierGroups.find((x) => x.id === opt.dataset.g);
+    if (!g) return;
+    const set = sheetSel[g.id] || (sheetSel[g.id] = new Set());
+    if (g.multiSelect) {
+      set.has(opt.dataset.o) ? set.delete(opt.dataset.o) : set.add(opt.dataset.o);
+    } else {
+      set.clear();
+      set.add(opt.dataset.o);
+    }
+    renderSheetOptions();
+    renderSheetQty();
   });
-  document.getElementById('sheetRemove').addEventListener('click', () => {
-    if (!sheetProduct) return;
-    setQty(sheetProduct.id, 0);
+  document.getElementById('sheetPrimary').addEventListener('click', () => {
+    if (!sheetProduct || !sheetRequiredMet()) return;
+    const { mods, adjust } = sheetModifiers();
+    const note = (document.getElementById('sheetNote')?.value || '').trim();
+    addLine({
+      id: sheetProduct.id,
+      name: sheetProduct.name,
+      price: Math.max(0, sheetProduct.price + adjust),
+      stock: sheetProduct.stock,
+      optionIds: mods.map((m) => m.optionId),
+      modifiers: mods,
+      notes: note,
+    }, sheetQtySelected);
     closeProductSheet();
   });
   onCartChange(refreshCards);
@@ -143,7 +190,8 @@ function openProductSheet(id) {
   const p = byId[id];
   if (!p) return;
   sheetProduct = p;
-  sheetQtySelected = Math.max(1, getQty(id) || 1);
+  sheetQtySelected = 1;
+  sheetSel = {};
 
   const promo = promoInfo(p.price, p.originalPrice);
   document.getElementById('sheetBody').innerHTML = `
@@ -158,12 +206,37 @@ function openProductSheet(id) {
         <div class="product-price">${fmtBaht(p.price)}${promo ? `<span class="product-price-original">${fmtBaht(p.originalPrice)}</span>` : ''}</div>
         <div class="product-stock${p.stock <= 5 ? ' low' : ''}">📦 เหลือ ${p.stock}</div>
       </div>
-    </div>`;
+    </div>
+    <div id="sheetGroups"></div>
+    <div class="sheet-note-label">หมายเหตุ (ถ้ามี)</div>
+    <textarea id="sheetNote" class="sheet-note" rows="2" maxlength="200"
+      placeholder="เช่น ไม่ใส่ผัก, ไม่เผ็ด"></textarea>`;
 
+  renderSheetOptions();
   renderSheetQty();
-  document.getElementById('sheetRemove').hidden = getQty(id) === 0;
+  document.getElementById('sheetRemove').hidden = true; // manage qty in cart
   document.getElementById('productSheet').classList.add('open');
   document.getElementById('sheetOverlay').classList.add('open');
+}
+
+function renderSheetOptions() {
+  const wrap = document.getElementById('sheetGroups');
+  if (!wrap) return;
+  const groups = sheetProduct?.modifierGroups || [];
+  wrap.innerHTML = groups.map((g) => {
+    const picks = sheetSel[g.id] || new Set();
+    const unmet = g.required && picks.size === 0;
+    return `
+      <div class="opt-group">
+        <div class="opt-title">${escHtml(g.name)}${g.required ? `<span class="opt-req${unmet ? ' unmet' : ''}">จำเป็น</span>` : ''}</div>
+        ${g.options.map((o) => `
+          <div class="opt-row" data-g="${escHtml(g.id)}" data-o="${escHtml(o.id)}">
+            <span class="opt-mark">${picks.has(o.id) ? '●' : '○'}</span>
+            <span class="opt-name">${escHtml(o.name)}</span>
+            ${o.priceAdjust ? `<span class="opt-price">${o.priceAdjust > 0 ? '+' : ''}${fmtBaht(o.priceAdjust)}</span>` : ''}
+          </div>`).join('')}
+      </div>`;
+  }).join('');
 }
 
 function closeProductSheet() {
@@ -175,7 +248,8 @@ function closeProductSheet() {
 function renderSheetQty() {
   const p = sheetProduct;
   if (!p) return;
-  const maxQ = Math.min(p.stock, 20); // spec: strip range 1..min(stock, 20)
+  const room = Math.max(1, p.stock - (getQty(p.id)));
+  const maxQ = Math.min(room, 20); // strip range 1..min(remaining, 20)
   sheetQtySelected = Math.min(sheetQtySelected, maxQ);
 
   const strip = document.getElementById('sheetQty');
@@ -184,8 +258,11 @@ function renderSheetQty() {
     .join('');
   strip.querySelector('.qty-opt.selected')?.scrollIntoView({ inline: 'center', block: 'nearest' });
 
-  const inCart = getQty(p.id) > 0;
-  document.getElementById('sheetPrimary').textContent = inCart
-    ? `อัปเดตเป็น ${sheetQtySelected} ชิ้น`
-    : `เพิ่ม ${sheetQtySelected} ลงตะกร้า`;
+  const { adjust } = sheetModifiers();
+  const unit = Math.max(0, p.price + adjust);
+  const btn = document.getElementById('sheetPrimary');
+  btn.disabled = !sheetRequiredMet();
+  btn.textContent = sheetRequiredMet()
+    ? `เพิ่ม ${sheetQtySelected} ลงตะกร้า · ${fmtBaht(unit * sheetQtySelected)}`
+    : 'กรุณาเลือกตัวเลือกที่จำเป็น';
 }

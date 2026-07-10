@@ -218,6 +218,28 @@ exports.getShopPublic = onRequest({ cors: true }, async (req, res) => {
     .collection("products")
     .limit(300)
     .get();
+
+  // Modifier groups (restaurant add-ons) — fetched once so each product can
+  // carry its resolved groups for the web picker. Whitelist display fields.
+  const groupsById = {};
+  const modSnap = await db
+    .collection("shops").doc(shopId)
+    .collection("modifierGroups").get();
+  for (const g of modSnap.docs) {
+    const d = g.data() || {};
+    groupsById[g.id] = {
+      id: g.id,
+      name: d.name || "",
+      required: d.required === true,
+      multiSelect: d.multiSelect === true,
+      options: (d.options || []).map((o) => ({
+        id: o.id,
+        name: o.name || "",
+        priceAdjust: Number(o.priceAdjust || 0),
+      })),
+    };
+  }
+
   const products = [];
   const now = Date.now();
   for (const doc of prodSnap.docs) {
@@ -231,6 +253,9 @@ exports.getShopPublic = onRequest({ cors: true }, async (req, res) => {
     const sale = Number(p.salePrice || 0);
     const until = p.saleUntil?.toMillis?.();
     const onSale = sale > 0 && sale < regular && (!until || until > now);
+    const modifierGroups = ((p.modifierGroupIds || [])
+      .map((id) => groupsById[id])
+      .filter(Boolean));
     products.push({
       id: doc.id,
       name: p.name || "",
@@ -241,6 +266,7 @@ exports.getShopPublic = onRequest({ cors: true }, async (req, res) => {
       imageUrl: p.imageUrl || "",
       // Upsell popup material: pinned products are the shop's own picks.
       ...(p.isPinned === true ? { pinned: true } : {}),
+      ...(modifierGroups.length ? { modifierGroups } : {}),
     });
   }
 
@@ -542,18 +568,15 @@ exports.createPromptPayOrder = onRequest(
       ? orderType
       : null;
 
-    const total = items.reduce((s, item) => s + item.price * item.quantity, 0);
-    if (total < 20) {
-      res.status(400).json({ error: "ยอดสั่งขั้นต่ำ ฿20" });
+    if (items.length > 100) {
+      res.status(400).json({ error: "รายการมากเกินไป" });
       return;
     }
 
     // Look up the shop's PromptPay settings
-    const settingsSnap = await admin
-      .firestore()
-      .collection("shops").doc(shopId)
-      .collection("settings").doc("shop")
-      .get();
+    const shopRef = admin.firestore().collection("shops").doc(shopId);
+    const settingsSnap = await shopRef
+      .collection("settings").doc("shop").get();
     const settings = settingsSnap.data() || {};
     const promptpayId = settings.promptpayId;
     const promptpayName = settings.promptpayName || "";
@@ -562,6 +585,60 @@ exports.createPromptPayOrder = onRequest(
       res.status(400).json({
         error: "ร้านนี้ยังไม่ได้ตั้งค่า PromptPay กรุณาติดต่อร้านโดยตรง",
       });
+      return;
+    }
+
+    // Reprice everything server-side (base + add-ons) — the client's prices
+    // are never trusted. Also resolves + validates modifier selections.
+    const now = new Date();
+    const groupsById = await loadModifierGroups(shopRef);
+    const pricedItems = [];
+    let total = 0;
+    for (const raw of items) {
+      const productId =
+        typeof raw?.productId === "string" ? raw.productId.trim() : "";
+      const q = raw?.quantity;
+      if (!productId || !Number.isInteger(q) || q < 1) {
+        res.status(400).json({ error: "ข้อมูลรายการไม่ถูกต้อง" });
+        return;
+      }
+      const quantity = Math.min(q, 99);
+      const optionIds = Array.isArray(raw?.optionIds)
+        ? raw.optionIds.filter((x) => typeof x === "string").map((x) => x.trim())
+        : [];
+      const notes =
+        typeof raw?.notes === "string" ? raw.notes.trim().slice(0, 200) : "";
+      const prodSnap = await shopRef.collection("products").doc(productId).get();
+      if (!prodSnap.exists) {
+        res.status(400).json({
+          error: "มีสินค้าที่ไม่พบในเมนู — รีเฟรชหน้าแล้วลองใหม่",
+        });
+        return;
+      }
+      const p = prodSnap.data();
+      const groups = (p.modifierGroupIds || [])
+        .map((id) => groupsById[id])
+        .filter(Boolean);
+      let line;
+      try {
+        line = priceLine({ productId, quantity, optionIds, notes }, p, groups, now);
+      } catch (e) {
+        res.status(400).json({ error: e.message });
+        return;
+      }
+      pricedItems.push({
+        productId,
+        productName: line.productName,
+        price: line.unitPrice,
+        quantity,
+        ...(line.modifiers.length ? { modifiers: line.modifiers } : {}),
+        ...(line.notes ? { notes: line.notes } : {}),
+      });
+      total += line.unitPrice * quantity;
+    }
+
+    if (total < 20) {
+      res.status(400).json({ error: "ยอดสั่งขั้นต่ำ ฿20" });
       return;
     }
 
@@ -581,7 +658,7 @@ exports.createPromptPayOrder = onRequest(
     await orderRef.set({
       customerName,
       customerPhone,
-      items,
+      items: pricedItems,
       total,
       finalAmount,
       paymentMethod: "promptpay",
@@ -2242,7 +2319,29 @@ exports.adminListSubscriptionPayments = onCall(async (request) => {
 // straight onto the table's open tab. No auth (guests) — guarded by App
 // Check, a restaurant-tier check, per-table cooldown, and line caps.
 // Prices are resolved server-side; client prices are never trusted.
-const { effectivePriceOf, sanitizeTableOrderItems } = require("./tableorder");
+const { sanitizeTableOrderItems, priceLine } = require("./tableorder");
+
+// Load a shop's modifier groups into an { id → group } map (server-side
+// pricing/validation for web add-ons).
+async function loadModifierGroups(shopRef) {
+  const snap = await shopRef.collection("modifierGroups").get();
+  const byId = {};
+  for (const g of snap.docs) {
+    const d = g.data() || {};
+    byId[g.id] = {
+      id: g.id,
+      name: d.name || "",
+      required: d.required === true,
+      multiSelect: d.multiSelect === true,
+      options: (d.options || []).map((o) => ({
+        id: o.id,
+        name: o.name || "",
+        priceAdjust: Number(o.priceAdjust || 0),
+      })),
+    };
+  }
+  return byId;
+}
 
 exports.createTableOrder = onRequest(
   { cors: true, secrets: [lineChannelAccessToken] },
@@ -2294,9 +2393,11 @@ exports.createTableOrder = onRequest(
         .collection("settings").doc("shop").get();
       const autoSend = settingsSnap.data()?.tableOrderAutoSend === true;
 
-      // Resolve prices server-side (sale price honored). Unknown product
-      // ids are rejected — the menu the customer saw came from shopPublic.
+      // Resolve prices + modifiers server-side (sale price honored; add-on
+      // adjustments applied from the shop's own groups — client prices are
+      // never trusted). Unknown product/option ids are rejected.
       const now = new Date();
+      const groupsById = await loadModifierGroups(shopRef);
       const priced = [];
       for (const it of items) {
         const prodSnap = await shopRef
@@ -2306,13 +2407,24 @@ exports.createTableOrder = onRequest(
           return;
         }
         const p = prodSnap.data();
+        const groups = (p.modifierGroupIds || [])
+          .map((id) => groupsById[id])
+          .filter(Boolean);
+        let line;
+        try {
+          line = priceLine(it, p, groups, now);
+        } catch (e) {
+          res.status(400).json({ error: e.message });
+          return;
+        }
         priced.push({
           productId: it.productId,
-          productName: p.name || "",
-          price: effectivePriceOf(p, now),
+          productName: line.productName,
+          price: line.unitPrice,
           costPrice: Number(p.costPrice || 0),
-          quantity: it.quantity,
-          ...(it.notes ? { notes: it.notes } : {}),
+          quantity: line.quantity,
+          ...(line.modifiers.length ? { modifiers: line.modifiers } : {}),
+          ...(line.notes ? { notes: line.notes } : {}),
           kitchenStatus: autoSend ? "sent" : "pending",
           ...(autoSend
             ? { sentToKitchenAt: admin.firestore.Timestamp.fromDate(now) }

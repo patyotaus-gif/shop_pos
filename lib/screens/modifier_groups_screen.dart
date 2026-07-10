@@ -13,7 +13,8 @@ class ModifierGroupsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Modifier Groups'), centerTitle: true),
+      appBar: AppBar(
+          title: const Text('ตัวเลือกเสริม (Add-on)'), centerTitle: true),
       body: StreamBuilder<List<ModifierGroup>>(
         stream: ModifierService.watchAll(),
         builder: (context, snap) {
@@ -24,14 +25,33 @@ class ModifierGroupsScreen extends StatelessWidget {
           if (groups.isEmpty) {
             return _EmptyState(onAdd: () => _add(context));
           }
-          return ListView.separated(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: groups.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (_, i) => _GroupTile(
-              group: groups[i],
-              onTap: () => _edit(context, groups[i]),
-            ),
+          final cs = Theme.of(context).colorScheme;
+          return Column(
+            children: [
+              Container(
+                width: double.infinity,
+                color: cs.primary.withValues(alpha: 0.06),
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  'สร้างกลุ่ม เช่น "ระดับความเผ็ด" หรือ "เพิ่มไข่" (ตั้งราคา +/− '
+                  'ต่อตัวเลือกได้) แล้วไปผูกกับเมนูในหน้าแก้สินค้า',
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: cs.onSurface.withValues(alpha: 0.7)),
+                ),
+              ),
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: groups.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (_, i) => _GroupTile(
+                    group: groups[i],
+                    onTap: () => _edit(context, groups[i]),
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),

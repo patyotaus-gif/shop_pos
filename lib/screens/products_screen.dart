@@ -24,22 +24,24 @@ class _ProductsScreenState extends State<ProductsScreen> {
         title: const Text('สินค้า'),
         centerTitle: true,
         actions: [
-          // Modifier groups admin lives behind a single icon — only
-          // surfaced for restaurants since retail products don't take
-          // option pickers.
+          // Add-on / modifier groups — labelled so restaurant owners can
+          // find it (was a bare icon before). Only for the restaurant tier.
           StreamBuilder<Shop?>(
             stream: ShopService.watchCurrentShop(),
             builder: (context, snap) {
-              if (snap.data?.shopType != ShopType.restaurant) {
+              if (snap.data?.tier != ShopTier.restaurant) {
                 return const SizedBox.shrink();
               }
-              return IconButton(
-                tooltip: 'Modifier groups',
-                icon: const Icon(Icons.tune_outlined),
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const ModifierGroupsScreen()),
+              return Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: TextButton.icon(
+                  icon: const Icon(Icons.tune_outlined, size: 18),
+                  label: const Text('ตัวเลือกเสริม'),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const ModifierGroupsScreen()),
+                  ),
                 ),
               );
             },

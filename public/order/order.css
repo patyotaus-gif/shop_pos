@@ -598,3 +598,35 @@ header h1 {
   border-radius: 6px;
 }
 .brand-logo[hidden] { display: none; }
+
+/* ── Product-sheet modifier options + note ── */
+.opt-group { margin-top: 14px; }
+.opt-title {
+  font-size: 14px; font-weight: 700; color: var(--text-dark);
+  margin-bottom: 6px; display: flex; align-items: center; gap: 6px;
+}
+.opt-req {
+  font-size: 10px; font-weight: 600;
+  color: var(--burgundy); background: var(--burgundy-dim);
+  padding: 1px 6px; border-radius: 4px;
+}
+.opt-req.unmet { color: #fff; background: #DC2626; }
+.opt-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 0; cursor: pointer;
+  border-bottom: 1px solid var(--border-color);
+}
+.opt-row .opt-mark { color: var(--burgundy); font-size: 15px; width: 16px; }
+.opt-row .opt-name { flex: 1; font-size: 14px; }
+.opt-row .opt-price { font-size: 13px; font-weight: 600; color: var(--text-mid); }
+.sheet-note-label {
+  font-size: 14px; font-weight: 700; margin: 16px 0 6px;
+}
+.sheet-note {
+  width: 100%;
+  border: 1.5px solid var(--border-color); border-radius: var(--radius-sm);
+  padding: 10px 12px; font-family: inherit; font-size: 14px;
+  background: #FBF8F3; resize: none; outline: none;
+}
+.sheet-note:focus { border-color: var(--burgundy); background: white; }
+.cart-item-mods { font-size: 12px; color: var(--text-mid); margin-top: 2px; }

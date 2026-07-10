@@ -8,6 +8,7 @@ import '../models/shop.dart';
 import '../services/entitlements.dart';
 import '../services/image_service.dart';
 import '../services/modifier_service.dart';
+import 'modifier_groups_screen.dart';
 import '../services/product_service.dart';
 import '../services/shop_service.dart';
 import '../utils/barcode_lookup.dart';
@@ -529,8 +530,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                   StreamBuilder<Shop?>(
                     stream: ShopService.watchCurrentShop(),
                     builder: (context, shopSnap) {
-                      if (shopSnap.data?.shopType !=
-                          ShopType.restaurant) {
+                      if (shopSnap.data?.tier != ShopTier.restaurant) {
                         return const SizedBox.shrink();
                       }
                       return StreamBuilder<List<ModifierGroup>>(
@@ -541,16 +541,32 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const SizedBox(height: 16),
-                              Text('Modifier groups',
-                                  style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primary)),
-                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text('ตัวเลือกเสริม (Add-on)',
+                                        style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary)),
+                                  ),
+                                  TextButton.icon(
+                                    icon: const Icon(Icons.tune_outlined,
+                                        size: 16),
+                                    label: const Text('จัดการกลุ่ม'),
+                                    onPressed: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) =>
+                                              const ModifierGroupsScreen()),
+                                    ),
+                                  ),
+                                ],
+                              ),
                               Text(
-                                'เลือกตัวเลือกที่ลูกค้าจะปรับได้ตอนสั่ง',
+                                'เลือกกลุ่มที่ลูกค้าจะปรับได้ตอนสั่ง เช่น ระดับความเผ็ด/เพิ่มไข่',
                                 style: TextStyle(
                                     fontSize: 11,
                                     color: Theme.of(context)
@@ -569,7 +585,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
-                                    'ยังไม่มีกลุ่ม — สร้างที่หน้า "Modifier groups" (ไอคอน 🎛 มุมขวาบนของหน้าสินค้า)',
+                                    'ยังไม่มีกลุ่ม — แตะ "จัดการกลุ่ม" ด้านบนเพื่อสร้าง เช่น "ระดับความเผ็ด"',
                                     style: TextStyle(
                                         fontSize: 12,
                                         color: Theme.of(context)

@@ -34,12 +34,18 @@ async function submitTableOrder() {
   const list = items();
   if (!list.length) return;
 
-  const payload = list.map((i, idx) => ({
-    productId: i.id,
-    quantity: i.quantity,
-    // Order-level note rides on the first line (no per-line UI this phase).
-    ...(idx === 0 && note ? { notes: note } : {}),
-  }));
+  const payload = list.map((i, idx) => {
+    // Each line carries its own add-ons + note; the order-level note (kitchen
+    // textarea) is merged onto the first line.
+    const lineNote = [idx === 0 ? note : '', i.notes || '']
+      .filter(Boolean).join(' · ');
+    return {
+      productId: i.id,
+      quantity: i.quantity,
+      optionIds: i.optionIds || [],
+      ...(lineNote ? { notes: lineNote } : {}),
+    };
+  });
 
   const btn = document.getElementById('kitchenSendBtn');
   const status = document.getElementById('kitchenStatus');
