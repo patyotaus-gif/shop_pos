@@ -55,14 +55,16 @@ async function start() {
     document.getElementById('shopName').textContent = shopName;
     document.title = `สั่งสินค้า — ${shopName}`;
 
-    // Shop logo → full-width head-band banner (set from Settings).
+    // Shop logo → sits in the sticky header (replaces the Pokpok mark),
+    // so the whole top bar stays fixed while the list scrolls.
     if (data.logoUrl) {
-      const banner = document.getElementById('shopBanner');
-      const img = document.getElementById('shopBannerImg');
-      img.alt = shopName;
-      img.onerror = () => { banner.hidden = true; };
-      img.src = data.logoUrl;
-      banner.hidden = false;
+      const logo = document.getElementById('shopLogoImg');
+      const mark = document.querySelector('.brand-mark');
+      logo.alt = shopName;
+      logo.onerror = () => { logo.hidden = true; if (mark) mark.hidden = false; };
+      logo.src = data.logoUrl;
+      logo.hidden = false;
+      if (mark) mark.hidden = true;
     }
 
     // Context badge + checkout label per mode.

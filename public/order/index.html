@@ -29,6 +29,7 @@
         <line x1="30" y1="90" x2="70" y2="90" stroke="#7A1F2B" stroke-width="2" stroke-linecap="round"/>
       </svg>
     </span>
+    <img id="shopLogoImg" class="brand-logo" alt="" hidden />
     <h1 id="shopName">กำลังโหลด...</h1>
     <span id="modeBadge" class="mode-badge" hidden></span>
   </div>
@@ -37,7 +38,6 @@
   </button>
 </header>
 
-<div id="shopBanner" class="shop-banner" hidden><img id="shopBannerImg" alt="" /></div>
 <div id="loading">กำลังโหลดสินค้า...</div>
 <div id="error" style="display:none"></div>
 <div id="catBar" class="cat-bar" hidden></div>
@@ -157,7 +157,7 @@
       </ol>
     </div>
 
-    <input type="file" id="slipFileInput" accept="image/*" capture="environment" style="display:none" />
+    <input type="file" id="slipFileInput" accept="image/*" style="display:none" />
     <button id="paySlipBtn" type="button">
       📷 อัปโหลดสลิปเพื่อยืนยันการชำระเงิน
     </button>
