@@ -1,8 +1,8 @@
 {
-  "version": "1.2.18",
-  "build": 33,
+  "version": "1.2.19",
+  "build": 34,
   "url": "https://pok-pok.app/app/pokpok.apk",
   "minSupportedBuild": 1,
   "mandatory": false,
-  "notes": "ร้านอาหาร: เพิ่มตัวเลือกเสริม (Add-on) ต่อเมนู เช่น ระดับความเผ็ด/เพิ่มไข่ ตั้งราคาได้ + ช่องหมายเหตุถึงครัว · ลูกค้าสแกน QR เลือก Add-on เองได้"
+  "notes": "ตั้งลิงก์ร้านสั้น ๆ (pok-pok.app/r/ชื่อร้าน) ในตั้งค่า → เอาไปใส่ Google Maps / แชร์ได้ + ปุ่มแชร์ลิงก์ในหน้า QR สั่งอาหาร"
 }
