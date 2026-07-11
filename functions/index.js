@@ -2522,3 +2522,65 @@ exports.createTableOrder = onRequest(
     }
   }
 );
+
+// ────────────────────────────────────────────────
+// Short shop links — pok-pok.app/r/<slug>
+// ────────────────────────────────────────────────
+const { normalizeSlug, validateSlug } = require("./slug");
+
+// Shop owner claims/changes their short-link slug. Uniqueness is enforced by
+// the slugs/{slug} doc existing; changing releases the old one.
+exports.setShopSlug = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Login required");
+  }
+  const shopId = request.auth.uid;
+  let slug;
+  try {
+    slug = validateSlug(normalizeSlug(request.data?.slug));
+  } catch (e) {
+    throw new HttpsError("invalid-argument", e.message);
+  }
+
+  const db = admin.firestore();
+  const slugRef = db.collection("slugs").doc(slug);
+  const settingsRef = db
+    .collection("shops").doc(shopId)
+    .collection("settings").doc("shop");
+
+  await db.runTransaction(async (tx) => {
+    const existing = await tx.get(slugRef);
+    if (existing.exists && existing.data().shopId !== shopId) {
+      throw new HttpsError("already-exists", "ชื่อนี้มีคนใช้แล้ว");
+    }
+    const oldSlug = (await tx.get(settingsRef)).data()?.slug;
+    if (oldSlug && oldSlug !== slug) {
+      tx.delete(db.collection("slugs").doc(oldSlug));
+    }
+    tx.set(slugRef, { shopId });
+    tx.set(settingsRef, { slug }, { merge: true });
+  });
+
+  return { slug };
+});
+
+// Public redirect: /r/<slug> → the shop's takeaway order page. Wired via a
+// hosting rewrite (/r/** → goShop). Unknown slug → the order page with no
+// shop, which shows a "ลิงก์ไม่ถูกต้อง" message.
+exports.goShop = onRequest({ cors: true }, async (req, res) => {
+  const m = /\/r\/([^/?#]+)/.exec(req.path || req.url || "");
+  const slug = m ? normalizeSlug(decodeURIComponent(m[1])) : "";
+  if (slug) {
+    try {
+      const snap = await admin.firestore().collection("slugs").doc(slug).get();
+      if (snap.exists) {
+        res.redirect(302,
+          `/order/?shop=${encodeURIComponent(snap.data().shopId)}&mode=takeaway`);
+        return;
+      }
+    } catch (e) {
+      console.error("goShop lookup failed:", e);
+    }
+  }
+  res.redirect(302, "/order/");
+});

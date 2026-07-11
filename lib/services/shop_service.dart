@@ -9,6 +9,15 @@ class ShopService {
   static DocumentReference<Map<String, dynamic>> _doc() =>
       FirebaseFirestore.instance.collection('shops').doc(AuthService.shopId);
 
+  /// Claim/change the shop's short-link slug (`pok-pok.app/r/{slug}`).
+  /// Returns the normalized slug the server accepted. Throws on taken/invalid.
+  static Future<String> setSlug(String slug) async {
+    final res = await FirebaseFunctions.instanceFor(region: 'asia-southeast1')
+        .httpsCallable('setShopSlug')
+        .call({'slug': slug});
+    return Map<String, dynamic>.from(res.data as Map)['slug'] as String;
+  }
+
   /// Unambiguous referral-code alphabet — no 0/O or 1/I/L so codes are
   /// easy to read aloud and type. 6 chars ≈ 1.3B combos; collision risk
   /// is negligible at this scale and the applyReferral function matches

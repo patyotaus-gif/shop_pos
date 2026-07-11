@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:image_picker/image_picker.dart';
@@ -48,6 +49,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   ShopType _shopType = ShopType.retail;
   String? _logoUrl;
   bool _savingLogo = false;
+  final _slugCtrl = TextEditingController();
+  String? _slug; // current saved slug
+  bool _savingSlug = false;
 
   @override
   void initState() {
@@ -64,7 +68,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _promptpayIdCtrl.dispose();
     _promptpayNameCtrl.dispose();
     _serviceChargeCtrl.dispose();
+    _slugCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _saveSlug() async {
+    final raw = _slugCtrl.text.trim();
+    if (raw.isEmpty) return;
+    setState(() => _savingSlug = true);
+    try {
+      final slug = await ShopService.setSlug(raw);
+      if (mounted) {
+        setState(() {
+          _slug = slug;
+          _slugCtrl.text = slug;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('บันทึกลิงก์แล้ว: pok-pok.app/r/$slug')));
+      }
+    } on FirebaseFunctionsException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(e.message ?? 'บันทึกลิงก์ไม่สำเร็จ'),
+            backgroundColor: Colors.red));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('บันทึกลิงก์ไม่สำเร็จ: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _savingSlug = false);
+    }
   }
 
   Future<void> _loadSettings() async {
@@ -86,6 +121,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _bankListenerGranted = granted;
           _shopType = shop?.shopType ?? ShopType.retail;
           _logoUrl = data['logoUrl'] as String?;
+          _slug = data['slug'] as String?;
+          _slugCtrl.text = _slug ?? '';
         });
       }
     } catch (_) {
@@ -364,6 +401,62 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ],
                 ),
+                const SizedBox(height: 16),
+                // Short shareable link — pok-pok.app/r/<slug>
+                Text('ลิงก์ร้าน (สำหรับแชร์/ใส่ Google Maps)',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.primary)),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Text('pok-pok.app/r/',
+                        style: TextStyle(fontSize: 13, color: Colors.grey)),
+                    Expanded(
+                      child: TextField(
+                        controller: _slugCtrl,
+                        decoration: const InputDecoration(
+                          hintText: 'ชื่อร้านภาษาอังกฤษ',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                          helperText: 'a-z 0-9 - เท่านั้น',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _savingSlug
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : TextButton(
+                            onPressed: _saveSlug, child: const Text('บันทึก')),
+                  ],
+                ),
+                if (_slug?.isNotEmpty ?? false)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text('pok-pok.app/r/$_slug',
+                              style: const TextStyle(
+                                  fontSize: 13, fontWeight: FontWeight.w600)),
+                        ),
+                        TextButton.icon(
+                          icon: const Icon(Icons.copy, size: 16),
+                          label: const Text('คัดลอก'),
+                          onPressed: () {
+                            Clipboard.setData(ClipboardData(
+                                text: 'https://pok-pok.app/r/$_slug'));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('คัดลอกลิงก์แล้ว')));
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
                 const SizedBox(height: 12),
                 Align(
                   alignment: Alignment.centerRight,

@@ -76,6 +76,13 @@
           "functionId": "createTableOrder",
           "region": "asia-southeast1"
         }
+      },
+      {
+        "source": "/r/**",
+        "function": {
+          "functionId": "goShop",
+          "region": "asia-southeast1"
+        }
       }
     ]
   }

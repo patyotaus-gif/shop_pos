@@ -103,6 +103,12 @@ service cloud.firestore {
     match /config/billing {
       allow read, write: if false;
     }
+    // Short-link slugs (pok-pok.app/r/<slug>) — claimed via the setShopSlug
+    // callable, resolved by the goShop redirect (both admin SDK). Deny all
+    // direct client access.
+    match /slugs/{slug} {
+      allow read, write: if false;
+    }
     // subscriptionPayments + usedSubscriptionSlipRefs (top-level) carry no
     // rules on purpose: default-deny, admin SDK only.
 

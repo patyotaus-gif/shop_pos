@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/restaurant_table.dart';
 import '../services/auth_service.dart';
@@ -27,6 +28,13 @@ class _OrderQrScreenState extends State<OrderQrScreen> {
   String _mode = 'dineIn';
   bool _autoSend = false;
   bool _busy = false;
+  String? _slug;
+
+  // The nicest link to hand out: the short /r/<slug> when set, else the long
+  // takeaway URL.
+  String get _shareUrl => (_slug?.isNotEmpty ?? false)
+      ? 'https://pok-pok.app/r/$_slug'
+      : _takeawayUrl;
 
   // QR center logo is always the Pokpok mark — brand consistency on every
   // printed QR. Shop logos live on the /order banner (set in Settings), not
@@ -52,6 +60,7 @@ class _OrderQrScreenState extends State<OrderQrScreen> {
       _shopName = shop?.name ?? '';
       _isRestaurant =
           shop != null && Entitlements.canUseTables(shop.tier);
+      _slug = settings['slug'] as String?;
       _mode = settings['tableOrderMode'] == 'prepaid' ? 'prepaid' : 'dineIn';
       _autoSend = settings['tableOrderAutoSend'] == true;
     });
@@ -117,18 +126,40 @@ class _OrderQrScreenState extends State<OrderQrScreen> {
                   fontSize: 12, color: cs.onSurface.withValues(alpha: .6))),
           const SizedBox(height: 12),
           Center(child: _qr(_takeawayUrl, size: 180)),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Center(
-            child: TextButton.icon(
-              icon: const Icon(Icons.copy, size: 16),
-              label: const Text('คัดลอกลิงก์'),
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: _takeawayUrl));
-                ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('คัดลอกแล้ว')));
-              },
+            child: Text(
+              (_slug?.isNotEmpty ?? false)
+                  ? 'ลิงก์ร้าน: pok-pok.app/r/$_slug'
+                  : 'ตั้งลิงก์สั้นได้ที่ ตั้งค่า → ลิงก์ร้าน',
+              style: TextStyle(
+                  fontSize: 12, color: cs.onSurface.withValues(alpha: .7)),
             ),
           ),
+          const SizedBox(height: 8),
+          Row(children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.copy, size: 16),
+                label: const Text('คัดลอกลิงก์'),
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: _shareUrl));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('คัดลอกแล้ว')));
+                },
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: FilledButton.icon(
+                icon: const Icon(Icons.share, size: 16),
+                label: const Text('แชร์ลิงก์'),
+                onPressed: () => Share.share(
+                    'สั่งอาหารร้าน$_shopName ออนไลน์ 👉 $_shareUrl'),
+              ),
+            ),
+          ]),
+          const SizedBox(height: 8),
           FilledButton.icon(
             onPressed: _busy
                 ? null
