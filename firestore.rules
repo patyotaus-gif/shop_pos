@@ -52,6 +52,16 @@ service cloud.firestore {
         allow read, write: if isOwner();
       }
 
+      // ── Recipe/ingredient inventory (Restaurant) ──
+      // Managed in-app by the owner; the sale-deduction trigger uses the
+      // admin SDK and bypasses rules.
+      match /ingredients/{ingredientId} {
+        allow read, write: if isOwner();
+      }
+      match /ingredientPurchases/{purchaseId} {
+        allow read, write: if isOwner();
+      }
+
       // ── Hardware shipments (Phase D) ──
       // เจ้าของร้านอ่าน tracker ได้; การ advance สถานะทำผ่าน admin SDK
       // (founder console) ซึ่ง bypass rules อยู่แล้ว แต่เปิด write ให้

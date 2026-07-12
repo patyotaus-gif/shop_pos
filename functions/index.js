@@ -1,5 +1,5 @@
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const admin = require("firebase-admin");
@@ -2584,3 +2584,130 @@ exports.goShop = onRequest({ cors: true }, async (req, res) => {
   }
   res.redirect(302, "/order/");
 });
+
+// ────────────────────────────────────────────────
+// Recipe / ingredient inventory — auto-deduct on sale
+// ────────────────────────────────────────────────
+// Every sales channel (POS, table close, online orders) converges on a Sale
+// doc, so ONE trigger deducts ingredients for all of them — old app versions
+// and offline-synced sales included. Ingredient stock may go negative on
+// purpose: selling is never blocked; negative is a recount signal.
+const { computeUsage } = require("./inventory");
+
+exports.onSaleDeductIngredients = onDocumentCreated(
+  "shops/{shopId}/sales/{saleId}",
+  async (event) => {
+    const snap = event.data;
+    if (!snap) return;
+    const sale = snap.data();
+    if (sale.ingredientsDeducted) return; // already handled (retry)
+    const items = sale.items || [];
+    if (!items.length) return;
+
+    const db = admin.firestore();
+    const shopRef = db.collection("shops").doc(event.params.shopId);
+
+    // Resolve products + modifier groups outside the txn (recipes rarely
+    // change mid-flight; idempotency lives on the sale flag inside the txn).
+    const productIds = [...new Set(items.map((i) => i.productId).filter(Boolean))];
+    const productsById = {};
+    for (const pid of productIds) {
+      const p = await shopRef.collection("products").doc(pid).get();
+      if (p.exists) productsById[pid] = p.data();
+    }
+    const hasModifiers = items.some((i) => (i.modifiers || []).length > 0);
+    const groupsById = {};
+    if (hasModifiers) {
+      const gs = await shopRef.collection("modifierGroups").get();
+      for (const g of gs.docs) groupsById[g.id] = { id: g.id, ...g.data() };
+    }
+
+    const usage = computeUsage(items, productsById, groupsById);
+    const ids = Object.keys(usage);
+    if (!ids.length) return; // nothing recipe-based in this sale
+
+    // Pre-read ingredients: drop deleted ones + capture pre-stock for the
+    // low-stock crossing check after the txn.
+    const pre = {};
+    for (const id of ids) {
+      const ing = await shopRef.collection("ingredients").doc(id).get();
+      if (!ing.exists) {
+        console.warn(`ingredient ${id} missing — skipping deduction`);
+        delete usage[id];
+        continue;
+      }
+      pre[id] = ing.data();
+    }
+    const liveIds = Object.keys(usage);
+    if (!liveIds.length) return;
+
+    await db.runTransaction(async (tx) => {
+      const saleSnap = await tx.get(snap.ref);
+      if (!saleSnap.exists || saleSnap.data().ingredientsDeducted) return;
+      for (const id of liveIds) {
+        tx.update(shopRef.collection("ingredients").doc(id), {
+          stock: admin.firestore.FieldValue.increment(-usage[id]),
+        });
+      }
+      tx.update(snap.ref, {
+        ingredientsDeducted: true,
+        ingredientUsage: usage,
+      });
+    });
+
+    // Low-stock alert only on the crossing (pre > threshold → post ≤) so a
+    // busy night doesn't spam the owner on every sale.
+    try {
+      const crossed = liveIds.filter((id) => {
+        const t = Number(pre[id].lowStockThreshold || 0);
+        if (t <= 0) return false;
+        const before = Number(pre[id].stock || 0);
+        return before > t && before - usage[id] <= t;
+      });
+      if (crossed.length) {
+        const fcmToken = (await shopRef.get()).data()?.fcmToken;
+        if (fcmToken) {
+          const names = crossed.map((id) => pre[id].name || id).join(", ");
+          await admin.messaging().send({
+            token: fcmToken,
+            notification: {
+              title: "วัตถุดิบใกล้หมด",
+              body: names,
+            },
+          });
+        }
+      }
+    } catch (e) {
+      console.error("ingredient low-stock notify failed:", e);
+    }
+  }
+);
+
+// Refund → put the ingredients back, using the usage snapshot frozen on the
+// sale (exact even if the recipe changed since).
+exports.onSaleRefundRestoreIngredients = onDocumentUpdated(
+  "shops/{shopId}/sales/{saleId}",
+  async (event) => {
+    const before = event.data?.before?.data();
+    const after = event.data?.after?.data();
+    if (!before || !after) return;
+    if (before.isRefunded === true || after.isRefunded !== true) return;
+    const usage = after.ingredientUsage;
+    if (!usage || after.ingredientsRestored) return;
+
+    const db = admin.firestore();
+    const shopRef = db.collection("shops").doc(event.params.shopId);
+    await db.runTransaction(async (tx) => {
+      const saleSnap = await tx.get(event.data.after.ref);
+      if (saleSnap.data()?.ingredientsRestored) return;
+      for (const [id, qty] of Object.entries(usage)) {
+        tx.set(
+          shopRef.collection("ingredients").doc(id),
+          { stock: admin.firestore.FieldValue.increment(qty) },
+          { merge: true }
+        );
+      }
+      tx.update(event.data.after.ref, { ingredientsRestored: true });
+    });
+  }
+);
