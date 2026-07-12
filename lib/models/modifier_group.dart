@@ -1,36 +1,51 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'ingredient.dart';
+
 /// One option inside a ModifierGroup — e.g. "เผ็ดน้อย" / "เพิ่มไข่ดาว +10฿".
 /// `priceAdjust` is added to the parent item's unit price; can be 0,
-/// positive, or negative.
+/// positive, or negative. `ingredientUsage` (optional) lists ingredients the
+/// option consumes — deducted server-side per sale, e.g. ไข่ดาว = ไข่ 1 ฟอง.
 class ModifierOption {
   final String id;
   final String name;
   final double priceAdjust;
+  final List<RecipeLine> ingredientUsage;
 
   const ModifierOption({
     required this.id,
     required this.name,
     this.priceAdjust = 0,
+    this.ingredientUsage = const [],
   });
 
   factory ModifierOption.fromMap(Map<String, dynamic> m) => ModifierOption(
         id: m['id'] ?? '',
         name: m['name'] ?? '',
         priceAdjust: (m['priceAdjust'] ?? 0).toDouble(),
+        ingredientUsage: ((m['ingredientUsage'] as List<dynamic>?) ?? const [])
+            .map((e) => RecipeLine.fromMap(e as Map<String, dynamic>))
+            .toList(),
       );
 
   Map<String, dynamic> toMap() => {
         'id': id,
         'name': name,
         'priceAdjust': priceAdjust,
+        if (ingredientUsage.isNotEmpty)
+          'ingredientUsage': ingredientUsage.map((e) => e.toMap()).toList(),
       };
 
-  ModifierOption copyWith({String? name, double? priceAdjust}) =>
+  ModifierOption copyWith({
+    String? name,
+    double? priceAdjust,
+    List<RecipeLine>? ingredientUsage,
+  }) =>
       ModifierOption(
         id: id,
         name: name ?? this.name,
         priceAdjust: priceAdjust ?? this.priceAdjust,
+        ingredientUsage: ingredientUsage ?? this.ingredientUsage,
       );
 }
 

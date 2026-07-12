@@ -2,11 +2,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import '../models/ingredient.dart';
 import '../models/modifier_group.dart';
 import '../models/product.dart';
 import '../models/shop.dart';
 import '../services/entitlements.dart';
 import '../services/image_service.dart';
+import '../services/ingredient_service.dart';
 import '../services/modifier_service.dart';
 import 'modifier_groups_screen.dart';
 import '../services/product_service.dart';
@@ -42,6 +44,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   File? _imageFile;
   bool _removeBackground = false;
   late Set<String> _modifierGroupIds;
+  late String _stockMode;
+  late List<RecipeLine> _recipe;
+  List<Ingredient>? _ingredients; // loaded when the recipe editor shows
 
   bool get _isEdit => widget.product != null;
 
@@ -68,6 +73,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     _category = p?.category ?? 'ทั่วไป';
     _isPinned = p?.isPinned ?? false;
     _modifierGroupIds = {...(p?.modifierGroupIds ?? const <String>[])};
+    _stockMode = p?.stockMode ?? 'count';
+    _recipe = [...(p?.recipe ?? const <RecipeLine>[])];
     if (p?.imagePath != null) _imageFile = File(p!.imagePath!);
 
     if (_barcode.text.isNotEmpty && !_isEdit) {
@@ -161,6 +168,166 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     }
   }
 
+  void _loadIngredientsOnce() {
+    if (_ingredients != null) return;
+    IngredientService.getAll().then((list) {
+      if (mounted) setState(() => _ingredients = list);
+    });
+  }
+
+  double get _recipeCost {
+    final costById = {
+      for (final i in _ingredients ?? const <Ingredient>[]) i.id: i.avgCost
+    };
+    return _recipe.fold(
+        0, (s, l) => s + (costById[l.ingredientId] ?? 0) * l.qty);
+  }
+
+  Widget _buildRecipeSection(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final ingredients = _ingredients ?? const <Ingredient>[];
+    final byId = {for (final i in ingredients) i.id: i};
+    if (_stockMode == 'recipe') _loadIngredientsOnce();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SegmentedButton<String>(
+          segments: const [
+            ButtonSegment(value: 'count', label: Text('นับสต็อกเอง')),
+            ButtonSegment(value: 'recipe', label: Text('ใช้สูตรวัตถุดิบ')),
+          ],
+          selected: {_stockMode},
+          onSelectionChanged: (s) => setState(() => _stockMode = s.first),
+        ),
+        const SizedBox(height: 8),
+        if (_stockMode == 'recipe') ...[
+          Text(
+            'ขาย 1 จาน = ตัดวัตถุดิบตามสูตรอัตโนมัติ · ต้นทุนคิดจากสูตร',
+            style: TextStyle(
+                fontSize: 11, color: cs.onSurface.withValues(alpha: 0.6)),
+          ),
+          const SizedBox(height: 8),
+          for (var i = 0; i < _recipe.length; i++)
+            ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                  byId[_recipe[i].ingredientId]?.name ??
+                      '(วัตถุดิบถูกลบ — แตะถังขยะเพื่อเอาออก)',
+                  style: const TextStyle(fontSize: 14)),
+              subtitle: Text(
+                  '${_recipe[i].qty} ${byId[_recipe[i].ingredientId]?.unit ?? ''}'
+                  ' · ฿${((byId[_recipe[i].ingredientId]?.avgCost ?? 0) * _recipe[i].qty).toStringAsFixed(2)}'),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                    onPressed: () => _editRecipeLine(index: i),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline,
+                        size: 18, color: Colors.red),
+                    onPressed: () => setState(() => _recipe.removeAt(i)),
+                  ),
+                ],
+              ),
+            ),
+          Row(
+            children: [
+              TextButton.icon(
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('เพิ่มวัตถุดิบในสูตร'),
+                onPressed: ingredients.isEmpty && _ingredients != null
+                    ? null
+                    : () => _editRecipeLine(),
+              ),
+              const Spacer(),
+              Text('ต้นทุนสูตร ฿${_recipeCost.toStringAsFixed(2)}',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700, color: cs.primary)),
+            ],
+          ),
+          if (_ingredients != null && ingredients.isEmpty)
+            Text('ยังไม่มีวัตถุดิบ — เพิ่มได้ที่หน้า สินค้า → "วัตถุดิบ"',
+                style: TextStyle(
+                    fontSize: 12,
+                    color: cs.onSurface.withValues(alpha: 0.6))),
+          const SizedBox(height: 8),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _editRecipeLine({int? index}) async {
+    _loadIngredientsOnce();
+    final ingredients = _ingredients ?? const <Ingredient>[];
+    if (ingredients.isEmpty) return;
+    final existing = index != null ? _recipe[index] : null;
+    String selectedId = existing?.ingredientId ?? ingredients.first.id;
+    final qtyCtrl = TextEditingController(
+        text: existing != null ? '${existing.qty}' : '');
+
+    final line = await showDialog<RecipeLine>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlg) => AlertDialog(
+          title: Text(index == null ? 'เพิ่มวัตถุดิบในสูตร' : 'แก้ไขสูตร'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: selectedId,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                    labelText: 'วัตถุดิบ', border: OutlineInputBorder()),
+                items: [
+                  for (final i in ingredients)
+                    DropdownMenuItem(
+                        value: i.id, child: Text('${i.name} (${i.unit})')),
+                ],
+                onChanged: (v) => setDlg(() => selectedId = v ?? selectedId),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: qtyCtrl,
+                autofocus: true,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                    labelText: 'จำนวนต่อ 1 จาน',
+                    border: OutlineInputBorder()),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('ยกเลิก')),
+            FilledButton(
+              onPressed: () {
+                final q = double.tryParse(qtyCtrl.text.trim());
+                if (q == null || q <= 0) return;
+                Navigator.pop(
+                    ctx, RecipeLine(ingredientId: selectedId, qty: q));
+              },
+              child: const Text('ตกลง'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (line == null) return;
+    setState(() {
+      if (index != null) {
+        _recipe[index] = line;
+      } else {
+        _recipe.add(line);
+      }
+    });
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
@@ -183,14 +350,30 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         savedImageUrl = result.imageUrl;
       }
 
+      final isRecipe = _stockMode == 'recipe';
+      // Recipe mode: cost comes from the recipe (Σ qty × avgCost) so profit
+      // reports reflect real ingredient costs automatically.
+      double costPrice = double.tryParse(_costPrice.text) ?? 0;
+      if (isRecipe && _ingredients != null) {
+        final costById = {for (final i in _ingredients!) i.id: i.avgCost};
+        costPrice = _recipe.fold(
+            0, (s, l) => s + (costById[l.ingredientId] ?? 0) * l.qty);
+      }
+
       final product = Product(
         id: widget.product?.id ?? '',
         name: _name.text.trim(),
         barcode: _barcode.text.trim(),
         price: double.parse(_price.text),
-        costPrice: double.tryParse(_costPrice.text) ?? 0,
-        stock: int.parse(_stock.text),
-        lowStockThreshold: int.parse(_lowStock.text),
+        costPrice: costPrice,
+        // Recipe mode ignores the product's own counter — keep whatever was
+        // there so switching back to count mode doesn't lose the number.
+        stock: isRecipe
+            ? (widget.product?.stock ?? 0)
+            : int.parse(_stock.text),
+        lowStockThreshold: isRecipe
+            ? (widget.product?.lowStockThreshold ?? 5)
+            : int.parse(_lowStock.text),
         category: _category,
         isPinned: _isPinned,
         imagePath: savedImagePath,
@@ -199,6 +382,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         salePrice: double.tryParse(_salePrice.text.trim()),
         saleUntil: _saleUntil,
         modifierGroupIds: _modifierGroupIds.toList(),
+        stockMode: _stockMode,
+        recipe: isRecipe ? _recipe : const [],
       );
 
       if (_isEdit) {
@@ -459,6 +644,17 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
+                  // ── โหมดสต็อก + สูตรวัตถุดิบ (Restaurant) ──
+                  StreamBuilder<Shop?>(
+                    stream: ShopService.watchCurrentShop(),
+                    builder: (context, snap) {
+                      if (snap.data?.tier != ShopTier.restaurant) {
+                        return const SizedBox.shrink();
+                      }
+                      return _buildRecipeSection(context);
+                    },
+                  ),
+                  if (_stockMode == 'count')
                   Row(
                     children: [
                       Expanded(

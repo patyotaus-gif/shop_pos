@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../models/ingredient.dart';
 import '../models/modifier_group.dart';
+import '../services/ingredient_service.dart';
 import '../services/modifier_service.dart';
 
 /// Create/edit a modifier group. Options are edited inline (add row /
@@ -23,6 +25,7 @@ class _ModifierGroupFormScreenState extends State<ModifierGroupFormScreen> {
   bool _multiSelect = false;
   late List<_OptionDraft> _options;
   bool _saving = false;
+  List<Ingredient> _ingredients = const [];
 
   @override
   void initState() {
@@ -36,10 +39,92 @@ class _ModifierGroupFormScreenState extends State<ModifierGroupFormScreen> {
               id: o.id,
               name: o.name,
               priceAdjust: o.priceAdjust,
+              ingredientUsage: o.ingredientUsage,
             ))
         .toList();
     if (_options.isEmpty) {
       _options.add(_OptionDraft.empty());
+    }
+    IngredientService.getAll().then((list) {
+      if (mounted) setState(() => _ingredients = list);
+    });
+  }
+
+  /// Optional ingredient link per option — e.g. ไข่ดาว = ไข่ 1 ฟอง, deducted
+  /// automatically on every sale that picks this option.
+  Future<void> _editUsage(_OptionDraft draft) async {
+    if (_ingredients.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('ยังไม่มีวัตถุดิบ — เพิ่มได้ที่หน้า สินค้า → "วัตถุดิบ"')));
+      return;
+    }
+    String selectedId = draft.ingredientUsage.isNotEmpty
+        ? draft.ingredientUsage.first.ingredientId
+        : _ingredients.first.id;
+    if (!_ingredients.any((i) => i.id == selectedId)) {
+      selectedId = _ingredients.first.id;
+    }
+    final qtyCtrl = TextEditingController(
+        text: draft.ingredientUsage.isNotEmpty
+            ? '${draft.ingredientUsage.first.qty}'
+            : '1');
+
+    final result = await showDialog<List<RecipeLine>>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlg) => AlertDialog(
+          title: Text('ตัดวัตถุดิบ — ${draft.nameCtrl.text.trim()}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: selectedId,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                    labelText: 'วัตถุดิบ', border: OutlineInputBorder()),
+                items: [
+                  for (final i in _ingredients)
+                    DropdownMenuItem(
+                        value: i.id, child: Text('${i.name} (${i.unit})')),
+                ],
+                onChanged: (v) => setDlg(() => selectedId = v ?? selectedId),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: qtyCtrl,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                    labelText: 'จำนวนที่ใช้ต่อ 1 ครั้ง',
+                    border: OutlineInputBorder()),
+              ),
+            ],
+          ),
+          actions: [
+            if (draft.ingredientUsage.isNotEmpty)
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, const <RecipeLine>[]),
+                child: const Text('ไม่ตัดวัตถุดิบ',
+                    style: TextStyle(color: Colors.red)),
+              ),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('ยกเลิก')),
+            FilledButton(
+              onPressed: () {
+                final q = double.tryParse(qtyCtrl.text.trim());
+                if (q == null || q <= 0) return;
+                Navigator.pop(ctx,
+                    [RecipeLine(ingredientId: selectedId, qty: q)]);
+              },
+              child: const Text('ตกลง'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (result != null && mounted) {
+      setState(() => draft.ingredientUsage = result);
     }
   }
 
@@ -189,6 +274,7 @@ class _ModifierGroupFormScreenState extends State<ModifierGroupFormScreen> {
             for (var i = 0; i < _options.length; i++) ...[
               _OptionRow(
                 draft: _options[i],
+                onUsage: () => _editUsage(_options[i]),
                 onRemove:
                     _options.length > 1 ? () => _removeOptionRow(i) : null,
               ),
@@ -219,11 +305,13 @@ class _OptionDraft {
   final String id;
   final TextEditingController nameCtrl;
   final TextEditingController priceCtrl;
+  List<RecipeLine> ingredientUsage;
 
   _OptionDraft({
     required this.id,
     required String name,
     required double priceAdjust,
+    this.ingredientUsage = const [],
   })  : nameCtrl = TextEditingController(text: name),
         priceCtrl = TextEditingController(
             text: priceAdjust == 0 ? '' : priceAdjust.toStringAsFixed(0));
@@ -243,13 +331,15 @@ class _OptionDraft {
         id: id,
         name: nameCtrl.text.trim(),
         priceAdjust: double.tryParse(priceCtrl.text) ?? 0,
+        ingredientUsage: ingredientUsage,
       );
 }
 
 class _OptionRow extends StatelessWidget {
-  const _OptionRow({required this.draft, this.onRemove});
+  const _OptionRow({required this.draft, this.onRemove, this.onUsage});
   final _OptionDraft draft;
   final VoidCallback? onRemove;
+  final VoidCallback? onUsage;
 
   @override
   Widget build(BuildContext context) {
@@ -281,6 +371,13 @@ class _OptionRow extends StatelessWidget {
               isDense: true,
             ),
           ),
+        ),
+        // ผูกวัตถุดิบ (ตัดสต็อกเมื่อเลือกตัวเลือกนี้) — เขียวเมื่อผูกแล้ว
+        IconButton(
+          icon: Icon(Icons.egg_outlined,
+              color: draft.ingredientUsage.isNotEmpty ? Colors.green : null),
+          tooltip: 'ตัดวัตถุดิบ',
+          onPressed: onUsage,
         ),
         IconButton(
           icon: const Icon(Icons.remove_circle_outline),

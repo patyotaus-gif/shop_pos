@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'ingredient.dart';
+
 class Product {
   final String id;
   final String name;
@@ -23,6 +25,17 @@ class Product {
   /// these ids to full ModifierGroup docs at order time.
   final List<String> modifierGroupIds;
 
+  /// "count" (default) = the product's own stock counter blocks sales as
+  /// always. "recipe" = ingredients deduct per [recipe] server-side on each
+  /// sale; the product's stock counter is ignored.
+  final String stockMode;
+
+  /// Ingredients consumed per dish (recipe mode). costPrice is recomputed
+  /// from this whenever the recipe or ingredient costs change.
+  final List<RecipeLine> recipe;
+
+  bool get isRecipeMode => stockMode == 'recipe';
+
   const Product({
     required this.id,
     required this.name,
@@ -38,6 +51,8 @@ class Product {
     this.salePrice,
     this.saleUntil,
     this.modifierGroupIds = const [],
+    this.stockMode = 'count',
+    this.recipe = const [],
   });
 
   bool get isLowStock => stock <= lowStockThreshold;
@@ -85,6 +100,10 @@ class Product {
         modifierGroupIds: ((data['modifierGroupIds'] as List<dynamic>?) ?? const [])
             .map((e) => e.toString())
             .toList(),
+        stockMode: data['stockMode'] == 'recipe' ? 'recipe' : 'count',
+        recipe: ((data['recipe'] as List<dynamic>?) ?? const [])
+            .map((e) => RecipeLine.fromMap(e as Map<String, dynamic>))
+            .toList(),
       );
 
   Map<String, dynamic> toFirestore() => {
@@ -103,6 +122,11 @@ class Product {
         'salePrice': salePrice,
         'saleUntil': saleUntil != null ? Timestamp.fromDate(saleUntil!) : null,
         if (modifierGroupIds.isNotEmpty) 'modifierGroupIds': modifierGroupIds,
+        'stockMode': stockMode,
+        'recipe': recipe.map((e) => e.toMap()).toList(),
+        // Derived index so cost recompute can query "products using
+        // ingredient X" with array-contains.
+        'recipeIngredientIds': recipe.map((e) => e.ingredientId).toList(),
       };
 
   Product copyWith({
@@ -119,6 +143,8 @@ class Product {
     double? salePrice,
     DateTime? saleUntil,
     List<String>? modifierGroupIds,
+    String? stockMode,
+    List<RecipeLine>? recipe,
   }) =>
       Product(
         id: id,
@@ -135,5 +161,7 @@ class Product {
         salePrice: salePrice ?? this.salePrice,
         saleUntil: saleUntil ?? this.saleUntil,
         modifierGroupIds: modifierGroupIds ?? this.modifierGroupIds,
+        stockMode: stockMode ?? this.stockMode,
+        recipe: recipe ?? this.recipe,
       );
 }

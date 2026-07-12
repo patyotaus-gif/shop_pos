@@ -3,6 +3,7 @@ import '../models/product.dart';
 import '../models/shop.dart';
 import '../services/product_service.dart';
 import '../services/shop_service.dart';
+import 'ingredients_screen.dart';
 import 'modifier_groups_screen.dart';
 import 'product_form_screen.dart';
 
@@ -32,17 +33,31 @@ class _ProductsScreenState extends State<ProductsScreen> {
               if (snap.data?.tier != ShopTier.restaurant) {
                 return const SizedBox.shrink();
               }
-              return Padding(
-                padding: const EdgeInsets.only(right: 4),
-                child: TextButton.icon(
-                  icon: const Icon(Icons.tune_outlined, size: 18),
-                  label: const Text('ตัวเลือกเสริม'),
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const ModifierGroupsScreen()),
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextButton.icon(
+                    icon: const Icon(Icons.egg_outlined, size: 18),
+                    label: const Text('วัตถุดิบ'),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const IngredientsScreen()),
+                    ),
                   ),
-                ),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: TextButton.icon(
+                      icon: const Icon(Icons.tune_outlined, size: 18),
+                      label: const Text('ตัวเลือกเสริม'),
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const ModifierGroupsScreen()),
+                      ),
+                    ),
+                  ),
+                ],
               );
             },
           ),
