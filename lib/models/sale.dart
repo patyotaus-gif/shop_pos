@@ -86,6 +86,13 @@ class Sale {
   /// Full/Restaurant tiers). Null when no staff profile was active.
   final String? staffName;
 
+  /// Per-day receipt number (YYMMDD-NNN) assigned at checkout. Null for
+  /// online-order sales (digital, not printed at a till) and legacy sales.
+  final String? receiptNo;
+
+  /// Restaurant table this bill closed from (null for retail/takeaway).
+  final String? tableName;
+
   const Sale({
     required this.id,
     required this.items,
@@ -104,6 +111,8 @@ class Sale {
     this.serviceCharge = 0,
     this.splitCount = 1,
     this.staffName,
+    this.receiptNo,
+    this.tableName,
   });
 
   /// Sum of line item subtotals — total minus service charge plus discount.
@@ -133,6 +142,8 @@ class Sale {
         serviceCharge: (data['serviceCharge'] ?? 0).toDouble(),
         splitCount: (data['splitCount'] ?? 1) as int,
         staffName: data['staffName'] as String?,
+        receiptNo: data['receiptNo'] as String?,
+        tableName: data['tableName'] as String?,
       );
 
   Map<String, dynamic> toFirestore() => {
@@ -148,5 +159,7 @@ class Sale {
         if (serviceCharge > 0) 'serviceCharge': serviceCharge,
         if (splitCount > 1) 'splitCount': splitCount,
         if (staffName != null) 'staffName': staffName,
+        if (receiptNo != null) 'receiptNo': receiptNo,
+        if (tableName != null) 'tableName': tableName,
       };
 }

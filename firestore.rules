@@ -62,6 +62,14 @@ service cloud.firestore {
         allow read, write: if isOwner();
       }
 
+      // ── Receipt counter + end-of-day cash sessions ──
+      match /counters/{counterId} {
+        allow read, write: if isOwner();
+      }
+      match /cashSessions/{sessionId} {
+        allow read, write: if isOwner();
+      }
+
       // ── Hardware shipments (Phase D) ──
       // เจ้าของร้านอ่าน tracker ได้; การ advance สถานะทำผ่าน admin SDK
       // (founder console) ซึ่ง bypass rules อยู่แล้ว แต่เปิด write ให้

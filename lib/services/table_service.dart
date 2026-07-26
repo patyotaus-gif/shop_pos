@@ -5,6 +5,7 @@ import '../models/product.dart';
 import '../models/restaurant_table.dart';
 import '../models/sale.dart';
 import '../models/table_order.dart';
+import '../utils/receipt_number.dart';
 import 'auth_service.dart';
 
 /// Tables + their open tabs.
@@ -247,6 +248,7 @@ class TableService {
             ))
         .toList();
 
+    final now = DateTime.now();
     final sale = Sale(
       id: '',
       items: saleItems,
@@ -254,41 +256,45 @@ class TableService {
       discount: discount,
       paid: paid,
       change: change,
-      createdAt: DateTime.now(),
+      createdAt: now,
       paymentMethod: paymentMethod,
       customerName: 'โต๊ะ ${order.tableName}',
       serviceCharge: serviceCharge,
       splitCount: splitCount,
+      tableName: order.tableName,
     );
 
-    final batch = FirebaseFirestore.instance.batch();
-
     final saleRef = _salesCol().doc();
-    batch.set(saleRef, sale.toFirestore());
+    final counterRef = _shopDoc().collection('counters').doc('receipt');
+    final todayKey = receiptDay(now);
 
-    // Deduct stock for any items that track inventory. Recipe-style menu
-    // items typically have stock = 9999; that's fine — decrement still
-    // works, just won't ever go low.
-    for (final item in order.items) {
-      batch.update(_productsCol().doc(item.productId),
-          {'stock': FieldValue.increment(-item.quantity)});
-    }
+    // Same per-day receipt-number transaction as POS checkout, plus closing
+    // the tab + freeing the table atomically.
+    await FirebaseFirestore.instance.runTransaction((tx) async {
+      final counterSnap = await tx.get(counterRef);
+      final data = counterSnap.data();
+      final next = nextReceiptSeq(
+          data?['day'] as String?, todayKey, (data?['seq'] ?? 0) as int);
 
-    // Mark tab closed (kept in history rather than deleted, so we can
-    // trace the order timeline later).
-    batch.update(_tableOrdersCol().doc(order.id), {
-      'status': TableOrderStatus.closed.name,
-      'closedAt': Timestamp.now(),
-      'saleId': saleRef.id,
+      tx.set(saleRef, {
+        ...sale.toFirestore(),
+        'receiptNo': formatReceiptNo(next.day, next.seq),
+      });
+      for (final item in order.items) {
+        tx.update(_productsCol().doc(item.productId),
+            {'stock': FieldValue.increment(-item.quantity)});
+      }
+      tx.update(_tableOrdersCol().doc(order.id), {
+        'status': TableOrderStatus.closed.name,
+        'closedAt': Timestamp.now(),
+        'saleId': saleRef.id,
+      });
+      tx.update(_tablesCol().doc(order.tableId), {
+        'status': TableStatus.available.name,
+        'currentOrderId': FieldValue.delete(),
+      });
+      tx.set(counterRef, {'day': next.day, 'seq': next.seq});
     });
-
-    // Free the table.
-    batch.update(_tablesCol().doc(order.tableId), {
-      'status': TableStatus.available.name,
-      'currentOrderId': FieldValue.delete(),
-    });
-
-    await batch.commit();
     return saleRef.id;
   }
 

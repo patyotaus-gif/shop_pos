@@ -3,6 +3,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import '../models/cart_item.dart';
 import '../models/sale.dart';
 import '../models/debt.dart';
+import '../utils/receipt_number.dart';
 import 'auth_service.dart';
 import 'customer_service.dart';
 import 'notification_service.dart';
@@ -63,32 +64,41 @@ class SaleService {
       staffName: staffName,
     );
 
-    final batch = FirebaseFirestore.instance.batch();
-
-    // Save sale
     final saleRef = _salesCol().doc();
-    batch.set(saleRef, sale.toFirestore());
+    final counterRef = _shopDoc().collection('counters').doc('receipt');
+    final todayKey = receiptDay(sale.createdAt);
 
-    // Deduct stock
-    for (final item in cart) {
-      final productRef = _productsCol().doc(item.product.id);
-      batch.update(productRef, {'stock': FieldValue.increment(-item.quantity)});
-    }
+    // One transaction: allocate the per-day receipt number, write the sale
+    // (with that number), deduct stock, and record any debt — all atomic so
+    // concurrent tills never collide on a number.
+    final receiptNo = await FirebaseFirestore.instance
+        .runTransaction<String>((tx) async {
+      final counterSnap = await tx.get(counterRef);
+      final data = counterSnap.data();
+      final next = nextReceiptSeq(
+          data?['day'] as String?, todayKey, (data?['seq'] ?? 0) as int);
+      final no = formatReceiptNo(next.day, next.seq);
 
-    // Save debt if needed
-    if (isDebt && customerName != null) {
-      final debtRef = _debtsCol().doc();
-      final debt = Debt(
-        id: '',
-        customerName: customerName,
-        amount: total,
-        createdAt: DateTime.now(),
-        saleId: saleRef.id,
-      );
-      batch.set(debtRef, debt.toFirestore());
-    }
-
-    await batch.commit();
+      tx.set(saleRef, {...sale.toFirestore(), 'receiptNo': no});
+      for (final item in cart) {
+        tx.update(_productsCol().doc(item.product.id),
+            {'stock': FieldValue.increment(-item.quantity)});
+      }
+      if (isDebt && customerName != null) {
+        tx.set(
+          _debtsCol().doc(),
+          Debt(
+            id: '',
+            customerName: customerName,
+            amount: total,
+            createdAt: DateTime.now(),
+            saleId: saleRef.id,
+          ).toFirestore(),
+        );
+      }
+      tx.set(counterRef, {'day': next.day, 'seq': next.seq});
+      return no;
+    });
 
     // Accrue loyalty points if a customer was attached. Best-effort —
     // outside the batch so a loyalty hiccup never fails the sale itself.
@@ -121,6 +131,7 @@ class SaleService {
       customerName: customerName,
       paymentMethod: paymentMethod,
       staffName: staffName,
+      receiptNo: receiptNo,
     );
   }
 

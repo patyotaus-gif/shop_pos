@@ -4,6 +4,7 @@ import '../models/product.dart';
 import '../models/sale.dart';
 import '../services/product_service.dart';
 import '../services/sale_service.dart';
+import 'cash_session_screen.dart';
 import 'marketplace_home_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -77,6 +78,22 @@ class DashboardScreen extends StatelessWidget {
                   ],
                 );
               },
+            ),
+            const SizedBox(height: 16),
+
+            // ปิดยอดสิ้นวัน — cash session + Z-report.
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.point_of_sale_outlined),
+                title: const Text('ปิดยอดสิ้นวัน'),
+                subtitle: const Text('เปิด/ปิดรอบ · นับเงินลิ้นชัก · Z-report'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const CashSessionScreen()),
+                ),
+              ),
             ),
             const SizedBox(height: 16),
 
