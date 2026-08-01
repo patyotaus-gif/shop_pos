@@ -946,9 +946,42 @@ git commit -m "feat: register louder unconfirmed_order Android notification chan
 
 ## Rollout (manual, after all tasks land — not part of this plan's automated steps)
 
-1. Deploy functions: `firebase deploy --only functions:getShopPublic,functions:createOrderCheckout,functions:createPromptPayOrder,functions:createTableOrder,functions:escalateUnconfirmedOrders,firestore:indexes`
-2. Cut a new Android release (APK) so the Dashboard toggle + new notification channel ship — follow the existing self-hosted-APK release workflow.
-3. Deploy hosting for the `/order` closed-state view: `firebase deploy --only hosting`
-4. Manual checks (from the spec's Testing section):
+**Order matters here — APK before `escalateUnconfirmedOrders`.** The escalation
+push sends on a brand-new `unconfirmed_order` Android channel, and this app
+has no `com.google.firebase.messaging.default_notification_channel_id`
+fallback in `AndroidManifest.xml`. Compare the existing note at
+`functions/index.js:1956` on `sendRenewalReminders`, which deliberately
+reuses the old `new_orders` channel for exactly this reason: a brand-new
+channel is missing on older installs and gets silently dropped by Android 8+.
+Android APKs here are self-hosted (see `distribution_self_hosted.md`) —
+adoption lags days-to-weeks and users can decline updates — so deploying
+`escalateUnconfirmedOrders` before the APK means every not-yet-updated
+device silently drops the escalation push, which is exactly the failure
+Feature B exists to prevent. The Feature A pause-gating functions
+(`getShopPublic`, `createOrderCheckout`, `createPromptPayOrder`,
+`createTableOrder`) have no such constraint and can deploy any time.
+
+1. Deploy the Feature A functions first (safe any time, no channel dependency):
+   `firebase deploy --only functions:getShopPublic,functions:createOrderCheckout,functions:createPromptPayOrder,functions:createTableOrder`
+2. Deploy hosting for the `/order` closed-state view: `firebase deploy --only hosting`
+3. Cut a new Android release (APK) so the Dashboard toggle + new
+   `unconfirmed_order` notification channel registration ship — follow the
+   existing self-hosted-APK release workflow. Let adoption settle before
+   the next step.
+4. **Before deploying indexes:** `firestore.indexes.json` in this branch
+   declares only the new escalation index (`orders` collection group:
+   `status` ASC + `paidAt` ASC). It was authored fresh for this feature and
+   does **not** reflect the live project's other indexes. Regenerate it from
+   the live project first — `firebase firestore:indexes > firestore.indexes.json`
+   — then re-add the escalation index on top. If you instead run
+   `firebase deploy --only firestore:indexes` against this branch's file
+   as-is, the CLI will offer to **delete** the live indexes serving
+   `tableOrders` (KDS + per-table queries) and `orders` (bank auto-match),
+   breaking restaurant mode and bank auto-match in production. **Never
+   accept an index-deletion prompt.**
+5. Only once the APK has had time to reach most devices, deploy the
+   escalation function and the (regenerated) indexes:
+   `firebase deploy --only functions:escalateUnconfirmedOrders,firestore:indexes`
+6. Manual checks (from the spec's Testing section):
    - Pause ordering → confirm `/order` shows the closed state for a takeaway link and a table QR link; confirm a direct `createPromptPayOrder` call while paused is rejected.
    - Place a real takeaway PromptPay order, leave it unconfirmed past 5 minutes, confirm LINE + the new push channel both fire exactly once.
