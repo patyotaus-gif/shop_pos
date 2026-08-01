@@ -5,6 +5,7 @@ const {
   ESCALATION_THRESHOLD_MS,
   needsEscalation,
   selectEscalationCandidates,
+  isShopOrderPath,
 } = require("./escalation");
 
 const NOW = Date.parse("2026-08-01T12:00:00Z");
@@ -61,6 +62,28 @@ assert.deepEqual(
   selectEscalationCandidates([dueOrder, notDueOrder, alreadyDone], NOW),
   [dueOrder],
   "selectEscalationCandidates should return only the due order"
+);
+
+// isShopOrderPath — tenant-isolation guard for the collectionGroup query.
+assert.equal(
+  isShopOrderPath("shops/x/orders/y"),
+  true,
+  "shops/{shopId}/orders/{orderId} should match"
+);
+assert.equal(
+  isShopOrderPath("suppliers/x/orders/y"),
+  false,
+  "suppliers/{supplierId}/orders/{orderId} should not match"
+);
+assert.equal(
+  isShopOrderPath("shops/x/branches/b/orders/y"),
+  false,
+  "a deeper/nested path should not match"
+);
+assert.equal(
+  isShopOrderPath("shops/orders"),
+  false,
+  "a shorter path should not match"
 );
 
 console.log("escalation.test.js: all assertions passed");

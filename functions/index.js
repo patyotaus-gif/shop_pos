@@ -34,6 +34,7 @@ const {
 const {
   ESCALATION_THRESHOLD_MS,
   selectEscalationCandidates,
+  isShopOrderPath,
 } = require("./escalation");
 
 // 60s in-memory cache — plan reads happen on every checkout/webhook.
@@ -2052,6 +2053,11 @@ exports.escalateUnconfirmedOrders = onSchedule(
     const db = admin.firestore();
     const now = Date.now();
     const cutoff = admin.firestore.Timestamp.fromMillis(now - ESCALATION_THRESHOLD_MS);
+    // Lower bound: only look at recently-paid orders. Without it, the first
+    // run would alert on every order ever left at `paid` (owners who fulfil
+    // without advancing status accumulate these), and every run would re-scan
+    // that unbounded backlog forever — escalatedAt-absence can't be indexed.
+    const floor = admin.firestore.Timestamp.fromMillis(now - 60 * 60 * 1000);
 
     // escalatedAt-absence isn't part of the composite index (Firestore can't
     // index "field missing"), so that half of the filter runs in memory via
@@ -2059,6 +2065,7 @@ exports.escalateUnconfirmedOrders = onSchedule(
     const snap = await db
       .collectionGroup("orders")
       .where("status", "==", "paid")
+      .where("paidAt", ">", floor)
       .where("paidAt", "<", cutoff)
       .get();
 
@@ -2067,10 +2074,7 @@ exports.escalateUnconfirmedOrders = onSchedule(
     // has no "paid" value today, but guard the path shape anyway so this
     // never touches a non-shop order doc.
     const pool = snap.docs
-      .filter((doc) => {
-        const parts = doc.ref.path.split("/");
-        return parts.length === 4 && parts[0] === "shops" && parts[2] === "orders";
-      })
+      .filter((doc) => isShopOrderPath(doc.ref.path))
       .map((doc) => {
         const data = doc.data();
         return {
@@ -2085,10 +2089,18 @@ exports.escalateUnconfirmedOrders = onSchedule(
 
     const candidates = selectEscalationCandidates(pool, now);
 
-    let escalated = 0;
+    let processed = 0;
     for (const order of candidates) {
-      // Stamp first — dedups against overlapping/retried runs.
-      await order.ref.update({ escalatedAt: admin.firestore.FieldValue.serverTimestamp() });
+      // Stamp first — dedups against overlapping/retried runs. Guarded like
+      // every other await in this loop: an unguarded throw here (deleted
+      // doc → NOT_FOUND, write contention) would reject the whole function
+      // and permanently block every later candidate behind this one.
+      try {
+        await order.ref.update({ escalatedAt: admin.firestore.FieldValue.serverTimestamp() });
+      } catch (e) {
+        console.error(`escalation stamp failed for ${order.ref.path}:`, e);
+        continue;
+      }
 
       const shopRef = order.ref.parent.parent;
       const text =
@@ -2134,9 +2146,12 @@ exports.escalateUnconfirmedOrders = onSchedule(
           console.error(`escalation LINE failed for ${order.ref.path}:`, e);
         }
       }
-      escalated++;
+      processed++;
     }
-    console.log(`Unconfirmed-order escalations sent: ${escalated}`);
+    // "Processed" (not "sent"): a candidate counts here once escalatedAt is
+    // stamped even if both FCM and LINE were skipped (no token/no LINE
+    // config) — this log tracks staleness detection, not delivery.
+    console.log(`Unconfirmed-order escalations processed: ${processed}`);
   }
 );
 

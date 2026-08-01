@@ -26,4 +26,23 @@ function selectEscalationCandidates(orders, nowMs, thresholdMs = ESCALATION_THRE
   return orders.filter((o) => needsEscalation(o, nowMs, thresholdMs));
 }
 
-module.exports = { ESCALATION_THRESHOLD_MS, needsEscalation, selectEscalationCandidates };
+// Tenant-isolation guard for the `collectionGroup("orders")` query in
+// escalateUnconfirmedOrders. `orders` also exists at
+// suppliers/{supplierId}/orders (B2B marketplace dual-write copy) —
+// collectionGroup matches both. MarketplaceOrderStatus has no "paid" value
+// today, but this guards the path shape anyway so escalation never touches
+// a non-shop order doc, no matter how the schema evolves.
+//
+// @param {string} path - a Firestore document path, e.g. doc.ref.path
+// @returns {boolean} true only for shops/{shopId}/orders/{orderId}
+function isShopOrderPath(path) {
+  const parts = path.split("/");
+  return parts.length === 4 && parts[0] === "shops" && parts[2] === "orders";
+}
+
+module.exports = {
+  ESCALATION_THRESHOLD_MS,
+  needsEscalation,
+  selectEscalationCandidates,
+  isShopOrderPath,
+};
