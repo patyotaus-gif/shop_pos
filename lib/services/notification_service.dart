@@ -76,10 +76,15 @@ class NotificationService {
           .set({'fcmToken': newToken}, SetOptions(merge: true));
     });
 
-    // แสดง notification เมื่อแอปอยู่ foreground
+    // แสดง notification เมื่อแอปอยู่ foreground — ใช้ channel เดียวกับที่
+    // FCM payload ระบุมา ไม่งั้น escalation (unconfirmed_order) จะโชว์บน
+    // new_orders แทน แล้ว vibration pattern ที่ตั้งใจแยกไว้จะไม่ทำงาน
     FirebaseMessaging.onMessage.listen((message) {
       final n = message.notification;
-      if (n != null) _showLocal(n.title ?? '', n.body ?? '', 'new_orders');
+      if (n != null) {
+        _showLocal(
+            n.title ?? '', n.body ?? '', n.android?.channelId ?? 'new_orders');
+      }
     });
   }
 
@@ -92,13 +97,22 @@ class NotificationService {
     );
   }
 
+  // Channel id → display name, kept in sync with the channels registered
+  // in init() above. Harmless if stale for an already-created channel
+  // (Android ignores the name after creation), but should stay correct.
+  static const _channelNames = {
+    'new_orders': 'ออเดอร์ใหม่',
+    'unconfirmed_order': 'ออเดอร์ค้างยืนยัน',
+    'low_stock': 'สินค้าใกล้หมด',
+  };
+
   static Future<void> _showLocal(
       String title, String body, String channelId) async {
     await init();
     final details = NotificationDetails(
       android: AndroidNotificationDetails(
         channelId,
-        channelId == 'new_orders' ? 'ออเดอร์ใหม่' : 'สินค้าใกล้หมด',
+        _channelNames[channelId] ?? channelId,
         importance: Importance.max,
         priority: Priority.high,
         icon: '@mipmap/ic_launcher',

@@ -67,6 +67,7 @@ header h1 {
   transition: var(--transition); flex-shrink: 0; position: relative;
 }
 #cartBtn:hover { border-color: var(--burgundy); color: var(--burgundy); }
+#cartBtn[hidden] { display: none; }
 #cartCount {
   background: var(--burgundy); color: var(--cream);
   border-radius: 100px; min-width: 20px; height: 20px; padding: 0 6px;
