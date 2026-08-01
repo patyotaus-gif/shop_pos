@@ -2095,10 +2095,16 @@ exports.escalateUnconfirmedOrders = onSchedule(
         `⚠️ ออเดอร์ค้าง 5 นาที: ${order.customerName || "-"} ` +
         `฿${Number(order.finalAmount || 0).toFixed(2)} ยังไม่ได้กดยืนยัน`;
 
-      const [shopSnap, settingsSnap] = await Promise.all([
-        shopRef.get(),
-        shopRef.collection("settings").doc("shop").get(),
-      ]);
+      let shopSnap, settingsSnap;
+      try {
+        [shopSnap, settingsSnap] = await Promise.all([
+          shopRef.get(),
+          shopRef.collection("settings").doc("shop").get(),
+        ]);
+      } catch (e) {
+        console.error(`escalation shop/settings fetch failed for ${order.ref.path}:`, e);
+        continue;
+      }
 
       // FCM and LINE are independent channels — one's failure (e.g. a stale
       // fcmToken) must never suppress the other.
