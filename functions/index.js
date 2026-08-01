@@ -28,6 +28,14 @@ const {
   validateTiers,
 } = require("./plans");
 
+// Pure escalation-candidate filter — extracted so escalateUnconfirmedOrders'
+// staleness logic can be unit-tested without touching Firestore. See
+// functions/escalation.test.js.
+const {
+  ESCALATION_THRESHOLD_MS,
+  selectEscalationCandidates,
+} = require("./escalation");
+
 // 60s in-memory cache — plan reads happen on every checkout/webhook.
 let _plansCache = { tiers: null, at: 0 };
 async function getPlans() {
@@ -2025,6 +2033,100 @@ function renewalMessage(isTrial, daysLeft) {
         body: `ต่ออายุก่อนหมด${when} เพื่อใช้งานไม่สะดุด`,
       };
 }
+
+// ────────────────────────────────────────────────
+// Escalate unconfirmed paid orders (takeaway/online only — see design spec;
+// dine-in tableOrders are explicitly out of scope for this pass)
+// ────────────────────────────────────────────────
+// A "paid" order sitting unconfirmed for 5+ minutes gets one best-effort
+// LINE + FCM nudge on a louder channel than the routine new-order ping.
+// escalatedAt is stamped before sending so overlapping/retried runs never
+// double-fire (see functions/escalation.js for the pure staleness filter).
+exports.escalateUnconfirmedOrders = onSchedule(
+  {
+    schedule: "every 2 minutes",
+    timeZone: "Asia/Bangkok",
+    secrets: [lineChannelAccessToken],
+  },
+  async () => {
+    const db = admin.firestore();
+    const now = Date.now();
+    const cutoff = admin.firestore.Timestamp.fromMillis(now - ESCALATION_THRESHOLD_MS);
+
+    // escalatedAt-absence isn't part of the composite index (Firestore can't
+    // index "field missing"), so that half of the filter runs in memory via
+    // selectEscalationCandidates below.
+    const snap = await db
+      .collectionGroup("orders")
+      .where("status", "==", "paid")
+      .where("paidAt", "<", cutoff)
+      .get();
+
+    // `orders` also exists at suppliers/{supplierId}/orders (B2B marketplace
+    // dual-write copy) — collectionGroup matches both. MarketplaceOrderStatus
+    // has no "paid" value today, but guard the path shape anyway so this
+    // never touches a non-shop order doc.
+    const pool = snap.docs
+      .filter((doc) => {
+        const parts = doc.ref.path.split("/");
+        return parts.length === 4 && parts[0] === "shops" && parts[2] === "orders";
+      })
+      .map((doc) => {
+        const data = doc.data();
+        return {
+          ref: doc.ref,
+          customerName: data.customerName,
+          finalAmount: data.finalAmount ?? data.total,
+          status: data.status,
+          paidAtMs: data.paidAt?.toMillis?.() ?? null,
+          escalatedAt: data.escalatedAt ?? null,
+        };
+      });
+
+    const candidates = selectEscalationCandidates(pool, now);
+
+    let escalated = 0;
+    for (const order of candidates) {
+      // Stamp first — dedups against overlapping/retried runs.
+      await order.ref.update({ escalatedAt: admin.firestore.FieldValue.serverTimestamp() });
+
+      const shopRef = order.ref.parent.parent;
+      const text =
+        `⚠️ ออเดอร์ค้าง 5 นาที: ${order.customerName || "-"} ` +
+        `฿${Number(order.finalAmount || 0).toFixed(2)} ยังไม่ได้กดยืนยัน`;
+
+      try {
+        const [shopSnap, settingsSnap] = await Promise.all([
+          shopRef.get(),
+          shopRef.collection("settings").doc("shop").get(),
+        ]);
+
+        const fcmToken = shopSnap.data()?.fcmToken;
+        if (fcmToken) {
+          await admin.messaging().send({
+            token: fcmToken,
+            notification: { title: "⚠️ ออเดอร์ค้างนาน", body: text },
+            android: {
+              notification: { channelId: "unconfirmed_order", priority: "high" },
+            },
+          });
+        }
+
+        const lineUserId = settingsSnap.data()?.lineUserId;
+        const lineEnabled = settingsSnap.data()?.lineNotifyEnabled !== false;
+        if (lineUserId && lineEnabled) {
+          await _linePush(lineChannelAccessToken.value(), lineUserId, [
+            { type: "text", text },
+          ]);
+        }
+      } catch (e) {
+        console.error(`escalation notify failed for ${order.ref.path}:`, e);
+      }
+      escalated++;
+    }
+    console.log(`Unconfirmed-order escalations sent: ${escalated}`);
+  }
+);
 
 // ────────────────────────────────────────────────
 // Subscription payment — direct PromptPay (0% fees)
