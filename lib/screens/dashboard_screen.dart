@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/product.dart';
 import '../models/sale.dart';
+import '../models/shop.dart';
+import '../services/entitlements.dart';
 import '../services/product_service.dart';
 import '../services/sale_service.dart';
+import '../services/shop_service.dart';
 import 'cash_session_screen.dart';
 import 'marketplace_home_screen.dart';
 
@@ -103,42 +106,52 @@ class DashboardScreen extends StatelessWidget {
             _MarketplaceCard(),
             const SizedBox(height: 16),
 
-            // Low stock
-            StreamBuilder<List<Product>>(
-              stream: ProductService.watchLowStock(),
-              builder: (ctx, snap) {
-                final products = snap.data ?? [];
-                if (products.isEmpty) return const SizedBox.shrink();
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+            // Low stock — inventory tracking is a Lite+ feature; Solo
+            // doesn't track stock at SKU level (see Entitlements.canUseInventory).
+            StreamBuilder<Shop?>(
+              stream: ShopService.watchCurrentShop(),
+              builder: (context, shopSnap) {
+                final tier = shopSnap.data?.tier ?? ShopTier.full;
+                if (!Entitlements.canUseInventory(tier)) {
+                  return const SizedBox.shrink();
+                }
+                return StreamBuilder<List<Product>>(
+                  stream: ProductService.watchLowStock(),
+                  builder: (ctx, snap) {
+                    final products = snap.data ?? [];
+                    if (products.isEmpty) return const SizedBox.shrink();
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.warning_amber, color: Colors.orange, size: 18),
-                        const SizedBox(width: 4),
-                        Text('สินค้าใกล้หมด (${products.length} รายการ)',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                        Row(
+                          children: [
+                            const Icon(Icons.warning_amber, color: Colors.orange, size: 18),
+                            const SizedBox(width: 4),
+                            Text('สินค้าใกล้หมด (${products.length} รายการ)',
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ...products.map((p) => Card(
+                              margin: const EdgeInsets.symmetric(vertical: 3),
+                              child: ListTile(
+                                dense: true,
+                                leading: const CircleAvatar(
+                                  backgroundColor: Colors.red,
+                                  radius: 16,
+                                  child: Icon(Icons.inventory_2_outlined, color: Colors.white, size: 16),
+                                ),
+                                title: Text(p.name),
+                                trailing: Text(
+                                  'เหลือ ${p.stock}',
+                                  style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            )),
+                        const SizedBox(height: 16),
                       ],
-                    ),
-                    const SizedBox(height: 8),
-                    ...products.map((p) => Card(
-                          margin: const EdgeInsets.symmetric(vertical: 3),
-                          child: ListTile(
-                            dense: true,
-                            leading: const CircleAvatar(
-                              backgroundColor: Colors.red,
-                              radius: 16,
-                              child: Icon(Icons.inventory_2_outlined, color: Colors.white, size: 16),
-                            ),
-                            title: Text(p.name),
-                            trailing: Text(
-                              'เหลือ ${p.stock}',
-                              style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        )),
-                    const SizedBox(height: 16),
-                  ],
+                    );
+                  },
                 );
               },
             ),

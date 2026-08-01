@@ -6,8 +6,10 @@ import '../models/debt.dart';
 import '../utils/receipt_number.dart';
 import 'auth_service.dart';
 import 'customer_service.dart';
+import 'entitlements.dart';
 import 'notification_service.dart';
 import 'product_service.dart';
+import 'shop_service.dart';
 
 class SaleService {
   static DocumentReference<Map<String, dynamic>> _shopDoc() =>
@@ -111,11 +113,16 @@ class SaleService {
       } catch (_) {}
     }
 
-    // Check low stock and notify
-    for (final item in cart) {
-      final product = await ProductService.getByBarcode(item.product.barcode);
-      if (product != null && product.isLowStock) {
-        await NotificationService.showLowStock(product.name, product.stock);
+    // Check low stock and notify — Lite+ only (Entitlements.canUseInventory);
+    // Solo doesn't track stock at SKU level so it gets no low-stock alerts.
+    final shop = await ShopService.getCurrentShop();
+    if (shop != null && Entitlements.canUseInventory(shop.tier)) {
+      for (final item in cart) {
+        final product =
+            await ProductService.getByBarcode(item.product.barcode);
+        if (product != null && product.isLowStock) {
+          await NotificationService.showLowStock(product.name, product.stock);
+        }
       }
     }
 

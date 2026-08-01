@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/product.dart';
 import '../models/shop.dart';
+import '../services/entitlements.dart';
 import '../services/product_service.dart';
 import '../services/shop_service.dart';
 import 'ingredients_screen.dart';
@@ -106,28 +107,41 @@ class _ProductsScreenState extends State<ProductsScreen> {
           ),
           const SizedBox(height: 8),
           Expanded(
-            child: StreamBuilder<List<Product>>(
-              stream: ProductService.watchAll(),
-              builder: (ctx, snap) {
-                if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-                var products = snap.data!;
-                if (_search.isNotEmpty) {
-                  products = products
-                      .where((p) =>
-                          p.name.toLowerCase().contains(_search.toLowerCase()) ||
-                          p.barcode.contains(_search))
-                      .toList();
-                }
-                if (_category != 'ทั้งหมด') {
-                  products = products.where((p) => p.category == _category).toList();
-                }
-                if (products.isEmpty) {
-                  return const Center(child: Text('ไม่พบสินค้า'));
-                }
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  itemCount: products.length,
-                  itemBuilder: (ctx, i) => _ProductTile(product: products[i]),
+            child: StreamBuilder<Shop?>(
+              stream: ShopService.watchCurrentShop(),
+              builder: (context, shopSnap) {
+                final tier = shopSnap.data?.tier ?? ShopTier.full;
+                // Stock-adjust workflow + low-stock highlighting are Lite+
+                // (Entitlements.canUseInventory) — Solo doesn't track stock
+                // at SKU level, so it only sees the plain stock count.
+                final showInventory = Entitlements.canUseInventory(tier);
+                return StreamBuilder<List<Product>>(
+                  stream: ProductService.watchAll(),
+                  builder: (ctx, snap) {
+                    if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+                    var products = snap.data!;
+                    if (_search.isNotEmpty) {
+                      products = products
+                          .where((p) =>
+                              p.name.toLowerCase().contains(_search.toLowerCase()) ||
+                              p.barcode.contains(_search))
+                          .toList();
+                    }
+                    if (_category != 'ทั้งหมด') {
+                      products = products.where((p) => p.category == _category).toList();
+                    }
+                    if (products.isEmpty) {
+                      return const Center(child: Text('ไม่พบสินค้า'));
+                    }
+                    return ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      itemCount: products.length,
+                      itemBuilder: (ctx, i) => _ProductTile(
+                        product: products[i],
+                        showInventory: showInventory,
+                      ),
+                    );
+                  },
                 );
               },
             ),
@@ -140,18 +154,23 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
 class _ProductTile extends StatelessWidget {
   final Product product;
-  const _ProductTile({required this.product});
+  // Lite+ only (Entitlements.canUseInventory): low-stock highlighting +
+  // the "รับสินค้าเข้า" adjust-stock workflow. Solo still sees the plain
+  // stock count (needed to avoid overselling) but not the alerting/history.
+  final bool showInventory;
+  const _ProductTile({required this.product, required this.showInventory});
 
   @override
   Widget build(BuildContext context) {
+    final flagLowStock = showInventory && product.isLowStock;
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: product.isLowStock ? Colors.red.shade100 : Colors.blue.shade100,
+          backgroundColor: flagLowStock ? Colors.red.shade100 : Colors.blue.shade100,
           child: Icon(
             Icons.inventory_2_outlined,
-            color: product.isLowStock ? Colors.red : Colors.blue,
+            color: flagLowStock ? Colors.red : Colors.blue,
           ),
         ),
         title: Text(product.name, style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -177,17 +196,18 @@ class _ProductTile extends StatelessWidget {
                 Text(
                   'สต็อก ${product.stock}',
                   style: TextStyle(
-                    color: product.isLowStock ? Colors.red : Colors.grey,
+                    color: flagLowStock ? Colors.red : Colors.grey,
                     fontSize: 12,
                   ),
                 ),
               ],
             ),
-            IconButton(
-              icon: const Icon(Icons.add_box_outlined),
-              tooltip: 'รับสินค้าเข้า',
-              onPressed: () => _showStockDialog(context),
-            ),
+            if (showInventory)
+              IconButton(
+                icon: const Icon(Icons.add_box_outlined),
+                tooltip: 'รับสินค้าเข้า',
+                onPressed: () => _showStockDialog(context),
+              ),
           ],
         ),
         onTap: () => Navigator.push(
