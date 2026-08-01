@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -31,6 +33,23 @@ class NotificationService {
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
+
+    // ออเดอร์ค้างยืนยันเกิน 5 นาที — channel แยกจาก new_orders ด้วย
+    // vibration pattern ที่ต่างชัดเจน จะได้สังเกตว่าด่วนกว่าปกติ
+    final unconfirmedChannel = AndroidNotificationChannel(
+      'unconfirmed_order',
+      'ออเดอร์ค้างยืนยัน',
+      description:
+          'แจ้งเตือนเมื่อออเดอร์ที่จ่ายเงินแล้วยังไม่ได้กดยืนยันเกิน 5 นาที',
+      importance: Importance.max,
+      playSound: true,
+      enableVibration: true,
+      vibrationPattern: Int64List.fromList([0, 400, 200, 400, 200, 400]),
+    );
+    await _plugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(unconfirmedChannel);
 
     _initialized = true;
   }
