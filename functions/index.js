@@ -2095,14 +2095,16 @@ exports.escalateUnconfirmedOrders = onSchedule(
         `⚠️ ออเดอร์ค้าง 5 นาที: ${order.customerName || "-"} ` +
         `฿${Number(order.finalAmount || 0).toFixed(2)} ยังไม่ได้กดยืนยัน`;
 
-      try {
-        const [shopSnap, settingsSnap] = await Promise.all([
-          shopRef.get(),
-          shopRef.collection("settings").doc("shop").get(),
-        ]);
+      const [shopSnap, settingsSnap] = await Promise.all([
+        shopRef.get(),
+        shopRef.collection("settings").doc("shop").get(),
+      ]);
 
-        const fcmToken = shopSnap.data()?.fcmToken;
-        if (fcmToken) {
+      // FCM and LINE are independent channels — one's failure (e.g. a stale
+      // fcmToken) must never suppress the other.
+      const fcmToken = shopSnap.data()?.fcmToken;
+      if (fcmToken) {
+        try {
           await admin.messaging().send({
             token: fcmToken,
             notification: { title: "⚠️ ออเดอร์ค้างนาน", body: text },
@@ -2110,17 +2112,21 @@ exports.escalateUnconfirmedOrders = onSchedule(
               notification: { channelId: "unconfirmed_order", priority: "high" },
             },
           });
+        } catch (e) {
+          console.error(`escalation FCM failed for ${order.ref.path}:`, e);
         }
+      }
 
-        const lineUserId = settingsSnap.data()?.lineUserId;
-        const lineEnabled = settingsSnap.data()?.lineNotifyEnabled !== false;
-        if (lineUserId && lineEnabled) {
+      const lineUserId = settingsSnap.data()?.lineUserId;
+      const lineEnabled = settingsSnap.data()?.lineNotifyEnabled !== false;
+      if (lineUserId && lineEnabled) {
+        try {
           await _linePush(lineChannelAccessToken.value(), lineUserId, [
             { type: "text", text },
           ]);
+        } catch (e) {
+          console.error(`escalation LINE failed for ${order.ref.path}:`, e);
         }
-      } catch (e) {
-        console.error(`escalation notify failed for ${order.ref.path}:`, e);
       }
       escalated++;
     }
