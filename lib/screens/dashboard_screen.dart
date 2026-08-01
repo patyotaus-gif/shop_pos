@@ -6,6 +6,7 @@ import '../models/shop.dart';
 import '../services/entitlements.dart';
 import '../services/product_service.dart';
 import '../services/sale_service.dart';
+import '../services/settings_service.dart';
 import '../services/shop_service.dart';
 import 'cash_session_screen.dart';
 import 'marketplace_home_screen.dart';
@@ -97,6 +98,36 @@ class DashboardScreen extends StatelessWidget {
                       builder: (_) => const CashSessionScreen()),
                 ),
               ),
+            ),
+            const SizedBox(height: 16),
+
+            // ปิดรับออเดอร์ — quick toggle for the /order customer web page.
+            // Optimistic write, no confirmation dialog: it's fast-reversible.
+            StreamBuilder<Map<String, dynamic>>(
+              stream: SettingsService.watchSettings(),
+              builder: (context, snap) {
+                final closed = snap.data?['ordersClosed'] == true;
+                return Card(
+                  child: SwitchListTile(
+                    secondary: Icon(
+                      closed ? Icons.storefront_outlined : Icons.storefront,
+                      color: closed ? Colors.red : Colors.green,
+                    ),
+                    title: Text(
+                      closed ? 'ปิดรับออเดอร์ชั่วคราว' : 'เปิดรับออเดอร์อยู่',
+                      style: TextStyle(
+                        color: closed ? Colors.red : Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: const Text('เปิด/ปิดรับออเดอร์จากหน้าเว็บลูกค้า (/order)'),
+                    value: !closed,
+                    activeThumbColor: Colors.green,
+                    onChanged: (open) =>
+                        SettingsService.saveSettings({'ordersClosed': !open}),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 16),
 
