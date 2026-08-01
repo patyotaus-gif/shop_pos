@@ -55,6 +55,7 @@ async function start() {
     if (data.ordersClosed) {
       document.getElementById('loading').style.display = 'none';
       document.getElementById('closedState').style.display = 'block';
+      document.getElementById('cartBtn').hidden = true;
       return;
     }
 
