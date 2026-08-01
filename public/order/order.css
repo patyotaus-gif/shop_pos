@@ -77,7 +77,7 @@ header h1 {
 #cartBtn:hover #cartCount { background: var(--burgundy-hover); }
 
 /* ── UTILITIES STATE ── */
-#loading, #error { text-align: center; padding: 80px 20px; color: var(--text-muted); font-size: 15px; font-weight: 500; }
+#loading, #error, #closedState { text-align: center; padding: 80px 20px; color: var(--text-muted); font-size: 15px; font-weight: 500; }
 #error { color: var(--burgundy); background: var(--burgundy-dim); border-radius: var(--radius-md); margin: 20px; padding: 20px; }
 
 /* ── PRODUCT GRID & CARDS ── */

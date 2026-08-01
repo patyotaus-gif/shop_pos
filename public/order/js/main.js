@@ -33,6 +33,31 @@ async function start() {
     }
     const data = await res.json();
 
+    const shopName = data.name || 'ร้านค้า';
+    document.getElementById('shopName').textContent = shopName;
+    document.title = `สั่งสินค้า — ${shopName}`;
+
+    // Shop logo → sits in the sticky header (replaces the Pokpok mark),
+    // so the whole top bar stays fixed while the list scrolls.
+    if (data.logoUrl) {
+      const logo = document.getElementById('shopLogoImg');
+      const mark = document.querySelector('.brand-mark');
+      logo.alt = shopName;
+      logo.onerror = () => { logo.hidden = true; if (mark) mark.hidden = false; };
+      logo.src = data.logoUrl;
+      logo.hidden = false;
+      if (mark) mark.hidden = true;
+    }
+
+    // Owner paused ordering — show identity + closed message only. No
+    // product grid, cart, or checkout wiring (also enforced server-side
+    // at submit, in case this tab was already open when the owner paused).
+    if (data.ordersClosed) {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('closedState').style.display = 'block';
+      return;
+    }
+
     // Resolve the ordering mode from the QR link + shop settings.
     if (data.table) {
       orderContext.table = data.table;
@@ -50,22 +75,6 @@ async function start() {
     });
     initPayment();
     initTableOrder();
-
-    const shopName = data.name || 'ร้านค้า';
-    document.getElementById('shopName').textContent = shopName;
-    document.title = `สั่งสินค้า — ${shopName}`;
-
-    // Shop logo → sits in the sticky header (replaces the Pokpok mark),
-    // so the whole top bar stays fixed while the list scrolls.
-    if (data.logoUrl) {
-      const logo = document.getElementById('shopLogoImg');
-      const mark = document.querySelector('.brand-mark');
-      logo.alt = shopName;
-      logo.onerror = () => { logo.hidden = true; if (mark) mark.hidden = false; };
-      logo.src = data.logoUrl;
-      logo.hidden = false;
-      if (mark) mark.hidden = true;
-    }
 
     // Context badge + checkout label per mode.
     const badge = document.getElementById('modeBadge');
