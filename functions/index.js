@@ -280,6 +280,9 @@ exports.getShopPublic = onRequest({ cors: true }, async (req, res) => {
 
   const out = { name: shop.name || "ร้านค้า", products };
   if (settings.logoUrl) out.logoUrl = settings.logoUrl;
+  // Owner-paused ordering — client still gets name/logo so the closed
+  // page can show shop identity, just no products/cart wiring.
+  if (settings.ordersClosed === true) out.ordersClosed = true;
 
   // Table-QR mode: ?table=<id> asks for the dine-in context too. Unknown
   // table → 404 so the page can tell the customer to call staff instead of
@@ -321,6 +324,15 @@ exports.createOrderCheckout = onRequest(
       return;
     }
 
+    // Re-check pause state server-side — covers a customer with the menu
+    // open in a stale tab before the owner paused ordering.
+    const shopRef = admin.firestore().collection("shops").doc(shopId);
+    const settingsSnap = await shopRef.collection("settings").doc("shop").get();
+    if (settingsSnap.data()?.ordersClosed === true) {
+      res.status(400).json({ error: "ร้านปิดรับออเดอร์ชั่วคราว" });
+      return;
+    }
+
     const total = items.reduce((s, item) => s + item.price * item.quantity, 0);
 
     if (total < 20) {
@@ -329,12 +341,7 @@ exports.createOrderCheckout = onRequest(
     }
 
     // สร้าง order doc ก่อน (status: pendingPayment)
-    const orderRef = admin
-      .firestore()
-      .collection("shops")
-      .doc(shopId)
-      .collection("orders")
-      .doc();
+    const orderRef = shopRef.collection("orders").doc();
 
     await orderRef.set({
       customerName,
@@ -578,6 +585,14 @@ exports.createPromptPayOrder = onRequest(
     const settingsSnap = await shopRef
       .collection("settings").doc("shop").get();
     const settings = settingsSnap.data() || {};
+
+    // Re-check pause state server-side — covers a customer with the menu
+    // open in a stale tab before the owner paused ordering.
+    if (settings.ordersClosed === true) {
+      res.status(400).json({ error: "ร้านปิดรับออเดอร์ชั่วคราว" });
+      return;
+    }
+
     const promptpayId = settings.promptpayId;
     const promptpayName = settings.promptpayName || "";
 
@@ -2391,6 +2406,10 @@ exports.createTableOrder = onRequest(
 
       const settingsSnap = await shopRef
         .collection("settings").doc("shop").get();
+      if (settingsSnap.data()?.ordersClosed === true) {
+        res.status(400).json({ error: "ร้านปิดรับออเดอร์ชั่วคราว" });
+        return;
+      }
       const autoSend = settingsSnap.data()?.tableOrderAutoSend === true;
 
       // Resolve prices + modifiers server-side (sale price honored; add-on
