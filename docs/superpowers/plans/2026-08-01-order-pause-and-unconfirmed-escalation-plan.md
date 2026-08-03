@@ -968,17 +968,32 @@ Feature B exists to prevent. The Feature A pause-gating functions
    `unconfirmed_order` notification channel registration ship — follow the
    existing self-hosted-APK release workflow. Let adoption settle before
    the next step.
-4. **Before deploying indexes:** `firestore.indexes.json` in this branch
-   declares only the new escalation index (`orders` collection group:
-   `status` ASC + `paidAt` ASC). It was authored fresh for this feature and
-   does **not** reflect the live project's other indexes. Regenerate it from
-   the live project first — `firebase firestore:indexes > firestore.indexes.json`
-   — then re-add the escalation index on top. If you instead run
-   `firebase deploy --only firestore:indexes` against this branch's file
-   as-is, the CLI will offer to **delete** the live indexes serving
-   `tableOrders` (KDS + per-table queries) and `orders` (bank auto-match),
-   breaking restaurant mode and bank auto-match in production. **Never
-   accept an index-deletion prompt.**
+4. **Index deployment — verified safe as-is (checked 2026-08-03).**
+   `firebase firestore:indexes` against the live project (`shop-pos-89294`)
+   returns `{"indexes": [], "fieldOverrides": []}` — the project has **no**
+   composite indexes deployed at all. So `firestore.indexes.json` declaring
+   only the escalation index (`orders` collection group: `status` ASC +
+   `paidAt` ASC) deletes nothing, and `firebase deploy --only
+   firestore:indexes` is safe to run directly. Re-verify with that same
+   command if significant time has passed before deploying.
+
+   **Separate pre-existing gap found during that check** (not caused by this
+   work, not blocking this rollout): two shipped queries need composite
+   indexes that do not exist in the live project, so they fail at runtime
+   whenever they first execute —
+   - `lib/services/table_service.dart:87-88` — `tableOrders`:
+     `where('status' ==) + orderBy('openedAt')` needs `status` ASC +
+     `openedAt` ASC (equality plus an order-by on a different field).
+   - `lib/services/bank_notification_service.dart:108-109` — `orders`:
+     `where('status' ==) + where('createdAt' >)` needs `status` ASC +
+     `createdAt` ASC (equality plus a range on a different field).
+
+   (`table_service.dart:98-99` — `tableId ==` plus `status ==` — is
+   equality-only and needs no composite index; Firestore serves it by
+   merging single-field indexes.) These two likely mean restaurant-tier KDS
+   and Android bank auto-match have never run against production, or are
+   failing silently. Worth fixing in its own change: add both indexes to
+   `firestore.indexes.json` and deploy.
 5. Only once the APK has had time to reach most devices, deploy the
    escalation function and the (regenerated) indexes:
    `firebase deploy --only functions:escalateUnconfirmedOrders,firestore:indexes`
