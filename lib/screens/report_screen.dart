@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/shop_operation.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -50,7 +51,8 @@ class _ReportScreenState extends State<ReportScreen>
     final now = DateTime.now();
     final eod = DateTime(now.year, now.month, now.day, 23, 59, 59);
     return switch (idx) {
-      0 => DateTimeRange(start: DateTime(now.year, now.month, now.day), end: eod),
+      0 =>
+        DateTimeRange(start: DateTime(now.year, now.month, now.day), end: eod),
       1 => DateTimeRange(start: DateTime(now.year, now.month, 1), end: eod),
       2 => () {
           final first = DateTime(now.year, now.month - 1, 1);
@@ -58,7 +60,9 @@ class _ReportScreenState extends State<ReportScreen>
           return DateTimeRange(start: first, end: last);
         }(),
       3 => DateTimeRange(start: DateTime(now.year, 1, 1), end: eod),
-      _ => _customRange ?? DateTimeRange(start: DateTime(now.year, now.month, now.day), end: eod),
+      _ => _customRange ??
+          DateTimeRange(
+              start: DateTime(now.year, now.month, now.day), end: eod),
     };
   }
 
@@ -83,7 +87,8 @@ class _ReportScreenState extends State<ReportScreen>
     if (picked != null && mounted) {
       setState(() => _customRange = DateTimeRange(
             start: picked.start,
-            end: DateTime(picked.end.year, picked.end.month, picked.end.day, 23, 59, 59),
+            end: DateTime(
+                picked.end.year, picked.end.month, picked.end.day, 23, 59, 59),
           ));
     }
   }
@@ -93,7 +98,8 @@ class _ReportScreenState extends State<ReportScreen>
     final range = _rangeFor(tabIdx);
     final title = _titleFor(tabIdx);
     final info = await SettingsService.getShopInfo();
-    final allSales = await SaleService.watchByRange(range.start, range.end).first;
+    final allSales =
+        await SaleService.watchByRange(range.start, range.end).first;
     final active = allSales.where((s) => !s.isRefunded).toList();
     final refunded = allSales.where((s) => s.isRefunded).toList();
 
@@ -101,8 +107,8 @@ class _ReportScreenState extends State<ReportScreen>
     final grossRevenue = allSales.fold<double>(0, (a, s) => a + s.total);
     final refundTotal = refunded.fold<double>(0, (a, s) => a + s.total);
     final netRevenue = grossRevenue - refundTotal;
-    final cogs = active.fold<double>(
-        0, (a, s) => a + s.items.fold(0, (b, i) => b + i.costPrice * i.quantity));
+    final cogs = active.fold<double>(0,
+        (a, s) => a + s.items.fold(0, (b, i) => b + i.costPrice * i.quantity));
     final grossProfit = netRevenue - cogs;
     final margin = netRevenue > 0 ? grossProfit / netRevenue * 100 : 0.0;
     final avgPerBill = active.isNotEmpty ? netRevenue / active.length : 0.0;
@@ -116,13 +122,15 @@ class _ReportScreenState extends State<ReportScreen>
     final productMap = <String, _ProductStat>{};
     for (final s in active) {
       for (final item in s.items) {
-        final stat = productMap.putIfAbsent(item.productName, () => _ProductStat(item.productName));
+        final stat = productMap.putIfAbsent(
+            item.productName, () => _ProductStat(item.productName));
         stat.qty += item.quantity;
         stat.revenue += item.subtotal;
         stat.profit += item.profit;
       }
     }
-    final top10 = productMap.values.toList()..sort((a, b) => b.revenue.compareTo(a.revenue));
+    final top10 = productMap.values.toList()
+      ..sort((a, b) => b.revenue.compareTo(a.revenue));
     if (top10.length > 10) top10.length = 10;
 
     final b = NumberFormat('#,##0.00');
@@ -140,7 +148,8 @@ class _ReportScreenState extends State<ReportScreen>
     const tealLight = PdfColor.fromInt(0xFFF0FDFA);
 
     // ── Style helpers ──
-    pw.TextStyle ts(double size, {bool bold = false, PdfColor? color}) => pw.TextStyle(
+    pw.TextStyle ts(double size, {bool bold = false, PdfColor? color}) =>
+        pw.TextStyle(
           font: bold ? fontBold : fontRegular,
           fontSize: size,
           color: color,
@@ -159,9 +168,10 @@ class _ReportScreenState extends State<ReportScreen>
 
     // P&L row: label left, value right
     pw.Widget plRow(String label, String value,
-        {bool bold = false, PdfColor? color, bool indent = false}) =>
+            {bool bold = false, PdfColor? color, bool indent = false}) =>
         pw.Padding(
-          padding: pw.EdgeInsets.symmetric(vertical: 2, horizontal: indent ? 12 : 0),
+          padding:
+              pw.EdgeInsets.symmetric(vertical: 2, horizontal: indent ? 12 : 0),
           child: pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
@@ -180,12 +190,19 @@ class _ReportScreenState extends State<ReportScreen>
 
     // Thick double-line divider for totals
     pw.Widget totalLine() => pw.Column(children: [
-          pw.Container(height: 0.5, color: PdfColors.grey600, margin: const pw.EdgeInsets.only(top: 3)),
-          pw.Container(height: 2, color: PdfColors.grey600, margin: const pw.EdgeInsets.only(top: 1, bottom: 3)),
+          pw.Container(
+              height: 0.5,
+              color: PdfColors.grey600,
+              margin: const pw.EdgeInsets.only(top: 3)),
+          pw.Container(
+              height: 2,
+              color: PdfColors.grey600,
+              margin: const pw.EdgeInsets.only(top: 1, bottom: 3)),
         ]);
 
     // Metric box
-    pw.Widget metricBox(String label, String value, {PdfColor? bg, PdfColor? fg}) =>
+    pw.Widget metricBox(String label, String value,
+            {PdfColor? bg, PdfColor? fg}) =>
         pw.Expanded(
           child: pw.Container(
             margin: const pw.EdgeInsets.symmetric(horizontal: 3),
@@ -207,18 +224,20 @@ class _ReportScreenState extends State<ReportScreen>
         );
 
     // Table header cell
-    pw.Widget th(String text, {pw.CrossAxisAlignment align = pw.CrossAxisAlignment.start}) =>
+    pw.Widget th(String text,
+            {pw.CrossAxisAlignment align = pw.CrossAxisAlignment.start}) =>
         pw.Container(
           padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 5),
           color: slate,
-          child: pw.Text(text, style: ts(7.5, bold: true, color: PdfColors.white)),
+          child:
+              pw.Text(text, style: ts(7.5, bold: true, color: PdfColors.white)),
         );
 
     // Table data cell
     pw.Widget td(String text,
-        {bool bold = false,
-        PdfColor? color,
-        pw.TextAlign align = pw.TextAlign.left}) =>
+            {bool bold = false,
+            PdfColor? color,
+            pw.TextAlign align = pw.TextAlign.left}) =>
         pw.Padding(
           padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3.5),
           child: pw.Text(text,
@@ -236,33 +255,39 @@ class _ReportScreenState extends State<ReportScreen>
           // ── Top banner ──
           pw.Container(
             width: double.infinity,
-            padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding:
+                const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: const pw.BoxDecoration(color: ruby),
             child: pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-                  pw.Text(info['name'] ?? 'ร้านของชำ',
-                      style: ts(15, bold: true, color: PdfColors.white)),
-                  if ((info['taxId'] ?? '').isNotEmpty)
-                    pw.Text('เลขผู้เสียภาษี: ${info['taxId']}',
-                        style: ts(8, color: PdfColor.fromInt(0xFFFFCDD2))),
-                  if ((info['address'] ?? '').isNotEmpty)
-                    pw.Text(info['address']!,
-                        style: ts(8, color: PdfColor.fromInt(0xFFFFCDD2))),
-                ]),
-                pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
-                  pw.Text('รายงานการขาย',
-                      style: ts(11, bold: true, color: PdfColors.white)),
-                  pw.Text(title,
-                      style: ts(9, color: PdfColor.fromInt(0xFFFFCDD2))),
-                  pw.Text(
-                      '${_dayFmt.format(range.start)} – ${_dayFmt.format(range.end)}',
-                      style: ts(8, color: PdfColor.fromInt(0xFFFFCDD2))),
-                  pw.Text('พิมพ์: ${DateFormat('dd/MM/yyyy HH:mm').format(now)}',
-                      style: ts(7, color: PdfColor.fromInt(0xFFFFCDD2))),
-                ]),
+                pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(info['name'] ?? 'ร้านของชำ',
+                          style: ts(15, bold: true, color: PdfColors.white)),
+                      if ((info['taxId'] ?? '').isNotEmpty)
+                        pw.Text('เลขผู้เสียภาษี: ${info['taxId']}',
+                            style: ts(8, color: PdfColor.fromInt(0xFFFFCDD2))),
+                      if ((info['address'] ?? '').isNotEmpty)
+                        pw.Text(info['address']!,
+                            style: ts(8, color: PdfColor.fromInt(0xFFFFCDD2))),
+                    ]),
+                pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Text('รายงานการขาย',
+                          style: ts(11, bold: true, color: PdfColors.white)),
+                      pw.Text(title,
+                          style: ts(9, color: PdfColor.fromInt(0xFFFFCDD2))),
+                      pw.Text(
+                          '${_dayFmt.format(range.start)} – ${_dayFmt.format(range.end)}',
+                          style: ts(8, color: PdfColor.fromInt(0xFFFFCDD2))),
+                      pw.Text(
+                          'พิมพ์: ${DateFormat('dd/MM/yyyy HH:mm').format(now)}',
+                          style: ts(7, color: PdfColor.fromInt(0xFFFFCDD2))),
+                    ]),
               ],
             ),
           ),
@@ -293,18 +318,17 @@ class _ReportScreenState extends State<ReportScreen>
             metricBox('ต้นทุนสินค้าขาย', '฿${b.format(cogs)}',
                 bg: const PdfColor.fromInt(0xFFFFF7ED),
                 fg: const PdfColor.fromInt(0xFFC2410C)),
-            metricBox(
-                'กำไรขั้นต้น  ${margin.toStringAsFixed(1)}%',
+            metricBox('กำไรขั้นต้น  ${margin.toStringAsFixed(1)}%',
                 '฿${b.format(grossProfit)}',
-                bg: tealLight,
-                fg: teal),
+                bg: tealLight, fg: teal),
             metricBox('จำนวนบิล', '${active.length} บิล',
                 bg: const PdfColor.fromInt(0xFFF8FAFC), fg: slate),
           ]),
           pw.SizedBox(height: 4),
           pw.Row(children: [
             metricBox('ค่าเฉลี่ย/บิล', '฿${b.format(avgPerBill)}'),
-            metricBox('คืนเงิน', '${refunded.length} บิล  (฿${b.format(refundTotal)})',
+            metricBox('คืนเงิน',
+                '${refunded.length} บิล  (฿${b.format(refundTotal)})',
                 fg: const PdfColor.fromInt(0xFFDC2626)),
             metricBox('รายได้ก่อนหักคืน', '฿${b.format(grossRevenue)}'),
             pw.Expanded(child: pw.SizedBox()),
@@ -319,7 +343,8 @@ class _ReportScreenState extends State<ReportScreen>
               borderRadius: pw.BorderRadius.circular(4),
             ),
             child: pw.Column(children: [
-              plRow('รายได้จากการขายทั้งหมด  (Gross Revenue)', '฿${b.format(grossRevenue)}'),
+              plRow('รายได้จากการขายทั้งหมด  (Gross Revenue)',
+                  '฿${b.format(grossRevenue)}'),
               if (refunded.isNotEmpty)
                 plRow('  (-) คืนเงิน  (Refunds)  ${refunded.length} บิล',
                     '(฿${b.format(refundTotal)})',
@@ -335,7 +360,8 @@ class _ReportScreenState extends State<ReportScreen>
                   color: grossProfit >= 0
                       ? const PdfColor.fromInt(0xFF0F766E)
                       : const PdfColor.fromInt(0xFFDC2626)),
-              plRow('อัตรากำไรขั้นต้น  (Gross Margin)', '${margin.toStringAsFixed(2)}%',
+              plRow('อัตรากำไรขั้นต้น  (Gross Margin)',
+                  '${margin.toStringAsFixed(2)}%',
                   bold: true,
                   color: grossProfit >= 0
                       ? const PdfColor.fromInt(0xFF0F766E)
@@ -343,7 +369,8 @@ class _ReportScreenState extends State<ReportScreen>
               thinLine(),
               plRow('จำนวนบิลทั้งหมด',
                   '${allSales.length} บิล  (ปกติ ${active.length}, คืนเงิน ${refunded.length})'),
-              plRow('มูลค่าเฉลี่ยต่อบิล  (Avg. Ticket Size)', '฿${b.format(avgPerBill)}'),
+              plRow('มูลค่าเฉลี่ยต่อบิล  (Avg. Ticket Size)',
+                  '฿${b.format(avgPerBill)}'),
             ]),
           ),
 
@@ -359,7 +386,10 @@ class _ReportScreenState extends State<ReportScreen>
             },
             children: [
               pw.TableRow(children: [
-                th('ช่องทาง'), th('ยอดรวม'), th('สัดส่วน'), th(''),
+                th('ช่องทาง'),
+                th('ยอดรวม'),
+                th('สัดส่วน'),
+                th(''),
               ]),
               ...byMethod.entries.map((e) {
                 final pct = netRevenue > 0 ? e.value / netRevenue : 0.0;
@@ -369,7 +399,8 @@ class _ReportScreenState extends State<ReportScreen>
                   td('฿${b.format(e.value)}', bold: true),
                   td('${(pct * 100).toStringAsFixed(1)}%'),
                   pw.Padding(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+                    padding: const pw.EdgeInsets.symmetric(
+                        horizontal: 5, vertical: 5),
                     child: pw.Stack(children: [
                       pw.Container(height: 8, color: PdfColors.grey100),
                       pw.Container(width: barW, height: 8, color: ruby),
@@ -378,9 +409,13 @@ class _ReportScreenState extends State<ReportScreen>
                 ]);
               }),
               pw.TableRow(
-                decoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFFF1F5F9)),
+                decoration:
+                    const pw.BoxDecoration(color: PdfColor.fromInt(0xFFF1F5F9)),
                 children: [
-                  th('รวม'), th('฿${b.format(netRevenue)}'), th('100%'), pw.SizedBox(),
+                  th('รวม'),
+                  th('฿${b.format(netRevenue)}'),
+                  th('100%'),
+                  pw.SizedBox(),
                 ],
               ),
             ],
@@ -400,20 +435,30 @@ class _ReportScreenState extends State<ReportScreen>
             },
             children: [
               pw.TableRow(children: [
-                th('#'), th('สินค้า'), th('จำนวน'), th('รายได้'), th('กำไร'), th('Margin'),
+                th('#'),
+                th('สินค้า'),
+                th('จำนวน'),
+                th('รายได้'),
+                th('กำไร'),
+                th('Margin'),
               ]),
               ...top10.asMap().entries.map((e) {
                 final m = e.value.revenue > 0
-                    ? e.value.profit / e.value.revenue * 100 : 0.0;
-                final rowBg = e.key.isEven ? PdfColors.white : const PdfColor.fromInt(0xFFF8FAFC);
+                    ? e.value.profit / e.value.revenue * 100
+                    : 0.0;
+                final rowBg = e.key.isEven
+                    ? PdfColors.white
+                    : const PdfColor.fromInt(0xFFF8FAFC);
                 return pw.TableRow(
                   decoration: pw.BoxDecoration(color: rowBg),
                   children: [
                     td('${e.key + 1}', bold: true, color: ruby),
                     td(e.value.name),
                     td('${e.value.qty}', align: pw.TextAlign.right),
-                    td('฿${b.format(e.value.revenue)}', align: pw.TextAlign.right),
-                    td('฿${b.format(e.value.profit)}', align: pw.TextAlign.right,
+                    td('฿${b.format(e.value.revenue)}',
+                        align: pw.TextAlign.right),
+                    td('฿${b.format(e.value.profit)}',
+                        align: pw.TextAlign.right,
                         color: const PdfColor.fromInt(0xFF0F766E)),
                     td('${m.toStringAsFixed(1)}%', align: pw.TextAlign.right),
                   ],
@@ -448,31 +493,44 @@ class _ReportScreenState extends State<ReportScreen>
               ...allSales.asMap().entries.map((entry) {
                 final idx = entry.key;
                 final s = entry.value;
-                final cost = s.items.fold<double>(0, (a, i) => a + i.costPrice * i.quantity);
+                final cost = s.items
+                    .fold<double>(0, (a, i) => a + i.costPrice * i.quantity);
                 final profit = s.isRefunded ? 0.0 : s.total - cost;
                 final isRef = s.isRefunded;
                 final rowBg = isRef
                     ? rubyLight
-                    : idx.isEven ? PdfColors.white : const PdfColor.fromInt(0xFFF8FAFC);
+                    : idx.isEven
+                        ? PdfColors.white
+                        : const PdfColor.fromInt(0xFFF8FAFC);
                 final textColor = isRef ? ruby : PdfColors.black;
                 return pw.TableRow(
                   decoration: pw.BoxDecoration(color: rowBg),
                   children: [
                     td('${idx + 1}', color: PdfColors.grey500),
-                    td(DateFormat('dd/MM/yy HH:mm').format(s.createdAt), color: textColor),
-                    td(isRef
-                        ? 'คืนเงิน${s.refundReason?.isNotEmpty == true ? ": ${s.refundReason}" : ""}'
-                        : (s.customerName ?? '-'),
+                    td(DateFormat('dd/MM/yy HH:mm').format(s.createdAt),
                         color: textColor),
-                    td(isRef ? '-' : (s.isDebt ? 'เชื่อ' : s.paymentMethod.label),
+                    td(
+                        isRef
+                            ? 'คืนเงิน${s.refundReason?.isNotEmpty == true ? ": ${s.refundReason}" : ""}'
+                            : (s.customerName ?? '-'),
                         color: textColor),
-                    td(isRef ? '(฿${b.format(s.total)})' : '฿${b.format(s.total)}',
-                        align: pw.TextAlign.right, color: textColor),
+                    td(
+                        isRef
+                            ? '-'
+                            : (s.isDebt ? 'เชื่อ' : s.paymentMethod.label),
+                        color: textColor),
+                    td(
+                        isRef
+                            ? '(฿${b.format(s.total)})'
+                            : '฿${b.format(s.total)}',
+                        align: pw.TextAlign.right,
+                        color: textColor),
                     td(isRef ? '-' : '฿${b.format(cost)}',
                         align: pw.TextAlign.right, color: textColor),
                     td(isRef ? '-' : '฿${b.format(profit)}',
                         align: pw.TextAlign.right,
-                        color: isRef ? ruby : const PdfColor.fromInt(0xFF0F766E)),
+                        color:
+                            isRef ? ruby : const PdfColor.fromInt(0xFF0F766E)),
                   ],
                 );
               }),
@@ -484,7 +542,8 @@ class _ReportScreenState extends State<ReportScreen>
     );
 
     await Printing.sharePdf(
-        bytes: await pdf.save(), filename: 'report_${title.replaceAll('/', '-')}.pdf');
+        bytes: await pdf.save(),
+        filename: 'report_${title.replaceAll('/', '-')}.pdf');
   }
 
   // ─── Professional CSV ────────────────────────────────────────────
@@ -492,15 +551,16 @@ class _ReportScreenState extends State<ReportScreen>
     final range = _rangeFor(tabIdx);
     final title = _titleFor(tabIdx);
     final info = await SettingsService.getShopInfo();
-    final allSales = await SaleService.watchByRange(range.start, range.end).first;
+    final allSales =
+        await SaleService.watchByRange(range.start, range.end).first;
     final active = allSales.where((s) => !s.isRefunded).toList();
     final refunded = allSales.where((s) => s.isRefunded).toList();
 
     final grossRevenue = allSales.fold<double>(0, (a, s) => a + s.total);
     final refundTotal = refunded.fold<double>(0, (a, s) => a + s.total);
     final netRevenue = grossRevenue - refundTotal;
-    final cogs = active.fold<double>(
-        0, (a, s) => a + s.items.fold(0, (b, i) => b + i.costPrice * i.quantity));
+    final cogs = active.fold<double>(0,
+        (a, s) => a + s.items.fold(0, (b, i) => b + i.costPrice * i.quantity));
     final grossProfit = netRevenue - cogs;
     final margin = netRevenue > 0 ? grossProfit / netRevenue * 100 : 0.0;
 
@@ -530,11 +590,13 @@ class _ReportScreenState extends State<ReportScreen>
     buf.writeln();
 
     buf.writeln('=== รายการขายทั้งหมด ===');
-    buf.writeln('ลำดับ,วันที่,ลูกค้า,ช่องทาง,รายได้,ต้นทุน,กำไร,ส่วนลด,สถานะ,เหตุผลคืนเงิน');
+    buf.writeln(
+        'ลำดับ,วันที่,ลูกค้า,ช่องทาง,รายได้,ต้นทุน,กำไร,ส่วนลด,สถานะ,เหตุผลคืนเงิน');
 
     var i = 1;
     for (final s in allSales) {
-      final cost = s.items.fold<double>(0, (a, item) => a + item.costPrice * item.quantity);
+      final cost = s.items
+          .fold<double>(0, (a, item) => a + item.costPrice * item.quantity);
       final profit = s.isRefunded ? 0.0 : s.total - cost;
       final method = s.isDebt ? 'เชื่อ' : s.paymentMethod.label;
       final status = s.isRefunded ? 'คืนเงิน' : 'ปกติ';
@@ -586,9 +648,8 @@ class _ReportScreenState extends State<ReportScreen>
             centerTitle: true,
             actions: [
               IconButton(
-                icon: Icon(advanced
-                    ? Icons.table_chart_outlined
-                    : Icons.lock_outline),
+                icon: Icon(
+                    advanced ? Icons.table_chart_outlined : Icons.lock_outline),
                 tooltip: 'Export CSV',
                 onPressed: () => exportOr(() => _exportCsv(_tab.index)),
               ),
@@ -666,8 +727,12 @@ class _SalesReport extends StatelessWidget {
     return StreamBuilder<List<Sale>>(
       stream: SaleService.watchByRange(range.start, range.end),
       builder: (ctx, snap) {
-        if (snap.hasError) return const Center(child: Text('โหลดข้อมูลไม่สำเร็จ'));
-        if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+        if (snap.hasError) {
+          return const Center(child: Text('โหลดข้อมูลไม่สำเร็จ'));
+        }
+        if (!snap.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
         final sales = snap.data!;
         final active = sales.where((s) => !s.isRefunded).toList();
@@ -677,10 +742,14 @@ class _SalesReport extends StatelessWidget {
         final refundTotal = refunded.fold<double>(0, (a, s) => a + s.total);
         final netRevenue = grossRevenue - refundTotal;
         final cogs = active.fold<double>(
-            0, (a, s) => a + s.items.fold(0, (b, i) => b + i.costPrice * i.quantity));
+            0,
+            (a, s) =>
+                a + s.items.fold(0, (b, i) => b + i.costPrice * i.quantity));
         final grossProfit = netRevenue - cogs;
         final margin = netRevenue > 0 ? grossProfit / netRevenue * 100 : 0.0;
-        final debtTotal = active.where((s) => s.isDebt).fold<double>(0, (a, s) => a + s.total);
+        final debtTotal = active
+            .where((s) => s.isDebt)
+            .fold<double>(0, (a, s) => a + s.total);
 
         return Column(
           children: [
@@ -690,14 +759,23 @@ class _SalesReport extends StatelessWidget {
               child: Column(
                 children: [
                   Row(children: [
-                    _Card(label: 'รายได้สุทธิ', value: '฿${baht.format(netRevenue)}',
-                        icon: Icons.attach_money, color: Colors.green),
+                    _Card(
+                        label: 'รายได้สุทธิ',
+                        value: '฿${baht.format(netRevenue)}',
+                        icon: Icons.attach_money,
+                        color: Colors.green),
                     const SizedBox(width: 8),
-                    _Card(label: 'จำนวนบิล', value: '${active.length} บิล',
-                        icon: Icons.receipt_long, color: cs.primary),
+                    _Card(
+                        label: 'จำนวนบิล',
+                        value: '${active.length} บิล',
+                        icon: Icons.receipt_long,
+                        color: cs.primary),
                     const SizedBox(width: 8),
-                    _Card(label: 'ยอดเชื่อ', value: '฿${baht.format(debtTotal)}',
-                        icon: Icons.person_outline, color: Colors.orange),
+                    _Card(
+                        label: 'ยอดเชื่อ',
+                        value: '฿${baht.format(debtTotal)}',
+                        icon: Icons.person_outline,
+                        color: Colors.orange),
                   ]),
                   const SizedBox(height: 8),
                   // P&L bar — advanced (Full/Restaurant). Basic tiers see
@@ -705,18 +783,26 @@ class _SalesReport extends StatelessWidget {
                   if (advanced)
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
                       decoration: BoxDecoration(
                         color: Colors.teal.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.teal.withValues(alpha: 0.25)),
+                        border: Border.all(
+                            color: Colors.teal.withValues(alpha: 0.25)),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _PLItem(label: 'รายได้สุทธิ', value: '฿${baht.format(netRevenue)}', color: Colors.green),
+                          _PLItem(
+                              label: 'รายได้สุทธิ',
+                              value: '฿${baht.format(netRevenue)}',
+                              color: Colors.green),
                           const Text('−', style: TextStyle(color: Colors.grey)),
-                          _PLItem(label: 'ต้นทุน', value: '฿${baht.format(cogs)}', color: Colors.redAccent),
+                          _PLItem(
+                              label: 'ต้นทุน',
+                              value: '฿${baht.format(cogs)}',
+                              color: Colors.redAccent),
                           const Text('=', style: TextStyle(color: Colors.grey)),
                           _PLItem(
                             label: 'กำไรขั้นต้น ${margin.toStringAsFixed(1)}%',
@@ -752,8 +838,7 @@ class _SalesReport extends StatelessWidget {
                                 'กำไร–ต้นทุน + ส่งออก PDF/CSV — อยู่ในแผน Full ขึ้นไป',
                                 style: TextStyle(
                                     fontSize: 12,
-                                    color: cs.onSurface
-                                        .withValues(alpha: 0.7)),
+                                    color: cs.onSurface.withValues(alpha: 0.7)),
                               ),
                             ),
                             Text('อัพเกรด',
@@ -770,15 +855,18 @@ class _SalesReport extends StatelessWidget {
                       padding: const EdgeInsets.only(top: 6),
                       child: Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: Colors.red.withValues(alpha: 0.06),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
+                          border: Border.all(
+                              color: Colors.red.withValues(alpha: 0.2)),
                         ),
                         child: Text(
                           'คืนเงิน ${refunded.length} บิล รวม ฿${baht.format(refundTotal)}',
-                          style: const TextStyle(fontSize: 12, color: Colors.red),
+                          style:
+                              const TextStyle(fontSize: 12, color: Colors.red),
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -804,33 +892,48 @@ class _SalesReport extends StatelessWidget {
                                     ? Colors.orange.shade100
                                     : Colors.green.shade100,
                             child: Icon(
-                              s.isRefunded ? Icons.undo : s.isDebt ? Icons.person_outline : Icons.check,
-                              color: s.isRefunded ? Colors.red : s.isDebt ? Colors.orange : Colors.green,
+                              s.isRefunded
+                                  ? Icons.undo
+                                  : s.isDebt
+                                      ? Icons.person_outline
+                                      : Icons.check,
+                              color: s.isRefunded
+                                  ? Colors.red
+                                  : s.isDebt
+                                      ? Colors.orange
+                                      : Colors.green,
                             ),
                           ),
                           title: Row(children: [
                             Expanded(
                               child: Text(
-                                s.isDebt ? 'เชื่อ: ${s.customerName}' : s.paymentMethod.label,
+                                s.isDebt
+                                    ? 'เชื่อ: ${s.customerName}'
+                                    : s.paymentMethod.label,
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
-                                  decoration: s.isRefunded ? TextDecoration.lineThrough : null,
+                                  decoration: s.isRefunded
+                                      ? TextDecoration.lineThrough
+                                      : null,
                                   color: s.isRefunded ? Colors.grey : null,
                                 ),
                               ),
                             ),
                             if (s.isRefunded)
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: Colors.red.shade100,
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: const Text('คืนเงินแล้ว',
-                                    style: TextStyle(fontSize: 10, color: Colors.red)),
+                                    style: TextStyle(
+                                        fontSize: 10, color: Colors.red)),
                               ),
                           ]),
-                          subtitle: Text('${s.items.length} รายการ · ${dateFormat.format(s.createdAt)}'),
+                          subtitle: Text(
+                              '${s.items.length} รายการ · ${dateFormat.format(s.createdAt)}'),
                           trailing: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.end,
@@ -839,10 +942,13 @@ class _SalesReport extends StatelessWidget {
                                   style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       color: s.isRefunded ? Colors.grey : null,
-                                      decoration: s.isRefunded ? TextDecoration.lineThrough : null)),
+                                      decoration: s.isRefunded
+                                          ? TextDecoration.lineThrough
+                                          : null)),
                               if (s.discount > 0)
                                 Text('ลด ฿${baht.format(s.discount)}',
-                                    style: const TextStyle(fontSize: 11, color: Colors.green)),
+                                    style: const TextStyle(
+                                        fontSize: 11, color: Colors.green)),
                             ],
                           ),
                           onTap: () => _showDetail(ctx, s),
@@ -867,14 +973,19 @@ class _SalesReport extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('รายละเอียดบิล',
-                style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                style: Theme.of(ctx)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             ...sale.items.map((item) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 2),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(child: Text('${item.productName} × ${item.quantity}')),
+                      Expanded(
+                          child:
+                              Text('${item.productName} × ${item.quantity}')),
                       Text('฿${bahtFmt.format(item.subtotal)}'),
                     ],
                   ),
@@ -882,7 +993,8 @@ class _SalesReport extends StatelessWidget {
             const Divider(),
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               const Text('รวม', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('฿${bahtFmt.format(sale.total)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text('฿${bahtFmt.format(sale.total)}',
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
             ]),
             if (sale.staffName != null) ...[
               const SizedBox(height: 4),
@@ -910,7 +1022,8 @@ class _SalesReport extends StatelessWidget {
                   onPressed: () async {
                     Navigator.pop(ctx);
                     final shopName = await SettingsService.getShopName();
-                    await ReceiptGenerator.printReceipt(sale, shopName: shopName);
+                    await ReceiptGenerator.printReceipt(sale,
+                        shopName: shopName);
                   },
                   icon: const Icon(Icons.receipt_long_outlined),
                   label: const Text('ใบเสร็จ'),
@@ -971,7 +1084,9 @@ class _RefundButton extends StatelessWidget {
               ],
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('ยกเลิก')),
+              TextButton(
+                  onPressed: () => Navigator.pop(c, false),
+                  child: const Text('ยกเลิก')),
               FilledButton(
                 onPressed: () => Navigator.pop(c, true),
                 style: FilledButton.styleFrom(backgroundColor: Colors.red),
@@ -981,7 +1096,12 @@ class _RefundButton extends StatelessWidget {
           ),
         );
         if (confirm == true) {
-          await SaleService.refundSale(sale, reason: reasonCtrl.text.trim());
+          if (!context.mounted) return;
+          await performShopOperation(
+              context,
+              () =>
+                  SaleService.refundSale(sale, reason: reasonCtrl.text.trim()),
+              success: 'บันทึกคืนเงินแล้ว');
         }
         reasonCtrl.dispose();
       },
@@ -996,7 +1116,11 @@ class _Card extends StatelessWidget {
   final String label, value;
   final IconData icon;
   final Color color;
-  const _Card({required this.label, required this.value, required this.icon, required this.color});
+  const _Card(
+      {required this.label,
+      required this.value,
+      required this.icon,
+      required this.color});
 
   @override
   Widget build(BuildContext context) => Expanded(
@@ -1011,9 +1135,12 @@ class _Card extends StatelessWidget {
             Icon(icon, color: color, size: 20),
             const SizedBox(height: 4),
             Text(value,
-                style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 13),
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, color: color, fontSize: 13),
                 textAlign: TextAlign.center),
-            Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey), textAlign: TextAlign.center),
+            Text(label,
+                style: const TextStyle(fontSize: 10, color: Colors.grey),
+                textAlign: TextAlign.center),
           ]),
         ),
       );
@@ -1023,7 +1150,11 @@ class _PLItem extends StatelessWidget {
   final String label, value;
   final Color color;
   final bool bold;
-  const _PLItem({required this.label, required this.value, required this.color, this.bold = false});
+  const _PLItem(
+      {required this.label,
+      required this.value,
+      required this.color,
+      this.bold = false});
 
   @override
   Widget build(BuildContext context) => Column(

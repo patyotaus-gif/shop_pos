@@ -10,6 +10,7 @@ import '../services/settings_service.dart';
 import '../services/shop_service.dart';
 import 'cash_session_screen.dart';
 import 'marketplace_home_screen.dart';
+import '../widgets/shop_setup_checklist.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -24,12 +25,14 @@ class DashboardScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('ภาพรวม'),
         centerTitle: true,
+        actions: [IconButton(tooltip:'คู่มือเริ่มตั้งค่าร้าน',icon:const Icon(Icons.help_outline),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:const Text('เริ่มตั้งค่าร้าน')),body:const SingleChildScrollView(child:ShopSetupChecklist(alwaysShow:true))))))],
       ),
       body: RefreshIndicator(
         onRefresh: () async {},
         child: ListView(
           padding: const EdgeInsets.all(12),
           children: [
+            const ShopSetupChecklist(),
             // Today summary
             StreamBuilder<List<Sale>>(
               stream: SaleService.watchToday(),

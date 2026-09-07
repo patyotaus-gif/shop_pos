@@ -891,49 +891,15 @@ exports.stripeWebhook = onRequest(
 exports.createRefund = onCall(
   { secrets: [stripeSecretKey] },
   async (request) => {
-    const { shopId, saleId, reason } = request.data;
-    if (!shopId || !saleId) throw new Error("shopId and saleId required");
-
-    const db = admin.firestore();
-    const saleRef = db.collection("shops").doc(shopId).collection("sales").doc(saleId);
-    const saleDoc = await saleRef.get();
-    if (!saleDoc.exists) throw new Error("Sale not found");
-
-    const saleData = saleDoc.data();
-    if (saleData.isRefunded) throw new Error("Already refunded");
-
-    let stripeRefundId = null;
-    if (saleData.stripePaymentIntentId) {
-      const Stripe = require("stripe");
-      const stripe = Stripe(stripeSecretKey.value());
-      const refund = await stripe.refunds.create({
-        payment_intent: saleData.stripePaymentIntentId,
-        reason: "requested_by_customer",
-      });
-      stripeRefundId = refund.id;
+    const { shopId, saleId, reason } = request.data || {};
+    if (typeof shopId !== 'string' || typeof saleId !== 'string' || !shopId || !saleId || shopId.includes('/') || saleId.includes('/')) {
+      throw new HttpsError('invalid-argument', 'shopId and saleId required');
     }
-
-    const batch = db.batch();
-    batch.update(saleRef, {
-      isRefunded: true,
-      refundedAt: admin.firestore.FieldValue.serverTimestamp(),
-      refundReason: reason || "",
-      stripeRefundId,
-    });
-
-    for (const item of saleData.items) {
-      const productRef = db.collection("shops").doc(shopId).collection("products").doc(item.productId);
-      batch.update(productRef, { stock: admin.firestore.FieldValue.increment(item.quantity) });
-    }
-
-    if (saleData.isDebt) {
-      const debtSnap = await db.collection("shops").doc(shopId).collection("debts")
-        .where("saleId", "==", saleId).limit(1).get();
-      for (const doc of debtSnap.docs) batch.delete(doc.reference);
-    }
-
-    await batch.commit();
-    return { success: true, stripeRefundId };
+    if (!request.auth || request.auth.uid !== shopId) throw new HttpsError('permission-denied', 'Shop owner required');
+    const { refundSale } = require('./refund');
+    const Stripe = require('stripe');
+    return refundSale({db:admin.firestore(),stripe:Stripe(stripeSecretKey.value()),shopId,saleId,
+      reason:typeof reason==='string' ? reason.slice(0,500) : '',FieldValue:admin.firestore.FieldValue});
   }
 );
 
@@ -2566,6 +2532,7 @@ exports.createTableOrder = onRequest(
           return;
         }
         priced.push({
+          id: require('node:crypto').randomUUID(),
           productId: it.productId,
           productName: line.productName,
           price: line.unitPrice,

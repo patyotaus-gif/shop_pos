@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shop_pos/widgets/side_navigation_shell.dart';
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
   Future<void> openShell(WidgetTester tester, Size size,
       {double textScale = 1}) async {
     tester.view.physicalSize = size;
@@ -19,6 +21,22 @@ void main() {
       home: const _ShellHarness(),
     ));
   }
+
+  testWidgets('collapsing the menu preserves the page and saves the preference',
+      (tester) async {
+    await openShell(tester, const Size(1200, 900));
+    await tester.tap(find.byKey(const ValueKey('add-item')));
+    await tester.pump();
+    final before = tester.getTopLeft(find.byKey(const ValueKey('add-item'))).dx;
+    await tester.tap(find.byKey(const ValueKey('toggle-sidebar')));
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(find.byKey(const ValueKey('add-item'))).dx,
+        lessThan(before));
+    expect(find.text('สินค้าในตะกร้า 1'), findsOneWidget);
+    expect((await SharedPreferences.getInstance()).getBool('sidebar-collapsed'),
+        isTrue);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('switching pages preserves the active cart state',
       (tester) async {

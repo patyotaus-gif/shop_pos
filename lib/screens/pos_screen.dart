@@ -22,6 +22,8 @@ import '../services/shop_service.dart';
 import '../services/staff_service.dart';
 import '../utils/receipt_generator.dart';
 import '../widgets/payment_sheet.dart';
+import '../widgets/shop_operation.dart';
+import '../utils/operation_error.dart';
 import '../widgets/product_image.dart';
 
 class PosScreen extends StatefulWidget {
@@ -35,6 +37,9 @@ class _PosScreenState extends State<PosScreen> {
   final _baht = NumberFormat('#,##0.00', 'th_TH');
   final List<CartItem> _cart = [];
   double _discount = 0;
+  bool _checkoutBusy = false;
+  bool _checkingPending = true;
+  Sale? _pendingSale;
   PaymentMethod _paymentMethod = PaymentMethod.cash;
   String _selectedCategory = 'ทั้งหมด';
 
@@ -53,6 +58,7 @@ class _PosScreenState extends State<PosScreen> {
   void initState() {
     super.initState();
     _loadShopContext();
+    _loadPending();
   }
 
   Future<void> _loadShopContext() async {
@@ -117,8 +123,7 @@ class _PosScreenState extends State<PosScreen> {
       setState(() => _loyaltyCustomer = customer);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(
-                'ลูกค้า ${customer.name} · ${customer.points} แต้ม')),
+            content: Text('ลูกค้า ${customer.name} · ${customer.points} แต้ม')),
       );
     }
   }
@@ -166,70 +171,81 @@ class _PosScreenState extends State<PosScreen> {
     );
   }
 
-
-  Future<void> _checkout({bool isDebt = false}) async {
-    if (_cart.isEmpty) return;
-
-    // ตรวจ stock ก่อน checkout
-    for (final item in _cart) {
-      if (item.product.stock < item.quantity) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(
-                '${item.product.name}: stock ไม่พอ (เหลือ ${item.product.stock} ชิ้น)'),
-            backgroundColor: Colors.red,
-          ));
-        }
-        return;
+  Future<void> _loadPending() async {
+    try {
+      final pending = await SaleService.pendingCheckout();
+      if (mounted) {
+        setState(() {
+          _pendingSale = pending;
+          _checkingPending = false;
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() => _checkingPending = false);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(operationError(error))));
       }
     }
+  }
 
-    String? customerName;
-    if (isDebt) {
-      customerName = await _askCustomerName();
-      if (customerName == null) return;
+  Future<void> _checkout({bool isDebt = false}) async {
+    if (_checkoutBusy ||
+        _checkingPending ||
+        (_cart.isEmpty && _pendingSale == null)) {
+      return;
     }
-    if (!mounted) return;
-
-    double paid = 0.0;
-    PaymentMethod method = _paymentMethod;
-    if (!isDebt) {
-      // Ask for payment method + amount in one sheet, instead of forcing
-      // the cashier to pick a method before they hit "ชำระเงิน".
-      final result = await showPaymentSheet(context, total: _total);
-      if (result == null) return;
-      method = result.method;
-      paid = result.paid;
-      setState(() => _paymentMethod = method);
-    }
-
+    setState(() => _checkoutBusy = true);
     try {
-      final sale = await SaleService.checkout(
-        cart: _cart,
-        paid: paid,
-        discount: _discount,
-        isDebt: isDebt,
-        customerName: customerName,
-        paymentMethod: method,
-        staffName: _activeStaffName,
-        loyaltyCustomerId: _loyaltyCustomer?.id,
-      );
-
+      final retry = _pendingSale != null;
+      String? customerName;
+      double paid = 0;
+      var method = _paymentMethod;
+      if (!retry) {
+        if (isDebt) {
+          customerName = await _askCustomerName();
+          if (customerName == null || !mounted) return;
+        } else {
+          final result = await showPaymentSheet(context, total: _total);
+          if (result == null || !mounted) return;
+          method = result.method;
+          paid = result.paid;
+        }
+      }
+      if (!mounted) return;
+      final frozenCart = List<CartItem>.unmodifiable(_cart);
+      final sale = await runShopOperation(
+          context,
+          () => retry
+              ? SaleService.resumeCheckout()
+              : SaleService.checkout(
+                  cart: frozenCart,
+                  paid: paid,
+                  discount: _discount,
+                  isDebt: isDebt,
+                  customerName: customerName,
+                  paymentMethod: method,
+                  staffName: _activeStaffName,
+                  loyaltyCustomerId: _loyaltyCustomer?.id));
+      if (!mounted) return;
       setState(() {
         _cart.clear();
         _discount = 0;
         _loyaltyCustomer = null;
+        _pendingSale = null;
+        _paymentMethod = method;
       });
-
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('บันทึกการขายแล้ว')));
+      _showReceiptDialog(sale);
+    } catch (error) {
       if (mounted) {
-        _showReceiptDialog(sale);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(operationError(error))));
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('เกิดข้อผิดพลาด: $e')),
-        );
-      }
+    } finally {
+      await _loadPending();
+      if (mounted) setState(() => _checkoutBusy = false);
     }
   }
 
@@ -248,7 +264,8 @@ class _PosScreenState extends State<PosScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ยกเลิก')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('ยกเลิก')),
           FilledButton(
             onPressed: () {
               if (ctrl.text.trim().isEmpty) return;
@@ -272,14 +289,16 @@ class _PosScreenState extends State<PosScreen> {
             const Icon(Icons.check_circle, color: Colors.green, size: 64),
             const SizedBox(height: 8),
             Text('ยอดรวม ฿${_baht.format(sale.total)}',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             if (!sale.isDebt)
               Text('เงินทอน ฿${_baht.format(sale.change)}',
                   style: const TextStyle(fontSize: 16)),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ปิด')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('ปิด')),
           FilledButton.icon(
             onPressed: () async {
               Navigator.pop(ctx);
@@ -295,7 +314,8 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   Future<void> _setDiscount() async {
-    final ctrl = TextEditingController(text: _discount > 0 ? _discount.toString() : '');
+    final ctrl =
+        TextEditingController(text: _discount > 0 ? _discount.toString() : '');
     final result = await showDialog<double>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -311,9 +331,12 @@ class _PosScreenState extends State<PosScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, 0.0), child: const Text('ล้างส่วนลด')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, 0.0),
+              child: const Text('ล้างส่วนลด')),
           FilledButton(
-            onPressed: () => Navigator.pop(ctx, double.tryParse(ctrl.text) ?? 0),
+            onPressed: () =>
+                Navigator.pop(ctx, double.tryParse(ctrl.text) ?? 0),
             child: const Text('ตกลง'),
           ),
         ],
@@ -364,8 +387,7 @@ class _PosScreenState extends State<PosScreen> {
             Padding(
               padding: const EdgeInsets.only(right: 4),
               child: ActionChip(
-                avatar:
-                    Icon(Icons.person_outline, size: 18, color: cs.primary),
+                avatar: Icon(Icons.person_outline, size: 18, color: cs.primary),
                 label: Text(_activeStaffName ?? 'เลือกพนักงาน',
                     style: const TextStyle(fontSize: 12)),
                 onPressed: _switchStaff,
@@ -379,204 +401,233 @@ class _PosScreenState extends State<PosScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Product search
+      body: Column(children: [
+        if (_checkingPending) const LinearProgressIndicator(),
+        if (_pendingSale != null)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: _ProductSearch(
-              onSelected: _addToCart,
-              selectedCategory: _selectedCategory,
-            ),
-          ),
-          // Category filter chips
-          StreamBuilder<List<Product>>(
-            stream: ProductService.watchAll(),
-            builder: (ctx, snap) {
-              final cats = ['ทั้งหมด', ...ProductService.categories];
-              return SizedBox(
-                height: 36,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  children: cats.map((cat) {
-                    final sel = cat == _selectedCategory;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(cat, style: const TextStyle(fontSize: 12)),
-                        selected: sel,
-                        onSelected: (_) =>
-                            setState(() => _selectedCategory = cat),
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('มีบิลรอยืนยัน ฿${_pendingSale!.total.toStringAsFixed(2)} อย่ารับเงินซ้ำ ตรวจรายการเดิมก่อนเริ่มบิลใหม่'),
+                    FilledButton.icon(
+                        onPressed: _checkoutBusy ? null : () => _checkout(),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('ตรวจและยืนยันรายการเดิม')),
+                  ])),
+        Expanded(
+            child: AbsorbPointer(
+                absorbing:
+                    _checkoutBusy || _checkingPending || _pendingSale != null,
+                child: Column(
+                  children: [
+                    // Product search
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      child: _ProductSearch(
+                        onSelected: _addToCart,
+                        selectedCategory: _selectedCategory,
                       ),
-                    );
-                  }).toList(),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 4),
-          // Pinned products (always horizontal, always visible)
-          StreamBuilder<List<Product>>(
-            stream: ProductService.watchAll(),
-            builder: (ctx, snap) {
-              final all = snap.data ?? [];
-              final pinned = all
-                  .where((p) =>
-                      p.isPinned &&
-                      (_selectedCategory == 'ทั้งหมด' ||
-                          p.category == _selectedCategory))
-                  .toList();
-              if (pinned.isEmpty) return const SizedBox.shrink();
-              return SizedBox(
-                height: 44,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  itemCount: pinned.length,
-                  itemBuilder: (ctx, i) => Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ActionChip(
-                      label: Text(pinned[i].name,
-                          style: const TextStyle(fontSize: 12)),
-                      avatar: const Icon(Icons.push_pin, size: 14),
-                      onPressed: () => _addToCart(pinned[i]),
                     ),
-                  ),
-                ),
-              );
-            },
-          ),
-          // Category-filtered product picker (only when a specific
-          // category is selected — keeps "ทั้งหมด" view clean and lets
-          // pinned + search carry the load there). Image cards with promo
-          // badges; tap = add 1 to cart (no sheet — cashier speed).
-          if (_selectedCategory != 'ทั้งหมด')
-            StreamBuilder<List<Product>>(
-              stream: ProductService.watchAll(),
-              builder: (ctx, snap) {
-                final all = snap.data ?? [];
-                final inCategory = all
-                    .where((p) => p.category == _selectedCategory)
-                    .toList()
-                  ..sort((a, b) => a.name.compareTo(b.name));
-                if (inCategory.isEmpty) {
-                  return Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Text(
-                      'ยังไม่มีสินค้าในหมวด "$_selectedCategory"',
-                      style: const TextStyle(
-                          color: Colors.grey, fontSize: 12),
+                    // Category filter chips
+                    StreamBuilder<List<Product>>(
+                      stream: ProductService.watchAll(),
+                      builder: (ctx, snap) {
+                        final cats = ['ทั้งหมด', ...ProductService.categories];
+                        return SizedBox(
+                          height: 36,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            children: cats.map((cat) {
+                              final sel = cat == _selectedCategory;
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: ChoiceChip(
+                                  label: Text(cat,
+                                      style: const TextStyle(fontSize: 12)),
+                                  selected: sel,
+                                  onSelected: (_) =>
+                                      setState(() => _selectedCategory = cat),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                }
-                return SizedBox(
-                  height: 132,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 4),
-                    itemCount: inCategory.length,
-                    itemBuilder: (ctx, i) {
-                      final p = inCategory[i];
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: _PickerProductCard(
-                          product: p,
-                          onAdd: p.stock <= 0 ? null : () => _addToCart(p),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
-          // Cart
-          Expanded(
-            child: _cart.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.shopping_cart_outlined,
-                            size: 64, color: cs.onSurface.withValues(alpha: 0.3)),
-                        const SizedBox(height: 8),
-                        Text('ยังไม่มีสินค้าในตะกร้า',
-                            style: TextStyle(color: cs.onSurface.withValues(alpha: 0.4))),
-                      ],
+                    const SizedBox(height: 4),
+                    // Pinned products (always horizontal, always visible)
+                    StreamBuilder<List<Product>>(
+                      stream: ProductService.watchAll(),
+                      builder: (ctx, snap) {
+                        final all = snap.data ?? [];
+                        final pinned = all
+                            .where((p) =>
+                                p.isPinned &&
+                                (_selectedCategory == 'ทั้งหมด' ||
+                                    p.category == _selectedCategory))
+                            .toList();
+                        if (pinned.isEmpty) return const SizedBox.shrink();
+                        return SizedBox(
+                          height: 44,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            itemCount: pinned.length,
+                            itemBuilder: (ctx, i) => Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ActionChip(
+                                label: Text(pinned[i].name,
+                                    style: const TextStyle(fontSize: 12)),
+                                avatar: const Icon(Icons.push_pin, size: 14),
+                                onPressed: () => _addToCart(pinned[i]),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    itemCount: _cart.length,
-                    itemBuilder: (ctx, i) => _CartItemTile(
-                      item: _cart[i],
-                      onRemove: () => _removeFromCart(i),
-                      onQtyChanged: (qty) => _updateQty(i, qty),
+                    // Category-filtered product picker (only when a specific
+                    // category is selected — keeps "ทั้งหมด" view clean and lets
+                    // pinned + search carry the load there). Image cards with promo
+                    // badges; tap = add 1 to cart (no sheet — cashier speed).
+                    if (_selectedCategory != 'ทั้งหมด')
+                      StreamBuilder<List<Product>>(
+                        stream: ProductService.watchAll(),
+                        builder: (ctx, snap) {
+                          final all = snap.data ?? [];
+                          final inCategory = all
+                              .where((p) => p.category == _selectedCategory)
+                              .toList()
+                            ..sort((a, b) => a.name.compareTo(b.name));
+                          if (inCategory.isEmpty) {
+                            return Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Text(
+                                'ยังไม่มีสินค้าในหมวด "$_selectedCategory"',
+                                style: const TextStyle(
+                                    color: Colors.grey, fontSize: 12),
+                              ),
+                            );
+                          }
+                          return SizedBox(
+                            height: 132,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 4),
+                              itemCount: inCategory.length,
+                              itemBuilder: (ctx, i) {
+                                final p = inCategory[i];
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: _PickerProductCard(
+                                    product: p,
+                                    onAdd: p.stock <= 0
+                                        ? null
+                                        : () => _addToCart(p),
+                                  ),
+                                );
+                              },
+                            ),
+                          );
+                        },
+                      ),
+                    // Cart
+                    Expanded(
+                      child: _cart.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.shopping_cart_outlined,
+                                      size: 64,
+                                      color:
+                                          cs.onSurface.withValues(alpha: 0.3)),
+                                  const SizedBox(height: 8),
+                                  Text('ยังไม่มีสินค้าในตะกร้า',
+                                      style: TextStyle(
+                                          color: cs.onSurface
+                                              .withValues(alpha: 0.4))),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
+                              itemCount: _cart.length,
+                              itemBuilder: (ctx, i) => _CartItemTile(
+                                item: _cart[i],
+                                onRemove: () => _removeFromCart(i),
+                                onQtyChanged: (qty) => _updateQty(i, qty),
+                              ),
+                            ),
                     ),
-                  ),
-          ),
-          // Loyalty customer strip (Full/Restaurant). Tap to attach a
-          // customer by phone so the sale accrues points.
-          if (_loyaltyEnabled)
-            Material(
-              color: _loyaltyCustomer != null
-                  ? cs.primary.withValues(alpha: 0.06)
-                  : cs.surface,
-              child: InkWell(
-                onTap: _attachCustomer,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    border: Border(
-                        top: BorderSide(color: cs.outlineVariant)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.card_giftcard_outlined,
-                          size: 18, color: cs.primary),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          _loyaltyCustomer != null
-                              ? '${_loyaltyCustomer!.name} · ${_loyaltyCustomer!.points} แต้ม'
-                              : 'เพิ่มลูกค้าสะสมแต้ม',
-                          style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: _loyaltyCustomer != null
-                                  ? FontWeight.w600
-                                  : FontWeight.normal,
-                              color: cs.onSurface),
+                    // Loyalty customer strip (Full/Restaurant). Tap to attach a
+                    // customer by phone so the sale accrues points.
+                    if (_loyaltyEnabled)
+                      Material(
+                        color: _loyaltyCustomer != null
+                            ? cs.primary.withValues(alpha: 0.06)
+                            : cs.surface,
+                        child: InkWell(
+                          onTap: _attachCustomer,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                  top: BorderSide(color: cs.outlineVariant)),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.card_giftcard_outlined,
+                                    size: 18, color: cs.primary),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    _loyaltyCustomer != null
+                                        ? '${_loyaltyCustomer!.name} · ${_loyaltyCustomer!.points} แต้ม'
+                                        : 'เพิ่มลูกค้าสะสมแต้ม',
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: _loyaltyCustomer != null
+                                            ? FontWeight.w600
+                                            : FontWeight.normal,
+                                        color: cs.onSurface),
+                                  ),
+                                ),
+                                if (_loyaltyCustomer != null)
+                                  GestureDetector(
+                                    onTap: () =>
+                                        setState(() => _loyaltyCustomer = null),
+                                    child: Icon(Icons.close,
+                                        size: 18,
+                                        color: cs.onSurface
+                                            .withValues(alpha: 0.5)),
+                                  )
+                                else
+                                  Icon(Icons.add, size: 18, color: cs.primary),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                      if (_loyaltyCustomer != null)
-                        GestureDetector(
-                          onTap: () =>
-                              setState(() => _loyaltyCustomer = null),
-                          child: Icon(Icons.close,
-                              size: 18,
-                              color: cs.onSurface.withValues(alpha: 0.5)),
-                        )
-                      else
-                        Icon(Icons.add, size: 18, color: cs.primary),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          // Summary & checkout
-          _CheckoutPanel(
-            subtotal: _subtotal,
-            discount: _discount,
-            total: _total,
-            onDiscount: _setDiscount,
-            onCheckout: () => _checkout(),
-            onDebt: () => _checkout(isDebt: true),
-            hasItems: _cart.isNotEmpty,
-          ),
-        ],
-      ),
+                    // Summary & checkout
+                    _CheckoutPanel(
+                      subtotal: _subtotal,
+                      discount: _discount,
+                      total: _total,
+                      onDiscount: _setDiscount,
+                      onCheckout: () => _checkout(),
+                      onDebt: () => _checkout(isDebt: true),
+                      hasItems: _cart.isNotEmpty,
+                    ),
+                  ],
+                ))),
+      ]),
     );
   }
 }
@@ -586,7 +637,8 @@ class _PosScreenState extends State<PosScreen> {
 class _ProductSearch extends StatefulWidget {
   final ValueChanged<Product> onSelected;
   final String selectedCategory;
-  const _ProductSearch({required this.onSelected, this.selectedCategory = 'ทั้งหมด'});
+  const _ProductSearch(
+      {required this.onSelected, this.selectedCategory = 'ทั้งหมด'});
 
   @override
   State<_ProductSearch> createState() => _ProductSearchState();
@@ -674,7 +726,8 @@ class _ProductSearchState extends State<_ProductSearch> {
                             ? '฿${p.effectivePrice.toStringAsFixed(2)} (ปกติ ฿${p.price.toStringAsFixed(2)}) · สต็อก ${p.stock}'
                             : '฿${p.price.toStringAsFixed(2)} · สต็อก ${p.stock}'),
                         trailing: Text(p.barcode,
-                            style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                            style: const TextStyle(
+                                fontSize: 11, color: Colors.grey)),
                         onTap: () {
                           widget.onSelected(p);
                           _ctrl.clear();
@@ -715,8 +768,10 @@ class _CartItemTile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
               )
             : null,
-        title: Text(item.product.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text('฿${baht.format(item.product.effectivePrice)} × ${item.quantity}'),
+        title: Text(item.product.name,
+            style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(
+            '฿${baht.format(item.product.effectivePrice)} × ${item.quantity}'),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -738,12 +793,16 @@ class _CartItemTile extends StatelessWidget {
                       controller: ctrl,
                       keyboardType: TextInputType.number,
                       autofocus: true,
-                      decoration: const InputDecoration(border: OutlineInputBorder()),
+                      decoration:
+                          const InputDecoration(border: OutlineInputBorder()),
                     ),
                     actions: [
-                      TextButton(onPressed: () => Navigator.pop(c), child: const Text('ยกเลิก')),
+                      TextButton(
+                          onPressed: () => Navigator.pop(c),
+                          child: const Text('ยกเลิก')),
                       FilledButton(
-                        onPressed: () => Navigator.pop(c, int.tryParse(ctrl.text)),
+                        onPressed: () =>
+                            Navigator.pop(c, int.tryParse(ctrl.text)),
                         child: const Text('ตกลง'),
                       ),
                     ],
@@ -928,91 +987,93 @@ class _CheckoutPanel extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return SafeArea(
-      top: false,
-      child: Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        top: false,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerHighest,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('รวม'),
-              Text('฿${baht.format(subtotal)}'),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('รวม'),
+                  Text('฿${baht.format(subtotal)}'),
+                ],
+              ),
+              if (discount > 0)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('ส่วนลด', style: TextStyle(color: Colors.green)),
+                    Text('-฿${baht.format(discount)}',
+                        style: const TextStyle(color: Colors.green)),
+                  ],
+                ),
+              const Divider(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('ยอดสุทธิ',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text('฿${baht.format(total)}',
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: cs.primary)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  // All three buttons share the row evenly (1:1:2) so the
+                  // narrowest one ("เชื่อ") still has enough horizontal room
+                  // not to wrap on Android, where the default Thai font is
+                  // wider than iOS's Thonburi/SF.
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: onDiscount,
+                      icon: const Icon(Icons.discount_outlined, size: 18),
+                      label: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text('ส่วนลด', maxLines: 1, softWrap: false),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: hasItems ? onDebt : null,
+                      icon: const Icon(Icons.person_outline, size: 18),
+                      label: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text('เชื่อ', maxLines: 1, softWrap: false),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.orange),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 2,
+                    child: FilledButton.icon(
+                      onPressed: hasItems ? onCheckout : null,
+                      icon: const Icon(Icons.payments_outlined, size: 18),
+                      label: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text('ชำระเงิน', maxLines: 1, softWrap: false),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
-          if (discount > 0)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('ส่วนลด', style: TextStyle(color: Colors.green)),
-                Text('-฿${baht.format(discount)}',
-                    style: const TextStyle(color: Colors.green)),
-              ],
-            ),
-          const Divider(),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('ยอดสุทธิ',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              Text('฿${baht.format(total)}',
-                  style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: cs.primary)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              // All three buttons share the row evenly (1:1:2) so the
-              // narrowest one ("เชื่อ") still has enough horizontal room
-              // not to wrap on Android, where the default Thai font is
-              // wider than iOS's Thonburi/SF.
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onDiscount,
-                  icon: const Icon(Icons.discount_outlined, size: 18),
-                  label: const FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text('ส่วนลด', maxLines: 1, softWrap: false),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: hasItems ? onDebt : null,
-                  icon: const Icon(Icons.person_outline, size: 18),
-                  label: const FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text('เชื่อ', maxLines: 1, softWrap: false),
-                  ),
-                  style: OutlinedButton.styleFrom(foregroundColor: Colors.orange),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                flex: 2,
-                child: FilledButton.icon(
-                  onPressed: hasItems ? onCheckout : null,
-                  icon: const Icon(Icons.payments_outlined, size: 18),
-                  label: const FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text('ชำระเงิน', maxLines: 1, softWrap: false),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ));
+        ));
   }
 }
 
@@ -1044,18 +1105,32 @@ class _ScannerScreenState extends State<_ScannerScreen>
   // Generates a short 880Hz beep WAV in memory — no asset file needed
   static Uint8List _generateBeep() {
     const sampleRate = 44100;
-    const freq = 3500;   // supermarket scanner ~3500Hz
+    const freq = 3500; // supermarket scanner ~3500Hz
     const durationMs = 80;
     const numSamples = sampleRate * durationMs ~/ 1000;
     const dataSize = numSamples * 2;
 
     final buf = ByteData(44 + dataSize);
     for (final e in [
-      [0, 0x52], [1, 0x49], [2, 0x46], [3, 0x46],
-      [8, 0x57], [9, 0x41], [10, 0x56], [11, 0x45],
-      [12, 0x66], [13, 0x6D], [14, 0x74], [15, 0x20],
-      [36, 0x64], [37, 0x61], [38, 0x74], [39, 0x61],
-    ]) { buf.setUint8(e[0], e[1]); }
+      [0, 0x52],
+      [1, 0x49],
+      [2, 0x46],
+      [3, 0x46],
+      [8, 0x57],
+      [9, 0x41],
+      [10, 0x56],
+      [11, 0x45],
+      [12, 0x66],
+      [13, 0x6D],
+      [14, 0x74],
+      [15, 0x20],
+      [36, 0x64],
+      [37, 0x61],
+      [38, 0x74],
+      [39, 0x61],
+    ]) {
+      buf.setUint8(e[0], e[1]);
+    }
     buf.setUint32(4, 36 + dataSize, Endian.little);
     buf.setUint32(16, 16, Endian.little);
     buf.setUint16(20, 1, Endian.little);
@@ -1070,7 +1145,9 @@ class _ScannerScreenState extends State<_ScannerScreen>
       final attack = i < 20 ? i / 20.0 : 1.0;
       final decay = (numSamples - i) / numSamples.toDouble();
       final env = attack * decay;
-      final s = (sin(2 * pi * freq * i / sampleRate) * 0.65 * env * 32767).round().clamp(-32768, 32767);
+      final s = (sin(2 * pi * freq * i / sampleRate) * 0.65 * env * 32767)
+          .round()
+          .clamp(-32768, 32767);
       buf.setInt16(44 + i * 2, s, Endian.little);
     }
     return buf.buffer.asUint8List();
@@ -1201,7 +1278,9 @@ class _ScannerScreenState extends State<_ScannerScreen>
 
           // Top area: nav bar + banner stacked in a Column inside SafeArea
           Positioned(
-            top: 0, left: 0, right: 0,
+            top: 0,
+            left: 0,
+            right: 0,
             child: SafeArea(
               bottom: false,
               child: Column(
@@ -1211,13 +1290,17 @@ class _ScannerScreenState extends State<_ScannerScreen>
                   Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+                        icon: const Icon(Icons.arrow_back_ios_new,
+                            color: Colors.white),
                         onPressed: () => Navigator.pop(context),
                       ),
                       const Expanded(
                         child: Text(
                           'สแกนบาร์โค้ด',
-                          style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w600),
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -1242,20 +1325,26 @@ class _ScannerScreenState extends State<_ScannerScreen>
                             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                             child: Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
                               decoration: BoxDecoration(
                                 color: _bannerSuccess
                                     ? const Color(0xFF16A34A)
                                     : const Color(0xFFDC2626),
                                 borderRadius: BorderRadius.circular(14),
                                 boxShadow: const [
-                                  BoxShadow(color: Colors.black38, blurRadius: 16, offset: Offset(0, 4)),
+                                  BoxShadow(
+                                      color: Colors.black38,
+                                      blurRadius: 16,
+                                      offset: Offset(0, 4)),
                                 ],
                               ),
                               child: Row(
                                 children: [
                                   Icon(
-                                    _bannerSuccess ? Icons.check_circle : Icons.error_outline,
+                                    _bannerSuccess
+                                        ? Icons.check_circle
+                                        : Icons.error_outline,
                                     color: Colors.white,
                                     size: 20,
                                   ),
@@ -1283,17 +1372,23 @@ class _ScannerScreenState extends State<_ScannerScreen>
 
           // Bottom hint
           Positioned(
-            bottom: 72, left: 0, right: 0,
+            bottom: 72,
+            left: 0,
+            right: 0,
             child: Column(children: [
               const Text(
                 'จ่อกล้องที่บาร์โค้ดในกรอบ',
-                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 6),
               Text(
                 'ระบบสแกนอัตโนมัติ ไม่ต้องกดปุ่ม',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12),
+                style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.5), fontSize: 12),
                 textAlign: TextAlign.center,
               ),
             ]),
@@ -1316,7 +1411,9 @@ class _OverlayPainter extends CustomPainter {
       Path.combine(
         PathOperation.difference,
         Path()..addRect(Rect.fromLTWH(0, 0, size.width, size.height)),
-        Path()..addRRect(RRect.fromRectAndRadius(scanRect, const Radius.circular(12))),
+        Path()
+          ..addRRect(
+              RRect.fromRectAndRadius(scanRect, const Radius.circular(12))),
       ),
       Paint()..color = Colors.black.withValues(alpha: 0.65),
     );
@@ -1388,7 +1485,10 @@ class _StaffPickerSheetState extends State<_StaffPickerSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(_selected == null ? 'ใครกำลังขาย?' : 'ใส่ PIN ของ ${_selected!.name}',
+          Text(
+              _selected == null
+                  ? 'ใครกำลังขาย?'
+                  : 'ใส่ PIN ของ ${_selected!.name}',
               style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
           if (_selected == null)

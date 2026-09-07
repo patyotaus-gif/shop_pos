@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../widgets/shop_operation.dart';
+import '../utils/operation_error.dart';
 
 import '../models/restaurant_table.dart';
 import '../models/table_order.dart';
@@ -81,8 +83,7 @@ class _OpenOrderPromptState extends State<_OpenOrderPrompt> {
                 size: 72, color: cs.primary.withValues(alpha: 0.6)),
             const SizedBox(height: 16),
             const Text('โต๊ะนี้ว่าง',
-                style:
-                    TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             Text(
               'เปิดออเดอร์เพื่อเริ่มรับสินค้าจากลูกค้า',
@@ -100,8 +101,8 @@ class _OpenOrderPromptState extends State<_OpenOrderPrompt> {
                   : const Icon(Icons.add),
               label: const Text('เปิดออเดอร์'),
               style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 24, vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
               ),
             ),
           ],
@@ -145,25 +146,32 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
       modifiers: pick.modifiers,
       notes: pick.notes,
     );
-    await TableService.addItem(widget.order.id, item);
+    if (!mounted) return;
+    await performShopOperation(
+        context, () => TableService.addItem(widget.order.id, item),
+        success: 'เพิ่มรายการรอส่งครัวแล้ว');
   }
 
   Future<void> _changeQty(int index, int delta) async {
-    final current = widget.order.items[index].quantity;
-    await TableService.setItemQuantity(
-        widget.order.id, index, current + delta);
+    final item = widget.order.items[index];
+    await performShopOperation(
+        context,
+        () => TableService.setItemQuantity(
+            widget.order.id, item.id, item.quantity + delta,
+            expectedQuantity: item.quantity));
   }
 
   double get _serviceCharge => _serviceChargePercent <= 0
       ? 0
       : widget.order.subtotal * (_serviceChargePercent / 100);
   double get _grandTotal => widget.order.subtotal + _serviceCharge;
-  bool get _hasPendingItems => widget.order.items
-      .any((i) => i.kitchenStatus == KitchenStatus.pending);
+  bool get _hasPendingItems =>
+      widget.order.items.any((i) => i.kitchenStatus == KitchenStatus.pending);
 
   Future<void> _sendToKitchen() async {
     try {
-      await TableService.sendToKitchen(widget.order.id);
+      await runShopOperation(
+          context, () => TableService.sendToKitchen(widget.order.id));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -182,25 +190,32 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
   }
 
   Future<void> _close({int splitCount = 1}) async {
+    if (_closing) return;
     if (widget.order.items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('ยังไม่มีรายการในออเดอร์')),
       );
       return;
     }
-    final result = await showPaymentSheet(context, total: _grandTotal);
-    if (result == null || !mounted) return;
-
+    final confirmedOrder = widget.order;
+    final confirmedServiceCharge = _serviceChargePercent;
     setState(() => _closing = true);
+    final result = await showPaymentSheet(context, total: _grandTotal);
+    if (result == null || !mounted) {
+      if (mounted) setState(() => _closing = false);
+      return;
+    }
     try {
-      await TableService.closeOrder(
-        order: widget.order,
-        paid: result.paid,
-        discount: 0,
-        paymentMethod: result.method,
-        serviceChargePercent: _serviceChargePercent,
-        splitCount: splitCount,
-      );
+      await runShopOperation(
+          context,
+          () => TableService.closeOrder(
+                order: confirmedOrder,
+                paid: result.paid,
+                discount: 0,
+                paymentMethod: result.method,
+                serviceChargePercent: confirmedServiceCharge,
+                splitCount: splitCount,
+              ));
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -216,7 +231,7 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
       if (mounted) {
         setState(() => _closing = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ปิดบิลไม่สำเร็จ: $e')),
+          SnackBar(content: Text(operationError(e))),
         );
       }
     }
@@ -255,7 +270,8 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
     );
     if (confirm != true || !mounted) return;
     try {
-      await TableService.cancelOrder(widget.order);
+      await runShopOperation(
+          context, () => TableService.cancelOrder(widget.order));
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
@@ -327,8 +343,8 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
                               child: Text('• $modifierLine',
                                   style: TextStyle(
                                       fontSize: 11,
-                                      color: cs.primary
-                                          .withValues(alpha: 0.85))),
+                                      color:
+                                          cs.primary.withValues(alpha: 0.85))),
                             ),
                           if (item.notes != null && item.notes!.isNotEmpty)
                             Padding(
@@ -337,8 +353,8 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
                                   style: TextStyle(
                                       fontSize: 11,
                                       fontStyle: FontStyle.italic,
-                                      color: cs.onSurface
-                                          .withValues(alpha: 0.7))),
+                                      color:
+                                          cs.onSurface.withValues(alpha: 0.7))),
                             ),
                           Padding(
                             padding: const EdgeInsets.only(top: 2),
@@ -346,8 +362,7 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
                               '฿${item.unitPrice.toStringAsFixed(2)} × ${item.quantity} = ฿${item.subtotal.toStringAsFixed(2)}',
                               style: TextStyle(
                                   fontSize: 12,
-                                  color:
-                                      cs.onSurface.withValues(alpha: 0.6)),
+                                  color: cs.onSurface.withValues(alpha: 0.6)),
                             ),
                           ),
                         ],
@@ -361,8 +376,7 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
                           ),
                           Text('${item.quantity}',
                               style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700)),
+                                  fontSize: 15, fontWeight: FontWeight.w700)),
                           IconButton(
                             icon: const Icon(Icons.add_circle_outline),
                             onPressed: () => _changeQty(i, 1),
@@ -379,8 +393,7 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             decoration: BoxDecoration(
               color: cs.surface,
-              border:
-                  Border(top: BorderSide(color: cs.outlineVariant)),
+              border: Border(top: BorderSide(color: cs.outlineVariant)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -395,13 +408,11 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
                       Text('ค่าสินค้า',
                           style: TextStyle(
                               fontSize: 13,
-                              color:
-                                  cs.onSurface.withValues(alpha: 0.6))),
+                              color: cs.onSurface.withValues(alpha: 0.6))),
                       Text('฿${order.subtotal.toStringAsFixed(2)}',
                           style: TextStyle(
                               fontSize: 13,
-                              color:
-                                  cs.onSurface.withValues(alpha: 0.7))),
+                              color: cs.onSurface.withValues(alpha: 0.7))),
                     ],
                   ),
                   const SizedBox(height: 2),
@@ -412,13 +423,11 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
                           'Service ${_serviceChargePercent.toStringAsFixed(0)}%',
                           style: TextStyle(
                               fontSize: 13,
-                              color:
-                                  cs.onSurface.withValues(alpha: 0.6))),
+                              color: cs.onSurface.withValues(alpha: 0.6))),
                       Text('฿${_serviceCharge.toStringAsFixed(2)}',
                           style: TextStyle(
                               fontSize: 13,
-                              color:
-                                  cs.onSurface.withValues(alpha: 0.7))),
+                              color: cs.onSurface.withValues(alpha: 0.7))),
                     ],
                   ),
                   const SizedBox(height: 6),
@@ -442,12 +451,11 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: _addItem,
+                        onPressed: _closing ? null : _addItem,
                         icon: const Icon(Icons.add),
                         label: const Text('เพิ่มสินค้า'),
                         style: OutlinedButton.styleFrom(
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 14),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
                       ),
                     ),
@@ -457,10 +465,12 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
                         child: FilledButton.tonalIcon(
                           onPressed: _closing ? null : _sendToKitchen,
                           icon: const Icon(Icons.soup_kitchen_outlined),
-                          label: const Text('ส่งครัว'),
+                          label: Text('ส่งครัว (${widget.order.items
+                                  .where((i) =>
+                                      i.kitchenStatus == KitchenStatus.pending)
+                                  .fold<int>(0, (sum, i) => sum + i.quantity)})'),
                           style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 14),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
                         ),
                       ),
@@ -471,13 +481,11 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed:
-                            _closing || empty ? null : _split,
+                        onPressed: _closing || empty ? null : _split,
                         icon: const Icon(Icons.call_split),
                         label: const Text('แยกบิล'),
                         style: OutlinedButton.styleFrom(
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 14),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
                       ),
                     ),
@@ -485,20 +493,17 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
                     Expanded(
                       flex: 2,
                       child: FilledButton.icon(
-                        onPressed:
-                            _closing || empty ? null : () => _close(),
+                        onPressed: _closing || empty ? null : () => _close(),
                         icon: _closing
                             ? const SizedBox(
                                 width: 18,
                                 height: 18,
                                 child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white))
+                                    strokeWidth: 2, color: Colors.white))
                             : const Icon(Icons.point_of_sale_outlined),
                         label: const Text('ปิดบิล'),
                         style: FilledButton.styleFrom(
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 14),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
                       ),
                     ),
@@ -522,19 +527,17 @@ class _OpenOrderViewState extends State<_OpenOrderView> {
 }
 
 /// Small pill that mirrors the item's kitchen lifecycle on the cart row.
-/// Pending hides itself (default state — no signal needed); sent shows
-/// amber "ครัวรับแล้ว"; ready shows green "พร้อมเสิร์ฟ".
+/// Show every state explicitly, including dishes not yet sent to the kitchen.
 class _KitchenStatusChip extends StatelessWidget {
   const _KitchenStatusChip({required this.status});
   final KitchenStatus status;
 
   @override
   Widget build(BuildContext context) {
-    if (status == KitchenStatus.pending) return const SizedBox.shrink();
     final (label, color) = switch (status) {
       KitchenStatus.sent => ('ครัวรับแล้ว', Colors.amber.shade700),
       KitchenStatus.ready => ('พร้อมเสิร์ฟ', Colors.green),
-      KitchenStatus.pending => ('', Colors.transparent),
+      KitchenStatus.pending => ('รอส่งครัว', Colors.blueGrey),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -545,8 +548,8 @@ class _KitchenStatusChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(
-            fontSize: 10, color: color, fontWeight: FontWeight.w600),
+        style:
+            TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600),
       ),
     );
   }

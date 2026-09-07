@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/shop_operation.dart';
 
 import '../models/table_order.dart';
 import '../services/table_service.dart';
@@ -35,8 +36,7 @@ class KitchenScreen extends StatelessWidget {
 
           return GridView.builder(
             padding: const EdgeInsets.all(16),
-            gridDelegate:
-                const SliverGridDelegateWithMaxCrossAxisExtent(
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
               maxCrossAxisExtent: 360,
               childAspectRatio: 0.95,
               crossAxisSpacing: 12,
@@ -66,13 +66,11 @@ class _TicketCard extends StatelessWidget {
             e.value.kitchenStatus == KitchenStatus.ready)
         .toList();
 
-    final allReady = kitchenItems.every(
-        (e) => e.value.kitchenStatus == KitchenStatus.ready);
+    final allReady =
+        kitchenItems.every((e) => e.value.kitchenStatus == KitchenStatus.ready);
 
     return Material(
-      color: allReady
-          ? Colors.green.withValues(alpha: 0.08)
-          : cs.surface,
+      color: allReady ? Colors.green.withValues(alpha: 0.08) : cs.surface,
       borderRadius: BorderRadius.circular(14),
       child: Container(
         decoration: BoxDecoration(
@@ -98,8 +96,8 @@ class _TicketCard extends StatelessWidget {
                 ),
                 if (allReady)
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: Colors.green.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(100),
@@ -116,20 +114,17 @@ class _TicketCard extends StatelessWidget {
             Text(
               _elapsed(order.openedAt),
               style: TextStyle(
-                  fontSize: 11,
-                  color: cs.onSurface.withValues(alpha: 0.6)),
+                  fontSize: 11, color: cs.onSurface.withValues(alpha: 0.6)),
             ),
             const Divider(height: 16),
             Expanded(
               child: ListView.separated(
                 itemCount: kitchenItems.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(height: 6),
+                separatorBuilder: (_, __) => const SizedBox(height: 6),
                 itemBuilder: (_, i) {
                   final entry = kitchenItems[i];
                   return _ItemRow(
                     orderId: order.id,
-                    index: entry.key,
                     item: entry.value,
                   );
                 },
@@ -153,12 +148,10 @@ class _TicketCard extends StatelessWidget {
 class _ItemRow extends StatelessWidget {
   const _ItemRow({
     required this.orderId,
-    required this.index,
     required this.item,
   });
 
   final String orderId;
-  final int index;
   final TableOrderItem item;
 
   @override
@@ -172,7 +165,9 @@ class _ItemRow extends StatelessWidget {
     return InkWell(
       onTap: ready
           ? null
-          : () async => TableService.markItemReady(orderId, index),
+          : () => performShopOperation(
+              context, () => TableService.markItemReady(orderId, item.id),
+              success: 'พร้อมเสิร์ฟแล้ว'),
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
@@ -192,8 +187,7 @@ class _ItemRow extends StatelessWidget {
             Container(
               width: 28,
               alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 6, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
                 color: cs.primary,
                 borderRadius: BorderRadius.circular(6),
@@ -252,14 +246,12 @@ class _EmptyKitchen extends StatelessWidget {
                 size: 72, color: cs.onSurface.withValues(alpha: 0.3)),
             const SizedBox(height: 16),
             const Text('ยังไม่มีออเดอร์เข้าครัว',
-                style:
-                    TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             Text(
               'รอจนกว่าหน้าโต๊ะจะกด "ส่งครัว"',
               style: TextStyle(
-                  fontSize: 13,
-                  color: cs.onSurface.withValues(alpha: 0.6)),
+                  fontSize: 13, color: cs.onSurface.withValues(alpha: 0.6)),
             ),
           ],
         ),

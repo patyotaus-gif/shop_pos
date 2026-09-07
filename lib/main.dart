@@ -31,6 +31,7 @@ import 'services/update_service.dart';
 import 'widgets/subscription_gate.dart';
 import 'widgets/update_prompt.dart';
 import 'widgets/side_navigation_shell.dart';
+import 'widgets/connection_status_banner.dart';
 
 // Default to light — Pokpok is a light-brand design and does not follow
 // the device's system dark setting. Dark is opt-in (Settings), persisted
@@ -540,6 +541,7 @@ class _MainShellState extends State<MainShell> {
             final safeIndex = selected < 0 ? 0 : selected;
             return SideNavigationShell(
               items: tabs,
+              statusBanner:const ConnectionStatusBanner(),
               selectedIndex: safeIndex,
               onSelected: (index) =>
                   setState(() => _selectedLabel = tabs[index].label),

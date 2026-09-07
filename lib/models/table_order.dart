@@ -17,6 +17,7 @@ enum KitchenStatus { pending, sent, ready }
 /// One line on an open tab. Mirrors the fields of `SaleItem` so closing the
 /// tab can build the Sale doc with no field translation.
 class TableOrderItem {
+  final String id;
   final String productId;
   final String productName;
   final double price;
@@ -29,6 +30,7 @@ class TableOrderItem {
   final DateTime? readyAt;
 
   const TableOrderItem({
+    this.id = '',
     required this.productId,
     required this.productName,
     required this.price,
@@ -48,6 +50,7 @@ class TableOrderItem {
   double get subtotal => unitPrice * quantity;
 
   factory TableOrderItem.fromMap(Map<String, dynamic> m) => TableOrderItem(
+        id: m['id'] as String? ?? '',
         productId: m['productId'] ?? '',
         productName: m['productName'] ?? '',
         price: (m['price'] ?? 0).toDouble(),
@@ -61,12 +64,12 @@ class TableOrderItem {
           (e) => e.name == (m['kitchenStatus'] ?? 'pending'),
           orElse: () => KitchenStatus.pending,
         ),
-        sentToKitchenAt:
-            (m['sentToKitchenAt'] as Timestamp?)?.toDate(),
+        sentToKitchenAt: (m['sentToKitchenAt'] as Timestamp?)?.toDate(),
         readyAt: (m['readyAt'] as Timestamp?)?.toDate(),
       );
 
   Map<String, dynamic> toMap() => {
+        if (id.isNotEmpty) 'id': id,
         'productId': productId,
         'productName': productName,
         'price': price,
@@ -82,6 +85,7 @@ class TableOrderItem {
       };
 
   TableOrderItem copyWith({
+    String? id,
     int? quantity,
     String? notes,
     List<OrderModifier>? modifiers,
@@ -90,6 +94,7 @@ class TableOrderItem {
     DateTime? readyAt,
   }) =>
       TableOrderItem(
+        id: id ?? this.id,
         productId: productId,
         productName: productName,
         price: price,
@@ -98,8 +103,12 @@ class TableOrderItem {
         notes: notes ?? this.notes,
         modifiers: modifiers ?? this.modifiers,
         kitchenStatus: kitchenStatus ?? this.kitchenStatus,
-        sentToKitchenAt: sentToKitchenAt ?? this.sentToKitchenAt,
-        readyAt: readyAt ?? this.readyAt,
+        sentToKitchenAt: kitchenStatus == KitchenStatus.pending
+            ? null
+            : sentToKitchenAt ?? this.sentToKitchenAt,
+        readyAt: kitchenStatus == KitchenStatus.pending
+            ? null
+            : readyAt ?? this.readyAt,
       );
 }
 
@@ -128,8 +137,7 @@ class TableOrder {
     this.saleId,
   });
 
-  double get subtotal =>
-      items.fold<double>(0, (s, i) => s + i.subtotal);
+  double get subtotal => items.fold<double>(0, (s, i) => s + i.subtotal);
 
   int get itemCount => items.fold<int>(0, (s, i) => s + i.quantity);
 
@@ -139,14 +147,18 @@ class TableOrder {
         tableId: data['tableId'] ?? '',
         tableName: data['tableName'] ?? '',
         items: (data['items'] as List<dynamic>? ?? [])
-            .map((e) => TableOrderItem.fromMap(e as Map<String, dynamic>))
+            .asMap()
+            .entries
+            .map((e) => TableOrderItem.fromMap({
+                  ...Map<String, dynamic>.from(e.value as Map),
+                  'id': (e.value as Map)['id'] ?? 'legacy-${e.key}',
+                }))
             .toList(),
         status: TableOrderStatus.values.firstWhere(
           (e) => e.name == (data['status'] ?? 'open'),
           orElse: () => TableOrderStatus.open,
         ),
-        openedAt:
-            (data['openedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        openedAt: (data['openedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         closedAt: (data['closedAt'] as Timestamp?)?.toDate(),
         saleId: data['saleId'] as String?,
       );
