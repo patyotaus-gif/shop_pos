@@ -18,6 +18,8 @@ class SaleItem {
   final String productName;
   final double price;
   final double costPrice;
+  final bool? costKnown;
+  final String? category;
   final int quantity;
   final double subtotal;
   final List<OrderModifier> modifiers;
@@ -27,6 +29,8 @@ class SaleItem {
     required this.productName,
     required this.price,
     this.costPrice = 0,
+    this.costKnown,
+    this.category,
     required this.quantity,
     required this.subtotal,
     this.modifiers = const [],
@@ -39,6 +43,8 @@ class SaleItem {
         productName: m['productName'] ?? '',
         price: (m['price'] ?? 0).toDouble(),
         costPrice: (m['costPrice'] ?? 0).toDouble(),
+        costKnown: m['costKnown'] as bool?,
+        category: m['category'] as String?,
         quantity: m['quantity'] ?? 1,
         subtotal: (m['subtotal'] ?? 0).toDouble(),
         modifiers: ((m['modifiers'] as List<dynamic>?) ?? const [])
@@ -51,6 +57,8 @@ class SaleItem {
         'productName': productName,
         'price': price,
         'costPrice': costPrice,
+        if (costKnown != null) 'costKnown': costKnown,
+        if (category != null) 'category': category,
         'quantity': quantity,
         'subtotal': subtotal,
         if (modifiers.isNotEmpty)
@@ -128,7 +136,8 @@ class Sale {
         discount: (data['discount'] ?? 0).toDouble(),
         paid: (data['paid'] ?? 0).toDouble(),
         change: (data['change'] ?? 0).toDouble(),
-        createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        createdAt:
+            (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         isDebt: data['isDebt'] ?? false,
         customerName: data['customerName'],
         paymentMethod: PaymentMethod.values.firstWhere(

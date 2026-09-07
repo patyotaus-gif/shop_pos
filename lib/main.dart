@@ -519,7 +519,7 @@ class _MainShellState extends State<MainShell> {
                 screen: ChatScreen(),
                 icon: Icons.auto_awesome_outlined,
                 selectedIcon: Icons.auto_awesome,
-                label: 'AI',
+                label: 'ผู้ช่วยร้าน',
               ),
               const AppNavigationItem(
                 screen: OrderQrScreen(),

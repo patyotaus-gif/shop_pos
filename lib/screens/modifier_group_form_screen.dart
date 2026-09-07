@@ -39,6 +39,7 @@ class _ModifierGroupFormScreenState extends State<ModifierGroupFormScreen> {
               id: o.id,
               name: o.name,
               priceAdjust: o.priceAdjust,
+              costAdjust: o.costAdjust,
               ingredientUsage: o.ingredientUsage,
             ))
         .toList();
@@ -55,7 +56,8 @@ class _ModifierGroupFormScreenState extends State<ModifierGroupFormScreen> {
   Future<void> _editUsage(_OptionDraft draft) async {
     if (_ingredients.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('ยังไม่มีวัตถุดิบ — เพิ่มได้ที่หน้า สินค้า → "วัตถุดิบ"')));
+          content:
+              Text('ยังไม่มีวัตถุดิบ — เพิ่มได้ที่หน้า สินค้า → "วัตถุดิบ"')));
       return;
     }
     String selectedId = draft.ingredientUsage.isNotEmpty
@@ -114,8 +116,8 @@ class _ModifierGroupFormScreenState extends State<ModifierGroupFormScreen> {
               onPressed: () {
                 final q = double.tryParse(qtyCtrl.text.trim());
                 if (q == null || q <= 0) return;
-                Navigator.pop(ctx,
-                    [RecipeLine(ingredientId: selectedId, qty: q)]);
+                Navigator.pop(
+                    ctx, [RecipeLine(ingredientId: selectedId, qty: q)]);
               },
               child: const Text('ตกลง'),
             ),
@@ -305,14 +307,17 @@ class _OptionDraft {
   final String id;
   final TextEditingController nameCtrl;
   final TextEditingController priceCtrl;
+  final TextEditingController costCtrl;
   List<RecipeLine> ingredientUsage;
 
   _OptionDraft({
     required this.id,
     required String name,
     required double priceAdjust,
+    double? costAdjust,
     this.ingredientUsage = const [],
-  })  : nameCtrl = TextEditingController(text: name),
+  })  : costCtrl = TextEditingController(text: costAdjust?.toString() ?? ''),
+        nameCtrl = TextEditingController(text: name),
         priceCtrl = TextEditingController(
             text: priceAdjust == 0 ? '' : priceAdjust.toStringAsFixed(0));
 
@@ -325,12 +330,14 @@ class _OptionDraft {
   void dispose() {
     nameCtrl.dispose();
     priceCtrl.dispose();
+    costCtrl.dispose();
   }
 
   ModifierOption toOption() => ModifierOption(
         id: id,
         name: nameCtrl.text.trim(),
         priceAdjust: double.tryParse(priceCtrl.text) ?? 0,
+        costAdjust: double.tryParse(costCtrl.text),
         ingredientUsage: ingredientUsage,
       );
 }
@@ -343,48 +350,67 @@ class _OptionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          flex: 3,
-          child: TextFormField(
-            controller: draft.nameCtrl,
-            decoration: const InputDecoration(
-              labelText: 'ชื่อตัวเลือก',
-              hintText: 'เช่น เผ็ดน้อย, ขนาดใหญ่',
-              border: OutlineInputBorder(),
-              isDense: true,
+    return Column(children: [
+      Row(
+        children: [
+          Expanded(
+            flex: 3,
+            child: TextFormField(
+              controller: draft.nameCtrl,
+              decoration: const InputDecoration(
+                labelText: 'ชื่อตัวเลือก',
+                hintText: 'เช่น เผ็ดน้อย, ขนาดใหญ่',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          flex: 2,
-          child: TextFormField(
-            controller: draft.priceCtrl,
-            keyboardType:
-                const TextInputType.numberWithOptions(signed: true, decimal: true),
-            decoration: const InputDecoration(
-              labelText: 'ราคา ฿+/-',
-              hintText: '0',
-              border: OutlineInputBorder(),
-              isDense: true,
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 2,
+            child: TextFormField(
+              controller: draft.priceCtrl,
+              keyboardType: const TextInputType.numberWithOptions(
+                  signed: true, decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'ราคา ฿+/-',
+                hintText: '0',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
             ),
           ),
-        ),
-        // ผูกวัตถุดิบ (ตัดสต็อกเมื่อเลือกตัวเลือกนี้) — เขียวเมื่อผูกแล้ว
-        IconButton(
-          icon: Icon(Icons.egg_outlined,
-              color: draft.ingredientUsage.isNotEmpty ? Colors.green : null),
-          tooltip: 'ตัดวัตถุดิบ',
-          onPressed: onUsage,
-        ),
-        IconButton(
-          icon: const Icon(Icons.remove_circle_outline),
-          color: Colors.red,
-          onPressed: onRemove,
-        ),
-      ],
-    );
+          // ผูกวัตถุดิบ (ตัดสต็อกเมื่อเลือกตัวเลือกนี้) — เขียวเมื่อผูกแล้ว
+          IconButton(
+            icon: Icon(Icons.egg_outlined,
+                color: draft.ingredientUsage.isNotEmpty ? Colors.green : null),
+            tooltip: 'ตัดวัตถุดิบ',
+            onPressed: onUsage,
+          ),
+          IconButton(
+            icon: const Icon(Icons.remove_circle_outline),
+            color: Colors.red,
+            onPressed: onRemove,
+          ),
+        ],
+      ),
+      const SizedBox(height: 8),
+      TextFormField(
+        controller: draft.costCtrl,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        decoration: const InputDecoration(
+            labelText: 'ต้นทุนเพิ่มต่อชิ้น ฿',
+            helperText: 'ว่าง = ยังไม่ทราบ · ใส่ 0 หากไม่มีต้นทุนเพิ่ม',
+            border: OutlineInputBorder(),
+            isDense: true),
+        validator: (v) {
+          if (v == null || v.trim().isEmpty) return null;
+          final cost = double.tryParse(v);
+          return cost == null || !cost.isFinite || cost < 0
+              ? 'ระบุต้นทุนตั้งแต่ 0 ขึ้นไป'
+              : null;
+        },
+      ),
+    ]);
   }
 }

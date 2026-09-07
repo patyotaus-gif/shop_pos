@@ -22,6 +22,8 @@ class TableOrderItem {
   final String productName;
   final double price;
   final double costPrice;
+  final bool? costKnown;
+  final String? category;
   final int quantity;
   final String? notes;
   final List<OrderModifier> modifiers;
@@ -35,6 +37,8 @@ class TableOrderItem {
     required this.productName,
     required this.price,
     this.costPrice = 0,
+    this.costKnown,
+    this.category,
     required this.quantity,
     this.notes,
     this.modifiers = const [],
@@ -55,6 +59,8 @@ class TableOrderItem {
         productName: m['productName'] ?? '',
         price: (m['price'] ?? 0).toDouble(),
         costPrice: (m['costPrice'] ?? 0).toDouble(),
+        costKnown: m['costKnown'] as bool?,
+        category: m['category'] as String?,
         quantity: (m['quantity'] ?? 1) as int,
         notes: m['notes'] as String?,
         modifiers: ((m['modifiers'] as List<dynamic>?) ?? const [])
@@ -74,6 +80,8 @@ class TableOrderItem {
         'productName': productName,
         'price': price,
         'costPrice': costPrice,
+        if (costKnown != null) 'costKnown': costKnown,
+        if (category != null) 'category': category,
         'quantity': quantity,
         if (notes != null) 'notes': notes,
         if (modifiers.isNotEmpty)
@@ -99,6 +107,8 @@ class TableOrderItem {
         productName: productName,
         price: price,
         costPrice: costPrice,
+        costKnown: costKnown,
+        category: category,
         quantity: quantity ?? this.quantity,
         notes: notes ?? this.notes,
         modifiers: modifiers ?? this.modifiers,

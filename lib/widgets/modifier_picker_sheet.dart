@@ -106,6 +106,7 @@ class _ModifierPickerSheetState extends State<_ModifierPickerSheet> {
             optionId: o.id,
             optionName: o.name,
             priceAdjust: o.priceAdjust,
+            costAdjust: o.costAdjust,
           ));
         }
       }
@@ -159,8 +160,7 @@ class _ModifierPickerSheetState extends State<_ModifierPickerSheet> {
                           children: [
                             Text(widget.product.name,
                                 style: const TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w700)),
+                                    fontSize: 17, fontWeight: FontWeight.w700)),
                             const SizedBox(height: 2),
                             Text(
                               'ราคาเริ่มต้น ฿${widget.product.price.toStringAsFixed(0)}',
@@ -216,8 +216,7 @@ class _ModifierPickerSheetState extends State<_ModifierPickerSheet> {
                     padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
                     decoration: BoxDecoration(
                       color: cs.surface,
-                      border:
-                          Border(top: BorderSide(color: cs.outlineVariant)),
+                      border: Border(top: BorderSide(color: cs.outlineVariant)),
                     ),
                     child: Row(
                       children: [
@@ -227,8 +226,8 @@ class _ModifierPickerSheetState extends State<_ModifierPickerSheet> {
                             Text('รวม',
                                 style: TextStyle(
                                     fontSize: 12,
-                                    color: cs.onSurface
-                                        .withValues(alpha: 0.6))),
+                                    color:
+                                        cs.onSurface.withValues(alpha: 0.6))),
                             Text('฿${preview.toStringAsFixed(2)}',
                                 style: TextStyle(
                                     fontSize: 20,
@@ -239,13 +238,11 @@ class _ModifierPickerSheetState extends State<_ModifierPickerSheet> {
                         const SizedBox(width: 16),
                         Expanded(
                           child: FilledButton.icon(
-                            onPressed:
-                                canSubmit ? () => _submit(groups) : null,
+                            onPressed: canSubmit ? () => _submit(groups) : null,
                             icon: const Icon(Icons.add),
                             label: const Text('เพิ่มเข้าตะกร้า'),
                             style: FilledButton.styleFrom(
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 14),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
                           ),
                         ),

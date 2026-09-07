@@ -10,12 +10,14 @@ class ModifierOption {
   final String id;
   final String name;
   final double priceAdjust;
+  final double? costAdjust;
   final List<RecipeLine> ingredientUsage;
 
   const ModifierOption({
     required this.id,
     required this.name,
     this.priceAdjust = 0,
+    this.costAdjust,
     this.ingredientUsage = const [],
   });
 
@@ -23,6 +25,7 @@ class ModifierOption {
         id: m['id'] ?? '',
         name: m['name'] ?? '',
         priceAdjust: (m['priceAdjust'] ?? 0).toDouble(),
+        costAdjust: (m['costAdjust'] as num?)?.toDouble(),
         ingredientUsage: ((m['ingredientUsage'] as List<dynamic>?) ?? const [])
             .map((e) => RecipeLine.fromMap(e as Map<String, dynamic>))
             .toList(),
@@ -32,6 +35,7 @@ class ModifierOption {
         'id': id,
         'name': name,
         'priceAdjust': priceAdjust,
+        'costAdjust': costAdjust,
         if (ingredientUsage.isNotEmpty)
           'ingredientUsage': ingredientUsage.map((e) => e.toMap()).toList(),
       };
@@ -45,6 +49,7 @@ class ModifierOption {
         id: id,
         name: name ?? this.name,
         priceAdjust: priceAdjust ?? this.priceAdjust,
+        costAdjust: costAdjust,
         ingredientUsage: ingredientUsage ?? this.ingredientUsage,
       );
 }
@@ -74,8 +79,7 @@ class ModifierGroup {
     required this.createdAt,
   });
 
-  factory ModifierGroup.fromFirestore(
-          Map<String, dynamic> data, String id) =>
+  factory ModifierGroup.fromFirestore(Map<String, dynamic> data, String id) =>
       ModifierGroup(
         id: id,
         name: data['name'] ?? '',

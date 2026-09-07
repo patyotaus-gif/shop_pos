@@ -76,6 +76,7 @@ function priceLine(item, product, groups, now) {
       optionId: hit.option.id,
       optionName: hit.option.name,
       priceAdjust: Number(hit.option.priceAdjust || 0),
+      ...(Number.isFinite(hit.option.costAdjust) && hit.option.costAdjust >= 0 ? { costAdjust: hit.option.costAdjust } : {}),
     });
   }
 

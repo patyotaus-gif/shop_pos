@@ -57,11 +57,14 @@ class SaleService {
                 productName: e.product.name,
                 price: e.product.effectivePrice,
                 costPrice: e.product.costPrice,
+                costKnown: e.product.costPrice > 0,
+                category: e.product.category,
                 quantity: e.quantity,
                 subtotal: e.subtotal))
             .toList();
         final total =
-            items.fold<double>(0, (amount, e) => amount + e.subtotal) - discount;
+            items.fold<double>(0, (amount, e) => amount + e.subtotal) -
+                discount;
         final sale = Sale(
             id: shop.collection('sales').doc().id,
             items: items,
@@ -168,7 +171,8 @@ class SaleService {
           throw StateError('มีสินค้าถูกลบ กรุณาตรวจสอบตะกร้า');
         }
         if ((product.data()?['stock'] as num? ?? 0) < entry.value) {
-          throw StateError('สินค้าคงเหลือไม่พอ: ${product.data()?['name'] ?? entry.key}');
+          throw StateError(
+              'สินค้าคงเหลือไม่พอ: ${product.data()?['name'] ?? entry.key}');
         }
       }
       final customerRef = loyaltyCustomerId == null

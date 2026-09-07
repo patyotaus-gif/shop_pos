@@ -349,6 +349,16 @@ exports.createOrderCheckout = onRequest(
       return;
     }
 
+    for (const item of items) {
+      if (typeof item.productId !== 'string' || !item.productId || item.productId.includes('/')) {
+        res.status(400).json({ error: 'ข้อมูลสินค้าไม่ถูกต้อง' }); return;
+      }
+      const product = (await shopRef.collection('products').doc(item.productId).get()).data();
+      item.costPrice = Number(product?.costPrice || 0);
+      item.costKnown = Number(product?.costPrice) > 0;
+      item.category = String(product?.category || 'ไม่ทราบหมวดหมู่ ณ เวลาขาย');
+    }
+
     // สร้าง order doc ก่อน (status: pendingPayment)
     const orderRef = shopRef.collection("orders").doc();
 
@@ -652,6 +662,9 @@ exports.createPromptPayOrder = onRequest(
       }
       pricedItems.push({
         productId,
+        costPrice: Number(p.costPrice || 0),
+        costKnown: Number(p.costPrice) > 0,
+        category: String(p.category || 'ทั่วไป'),
         productName: line.productName,
         price: line.unitPrice,
         quantity,
@@ -806,6 +819,9 @@ exports.stripeWebhook = onRequest(
             productName: item.productName,
             price: item.price,
             quantity: item.quantity,
+            costPrice: item.costPrice ?? 0,
+            costKnown: item.costKnown ?? false,
+            ...(item.category ? { category: item.category } : {}),
             subtotal: item.price * item.quantity,
           })),
           total: orderData.total,
@@ -1063,123 +1079,15 @@ const AI_DAILY_LIMIT_PER_SHOP = 100;
 // equivalent — same price tier, better Thai output, current SDK support.
 const AI_MODEL = "gemini-2.5-flash-lite";
 
-exports.aiChat = onCall(
-  { secrets: [geminiApiKey] },
-  async (request) => {
-    if (!request.auth) {
-      throw new HttpsError("unauthenticated", "Login required");
-    }
-    const shopId = request.auth.uid;
-    const { history, shopContext } = request.data || {};
-    if (!Array.isArray(history) || history.length === 0) {
-      throw new HttpsError("invalid-argument", "history is required");
-    }
+const salesAssistant = require('./sales_assistant').handlers({
+  db: admin.firestore(), apiKey: () => geminiApiKey.value(), model: AI_MODEL,
+});
+exports.aiChat = onCall({ secrets: [geminiApiKey], timeoutSeconds: 120, memory: '512MiB' }, salesAssistant.aiChat);
+exports.getSalesAnalysis = onCall({ timeoutSeconds: 120, memory: '512MiB' }, salesAssistant.getSalesAnalysis);
+exports.saveAnalysisContext = onCall(salesAssistant.saveAnalysisContext);
+exports.recordProductAnalytics = onDocumentUpdated('shops/{shopId}/products/{productId}', salesAssistant.recordProductAnalytics);
 
-    // Subscription gate — only trial-in-window or active-in-window shops
-    // get to spend our Gemini budget.
-    const shopSnap = await admin.firestore().collection("shops").doc(shopId).get();
-    if (!shopSnap.exists) {
-      throw new HttpsError("not-found", "Shop not found");
-    }
-    const shop = shopSnap.data();
-    const now = new Date();
-    const trialOk =
-      shop.subscriptionStatus === "trial" &&
-      shop.trialEndsAt &&
-      shop.trialEndsAt.toDate() > now;
-    const activeOk =
-      shop.subscriptionStatus === "active" &&
-      shop.subscriptionEndsAt &&
-      shop.subscriptionEndsAt.toDate() > now;
-    if (!trialOk && !activeOk) {
-      throw new HttpsError(
-        "failed-precondition",
-        "Subscription not active — please renew to use AI"
-      );
-    }
-
-    // Per-shop daily rate limit. Doc id = YYYY-MM-DD so it rolls over
-    // automatically at midnight in the function's region.
-    const today = now.toISOString().slice(0, 10);
-    const usageRef = admin
-      .firestore()
-      .collection("shops").doc(shopId)
-      .collection("aiUsage").doc(today);
-    const usageSnap = await usageRef.get();
-    const dailyCount = usageSnap.exists ? (usageSnap.data().count || 0) : 0;
-    if (dailyCount >= AI_DAILY_LIMIT_PER_SHOP) {
-      throw new HttpsError(
-        "resource-exhausted",
-        `ใช้ AI ครบ ${AI_DAILY_LIMIT_PER_SHOP} ครั้งในวันนี้แล้ว — เริ่มใหม่พรุ่งนี้`
-      );
-    }
-
-    // Build Gemini request. Gemini uses 'model' instead of 'assistant'.
-    const systemPrompt =
-      "คุณเป็นผู้ช่วย AI สำหรับร้านค้าปลีกที่ใช้ระบบ Pokpok POS\n" +
-      "ตอบเป็นภาษาไทย กระชับ ตรงประเด็น ช่วยวิเคราะห์ยอดขาย แนะนำการจัดการร้าน" +
-      (shopContext ? "\n\nข้อมูลร้านวันนี้:\n" + shopContext : "");
-
-    const contents = history.map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: String(m.content || "") }],
-    }));
-
-    const url =
-      "https://generativelanguage.googleapis.com/v1beta/models/" +
-      AI_MODEL +
-      ":generateContent?key=" +
-      geminiApiKey.value();
-    const geminiRes = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents,
-        generationConfig: {
-          maxOutputTokens: 1024,
-          temperature: 0.7,
-        },
-      }),
-    });
-
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
-      console.error("Gemini API error:", geminiRes.status, errText);
-      throw new HttpsError(
-        "internal",
-        `AI provider error (${geminiRes.status}): ${errText.slice(0, 200)}`
-      );
-    }
-    const data = await geminiRes.json();
-    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!reply) {
-      console.error("Empty Gemini response:", JSON.stringify(data));
-      throw new HttpsError("internal", "AI returned no content");
-    }
-
-    // Bump the daily counter only on a successful call so quota-exhausted
-    // user attempts don't burn budget.
-    await usageRef.set(
-      {
-        count: admin.firestore.FieldValue.increment(1),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-
-    return {
-      reply,
-      usage: {
-        dailyCount: dailyCount + 1,
-        dailyLimit: AI_DAILY_LIMIT_PER_SHOP,
-      },
-    };
-  }
-);
-
-// ────────────────────────────────────────────────
-// LINE chat bot — AI auto-reply (Gemini)
+// // LINE chat bot — AI auto-reply (Gemini)
 // ────────────────────────────────────────────────
 // Powers the general-message branch of lineWebhook. Replies go out via the
 // (free, unmetered) reply token, so the only cost is Gemini — bounded by a
@@ -2447,6 +2355,7 @@ async function loadModifierGroups(shopRef) {
         id: o.id,
         name: o.name || "",
         priceAdjust: Number(o.priceAdjust || 0),
+        ...(Number.isFinite(o.costAdjust) && o.costAdjust >= 0 ? { costAdjust: o.costAdjust } : {}),
       })),
     };
   }
@@ -2535,8 +2444,10 @@ exports.createTableOrder = onRequest(
           id: require('node:crypto').randomUUID(),
           productId: it.productId,
           productName: line.productName,
-          price: line.unitPrice,
+          price: line.unitPrice - line.modifiers.reduce((sum, m) => sum + m.priceAdjust, 0),
           costPrice: Number(p.costPrice || 0),
+          costKnown: Number(p.costPrice) > 0,
+          category: String(p.category || 'ทั่วไป'),
           quantity: line.quantity,
           ...(line.modifiers.length ? { modifiers: line.modifiers } : {}),
           ...(line.notes ? { notes: line.notes } : {}),

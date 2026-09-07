@@ -9,6 +9,7 @@ class OrderModifier {
   final String optionId;
   final String optionName;
   final double priceAdjust;
+  final double? costAdjust;
 
   const OrderModifier({
     required this.groupId,
@@ -16,6 +17,7 @@ class OrderModifier {
     required this.optionId,
     required this.optionName,
     this.priceAdjust = 0,
+    this.costAdjust,
   });
 
   factory OrderModifier.fromMap(Map<String, dynamic> m) => OrderModifier(
@@ -24,6 +26,7 @@ class OrderModifier {
         optionId: m['optionId'] ?? '',
         optionName: m['optionName'] ?? '',
         priceAdjust: (m['priceAdjust'] ?? 0).toDouble(),
+        costAdjust: (m['costAdjust'] as num?)?.toDouble(),
       );
 
   Map<String, dynamic> toMap() => {
@@ -32,6 +35,7 @@ class OrderModifier {
         'optionId': optionId,
         'optionName': optionName,
         'priceAdjust': priceAdjust,
+        if (costAdjust != null) 'costAdjust': costAdjust,
       };
 }
 
