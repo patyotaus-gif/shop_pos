@@ -39,8 +39,13 @@ void main() {
     expect(saved!['tier'], 'lite');
     expect(saved!['billingCycle'], 'yearly');
     expect(saved!['locations'], 3);
-    expect(
-        saved!['expected'], {'tier': 'lite', 'plan': 'yearly', 'locations': 3});
+    expect(saved!['expected'], {
+      'tier': 'lite',
+      'shopType': 'retail',
+      'plan': 'yearly',
+      'locations': 3
+    });
+    expect(saved!['shopType'], 'retail');
     expect(saved!.containsKey('days'), isFalse);
     expect(saved!.containsKey('subscriptionEndsAt'), isFalse);
     expect(find.text('แก้แผนผู้ใช้'), findsNothing);

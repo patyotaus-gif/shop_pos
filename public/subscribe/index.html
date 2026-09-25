@@ -163,6 +163,8 @@
       <button class="bill-btn" id="by" onclick="setBill('yearly')">รายปี <span class="save-pill">ประหยัด ~17%</span></button>
     </div>
 
+    <p id="shopPlanInfo" role="status"></p>
+    <p>ประเภทร้านใช้ตามบัญชีในแอป หากต้องการเปลี่ยนประเภทร้านให้ติดต่อผู้ดูแล · อุปกรณ์และบริการถึงร้านตกลงแยกต่างหาก</p>
     <div class="cards" id="cards"></div>
 
     <div class="note">
@@ -232,7 +234,7 @@
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const fmtBaht = (satang) => (satang / 100).toLocaleString("en-US");
 
-  const TIER_ORDER = ["solo", "lite", "full", "restaurant"];
+  const TIER_ORDER = ["solo", "lite", "full"];
 
   // Fallback when config/plans doesn't exist yet — mirrors
   // functions/plans.js DEFAULT_TIERS (the server falls back the same way).
@@ -250,6 +252,9 @@
   let uid = null;
   let cycle = "monthly";
   let shopLocations = 1;
+  let shopType = 'retail';
+  let legacyRestaurant = false;
+  let currentTier = 'full';
   let tiers = FALLBACK_TIERS;
   let pendingPayment = null;
 
@@ -288,6 +293,10 @@
       const snap = await getDoc(doc(db, "shops", uid));
       if (snap.exists()) {
         $("shopName").textContent = snap.data().name || "ร้านของคุณ";
+        const shop = snap.data();
+        legacyRestaurant = shop.tier === 'restaurant' || (!shop.tier && shop.shopType === 'restaurant');
+        shopType = legacyRestaurant ? 'restaurant' : (shop.shopType || 'retail');
+        currentTier = legacyRestaurant ? 'restaurant' : (shop.tier || 'full');
         shopLocations = Math.max(1, parseInt(snap.data().locations || 1));
       }
     } catch (_) {}
@@ -309,7 +318,12 @@
   function render() {
     const el = $("cards");
     el.innerHTML = "";
-    for (const tierKey of TIER_ORDER) {
+    $('shopPlanInfo').textContent = (shopType === 'restaurant' ? 'ร้านอาหาร' : 'ร้านค้าปลีก') +
+      (legacyRestaurant ? ' · ใช้แผน Restaurant เดิม ต่ออายุเดิมได้ หรือเลือกแผนใหม่โดยใช้สิทธิ์ของแผนนั้น' : ' · เลือก Solo / Lite / Full');
+    const descriptions = shopType === 'restaurant'
+      ? {solo:'รับออเดอร์กลับบ้าน · เมนูและตัวเลือกอาหาร · รายงานรายวัน',lite:'เพิ่มโต๊ะ · ส่งครัว · QR สั่งอาหารที่โต๊ะ',full:'เพิ่มสูตรอาหารและวัตถุดิบ · พนักงาน 3 ผู้ใช้ · สะสมแต้ม · รายงานเชิงลึก'}
+      : {solo:'ขายสินค้า · รับเงิน · รายงานรายวัน',lite:'เพิ่มสต็อก · ลูกหนี้ · พิมพ์ใบเสร็จ',full:'เพิ่มพนักงาน 3 ผู้ใช้ · สะสมแต้ม · รายงานเชิงลึก'};
+    for (const tierKey of [...TIER_ORDER, ...(legacyRestaurant ? ['restaurant'] : [])]) {
       const p = tiers[tierKey];
       if (!p || p.enabled === false) continue;
       const amt = fmtBaht((cycle === "monthly" ? p.monthly : p.yearly).amount);
@@ -318,9 +332,9 @@
       card.className = "card" + (p.featured ? " featured" : "");
       card.innerHTML = `
         ${p.featured ? '<span class="badge">แนะนำ</span>' : ""}
-        <div class="plan">${esc(p.name)}</div>
+        <div class="plan">${esc(tierKey === "restaurant" ? "Full (Restaurant เดิม)" : p.name)}</div>
         <div class="price"><span class="cur">฿</span>${esc(amt)}<span class="per"> ${esc(per)}</span></div>
-        <div class="desc">${esc(p.desc)}</div>
+        <div class="desc">${esc(descriptions[tierKey] || "ต่ออายุแพ็กเกจเดิม พร้อมสิทธิ์เดิม")}</div>
         <button class="pay" data-tier="${esc(tierKey)}">จ่ายด้วย PromptPay</button>
         <button class="pay-card-link" data-tier="${esc(tierKey)}">หรือจ่ายด้วยบัตรเครดิต</button>`;
       card.querySelector(".pay").onclick = (e) => payPromptPay(tierKey, e.currentTarget);
@@ -330,7 +344,11 @@
   }
 
   // ── PromptPay direct (0% fees — primary rail) ──
+  function confirmPlanChange(tier) {
+    return tier === currentTier || confirm('การเลือกแผนนี้จะเปลี่ยนสิทธิ์เมื่อชำระสำเร็จ โปรดตรวจความสามารถและจำนวนผู้ใช้ของแผนใหม่ก่อนดำเนินการ');
+  }
   async function payPromptPay(tier, btn) {
+    if (!confirmPlanChange(tier)) return;
     btn.disabled = true; btn.textContent = "กำลังสร้างรายการ…";
     try {
       const res = await createSubPayment({ tier, billingCycle: cycle });
@@ -441,6 +459,7 @@
 
   // ── Card via Stripe (secondary rail) ──
   async function payCard(tier, btn) {
+    if (!confirmPlanChange(tier)) return;
     btn.disabled = true; btn.textContent = "กำลังพาไปหน้าชำระเงิน…";
     try {
       const res = await createCheckout({

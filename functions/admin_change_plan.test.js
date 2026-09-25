@@ -41,3 +41,22 @@ test('production callable rejects unauthenticated and normal shop users', async 
   await assert.rejects(adminChangePlan.run({ data: {} }), e => e.code === 'unauthenticated');
   await assert.rejects(adminChangePlan.run({ auth: { uid: 'shop', token: { email: 'customer@example.com' } }, data: {} }), e => e.code === 'permission-denied');
 });
+test('changing tier preserves restaurant type unless explicitly changed', async () => {
+  const f = fixture();
+  f.records.get('shops/shop').shopType = 'restaurant';
+  f.request.data.tier = 'lite';
+  await f.change(f.request);
+  assert.equal(f.records.get('shops/shop').shopType, 'restaurant');
+  assert.equal(f.records.get('shops/shop').tier, 'lite');
+});
+test('explicit type changes are audited and stale type is rejected', async () => {
+  const f = fixture();
+  f.request.data.tier = 'lite';
+  f.request.data.shopType = 'restaurant';
+  f.request.data.expected.shopType = 'retail';
+  await f.change(f.request);
+  assert.equal(f.records.get('shops/shop/planChanges/unique-request-123').after.shopType, 'restaurant');
+  f.request.data.requestId = 'different-request-123';
+  f.request.data.expected = {tier:'lite',plan:'yearly',locations:2,shopType:'retail'};
+  await assert.rejects(f.change(f.request), e => e.code === 'failed-precondition');
+});

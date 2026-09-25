@@ -125,7 +125,7 @@
     .bill-btn { border: 1px solid var(--line); padding: 8px 16px; color: var(--ink); background: transparent; border-radius: 4px; font-size: 14px; }
     .bill-btn.on { background: var(--wine); color: white; border-color: var(--wine); }
     .save-pill { font-size: 11px; margin-left: 5px; }
-    .pricing-cards { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); }
+    .pricing-cards { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); }
     .p-card { padding: 25px 20px; display: flex; flex-direction: column; position: relative; min-width: 0; }
     .p-card + .p-card { border-left: 1px solid var(--line); }
     .p-card.featured { background: #e9e0d3; }
@@ -179,7 +179,8 @@
     @media (max-width: 900px) { .nav-links, .nav-end .btn-ghost { display: none; } .hamburger { display: flex; } .hero { gap: 24px; } h1 { font-size: 42px; } .hero-visual { padding: 32px 16px 22px; } .hero-visual img { width: 210px; } .margin-note { top: 25px; font-size: 12px; } .online { gap: 35px !important; } .marketplace { gap: 35px; } }
     @media (max-width: 600px) { nav { height: 68px; padding: 0 5%; gap: 12px; } .logo { font-size: 24px; } .nav-end { gap: 6px; } .btn-ruby { font-size: 12px; padding: 7px 12px; } .mobile-nav { top: 68px; } main > section { padding: 48px 0; } .hero { grid-template-columns: 1fr; gap: 32px; } h1 { font-size: clamp(36px, 9vw, 48px); margin: 16px 0; } .hero-desc { font-size: 16px; } .hero-ctas { gap: 18px; } .btn-lg { padding: 12px 18px; font-size: 15px; } .hero-visual { margin: 0 18px; padding-top: 25px; } .hero-visual img { width: 195px; } .hero-visual figcaption { font-size: 11px; } .margin-note { right: -10px; top: 34px; } .shop-strip { gap: 8px 20px; font-size: 12px; padding: 16px 0; } .shop-strip span:first-child { flex-basis: 100%; } .section-intro { grid-template-columns: 1fr; gap: 5px; margin-bottom: 25px; } .shop-stories { grid-template-columns: 1fr; } .shop-story, .shop-story + .shop-story { padding: 25px 0; border-left: 0; } .shop-story + .shop-story { border-top: 2px solid var(--wine); } .shop-story h3 { font-size: 26px; } main > .online { grid-template-columns: 1fr; padding: 44px 7%; gap: 32px !important; } .order-shot img { width: 195px; } .marketplace { grid-template-columns: 1fr; gap: 15px; } .how-steps { grid-template-columns: 1fr; gap: 20px; } .how-step { display: grid; grid-template-columns: 35px 1fr; gap: 10px; } .how-step-title { margin-top: 0; } .pricing-cards { grid-template-columns: 1fr 1fr; } .p-card { padding: 23px 12px; } .p-amt { font-size: 27px; } .p-plan { font-size: 16px; } .p-list { font-size: 12px; } .p-btn { font-size: 13px; } .download-guides { grid-template-columns: 1fr; gap: 24px; } .footer-top { grid-template-columns: 1fr 1fr; gap: 30px 20px; } .footer-brand { grid-column: 1 / -1; } .footer-col a { overflow-wrap: anywhere; } }
     @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation: none !important; transition: none !important; } }
-</style>
+@media (max-width: 600px) { .pricing-cards { grid-template-columns: 1fr; } .p-card + .p-card { border-left: 0; border-top: 1px solid var(--line); } }
+  </style>
 </head>
 <body>
 <a class="skip-link" href="#main">ข้ามไปเนื้อหา</a>
@@ -252,7 +253,7 @@
       <div class="scenario"><strong>ลูกค้าสั่งเพิ่มที่โต๊ะเดิม</strong><p>เปิดบิลตามโต๊ะ เพิ่มรายการอาหารและหมายเหตุถึงครัวไว้ในออเดอร์นั้น</p></div>
       <div class="scenario"><strong>ส่งรายการจากหน้าร้านเข้าครัว</strong><p>กดส่งครัว ให้ทีมครัวเห็นรายการที่ต้องทำและทำเครื่องหมายเมื่อพร้อมเสิร์ฟ</p></div>
       <div class="scenario"><strong>ทานด้วยกัน แต่อยากแยกจ่าย</strong><p>ใช้การแยกบิลตอนคิดเงิน พร้อมเก็บยอดขายกลับมาดูในรายงาน</p></div>
-      <p class="tier-note">ผังโต๊ะ หน้าจอครัว และแยกบิล ในแพ็กเกจ Restaurant</p>
+      <p class="tier-note">เลือกร้านอาหาร · โต๊ะ หน้าจอครัว และแยกบิล เริ่มที่ Lite</p>
     </article>
   </div>
 </section>
@@ -264,7 +265,7 @@
 
 <section class="marketplace" id="marketplace"><div><p class="eyebrow">ถึงเวลาสั่งของเข้าร้าน</p><h2 class="heading">ของชุดเดิม<br>ไม่ต้องจดใหม่ทุกครั้ง</h2><p class="subtext">ดูสินค้าจากร้านส่งที่เปิดขายในระบบ แล้วสั่งต่อจากแอปที่ใช้ดูแลร้านอยู่แล้ว</p></div><div><ol class="supply-list"><li><div>ดูรูป ราคา และยอดสั่งขั้นต่ำ<p>เลือกสินค้าจากร้านส่งก่อนตัดสินใจสั่ง</p></div></li><li><div>ดึงรายการจากบิลเดิมมาสั่งซ้ำ<p>ปรับจำนวนให้พอดีกับของที่ขาดรอบนี้</p></div></li><li><div>เก็บร้านและสินค้าที่สั่งประจำ<p>กลับมาหาได้จากรายการโปรดและประวัติสั่งซื้อ</p></div></li></ol><p class="supplier-link">เป็นร้านส่ง? <a href="/supplier">เข้าพอร์ทัลจัดการสินค้าและออเดอร์ ↗</a></p></div></section>
 
-<section class="how" id="how"><p class="eyebrow">เริ่มทีละนิดก็ได้</p><h2 class="heading">ลองจากบิลแรกของร้าน</h2><div class="how-steps"><div class="how-step"><span class="how-num">01</span><div><h3 class="how-step-title">ติดตั้ง แล้วตั้งชื่อร้าน</h3><p class="how-step-desc">เลือก Android หรือ iOS สมัครด้วยอีเมล และเลือกแพ็กเกจให้เหมาะกับร้าน</p></div></div><div class="how-step"><span class="how-num">02</span><div><h3 class="how-step-title">ใส่สินค้าหรือเมนูที่ขาย</h3><p class="how-step-desc">เริ่มจากรายการที่ขายบ่อย พร้อมราคา แล้วค่อยเพิ่มส่วนที่เหลือ</p></div></div><div class="how-step"><span class="how-num">03</span><div><h3 class="how-step-title">ลองขาย แล้วเปิดดูยอด</h3><p class="how-step-desc">ทำความคุ้นเคยกับการรับเงินและรายงานก่อนนำไปใช้ที่หน้าร้าน</p></div></div></div></section>
+<section class="how" id="how"><p class="eyebrow">เริ่มทีละนิดก็ได้</p><h2 class="heading">ลองจากบิลแรกของร้าน</h2><div class="how-steps"><div class="how-step"><span class="how-num">01</span><div><h3 class="how-step-title">ติดตั้ง แล้วตั้งชื่อร้าน</h3><p class="how-step-desc">เลือก Android หรือ iOS สมัครด้วยอีเมล และเลือกประเภทร้านและแพ็กเกจให้เหมาะกับงาน</p></div></div><div class="how-step"><span class="how-num">02</span><div><h3 class="how-step-title">ใส่สินค้าหรือเมนูที่ขาย</h3><p class="how-step-desc">เริ่มจากรายการที่ขายบ่อย พร้อมราคา แล้วค่อยเพิ่มส่วนที่เหลือ</p></div></div><div class="how-step"><span class="how-num">03</span><div><h3 class="how-step-title">ลองขาย แล้วเปิดดูยอด</h3><p class="how-step-desc">ทำความคุ้นเคยกับการรับเงินและรายงานก่อนนำไปใช้ที่หน้าร้าน</p></div></div></div></section>
 <!-- PRICING -->
 <section class="pricing" id="pricing">
   <div class="eyebrow">ราคา</div>
@@ -274,63 +275,35 @@
     <button class="bill-btn on" aria-pressed="true" id="bm" onclick="setBill('m')">รายเดือน</button>
     <button class="bill-btn" aria-pressed="false" id="by" onclick="setBill('y')">รายปี <span class="save-pill">ประหยัด 17%</span></button>
   </div>
+  <div class="bill-toggle" role="group" aria-label="ประเภทร้าน">
+    <button class="bill-btn on" id="type-retail" aria-pressed="true" onclick="setShopType('retail')">ร้านค้าปลีก</button>
+    <button class="bill-btn" id="type-restaurant" aria-pressed="false" onclick="setShopType('restaurant')">ร้านอาหาร</button>
+  </div>
+  <p class="subtext" style="margin-bottom:20px">เลือกประเภทร้าน แล้วเลือก Solo, Lite หรือ Full ตามงานที่ต้องใช้ · ราคาต่อร้าน</p>
   <div class="pricing-cards">
-    <!-- Solo -->
     <div class="p-card">
+
       <div class="p-plan">Solo</div>
       <div class="p-price"><span class="currency">฿</span><span class="p-amt" data-m="199" data-y="1,990">199</span><span class="period p-per"> /เดือน</span></div>
-      <div class="p-desc">ใช้มือถือ/tablet ของตัวเอง</div>
-      <hr class="p-sep"/>
-      <ul class="p-list">
-        <li>POS ขาย รับเงิน ใบเสร็จดิจิทัล</li>
-        <li>รายงานยอดขายรายวัน</li>
-        <li>QR PromptPay ในตัว</li>
-        <li>สั่งของจาก supplier</li>
-      </ul>
+      <div class="p-desc" id="plan-desc-0">ขายเอง ดูยอดได้ทุกวัน</div><hr class="p-sep">
+      <ul class="p-list" id="plan-features-0"><li>ขายสินค้าและรับเงิน</li><li>รายงานรายวัน</li><li>QR PromptPay</li><li>สั่งของจากร้านส่ง</li></ul>
       <a href="#download" class="p-btn">เริ่มทดลองฟรี</a>
     </div>
-    <!-- Lite -->
     <div class="p-card">
+
       <div class="p-plan">Lite</div>
       <div class="p-price"><span class="currency">฿</span><span class="p-amt" data-m="399" data-y="3,990">399</span><span class="period p-per"> /เดือน</span></div>
-      <div class="p-desc">มี tablet แล้ว + ชุดพิมพ์ใบเสร็จ</div>
-      <hr class="p-sep"/>
-      <ul class="p-list">
-        <li>ทุกอย่างใน Solo</li>
-        <li>ใบเสร็จกระดาษ + ลิ้นชักเงิน</li>
-        <li>จัดการสต็อก</li>
-        <li>ฐานข้อมูลลูกค้า</li>
-      </ul>
+      <div class="p-desc" id="plan-desc-1">ดูแลสินค้าและลูกหนี้</div><hr class="p-sep">
+      <ul class="p-list" id="plan-features-1"><li>ทุกอย่างใน Solo</li><li>จัดการสต็อกและเตือนใกล้หมด</li><li>ลูกหนี้และการรับชำระ</li><li>พิมพ์ใบเสร็จด้วยอุปกรณ์ที่รองรับ</li></ul>
       <a href="#download" class="p-btn">เริ่มทดลองฟรี</a>
     </div>
-    <!-- Full (featured) -->
     <div class="p-card featured">
       <div class="p-card-badge">แนะนำ</div>
       <div class="p-plan">Full</div>
       <div class="p-price"><span class="currency">฿</span><span class="p-amt" data-m="599" data-y="5,990">599</span><span class="period p-per"> /เดือน</span></div>
-      <div class="p-desc">สำหรับร้านที่ต้องการใช้งานพร้อมชุดอุปกรณ์</div>
-      <hr class="p-sep"/>
-      <ul class="p-list">
-        <li>ทุกอย่างใน Lite</li>
-        <li>ชุดอุปกรณ์ครบ (tablet + ปรินเตอร์ + ลิ้นชัก)</li>
-        <li>รองรับพนักงาน 3 ผู้ใช้</li>
-        <li>รายงานเชิงลึก + ติดต่อสอบถามบริการดูแลอุปกรณ์</li>
-      </ul>
+      <div class="p-desc" id="plan-desc-2">บริหารร้านด้วยข้อมูล</div><hr class="p-sep">
+      <ul class="p-list" id="plan-features-2"><li>ทุกอย่างใน Lite</li><li>พนักงาน 3 ผู้ใช้</li><li>สมาชิกสะสมแต้ม</li><li>รายงานเชิงลึก</li></ul>
       <a href="#download" class="p-btn ruby">เริ่มทดลองฟรี</a>
-    </div>
-    <!-- Restaurant -->
-    <div class="p-card">
-      <div class="p-plan">Restaurant</div>
-      <div class="p-price"><span class="currency">฿</span><span class="p-amt" data-m="1,199" data-y="11,990">1,199</span><span class="period p-per"> /เดือน·สาขา</span></div>
-      <div class="p-desc">ร้านอาหาร หลายสาขา</div>
-      <hr class="p-sep"/>
-      <ul class="p-list">
-        <li>ทุกอย่างใน Full</li>
-        <li>ครัว + ผังโต๊ะ + แยกบิล</li>
-        <li>หลายสาขา + ผู้ใช้ไม่จำกัด</li>
-        <li>เชื่อม Xero / FlowAccount</li>
-      </ul>
-      <a href="#download" class="p-btn">เริ่มทดลองฟรี</a>
     </div>
   </div>
   <p class="subtext" style="margin-top:24px">การทดลองฟรีเป็นการทดลองแอป หากต้องการชุดอุปกรณ์ กรุณา <a href="https://lin.ee/V8eWC8Tl" target="_blank" rel="noopener">ติดต่อทีมงาน</a> เพื่อยืนยันรายการอุปกรณ์ ค่าใช้จ่าย เงื่อนไขสัญญา และพื้นที่บริการก่อนตัดสินใจ</p>
@@ -376,7 +349,7 @@
         Pokpok เหมาะกับร้านค้าประเภทไหน?
         <span class="faq-arrow">▾</span>
       </button>
-      <div class="faq-a" id="faq-answer-1" hidden>ใช้ได้ทั้งร้านค้าปลีกและร้านอาหาร ร้านค้าปลีกใช้ขายสินค้า เช็กสต็อก และบันทึกลูกหนี้ ส่วนแพ็กเกจ Restaurant มีผังโต๊ะ ส่งรายการเข้าครัว และแยกบิล โดยฟีเจอร์ที่ใช้ได้ขึ้นอยู่กับแพ็กเกจ ดูรายละเอียดในตารางราคาด้านบน</div>
+      <div class="faq-a" id="faq-answer-1" hidden>เลือกร้านค้าปลีกหรือร้านอาหาร แล้วเลือก Solo, Lite หรือ Full ร้านอาหาร Solo เหมาะรับออเดอร์กลับบ้าน Lite เพิ่มโต๊ะและครัว Full เพิ่มสูตรวัตถุดิบและรายงานเชิงลึก ดูรายละเอียดของแต่ละประเภทร้านในตารางราคาด้านบน</div>
     </div>
     <div class="faq-item">
       <button class="faq-q" onclick="toggleFaq(this)" aria-expanded="false" aria-controls="faq-answer-2">
@@ -469,6 +442,19 @@
 </footer>
 
 <script>
+  const planFeatures = {"retail":[["ขายเอง ดูยอดได้ทุกวัน","ขายสินค้าและรับเงิน","รายงานรายวัน","QR PromptPay","สั่งของจากร้านส่ง"],["ดูแลสินค้าและลูกหนี้","ทุกอย่างใน Solo","จัดการสต็อกและเตือนใกล้หมด","ลูกหนี้และการรับชำระ","พิมพ์ใบเสร็จด้วยอุปกรณ์ที่รองรับ"],["บริหารร้านด้วยข้อมูล","ทุกอย่างใน Lite","พนักงาน 3 ผู้ใช้","สมาชิกสะสมแต้ม","รายงานเชิงลึก"]],"restaurant":[["รับออเดอร์กลับบ้าน","ขายอาหารและรับเงิน","เมนูและตัวเลือกเสริม","รายงานรายวัน","QR PromptPay"],["ดูแลโต๊ะและครัว","ทุกอย่างใน Solo","โต๊ะและบิลค้าง","ส่งรายการเข้าครัว","QR สั่งอาหารที่โต๊ะ"],["รู้ต้นทุน ดูกำไร","ทุกอย่างใน Lite","สูตรอาหารและวัตถุดิบ","พนักงาน 3 ผู้ใช้ + สะสมแต้ม","รายงานเชิงลึก"]]};
+  function setShopType(type) {
+    for (const key of ['retail', 'restaurant']) {
+      const button = document.getElementById('type-' + key);
+      button.classList.toggle('on', key === type);
+      button.setAttribute('aria-pressed', String(key === type));
+    }
+    planFeatures[type].forEach((items, i) => {
+      document.getElementById('plan-desc-' + i).textContent = items[0];
+      const list = document.getElementById('plan-features-' + i);
+      list.replaceChildren(...items.slice(1).map(text => { const li = document.createElement('li'); li.textContent = text; return li; }));
+    });
+  }
   function setBill(t) {
     ['m', 'y'].forEach(v => { const button = document.getElementById('b' + v); button.classList.toggle('on', t === v); button.setAttribute('aria-pressed', String(t === v)); });
     document.querySelectorAll('.p-amt').forEach(el => { el.textContent = t === 'm' ? el.dataset.m : el.dataset.y; });

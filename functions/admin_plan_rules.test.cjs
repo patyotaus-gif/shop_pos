@@ -13,6 +13,13 @@ const fs = require('node:fs');
       subscriptionStatus: 'trial', subscriptionEndsAt: null, createdAt: Timestamp.now(),
       trialEndsAt: Timestamp.fromMillis(Date.now() + 60 * 86400000) };
     await assertSucceeds(setDoc(doc(owner, 'shops/owner'), data));
+    for (const shopType of ['retail', 'restaurant']) {
+      for (const tier of ['solo', 'lite', 'full']) {
+        const id = `${shopType}-${tier}`;
+        await assertSucceeds(setDoc(doc(env.authenticatedContext(id).firestore(), `shops/${id}`), {...data, shopType, tier}));
+      }
+    }
+    await assertFails(setDoc(doc(other, 'shops/other'), {...data, shopType:'unknown'}));
     await assertSucceeds(updateDoc(doc(owner, 'shops/owner'), { name: 'Renamed', fcmToken: 'test' }));
     for (const change of [{ tier: 'restaurant' }, { plan: 'yearly' }, { locations: 5 }, { shopType: 'restaurant' },
       { subscriptionStatus: 'active' }, { trialEndsAt: Timestamp.fromMillis(Date.now() + 90 * 86400000) },

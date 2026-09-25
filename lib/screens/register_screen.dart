@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/shop.dart';
 import '../services/auth_service.dart';
-import '../services/hardware_service.dart';
 import '../services/shop_service.dart';
 import '../widgets/tier_picker.dart';
 
@@ -25,6 +24,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passCtrl = TextEditingController();
   final _confirmPassCtrl = TextEditingController();
   final _referralCtrl = TextEditingController();
+  ShopType _shopType = ShopType.retail;
   ShopTier _tier = ShopTier.full; // mass-market default
   bool _loading = false;
   bool _obscure = true;
@@ -58,8 +58,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
     if (!_acceptedTerms) {
-      setState(() => _error =
-          'กรุณายอมรับเงื่อนไขการใช้บริการและนโยบายความเป็นส่วนตัว');
+      setState(() =>
+          _error = 'กรุณายอมรับเงื่อนไขการใช้บริการและนโยบายความเป็นส่วนตัว');
       return;
     }
     setState(() {
@@ -81,21 +81,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    // สร้าง shop document ใน Firestore. shopType จะ derive จาก tier เอง
-    // ใน ShopService (Tier 4 = restaurant, ที่เหลือ = retail).
+    // Store business type independently from the selected subscription tier.
     try {
       await ShopService.createShop(
         name: _shopNameCtrl.text.trim(),
         email: _emailCtrl.text.trim(),
         tier: _tier,
+        shopType: _shopType,
         policyVersion: kPolicyVersion,
       );
-      // For tiers that ship a kit (Lite/Full/Restaurant) queue a hardware
-      // request so the founder/sales agent sees it in their pipeline.
-      // No-op for Solo (BYOD). Best-effort — a failed hardware write
-      // shouldn't block the shop from being created, so it's not in the
-      // same try/return as createShop.
-      await HardwareService.createForSignup(tier: _tier);
+      // Hardware is ordered separately after confirming equipment and terms.
       // Redeem referral code if the user entered one. Best-effort: a bad
       // code just doesn't credit anyone and never blocks signup.
       if (_referralCtrl.text.trim().isNotEmpty) {
@@ -178,8 +173,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     prefixIcon: Icon(Icons.storefront_outlined),
                     border: OutlineInputBorder(),
                   ),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'กรุณากรอกชื่อร้าน' : null,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'กรุณากรอกชื่อร้าน'
+                      : null,
                 ),
                 const SizedBox(height: 24),
 
@@ -203,7 +199,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ],
                 ),
                 const SizedBox(height: 10),
+                SegmentedButton<ShopType>(
+                  segments: const [
+                    ButtonSegment(
+                        value: ShopType.retail,
+                        label: Text('ร้านค้าปลีก'),
+                        icon: Icon(Icons.storefront_outlined)),
+                    ButtonSegment(
+                        value: ShopType.restaurant,
+                        label: Text('ร้านอาหาร'),
+                        icon: Icon(Icons.restaurant_outlined)),
+                  ],
+                  selected: {_shopType},
+                  onSelectionChanged: _loading
+                      ? null
+                      : (v) => setState(() => _shopType = v.first),
+                ),
+                const SizedBox(height: 12),
                 TierPicker(
+                  shopType: _shopType,
                   selected: _tier,
                   onChanged: (t) => setState(() => _tier = t),
                 ),
@@ -244,7 +258,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   validator: (v) {
                     if (v == null || v.isEmpty) return 'กรุณากรอกรหัสผ่าน';
-                    if (v.length < 6) return 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร';
+                    if (v.length < 6) {
+                      return 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร';
+                    }
                     return null;
                   },
                 ),
@@ -301,8 +317,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             style: TextStyle(
                                 fontSize: 12.5,
                                 height: 1.5,
-                                color:
-                                    cs.onSurface.withValues(alpha: 0.75)),
+                                color: cs.onSurface.withValues(alpha: 0.75)),
                             children: [
                               const TextSpan(text: 'ฉันยอมรับ '),
                               TextSpan(
@@ -331,8 +346,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 if (_error != null) ...[
                   const SizedBox(height: 12),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: cs.errorContainer,
                       borderRadius: BorderRadius.circular(8),
@@ -360,8 +375,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ? const SizedBox(
                             height: 20,
                             width: 20,
-                            child:
-                                CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Text('สมัครและเริ่มใช้งานฟรี'),
                   ),
@@ -384,4 +398,3 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
-

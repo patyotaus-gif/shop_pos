@@ -22,6 +22,8 @@ import '../services/shop_service.dart';
 import '../services/staff_service.dart';
 import '../utils/receipt_generator.dart';
 import '../widgets/payment_sheet.dart';
+import '../widgets/modifier_picker_sheet.dart';
+import '../models/order_modifier.dart';
 import '../widgets/shop_operation.dart';
 import '../utils/operation_error.dart';
 import '../widgets/product_image.dart';
@@ -131,13 +133,25 @@ class _PosScreenState extends State<PosScreen> {
   double get _subtotal => _cart.fold(0, (s, e) => s + e.subtotal);
   double get _total => _subtotal - _discount;
 
-  void _addToCart(Product product) {
+  Future<void> _addToCart(Product product) async {
+    if (_checkoutBusy || _pendingSale != null) return;
+    ModifierPick? pick;
+    if (product.modifierGroupIds.isNotEmpty) {
+      pick = await showModifierPicker(context, product: product);
+      if (pick == null || !mounted || _checkoutBusy) return;
+    }
+    final modifiers = pick?.modifiers ?? <OrderModifier>[];
+    final notes = pick?.notes;
     setState(() {
-      final idx = _cart.indexWhere((e) => e.product.id == product.id);
+      final idx = _cart.indexWhere((e) =>
+          e.product.id == product.id &&
+          modifiersEqual(e.modifiers, modifiers) &&
+          e.notes == notes);
       if (idx >= 0) {
         _cart[idx] = _cart[idx].copyWith(quantity: _cart[idx].quantity + 1);
       } else {
-        _cart.add(CartItem(product: product));
+        _cart.add(
+            CartItem(product: product, modifiers: modifiers, notes: notes));
       }
     });
   }
@@ -161,7 +175,7 @@ class _PosScreenState extends State<PosScreen> {
             final product = await ProductService.getByBarcode(barcode);
             if (!mounted) return null;
             if (product != null) {
-              _addToCart(product);
+              await _addToCart(product);
               return product.name;
             }
             return null;
@@ -409,7 +423,8 @@ class _PosScreenState extends State<PosScreen> {
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('มีบิลรอยืนยัน ฿${_pendingSale!.total.toStringAsFixed(2)} อย่ารับเงินซ้ำ ตรวจรายการเดิมก่อนเริ่มบิลใหม่'),
+                    Text(
+                        'มีบิลรอยืนยัน ฿${_pendingSale!.total.toStringAsFixed(2)} อย่ารับเงินซ้ำ ตรวจรายการเดิมก่อนเริ่มบิลใหม่'),
                     FilledButton.icon(
                         onPressed: _checkoutBusy ? null : () => _checkout(),
                         icon: const Icon(Icons.refresh),
@@ -770,8 +785,9 @@ class _CartItemTile extends StatelessWidget {
             : null,
         title: Text(item.product.name,
             style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(
-            '฿${baht.format(item.product.effectivePrice)} × ${item.quantity}'),
+        subtitle: Text('฿${baht.format(item.unitPrice)} × ${item.quantity}'
+            '${item.modifiers.isEmpty ? '' : '\n${item.modifiers.map((m) => m.optionName).join(', ')}'}'
+            '${item.notes == null ? '' : '\n${item.notes}'}'),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [

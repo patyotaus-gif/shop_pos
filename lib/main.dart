@@ -58,7 +58,8 @@ void main() async {
   try {
     await initializeDateFormatting('th_TH', null);
     themeNotifier.value = await ThemeService.load();
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)
+    await Firebase.initializeApp(
+            options: DefaultFirebaseOptions.currentPlatform)
         .timeout(const Duration(seconds: 15));
     // App Check (monitoring) — attests the app to Firebase backends so we
     // can later enforce that requests come from the real app. Release uses
@@ -125,7 +126,8 @@ class _BootErrorApp extends StatelessWidget {
                   child: SingleChildScrollView(
                     child: SelectableText(
                       stack,
-                      style: const TextStyle(fontSize: 11, fontFamily: 'Courier'),
+                      style:
+                          const TextStyle(fontSize: 11, fontFamily: 'Courier'),
                     ),
                   ),
                 ),
@@ -146,49 +148,49 @@ class ShopPosApp extends StatelessWidget {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeNotifier,
       builder: (context, mode, _) => MaterialApp(
-      title: 'Shop POS',
-      debugShowCheckedModeBanner: false,
-      themeMode: mode,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF7A1F2B),
-          brightness: Brightness.light,
+        title: 'Shop POS',
+        debugShowCheckedModeBanner: false,
+        themeMode: mode,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF7A1F2B),
+            brightness: Brightness.light,
+          ),
+          fontFamily: _brandFont,
+          useMaterial3: true,
         ),
-        fontFamily: _brandFont,
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF7A1F2B),
-          brightness: Brightness.dark,
+        darkTheme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF7A1F2B),
+            brightness: Brightness.dark,
+          ),
+          fontFamily: _brandFont,
+          useMaterial3: true,
         ),
-        fontFamily: _brandFont,
-        useMaterial3: true,
-      ),
-      home: StreamBuilder<User?>(
-        stream: AuthService.authStateStream,
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const _PokpokSplash();
+        home: StreamBuilder<User?>(
+          stream: AuthService.authStateStream,
+          builder: (context, snap) {
+            if (snap.connectionState == ConnectionState.waiting) {
+              return const _PokpokSplash();
+            }
+            if (snap.data == null) return const LoginScreen();
+            // Load the founder custom claim for an already-signed-in user (app
+            // relaunch); signIn() covers the fresh-login path. Fire-and-forget —
+            // UI gates on the cached value once it resolves.
+            AuthService.refreshFounderClaim();
+            return const SubscriptionGate(child: MainShell());
+          },
+        ),
+        onGenerateRoute: (settings) {
+          if (settings.name == '/product-form') {
+            final barcode = settings.arguments as String?;
+            return MaterialPageRoute(
+              builder: (_) => ProductFormScreen(initialBarcode: barcode),
+            );
           }
-          if (snap.data == null) return const LoginScreen();
-          // Load the founder custom claim for an already-signed-in user (app
-          // relaunch); signIn() covers the fresh-login path. Fire-and-forget —
-          // UI gates on the cached value once it resolves.
-          AuthService.refreshFounderClaim();
-          return const SubscriptionGate(child: MainShell());
+          return null;
         },
       ),
-      onGenerateRoute: (settings) {
-        if (settings.name == '/product-form') {
-          final barcode = settings.arguments as String?;
-          return MaterialPageRoute(
-            builder: (_) => ProductFormScreen(initialBarcode: barcode),
-          );
-        }
-        return null;
-      },
-    ),
     );
   }
 }
@@ -339,10 +341,10 @@ class _SplashMarkPainter extends CustomPainter {
     final fill = Paint()..color = cream;
 
     // ── Ripple (two pulses per loop, behind the bowl) ──
-    final rScale = _kf(
-        t, [0, .16, .30, .35, .45, 1.0], [.35, .35, 1.5, .35, 1.4, 1.4]);
-    final rOpacity = _kf(t, [0, .16, .20, .30, .35, .45, 1.0],
-        [0, 0, .5, 0, .45, 0, 0]);
+    final rScale =
+        _kf(t, [0, .16, .30, .35, .45, 1.0], [.35, .35, 1.5, .35, 1.4, 1.4]);
+    final rOpacity =
+        _kf(t, [0, .16, .20, .30, .35, .45, 1.0], [0, 0, .5, 0, .45, 0, 0]);
     if (rOpacity > 0.01) {
       canvas.drawCircle(
         const Offset(100, 120),
@@ -355,10 +357,10 @@ class _SplashMarkPainter extends CustomPainter {
     }
 
     // ── Bowl (squashes around its base on each impact) ──
-    final bScaleX = _kf(t, [0, .10, .19, .25, .35, .40, 1.0],
-        [1, 1, 1.04, 1, 1.025, 1, 1]);
-    final bScaleY = _kf(
-        t, [0, .10, .19, .25, .35, .40, 1.0], [1, 1, .94, 1, .97, 1, 1]);
+    final bScaleX =
+        _kf(t, [0, .10, .19, .25, .35, .40, 1.0], [1, 1, 1.04, 1, 1.025, 1, 1]);
+    final bScaleY =
+        _kf(t, [0, .10, .19, .25, .35, .40, 1.0], [1, 1, .94, 1, .97, 1, 1]);
     canvas.save();
     canvas.translate(100, 162);
     canvas.scale(bScaleX, bScaleY);
@@ -437,7 +439,8 @@ class _MainShellState extends State<MainShell> {
         // shopType field let a console-upgraded shop keep shopType="retail"
         // and never see Tables/Kitchen.)
         final tier = shopSnap.data?.tier ?? ShopTier.full;
-        final isRestaurant = tier == ShopTier.restaurant;
+        final shopType = shopSnap.data?.shopType ?? ShopType.retail;
+        final hasTables = Entitlements.canUseTables(tier, shopType);
         // Solo tier doesn't include the customer DB / debts feature, so
         // the ลูกหนี้ tab is hidden for them. Tap on the upgrade
         // surfaces in Settings nudges them to Lite if they want it back.
@@ -456,7 +459,7 @@ class _MainShellState extends State<MainShell> {
                 selectedIcon: Icons.dashboard,
                 label: 'ภาพรวม',
               ),
-              if (isRestaurant)
+              if (hasTables)
                 const AppNavigationItem(
                   screen: TablesScreen(),
                   icon: Icons.table_restaurant_outlined,
@@ -470,7 +473,7 @@ class _MainShellState extends State<MainShell> {
                   selectedIcon: Icons.point_of_sale,
                   label: 'ขาย',
                 ),
-              if (isRestaurant)
+              if (hasTables)
                 const AppNavigationItem(
                   screen: KitchenScreen(),
                   icon: Icons.soup_kitchen_outlined,
@@ -495,7 +498,7 @@ class _MainShellState extends State<MainShell> {
 
             // Marketplace remains accessible from the Dashboard.
             final moreTabs = <AppNavigationItem>[
-              if (isRestaurant)
+              if (hasTables)
                 const AppNavigationItem(
                   screen: ProductsScreen(),
                   icon: Icons.inventory_2_outlined,
@@ -537,11 +540,12 @@ class _MainShellState extends State<MainShell> {
 
             final tabs = [...primaryTabs, ...moreTabs];
             // Match the page by identity when tier changes reorder the menu.
-            final selected = tabs.indexWhere((tab) => tab.label == _selectedLabel);
+            final selected =
+                tabs.indexWhere((tab) => tab.label == _selectedLabel);
             final safeIndex = selected < 0 ? 0 : selected;
             return SideNavigationShell(
               items: tabs,
-              statusBanner:const ConnectionStatusBanner(),
+              statusBanner: const ConnectionStatusBanner(),
               selectedIndex: safeIndex,
               onSelected: (index) =>
                   setState(() => _selectedLabel = tabs[index].label),

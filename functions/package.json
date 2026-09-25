@@ -5,7 +5,7 @@
   },
   "main": "index.js",
   "scripts": {
-    "test": "node escalation.test.js && node --test refund.test.js analytics.test.js analytics_backend.test.js admin_change_plan.test.js",
+    "test": "node escalation.test.js && node --test refund.test.js analytics.test.js analytics_backend.test.js admin_change_plan.test.js shop_capabilities.test.js",
     "test:rules": "firebase emulators:exec --only firestore --project demo-pokpok-admin --config ../firebase.rules-test.json \"node admin_plan_rules.test.cjs\""
   },
   "dependencies": {

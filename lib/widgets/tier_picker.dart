@@ -11,8 +11,10 @@ class TierPicker extends StatelessWidget {
     super.key,
     required this.selected,
     required this.onChanged,
+    this.shopType = ShopType.retail,
   });
 
+  final ShopType shopType;
   final ShopTier selected;
   final void Function(ShopTier) onChanged;
 
@@ -44,14 +46,30 @@ class TierPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        for (final tier in ShopTier.values) ...[
+        for (final tier in ShopTierX.selectable) ...[
           _TierRow(
             tier: tier,
-            meta: _meta[tier]!,
+            meta: _TierMeta(
+              icon: _meta[tier]!.icon,
+              monthlyPrice: _meta[tier]!.monthlyPrice,
+              recommended: tier == ShopTier.full,
+              tagline: shopType == ShopType.restaurant
+                  ? switch (tier) {
+                      ShopTier.solo =>
+                        'รับออเดอร์กลับบ้าน · เมนูและตัวเลือกอาหาร',
+                      ShopTier.lite => 'เพิ่มโต๊ะ · ส่งครัว · QR สั่งที่โต๊ะ',
+                      _ => 'เพิ่มสูตรอาหาร · สะสมแต้ม · รายงานเชิงลึก',
+                    }
+                  : switch (tier) {
+                      ShopTier.solo => 'ขายสินค้า · รับเงิน · รายงานรายวัน',
+                      ShopTier.lite => 'เพิ่มสต็อก · ลูกหนี้ · พิมพ์ใบเสร็จ',
+                      _ => 'เพิ่มพนักงาน 3 ผู้ใช้ · สะสมแต้ม · รายงานเชิงลึก',
+                    },
+            ),
             selected: selected == tier,
             onTap: () => onChanged(tier),
           ),
-          if (tier != ShopTier.values.last) const SizedBox(height: 8),
+          if (tier != ShopTierX.selectable.last) const SizedBox(height: 8),
         ],
       ],
     );

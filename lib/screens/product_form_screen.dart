@@ -252,8 +252,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
           if (_ingredients != null && ingredients.isEmpty)
             Text('ยังไม่มีวัตถุดิบ — เพิ่มได้ที่หน้า สินค้า → "วัตถุดิบ"',
                 style: TextStyle(
-                    fontSize: 12,
-                    color: cs.onSurface.withValues(alpha: 0.6))),
+                    fontSize: 12, color: cs.onSurface.withValues(alpha: 0.6))),
           const SizedBox(height: 8),
         ],
       ],
@@ -266,8 +265,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     if (ingredients.isEmpty) return;
     final existing = index != null ? _recipe[index] : null;
     String selectedId = existing?.ingredientId ?? ingredients.first.id;
-    final qtyCtrl = TextEditingController(
-        text: existing != null ? '${existing.qty}' : '');
+    final qtyCtrl =
+        TextEditingController(text: existing != null ? '${existing.qty}' : '');
 
     final line = await showDialog<RecipeLine>(
       context: context,
@@ -296,8 +295,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(
-                    labelText: 'จำนวนต่อ 1 จาน',
-                    border: OutlineInputBorder()),
+                    labelText: 'จำนวนต่อ 1 จาน', border: OutlineInputBorder()),
               ),
             ],
           ),
@@ -368,9 +366,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         costPrice: costPrice,
         // Recipe mode ignores the product's own counter — keep whatever was
         // there so switching back to count mode doesn't lose the number.
-        stock: isRecipe
-            ? (widget.product?.stock ?? 0)
-            : int.parse(_stock.text),
+        stock: isRecipe ? (widget.product?.stock ?? 0) : int.parse(_stock.text),
         lowStockThreshold: isRecipe
             ? (widget.product?.lowStockThreshold ?? 5)
             : int.parse(_lowStock.text),
@@ -648,70 +644,72 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                   StreamBuilder<Shop?>(
                     stream: ShopService.watchCurrentShop(),
                     builder: (context, snap) {
-                      if (snap.data?.tier != ShopTier.restaurant) {
+                      if (snap.data == null ||
+                          !Entitlements.canUseRecipes(
+                              snap.data!.tier, snap.data!.shopType)) {
                         return const SizedBox.shrink();
                       }
                       return _buildRecipeSection(context);
                     },
                   ),
                   if (_stockMode == 'count')
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _stock,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'จำนวนสต็อก *',
-                            border: OutlineInputBorder(),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _stock,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'จำนวนสต็อก *',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (v) {
+                              if (v!.isEmpty) return 'กรุณากรอกสต็อก';
+                              if (int.tryParse(v) == null) return 'ไม่ถูกต้อง';
+                              return null;
+                            },
                           ),
-                          validator: (v) {
-                            if (v!.isEmpty) return 'กรุณากรอกสต็อก';
-                            if (int.tryParse(v) == null) return 'ไม่ถูกต้อง';
-                            return null;
-                          },
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        // Low-stock threshold is part of inventory
-                        // tracking — Solo tier doesn't include that, so
-                        // we disable the field and surface the upgrade
-                        // ask inline. Tap the lock icon for the modal.
-                        child: StreamBuilder<Shop?>(
-                          stream: ShopService.watchCurrentShop(),
-                          builder: (context, snap) {
-                            final tier = snap.data?.tier ?? ShopTier.full;
-                            final enabled = Entitlements.canUseInventory(tier);
-                            return TextFormField(
-                              controller: _lowStock,
-                              keyboardType: TextInputType.number,
-                              enabled: enabled,
-                              decoration: InputDecoration(
-                                labelText: 'แจ้งเตือนเมื่อเหลือ',
-                                border: const OutlineInputBorder(),
-                                helperText: enabled
-                                    ? null
-                                    : 'ใช้ได้ในแผน Lite ขึ้นไป',
-                                suffixIcon: enabled
-                                    ? null
-                                    : IconButton(
-                                        icon: const Icon(
-                                            Icons.lock_outline,
-                                            size: 18),
-                                        onPressed: () => showUpgradePrompt(
-                                          context,
-                                          feature: EntitlementFeature
-                                              .inventory,
+                        const SizedBox(width: 16),
+                        Expanded(
+                          // Low-stock threshold is part of inventory
+                          // tracking — Solo tier doesn't include that, so
+                          // we disable the field and surface the upgrade
+                          // ask inline. Tap the lock icon for the modal.
+                          child: StreamBuilder<Shop?>(
+                            stream: ShopService.watchCurrentShop(),
+                            builder: (context, snap) {
+                              final tier = snap.data?.tier ?? ShopTier.full;
+                              final enabled =
+                                  Entitlements.canUseInventory(tier);
+                              return TextFormField(
+                                controller: _lowStock,
+                                keyboardType: TextInputType.number,
+                                enabled: enabled,
+                                decoration: InputDecoration(
+                                  labelText: 'แจ้งเตือนเมื่อเหลือ',
+                                  border: const OutlineInputBorder(),
+                                  helperText: enabled
+                                      ? null
+                                      : 'ใช้ได้ในแผน Lite ขึ้นไป',
+                                  suffixIcon: enabled
+                                      ? null
+                                      : IconButton(
+                                          icon: const Icon(Icons.lock_outline,
+                                              size: 18),
+                                          onPressed: () => showUpgradePrompt(
+                                            context,
+                                            feature:
+                                                EntitlementFeature.inventory,
+                                          ),
                                         ),
-                                      ),
-                              ),
-                            );
-                          },
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
                   const SizedBox(height: 8),
                   SwitchListTile(
                     value: _isPinned,
@@ -726,7 +724,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                   StreamBuilder<Shop?>(
                     stream: ShopService.watchCurrentShop(),
                     builder: (context, shopSnap) {
-                      if (shopSnap.data?.tier != ShopTier.restaurant) {
+                      if (shopSnap.data?.shopType != ShopType.restaurant) {
                         return const SizedBox.shrink();
                       }
                       return StreamBuilder<List<ModifierGroup>>(

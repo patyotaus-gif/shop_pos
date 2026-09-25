@@ -43,10 +43,17 @@ class Entitlements {
       t == ShopTier.full || t == ShopTier.restaurant;
 
   /// Kitchen ticket display + send-to-kitchen flow. Restaurant only.
-  static bool canUseKitchen(ShopTier t) => t == ShopTier.restaurant;
+  static bool canUseKitchen(ShopTier t, [ShopType type = ShopType.retail]) =>
+      t == ShopTier.restaurant ||
+      (type == ShopType.restaurant && t != ShopTier.solo);
 
   /// Dine-in table management + open tabs. Restaurant only.
-  static bool canUseTables(ShopTier t) => t == ShopTier.restaurant;
+  static bool canUseTables(ShopTier t, [ShopType type = ShopType.retail]) =>
+      canUseKitchen(t, type);
+
+  static bool canUseRecipes(ShopTier t, ShopType type) =>
+      t == ShopTier.restaurant ||
+      (type == ShopType.restaurant && t == ShopTier.full);
 
   /// Multi-location dashboard, location switching. Restaurant only.
   static bool canUseMultiBranch(ShopTier t) => t == ShopTier.restaurant;
@@ -75,8 +82,8 @@ class Entitlements {
         EntitlementFeature.customerDb => ShopTier.lite,
         EntitlementFeature.loyalty => ShopTier.full,
         EntitlementFeature.advancedReports => ShopTier.full,
-        EntitlementFeature.kitchen => ShopTier.restaurant,
-        EntitlementFeature.tables => ShopTier.restaurant,
+        EntitlementFeature.kitchen => ShopTier.lite,
+        EntitlementFeature.tables => ShopTier.lite,
         EntitlementFeature.multiBranch => ShopTier.restaurant,
         EntitlementFeature.apiSync => ShopTier.restaurant,
         EntitlementFeature.multiUser => ShopTier.full,

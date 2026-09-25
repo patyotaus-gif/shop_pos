@@ -20,7 +20,8 @@ service cloud.firestore {
         && request.resource.data.locations is int
         && request.resource.data.locations >= 1
         && request.resource.data.locations <= 10000
-        && request.resource.data.shopType == (request.resource.data.tier == 'restaurant' ? 'restaurant' : 'retail');
+        && request.resource.data.shopType in ['retail', 'restaurant']
+        && (request.resource.data.tier != 'restaurant' || request.resource.data.shopType == 'restaurant');
       allow update: if isOwner()
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
           'tier', 'plan', 'locations', 'shopType', 'subscriptionStatus',

@@ -4,6 +4,7 @@ const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const admin = require("firebase-admin");
 const { defineSecret } = require("firebase-functions/params");
+const { shopTypeOf, canUseTables, canSelectTier } = require('./shop_capabilities');
 
 admin.initializeApp();
 
@@ -80,6 +81,7 @@ async function applySubscriptionPayment(shopId, tier, billingCycle, locations, p
       subscriptionStatus: "active",
       subscriptionEndsAt: admin.firestore.Timestamp.fromDate(newEndDate),
       tier,
+      shopType: tier === 'restaurant' ? 'restaurant' : shopTypeOf(shopDoc.exists ? shopDoc.data() : {}),
       plan: billingCycle, // billing cycle — keep as plan for legacy
       locations: Math.max(1, parseInt(locations || 1)),
       lastPaymentAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -125,6 +127,11 @@ exports.createCheckoutSession = onCall(
     // Resolve which plan to bill. If a tier is sent, use the new path;
     // otherwise treat the legacy `plan` as a billingCycle on the Full tier.
     const resolvedTier = tier || "full";
+    const shopSnapshot = await admin.firestore().collection('shops').doc(shopId).get();
+    if (!shopSnapshot.exists) throw new HttpsError('not-found', 'ไม่พบร้านค้า');
+    if (!canSelectTier(shopSnapshot.data(), resolvedTier)) {
+      throw new HttpsError('invalid-argument', 'เลือก Solo, Lite หรือ Full');
+    }
     const resolvedCycle = billingCycle || plan || "monthly";
     const tiers = await getPlans();
     if (tiers[resolvedTier] && tiers[resolvedTier].enabled === false) {
@@ -1098,7 +1105,7 @@ const LINE_BOT_SYSTEM_PROMPT =
   "และรับออเดอร์ออนไลน์ สำหรับร้านค้าปลีกและร้านอาหารในไทย\n" +
   "- ตอบเป็นภาษาไทย สุภาพ เป็นกันเอง กระชับ (ไม่เกินประมาณ 5 บรรทัด)\n" +
   "- ช่วยเรื่อง: วิธีใช้แอป ฟีเจอร์ แพ็กเกจ/ราคา การสมัคร การต่ออายุ การเชื่อม LINE การสั่งของออนไลน์\n" +
-  "- แพ็กเกจต่อเดือน: Solo 199 / Lite 399 / Full 599 / Restaurant 1,199 บาท (รายปีคุ้มกว่า) " +
+  "- เลือกประเภทร้านค้าปลีกหรือร้านอาหาร แยกจากแพ็กเกจ Solo 199 / Lite 399 / Full 599 บาทต่อเดือน ราคาอาจปรับตามแค็ตตาล็อกปัจจุบัน " +
   "ดูล่าสุด สมัคร และต่ออายุที่ https://pok-pok.app/subscribe\n" +
   "- ถ้าผู้ใช้อยากรับแจ้งเตือนออเดอร์ผ่าน LINE ให้บอกว่าพิมพ์คำว่า \"ID\" เพื่อรับ LINE User ID\n" +
   "- ถ้าถูกถามข้อมูลเฉพาะร้าน บัญชี หรือยอดขาย ที่คุณไม่มีข้อมูล อย่าเดาหรือแต่งขึ้น " +
@@ -1414,6 +1421,7 @@ exports.adminListShops = onCall(async (request) => {
       name: d.name || "",
       email: d.email || "",
       tier: d.tier || (d.shopType === "restaurant" ? "restaurant" : "full"),
+      shopType: shopTypeOf(d),
       plan: d.plan || "monthly",
       locations: d.locations || 1,
       subscriptionStatus: d.subscriptionStatus || "trial",
@@ -1487,11 +1495,7 @@ exports.adminSetSubscription = onCall(async (request) => {
         tier,
         plan: cycle,
         locations,
-        // Keep shopType in sync with the tier so nav gating (Tables/Kitchen,
-        // which keys on shopType) reflects a Restaurant upgrade. Without
-        // this, a shop upgraded from retail keeps shopType="retail" and
-        // never sees the restaurant screens.
-        shopType: tier === "restaurant" ? "restaurant" : "retail",
+        shopType: tier === "restaurant" ? "restaurant" : shopTypeOf(data),
       },
       { merge: true }
     );
@@ -2065,7 +2069,9 @@ exports.createSubscriptionPayment = onCall(async (request) => {
   }
 
   const shopSnap = await admin.firestore().collection("shops").doc(shopId).get();
-  const shopData = shopSnap.exists ? shopSnap.data() : {};
+  if (!shopSnap.exists) throw new HttpsError('not-found', 'ไม่พบร้านค้า');
+  const shopData = shopSnap.data();
+  if (!canSelectTier(shopData, tier)) throw new HttpsError('invalid-argument', 'เลือก Solo, Lite หรือ Full');
   const locations = tierCfg.perLocation === true
     ? Math.max(1, parseInt(shopData.locations || 1))
     : 1;
@@ -2406,7 +2412,7 @@ exports.createTableOrder = onRequest(
         return;
       }
       // Table ordering is a Restaurant-tier feature — reject leaked links.
-      if ((shopSnap.data().tier || "") !== "restaurant") {
+      if (!canUseTables(shopSnap.data())) {
         res.status(403).json({ error: "ร้านนี้ไม่ได้เปิดสั่งผ่านโต๊ะ" });
         return;
       }

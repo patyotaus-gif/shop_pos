@@ -45,7 +45,8 @@ class ReceiptGenerator {
               ),
             pw.Center(
               child: pw.Text(name,
-                  style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                  style: pw.TextStyle(
+                      fontSize: 14, fontWeight: pw.FontWeight.bold)),
             ),
             if (address.isNotEmpty)
               pw.Center(
@@ -59,7 +60,9 @@ class ReceiptGenerator {
                     style: const pw.TextStyle(fontSize: 8)),
               ),
             pw.SizedBox(height: 2),
-            pw.Center(child: pw.Text(_date.format(sale.createdAt), style: const pw.TextStyle(fontSize: 9))),
+            pw.Center(
+                child: pw.Text(_date.format(sale.createdAt),
+                    style: const pw.TextStyle(fontSize: 9))),
             if (sale.receiptNo != null)
               pw.Center(
                 child: pw.Text('เลขที่ ${sale.receiptNo}',
@@ -80,8 +83,7 @@ class ReceiptGenerator {
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
                       pw.Expanded(
-                        child: pw.Text(
-                            '${item.productName} x${item.quantity}',
+                        child: pw.Text('${item.productName} x${item.quantity}',
                             style: const pw.TextStyle(fontSize: 9)),
                       ),
                       pw.Text(_baht.format(item.subtotal),
@@ -96,6 +98,9 @@ class ReceiptGenerator {
                         style: const pw.TextStyle(fontSize: 8),
                       ),
                     ),
+                  if (item.notes != null && item.notes!.isNotEmpty)
+                    pw.Text(item.notes!,
+                        style: const pw.TextStyle(fontSize: 8)),
                 ],
               ),
             ),
@@ -119,7 +124,8 @@ class ReceiptGenerator {
             if (sale.isDebt)
               pw.Center(
                 child: pw.Text('** เชื่อ: ${sale.customerName} **',
-                    style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                    style: pw.TextStyle(
+                        fontSize: 10, fontWeight: pw.FontWeight.bold)),
               ),
             if (sale.staffName != null)
               pw.Padding(
@@ -128,14 +134,17 @@ class ReceiptGenerator {
                     style: const pw.TextStyle(fontSize: 8)),
               ),
             pw.SizedBox(height: 8),
-            pw.Center(child: pw.Text('ขอบคุณที่ใช้บริการ', style: const pw.TextStyle(fontSize: 9))),
+            pw.Center(
+                child: pw.Text('ขอบคุณที่ใช้บริการ',
+                    style: const pw.TextStyle(fontSize: 9))),
           ],
         ),
       ),
     );
 
     final fileTag = sale.receiptNo ?? sale.id;
-    await Printing.sharePdf(bytes: await pdf.save(), filename: 'receipt_$fileTag.pdf');
+    await Printing.sharePdf(
+        bytes: await pdf.save(), filename: 'receipt_$fileTag.pdf');
   }
 
   /// Fetch the shop logo bytes (settings.logoUrl) for the receipt header.
@@ -157,10 +166,14 @@ class ReceiptGenerator {
         children: [
           pw.Text(label,
               style: pw.TextStyle(
-                  fontSize: 10, fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal)),
+                  fontSize: 10,
+                  fontWeight:
+                      bold ? pw.FontWeight.bold : pw.FontWeight.normal)),
           pw.Text(value,
               style: pw.TextStyle(
-                  fontSize: 10, fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal)),
+                  fontSize: 10,
+                  fontWeight:
+                      bold ? pw.FontWeight.bold : pw.FontWeight.normal)),
         ],
       );
 }

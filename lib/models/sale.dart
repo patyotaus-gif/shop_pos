@@ -23,6 +23,7 @@ class SaleItem {
   final int quantity;
   final double subtotal;
   final List<OrderModifier> modifiers;
+  final String? notes;
 
   const SaleItem({
     required this.productId,
@@ -34,6 +35,7 @@ class SaleItem {
     required this.quantity,
     required this.subtotal,
     this.modifiers = const [],
+    this.notes,
   });
 
   double get profit => (price - costPrice) * quantity;
@@ -47,6 +49,7 @@ class SaleItem {
         category: m['category'] as String?,
         quantity: m['quantity'] ?? 1,
         subtotal: (m['subtotal'] ?? 0).toDouble(),
+        notes: m['notes'] as String?,
         modifiers: ((m['modifiers'] as List<dynamic>?) ?? const [])
             .map((e) => OrderModifier.fromMap(e as Map<String, dynamic>))
             .toList(),
@@ -61,6 +64,7 @@ class SaleItem {
         if (category != null) 'category': category,
         'quantity': quantity,
         'subtotal': subtotal,
+        if (notes != null) 'notes': notes,
         if (modifiers.isNotEmpty)
           'modifiers': modifiers.map((m) => m.toMap()).toList(),
       };

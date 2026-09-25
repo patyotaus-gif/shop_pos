@@ -60,6 +60,8 @@ class SaleService {
                 costKnown: e.product.costPrice > 0,
                 category: e.product.category,
                 quantity: e.quantity,
+                modifiers: e.modifiers,
+                notes: e.notes,
                 subtotal: e.subtotal))
             .toList();
         final total =

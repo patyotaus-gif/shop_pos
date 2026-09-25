@@ -2,10 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum SubscriptionStatus { trial, active, expired }
 
-/// Pricing tier — chosen at signup and used by the entitlements service to
-/// gate features (max users, kitchen display, multi-branch, API sync ฯลฯ).
-/// Order matches "ladder logic" from Solo (cheapest, BYOD) to Restaurant
-/// (full kit + kitchen + multi-branch).
+/// Solo/Lite/Full are independent of business type. The restaurant value is
+/// retained for existing customers' entitlements and renewal terms only.
 enum ShopTier { solo, lite, full, restaurant }
 
 extension ShopTierX on ShopTier {
@@ -13,12 +11,12 @@ extension ShopTierX on ShopTier {
         ShopTier.solo => 'Pokpok Solo',
         ShopTier.lite => 'Pokpok Lite',
         ShopTier.full => 'Pokpok Full',
-        ShopTier.restaurant => 'Pokpok Restaurant',
+        ShopTier.restaurant => 'Pokpok Full (Restaurant เดิม)',
       };
 
-  /// Map tier → ShopType so the existing nav/UI gating (which keys on
-  /// retail vs restaurant) keeps working without a separate `shopType`
-  /// field becoming stale. Only Tier 4 unlocks restaurant features.
+  static const selectable = [ShopTier.solo, ShopTier.lite, ShopTier.full];
+
+  /// Legacy compatibility only. New shops select type independently.
   ShopType get derivedShopType =>
       this == ShopTier.restaurant ? ShopType.restaurant : ShopType.retail;
 }
@@ -30,6 +28,10 @@ extension ShopTierX on ShopTier {
 /// Existing shops written before this field existed default to `retail` on
 /// read, so no Firestore migration is required.
 enum ShopType { retail, restaurant }
+
+extension ShopTypeX on ShopType {
+  String get label => this == ShopType.restaurant ? 'ร้านอาหาร' : 'ร้านค้าปลีก';
+}
 
 class Shop {
   final String id;
@@ -100,7 +102,11 @@ class Shop {
     //   - shopType=retail (or missing) → tier=full (Tier 3 was the
     //     historical ฿299 ≈ ฿599 equivalent — closest experience)
     final shopType = ShopType.values.firstWhere(
-      (e) => e.name == (data['shopType'] ?? 'retail'),
+      (e) =>
+          e.name ==
+          (data['tier'] == 'restaurant'
+              ? 'restaurant'
+              : (data['shopType'] ?? 'retail')),
       orElse: () => ShopType.retail,
     );
     final tier = data['tier'] != null
@@ -108,7 +114,9 @@ class Shop {
             (e) => e.name == data['tier'],
             orElse: () => ShopTier.full,
           )
-        : (shopType == ShopType.restaurant ? ShopTier.restaurant : ShopTier.full);
+        : (shopType == ShopType.restaurant
+            ? ShopTier.restaurant
+            : ShopTier.full);
 
     return Shop(
       id: id,
@@ -124,8 +132,7 @@ class Shop {
       locations: (data['locations'] ?? 1) as int,
       trialEndsAt: (data['trialEndsAt'] as Timestamp?)?.toDate(),
       subscriptionEndsAt: (data['subscriptionEndsAt'] as Timestamp?)?.toDate(),
-      createdAt:
-          (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       referralCode: data['referralCode'] as String?,
       referredBy: data['referredBy'] as String?,
     );

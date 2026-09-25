@@ -57,7 +57,7 @@ String _tierLabel(String t) => switch (t) {
       'solo' => 'Solo',
       'lite' => 'Lite',
       'full' => 'Full',
-      'restaurant' => 'Restaurant',
+      'restaurant' => 'Full (Restaurant เดิม)',
       _ => t,
     };
 
@@ -100,8 +100,7 @@ class _ShopsTabState extends State<_ShopsTab> {
               border: OutlineInputBorder(),
               isDense: true,
             ),
-            onChanged: (v) =>
-                setState(() => _query = v.trim().toLowerCase()),
+            onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
           ),
         ),
         Expanded(
@@ -183,8 +182,7 @@ class _ShopTile extends StatelessWidget {
               _Chip('ทดลองถึง ${_date(shop['trialEndsAt'])}')
             else if (status == 'active')
               _Chip('ถึง ${_date(shop['subscriptionEndsAt'])}'),
-            if (hw.isNotEmpty)
-              _Chip('HW: ${_hwLabel(hw.first['status'])}'),
+            if (hw.isNotEmpty) _Chip('HW: ${_hwLabel(hw.first['status'])}'),
           ]),
         ],
       ),
@@ -258,8 +256,7 @@ class _ShopActionsSheetState extends State<_ShopActionsSheet> {
               shop['name']?.toString().isNotEmpty == true
                   ? shop['name'].toString()
                   : '(ไม่มีชื่อร้าน)',
-              style: const TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.w700),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
             Text(shop['email']?.toString() ?? '',
                 style: TextStyle(
@@ -274,22 +271,28 @@ class _ShopActionsSheetState extends State<_ShopActionsSheet> {
               ActionChip(
                 avatar: const Icon(Icons.edit_outlined, size: 18),
                 label: const Text('แก้แผนผู้ใช้'),
-                onPressed: _busy ? null : () async {
-                  final changed = await showDialog<bool>(context: context,
-                    barrierDismissible: false, builder: (_) => AdminPlanDialog(shop: shop));
-                  if (changed == true && context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('เปลี่ยนแผนแล้ว วันหมดอายุคงเดิม')));
-                    Navigator.pop(context);
-                  }
-                },
+                onPressed: _busy
+                    ? null
+                    : () async {
+                        final changed = await showDialog<bool>(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (_) => AdminPlanDialog(shop: shop));
+                        if (changed == true && context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content:
+                                      Text('เปลี่ยนแผนแล้ว วันหมดอายุคงเดิม')));
+                          Navigator.pop(context);
+                        }
+                      },
               ),
               for (final d in const [7, 30, 60])
                 ActionChip(
                   label: Text('+$d วันทดลอง'),
                   onPressed: _busy
                       ? null
-                      : () => _run(
-                          () => AdminService.extendTrial(shopId, d),
+                      : () => _run(() => AdminService.extendTrial(shopId, d),
                           'ต่อทดลอง +$d วันแล้ว'),
                 ),
               ActionChip(
@@ -366,7 +369,8 @@ class _ShopActionsSheetState extends State<_ShopActionsSheet> {
   Future<void> _openActivate() async {
     final result = await showDialog<({String tier, String cycle})>(
       context: context,
-      builder: (_) => const _ActivateDialog(),
+      builder: (_) => _ActivateDialog(
+          initialTier: widget.shop['tier'] as String? ?? 'full'),
     );
     if (result == null) return;
     final days = result.cycle == 'yearly' ? 365 : 30;
@@ -383,13 +387,14 @@ class _ShopActionsSheetState extends State<_ShopActionsSheet> {
 }
 
 class _ActivateDialog extends StatefulWidget {
-  const _ActivateDialog();
+  const _ActivateDialog({required this.initialTier});
+  final String initialTier;
   @override
   State<_ActivateDialog> createState() => _ActivateDialogState();
 }
 
 class _ActivateDialogState extends State<_ActivateDialog> {
-  String _tier = 'full';
+  late String _tier = widget.initialTier;
   String _cycle = 'monthly';
 
   @override
@@ -402,12 +407,13 @@ class _ActivateDialogState extends State<_ActivateDialog> {
           DropdownButtonFormField<String>(
             initialValue: _tier,
             decoration: const InputDecoration(labelText: 'แพ็กเกจ'),
-            items: const [
-              DropdownMenuItem(value: 'solo', child: Text('Solo')),
+            items: [
+              const DropdownMenuItem(value: 'solo', child: Text('Solo')),
               DropdownMenuItem(value: 'lite', child: Text('Lite')),
               DropdownMenuItem(value: 'full', child: Text('Full')),
-              DropdownMenuItem(
-                  value: 'restaurant', child: Text('Restaurant')),
+              if (widget.initialTier == 'restaurant')
+                const DropdownMenuItem(
+                    value: 'restaurant', child: Text('Full (Restaurant เดิม)')),
             ],
             onChanged: (v) => setState(() => _tier = v ?? 'full'),
           ),
@@ -416,7 +422,8 @@ class _ActivateDialogState extends State<_ActivateDialog> {
             initialValue: _cycle,
             decoration: const InputDecoration(labelText: 'รอบบิล'),
             items: const [
-              DropdownMenuItem(value: 'monthly', child: Text('รายเดือน (30 วัน)')),
+              DropdownMenuItem(
+                  value: 'monthly', child: Text('รายเดือน (30 วัน)')),
               DropdownMenuItem(value: 'yearly', child: Text('รายปี (365 วัน)')),
             ],
             onChanged: (v) => setState(() => _cycle = v ?? 'monthly'),
@@ -428,8 +435,7 @@ class _ActivateDialogState extends State<_ActivateDialog> {
             onPressed: () => Navigator.pop(context),
             child: const Text('ยกเลิก')),
         FilledButton(
-          onPressed: () =>
-              Navigator.pop(context, (tier: _tier, cycle: _cycle)),
+          onPressed: () => Navigator.pop(context, (tier: _tier, cycle: _cycle)),
           child: const Text('เปิดใช้'),
         ),
       ],
@@ -444,9 +450,8 @@ class _SuppliersTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final col = FirebaseFirestore.instance
-        .collection('suppliers')
-        .orderBy('name');
+    final col =
+        FirebaseFirestore.instance.collection('suppliers').orderBy('name');
     return Scaffold(
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: col.snapshots(),
@@ -456,8 +461,7 @@ class _SuppliersTab extends StatelessWidget {
           }
           final docs = snap.data?.docs ?? const [];
           if (docs.isEmpty) {
-            return const Center(
-                child: Text('ยังไม่มีซัพพลายเออร์ — กดปุ่ม +'));
+            return const Center(child: Text('ยังไม่มีซัพพลายเออร์ — กดปุ่ม +'));
           }
           return ListView.separated(
             itemCount: docs.length,
@@ -467,7 +471,9 @@ class _SuppliersTab extends StatelessWidget {
               return ListTile(
                 leading: CircleAvatar(
                   backgroundColor: s.active
-                      ? Theme.of(context).colorScheme.primary
+                      ? Theme.of(context)
+                          .colorScheme
+                          .primary
                           .withValues(alpha: 0.12)
                       : Colors.grey.withValues(alpha: 0.2),
                   child: Icon(Icons.storefront,
@@ -569,7 +575,9 @@ class _SupplierEditDialogState extends State<_SupplierEditDialog> {
           onPressed: _busy ? null : _save,
           child: _busy
               ? const SizedBox(
-                  width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2))
               : const Text('บันทึก'),
         ),
       ],
@@ -745,7 +753,9 @@ class _ProductEditDialogState extends State<_ProductEditDialog> {
           onPressed: _busy ? null : _save,
           child: _busy
               ? const SizedBox(
-                  width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2))
               : const Text('บันทึก'),
         ),
       ],
@@ -837,8 +847,7 @@ class _SheetLabel extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Text(text,
-            style: const TextStyle(
-                fontSize: 13, fontWeight: FontWeight.w700)),
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
       );
 }
 
@@ -1036,7 +1045,8 @@ class _TierForm {
       : name = TextEditingController(text: (t['name'] ?? '') as String),
         desc = TextEditingController(text: (t['desc'] ?? '') as String),
         monthly = TextEditingController(
-            text: '${(((t['monthly'] as Map?)?['amount'] ?? 0) as num) ~/ 100}'),
+            text:
+                '${(((t['monthly'] as Map?)?['amount'] ?? 0) as num) ~/ 100}'),
         yearly = TextEditingController(
             text: '${(((t['yearly'] as Map?)?['amount'] ?? 0) as num) ~/ 100}'),
         enabled = t['enabled'] != false,
@@ -1148,7 +1158,8 @@ class _BillingTabState extends State<_BillingTab> {
           (int.tryParse(f.monthly.text.trim()) ?? 0) <= 0 ||
           (int.tryParse(f.yearly.text.trim()) ?? 0) <= 0) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('แผน ${entry.key}: กรอกชื่อ + ราคาให้ครบ (จำนวนเต็มบาท)'),
+          content:
+              Text('แผน ${entry.key}: กรอกชื่อ + ราคาให้ครบ (จำนวนเต็มบาท)'),
           backgroundColor: Colors.red,
         ));
         return;
@@ -1159,13 +1170,13 @@ class _BillingTabState extends State<_BillingTab> {
       await AdminService.upsertPlans(
           {for (final e in _forms.entries) e.key: e.value.toTier()});
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('บันทึกแผนแล้ว — มีผลกับหน้าเว็บทันที')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('บันทึกแผนแล้ว — มีผลกับหน้าเว็บทันที')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('บันทึกไม่สำเร็จ: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('บันทึกไม่สำเร็จ: $e'), backgroundColor: Colors.red));
       }
     } finally {
       if (mounted) setState(() => _savingPlans = false);
@@ -1186,8 +1197,8 @@ class _BillingTabState extends State<_BillingTab> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('บันทึกไม่สำเร็จ: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('บันทึกไม่สำเร็จ: $e'), backgroundColor: Colors.red));
       }
     } finally {
       if (mounted) setState(() => _savingBilling = false);
@@ -1253,7 +1264,8 @@ class _BillingTabState extends State<_BillingTab> {
           // ── แผน & ราคา ──
           Text('แผน & ราคา', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 4),
-          Text('แก้แล้วมีผลกับหน้า pok-pok.app/subscribe และการคิดเงินทันที (ราคาเป็นบาท)',
+          Text(
+              'แก้แล้วมีผลกับหน้า pok-pok.app/subscribe และการคิดเงินทันที (ราคาเป็นบาท)',
               style: TextStyle(
                   fontSize: 12, color: cs.onSurface.withValues(alpha: 0.6))),
           const SizedBox(height: 8),
@@ -1274,8 +1286,7 @@ class _BillingTabState extends State<_BillingTab> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Text('ยังไม่มีรายการ',
-                  style:
-                      TextStyle(color: cs.onSurface.withValues(alpha: 0.5))),
+                  style: TextStyle(color: cs.onSurface.withValues(alpha: 0.5))),
             )
           else
             for (final p in _payments) _paymentTile(p),
@@ -1297,14 +1308,18 @@ class _BillingTabState extends State<_BillingTab> {
           TextField(
             controller: f.name,
             decoration: const InputDecoration(
-                labelText: 'ชื่อแผน', border: OutlineInputBorder(), isDense: true),
+                labelText: 'ชื่อแผน',
+                border: OutlineInputBorder(),
+                isDense: true),
           ),
           const SizedBox(height: 10),
           TextField(
             controller: f.desc,
             maxLines: 2,
             decoration: const InputDecoration(
-                labelText: 'คำอธิบาย', border: OutlineInputBorder(), isDense: true),
+                labelText: 'คำอธิบาย',
+                border: OutlineInputBorder(),
+                isDense: true),
           ),
           const SizedBox(height: 10),
           Row(children: [

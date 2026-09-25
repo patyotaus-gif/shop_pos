@@ -1,12 +1,15 @@
 const { HttpsError } = require('firebase-functions/v2/https');
+const { shopTypeOf } = require('./shop_capabilities');
 const tiers = ['solo', 'lite', 'full', 'restaurant'];
 const cycles = ['monthly', 'yearly'];
 function createChangePlan({ db, assertFounder, FieldValue }) {
   return async request => {
     assertFounder(request);
-    const { shopId, tier, billingCycle, locations, expected, requestId, reason } = request.data || {};
+    const { shopId, tier, billingCycle, locations, expected, requestId, reason, shopType } = request.data || {};
     if (typeof shopId !== 'string' || !shopId || shopId.includes('/') ||
         !tiers.includes(tier) || !cycles.includes(billingCycle) ||
+        (shopType !== undefined && !['retail', 'restaurant'].includes(shopType)) ||
+        (tier === 'restaurant' && shopType === 'retail') ||
         !Number.isInteger(locations) || locations < 1 || locations > 10000 ||
         typeof requestId !== 'string' || !/^[a-zA-Z0-9-]{10,80}$/.test(requestId) ||
         typeof reason !== 'string' || !reason.trim() || reason.length > 500 ||
@@ -21,7 +24,8 @@ function createChangePlan({ db, assertFounder, FieldValue }) {
       if (prior.exists) {
         const p = prior.data();
         if (p.actor !== request.auth.uid || p.after.tier !== tier || p.after.plan !== billingCycle ||
-            p.after.locations !== locations || p.reason !== reason.trim()) {
+            p.after.locations !== locations || p.reason !== reason.trim() ||
+            (shopType !== undefined && p.after.shopType !== shopType)) {
           throw new HttpsError('already-exists', 'คำขอซ้ำมีข้อมูลต่างกัน กรุณาเปิดหน้าร้านใหม่');
         }
         return { ok: true, replayed: true };
@@ -33,8 +37,14 @@ function createChangePlan({ db, assertFounder, FieldValue }) {
       if (Object.keys(before).some(k => before[k] !== expected[k])) {
         throw new HttpsError('failed-precondition', 'แผนถูกเปลี่ยนแล้ว กรุณาปิดหน้านี้และเปิดร้านใหม่ก่อนแก้ไข');
       }
-      const after = { tier, plan: billingCycle, locations };
-      tx.update(ref, { ...after, shopType: tier === 'restaurant' ? 'restaurant' : 'retail' });
+      // Old clients omit expected.shopType; preserve their retry compatibility.
+      if (expected.shopType !== undefined && expected.shopType !== shopTypeOf(data)) {
+        throw new HttpsError('failed-precondition', 'ประเภทร้านเปลี่ยนแล้ว กรุณาเปิดร้านใหม่');
+      }
+      before.shopType = shopTypeOf(data);
+      const after = { tier, plan: billingCycle, locations,
+        shopType: tier === 'restaurant' ? 'restaurant' : (shopType || shopTypeOf(data)) };
+      tx.update(ref, after);
       tx.set(audit, { actor: request.auth.uid, before, after, reason: reason.trim(),
         createdAt: FieldValue.serverTimestamp() });
       // This changes entitlements only: no renewal, charge, or Stripe contract edit.

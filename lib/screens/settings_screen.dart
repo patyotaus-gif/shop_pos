@@ -94,8 +94,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('บันทึกลิงก์ไม่สำเร็จ: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('บันทึกลิงก์ไม่สำเร็จ: $e')));
       }
     } finally {
       if (mounted) setState(() => _savingSlug = false);
@@ -133,8 +133,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   /// Shop logo → shown as the head-band banner on the customer /order page.
   Future<void> _pickLogo() async {
-    final picked =
-        await ImagePicker().pickImage(source: ImageSource.gallery);
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
     final shopId = AuthService.shopId;
     if (picked == null || shopId == null) return;
     setState(() => _savingLogo = true);
@@ -144,8 +143,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) setState(() => _logoUrl = url);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('อัปโหลดโลโก้ไม่สำเร็จ: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('อัปโหลดโลโก้ไม่สำเร็จ: $e')));
       }
     } finally {
       if (mounted) setState(() => _savingLogo = false);
@@ -211,7 +210,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _savePromptPay() async {
     final id = _promptpayIdCtrl.text.replaceAll(RegExp(r'[^\d]'), '');
-    if (id.isNotEmpty && id.length != 10 && id.length != 13 && id.length != 15) {
+    if (id.isNotEmpty &&
+        id.length != 10 &&
+        id.length != 13 &&
+        id.length != 15) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -256,7 +258,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return;
     }
     await _saveLineSettings();
-    await LineService.sendMessage('✅ ทดสอบการแจ้งเตือน LINE จาก Pokpok POS สำเร็จ!');
+    await LineService.sendMessage(
+        '✅ ทดสอบการแจ้งเตือน LINE จาก Pokpok POS สำเร็จ!');
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('ส่งทดสอบแล้ว ตรวจสอบ LINE ของคุณ')),
@@ -358,7 +361,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       width: 56,
                       height: 56,
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(8),
                         image: (_logoUrl?.isNotEmpty ?? false)
                             ? DecorationImage(
@@ -395,8 +400,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       TextButton(
                         onPressed: _pickLogo,
-                        child: Text(
-                            (_logoUrl?.isNotEmpty ?? false) ? 'เปลี่ยน' : 'เพิ่มโลโก้'),
+                        child: Text((_logoUrl?.isNotEmpty ?? false)
+                            ? 'เปลี่ยน'
+                            : 'เพิ่มโลโก้'),
                       ),
                     ],
                   ],
@@ -451,7 +457,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             Clipboard.setData(ClipboardData(
                                 text: 'https://pok-pok.app/r/$_slug'));
                             ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('คัดลอกลิงก์แล้ว')));
+                                const SnackBar(
+                                    content: Text('คัดลอกลิงก์แล้ว')));
                           },
                         ),
                       ],
@@ -489,7 +496,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _PlanTile(shop: snap.data),
                       if (snap.data != null) ...[
                         const SizedBox(height: 12),
-                        _PlanCapabilities(tier: snap.data!.tier),
+                        _PlanCapabilities(
+                            tier: snap.data!.tier,
+                            shopType: snap.data!.shopType),
                         if (snap.data!.referralCode != null) ...[
                           const SizedBox(height: 12),
                           _ReferralCard(code: snap.data!.referralCode!),
@@ -577,8 +586,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 ),
                                 if (allowed)
                                   Icon(Icons.chevron_right,
-                                      color: cs.onSurface
-                                          .withValues(alpha: 0.4))
+                                      color:
+                                          cs.onSurface.withValues(alpha: 0.4))
                                 else
                                   Text('อัพเกรด',
                                       style: TextStyle(
@@ -654,8 +663,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 ),
                                 if (allowed)
                                   Icon(Icons.chevron_right,
-                                      color: cs.onSurface
-                                          .withValues(alpha: 0.4))
+                                      color:
+                                          cs.onSurface.withValues(alpha: 0.4))
                                 else
                                   Text('อัพเกรด',
                                       style: TextStyle(
@@ -734,8 +743,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         fontWeight: FontWeight.w600,
                                         fontSize: 15)),
                                 SizedBox(height: 2),
-                                Text(
-                                    'จัดการสมาชิก · ฮาร์ดแวร์ · ซัพพลายเออร์',
+                                Text('จัดการสมาชิก · ฮาร์ดแวร์ · ซัพพลายเออร์',
                                     style: TextStyle(fontSize: 12)),
                               ],
                             ),
@@ -799,10 +807,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 // Theme section
                 Text('การแสดงผล',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleSmall
-                        ?.copyWith(color: cs.primary, fontWeight: FontWeight.bold)),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: cs.primary, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 ValueListenableBuilder<ThemeMode>(
                   valueListenable: themeNotifier,
@@ -827,17 +833,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 // PromptPay payment section
                 Text('รับเงินออนไลน์ (PromptPay)',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleSmall
-                        ?.copyWith(color: cs.primary, fontWeight: FontWeight.bold)),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: cs.primary, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: cs.primaryContainer.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: cs.primary.withValues(alpha: 0.3)),
+                    border:
+                        Border.all(color: cs.primary.withValues(alpha: 0.3)),
                   ),
                   child: const Text(
                     'ลูกค้าที่สั่งของออนไลน์จะเห็น QR PromptPay พร้อมจำนวนเงิน (มีเศษ\nสตางค์ระบุออเดอร์)\nเงินจะเข้าบัญชีร้านโดยตรง — Pokpok ไม่หักค่าธรรมเนียม',
@@ -853,7 +858,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     hintText: 'เบอร์โทร (เช่น 0812345678) หรือเลขบัตรประชาชน',
                     prefixIcon: Icon(Icons.qr_code_2),
                     border: OutlineInputBorder(),
-                    helperText: '10 หลัก (เบอร์), 13 หลัก (บัตรประชาชน), หรือ 15 หลัก (e-wallet)',
+                    helperText:
+                        '10 หลัก (เบอร์), 13 หลัก (บัตรประชาชน), หรือ 15 หลัก (e-wallet)',
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -864,7 +870,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     hintText: 'นาย ก ข',
                     prefixIcon: Icon(Icons.account_balance_outlined),
                     border: OutlineInputBorder(),
-                    helperText: 'แสดงในหน้าจ่ายเงินของลูกค้าเพื่อยืนยันความถูกต้อง',
+                    helperText:
+                        'แสดงในหน้าจ่ายเงินของลูกค้าเพื่อยืนยันความถูกต้อง',
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -965,17 +972,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 // LINE Notification section
                 Text('การแจ้งเตือน LINE',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleSmall
-                        ?.copyWith(color: cs.primary, fontWeight: FontWeight.bold)),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: cs.primary, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: const Color(0xFF06C755).withValues(alpha: 0.07),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFF06C755).withValues(alpha: 0.3)),
+                    border: Border.all(
+                        color: const Color(0xFF06C755).withValues(alpha: 0.3)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1018,7 +1024,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             backgroundColor: const Color(0xFF06C755)),
                         icon: _savingLine
                             ? const SizedBox(
-                                width: 16, height: 16,
+                                width: 16,
+                                height: 16,
                                 child: CircularProgressIndicator(
                                     strokeWidth: 2, color: Colors.white))
                             : const Icon(Icons.save_outlined),
@@ -1044,17 +1051,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 // Subscription section
                 Text('Subscription',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleSmall
-                        ?.copyWith(color: cs.primary, fontWeight: FontWeight.bold)),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: cs.primary, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton.icon(
                     onPressed: () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const SubscriptionScreen()),
                     ),
                     icon: const Icon(Icons.star_outline),
                     label: const Text('จัดการ Subscription'),
@@ -1066,10 +1072,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 // Account section
                 Text('บัญชีผู้ใช้',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleSmall
-                        ?.copyWith(color: cs.primary, fontWeight: FontWeight.bold)),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: cs.primary, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
@@ -1168,19 +1172,13 @@ class _PlanTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Text(s.tier.label,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w700, fontSize: 15)),
-                      const SizedBox(width: 8),
-                      Text(priceText,
-                          style: TextStyle(
-                              fontSize: 12,
-                              color:
-                                  cs.onSurface.withValues(alpha: 0.65))),
-                    ],
-                  ),
+                  Text('${s.shopType.label} · ${s.tier.label}',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 15)),
+                  Text(priceText,
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: cs.onSurface.withValues(alpha: 0.65))),
                   const SizedBox(height: 2),
                   Text(statusText,
                       style: TextStyle(
@@ -1243,8 +1241,7 @@ class _HardwareTracker extends StatelessWidget {
           const SizedBox(height: 4),
           Text(request.kit.label,
               style: TextStyle(
-                  fontSize: 12,
-                  color: cs.onSurface.withValues(alpha: 0.65))),
+                  fontSize: 12, color: cs.onSurface.withValues(alpha: 0.65))),
           if (!returned) ...[
             const SizedBox(height: 12),
             ClipRRect(
@@ -1270,8 +1267,7 @@ class _HardwareTracker extends StatelessWidget {
             const SizedBox(height: 8),
             Text(request.note!,
                 style: TextStyle(
-                    fontSize: 11,
-                    color: cs.onSurface.withValues(alpha: 0.6))),
+                    fontSize: 11, color: cs.onSurface.withValues(alpha: 0.6))),
           ],
         ],
       ),
@@ -1287,8 +1283,7 @@ class _HardwareTracker extends StatelessWidget {
         children: [
           Text(k,
               style: TextStyle(
-                  fontSize: 12,
-                  color: cs.onSurface.withValues(alpha: 0.6))),
+                  fontSize: 12, color: cs.onSurface.withValues(alpha: 0.6))),
           Text(v,
               style:
                   const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
@@ -1321,28 +1316,27 @@ class _ReferralCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.card_giftcard_outlined,
-                  size: 18, color: cs.primary),
+              Icon(Icons.card_giftcard_outlined, size: 18, color: cs.primary),
               const SizedBox(width: 8),
               const Expanded(
                 child: Text('แนะนำเพื่อน — ได้ฟรี 30 วันทั้งคู่',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 13)),
+                    style:
+                        TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
               ),
             ],
           ),
           const SizedBox(height: 4),
-          Text('ให้เพื่อนกรอกรหัสนี้ตอนสมัคร แล้วทั้งคุณและเพื่อนได้ทดลองเพิ่มคนละ 30 วัน',
+          Text(
+              'ให้เพื่อนกรอกรหัสนี้ตอนสมัคร แล้วทั้งคุณและเพื่อนได้ทดลองเพิ่มคนละ 30 วัน',
               style: TextStyle(
-                  fontSize: 11,
-                  color: cs.onSurface.withValues(alpha: 0.65))),
+                  fontSize: 11, color: cs.onSurface.withValues(alpha: 0.65))),
           const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: cs.surface,
                     borderRadius: BorderRadius.circular(8),
@@ -1392,7 +1386,8 @@ class _ReferralCard extends StatelessWidget {
 /// the owner can scan in 5 seconds — and convert that curiosity into a
 /// concrete upgrade ask via the tap target.
 class _PlanCapabilities extends StatelessWidget {
-  const _PlanCapabilities({required this.tier});
+  const _PlanCapabilities({required this.tier, required this.shopType});
+  final ShopType shopType;
   final ShopTier tier;
 
   static const _features = [
@@ -1404,24 +1399,21 @@ class _PlanCapabilities extends StatelessWidget {
     EntitlementFeature.advancedReports,
     EntitlementFeature.tables,
     EntitlementFeature.kitchen,
-    EntitlementFeature.multiBranch,
-    EntitlementFeature.apiSync,
   ];
 
   bool _has(EntitlementFeature f) => switch (f) {
         EntitlementFeature.paperReceipt =>
           Entitlements.canUsePaperReceipt(tier),
         EntitlementFeature.inventory => Entitlements.canUseInventory(tier),
-        EntitlementFeature.customerDb =>
-          Entitlements.canUseCustomerDb(tier),
+        EntitlementFeature.customerDb => Entitlements.canUseCustomerDb(tier),
         EntitlementFeature.multiUser => Entitlements.canUseStaff(tier),
         EntitlementFeature.loyalty => Entitlements.canUseLoyalty(tier),
         EntitlementFeature.advancedReports =>
           Entitlements.canUseAdvancedReports(tier),
-        EntitlementFeature.kitchen => Entitlements.canUseKitchen(tier),
-        EntitlementFeature.tables => Entitlements.canUseTables(tier),
-        EntitlementFeature.multiBranch =>
-          Entitlements.canUseMultiBranch(tier),
+        EntitlementFeature.kitchen =>
+          Entitlements.canUseKitchen(tier, shopType),
+        EntitlementFeature.tables => Entitlements.canUseTables(tier, shopType),
+        EntitlementFeature.multiBranch => Entitlements.canUseMultiBranch(tier),
         EntitlementFeature.apiSync => Entitlements.canUseApiSync(tier),
       };
 
@@ -1445,10 +1437,13 @@ class _PlanCapabilities extends StatelessWidget {
                   color: cs.onSurface.withValues(alpha: 0.55))),
           const SizedBox(height: 6),
           for (final f in _features)
-            _CapabilityRow(
-              feature: f,
-              included: _has(f),
-            ),
+            if (shopType == ShopType.restaurant ||
+                (f != EntitlementFeature.tables &&
+                    f != EntitlementFeature.kitchen))
+              _CapabilityRow(
+                feature: f,
+                included: _has(f),
+              ),
         ],
       ),
     );
@@ -1464,9 +1459,8 @@ class _CapabilityRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return InkWell(
-      onTap: included
-          ? null
-          : () => showUpgradePrompt(context, feature: feature),
+      onTap:
+          included ? null : () => showUpgradePrompt(context, feature: feature),
       borderRadius: BorderRadius.circular(6),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
@@ -1488,8 +1482,7 @@ class _CapabilityRow extends StatelessWidget {
                   color: included
                       ? cs.onSurface
                       : cs.onSurface.withValues(alpha: 0.5),
-                  decoration:
-                      included ? null : TextDecoration.lineThrough,
+                  decoration: included ? null : TextDecoration.lineThrough,
                   decorationColor: cs.onSurface.withValues(alpha: 0.3),
                 ),
               ),

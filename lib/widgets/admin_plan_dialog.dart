@@ -15,7 +15,7 @@ class _AdminPlanDialogState extends State<AdminPlanDialog> {
   final _form = GlobalKey<FormState>();
   final _reason = TextEditingController();
   late final TextEditingController _locations;
-  late String _tier, _cycle;
+  late String _tier, _cycle, _shopType;
   bool _busy = false;
   String? _error;
   Map<String, dynamic>? _pending;
@@ -23,6 +23,8 @@ class _AdminPlanDialogState extends State<AdminPlanDialog> {
   void initState() {
     super.initState();
     _tier = widget.shop['tier'] as String? ?? 'full';
+    _shopType = widget.shop['shopType'] as String? ??
+        (_tier == 'restaurant' ? 'restaurant' : 'retail');
     _cycle = widget.shop['plan'] as String? ?? 'monthly';
     _locations =
         TextEditingController(text: '${widget.shop['locations'] ?? 1}');
@@ -40,17 +42,20 @@ class _AdminPlanDialogState extends State<AdminPlanDialog> {
     final payload = <String, dynamic>{
       'shopId': widget.shop['id'],
       'tier': _tier,
+      'shopType': _shopType,
       'billingCycle': _cycle,
       'locations': int.parse(_locations.text.trim()),
       'reason': _reason.text.trim(),
       'expected': {
         'tier': widget.shop['tier'] ?? 'full',
+        'shopType': widget.shop['shopType'] ??
+            (widget.shop['tier'] == 'restaurant' ? 'restaurant' : 'retail'),
         'plan': widget.shop['plan'] ?? 'monthly',
         'locations': widget.shop['locations'] ?? 1,
       }
     };
     if (_pending == null ||
-        ['tier', 'billingCycle', 'locations', 'reason']
+        ['tier', 'shopType', 'billingCycle', 'locations', 'reason']
             .any((k) => _pending![k] != payload[k])) {
       _pending = {...payload, 'requestId': const Uuid().v4()};
     }
@@ -62,11 +67,12 @@ class _AdminPlanDialogState extends State<AdminPlanDialog> {
       await (widget.save ?? AdminService.changePlan)(_pending!);
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _error = operationError(e);
           _busy = false;
         });
+      }
     }
   }
 
@@ -86,21 +92,47 @@ class _AdminPlanDialogState extends State<AdminPlanDialog> {
                           '${widget.shop['name'] ?? ''}\n${widget.shop['email'] ?? ''}'),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
+                        key: ValueKey(_shopType),
+                        initialValue: _shopType,
+                        decoration:
+                            const InputDecoration(labelText: 'ประเภทร้าน'),
+                        items: const [
+                          DropdownMenuItem(
+                              value: 'retail', child: Text('ร้านค้าปลีก')),
+                          DropdownMenuItem(
+                              value: 'restaurant', child: Text('ร้านอาหาร')),
+                        ],
+                        onChanged: _busy || _tier == 'restaurant'
+                            ? null
+                            : (v) => setState(() => _shopType = v!),
+                      ),
+                      if (widget.shop['tier'] == 'restaurant')
+                        const Text(
+                            'แผน Restaurant เดิมคงสิทธิ์ไว้ การเลือกแผนใหม่จะใช้สิทธิ์ของแผนที่เลือก'),
+                      DropdownButtonFormField<String>(
                           initialValue: _tier,
                           decoration:
                               const InputDecoration(labelText: 'แพ็กเกจ'),
-                          items: const [
-                            DropdownMenuItem(
+                          items: [
+                            const DropdownMenuItem(
                                 value: 'solo', child: Text('Solo')),
                             DropdownMenuItem(
                                 value: 'lite', child: Text('Lite')),
                             DropdownMenuItem(
                                 value: 'full', child: Text('Full')),
-                            DropdownMenuItem(
-                                value: 'restaurant', child: Text('Restaurant'))
+                            if (widget.shop['tier'] == 'restaurant')
+                              const DropdownMenuItem(
+                                  value: 'restaurant',
+                                  child: Text('Full (Restaurant เดิม)'))
                           ],
-                          onChanged:
-                              _busy ? null : (v) => setState(() => _tier = v!)),
+                          onChanged: _busy
+                              ? null
+                              : (v) => setState(() {
+                                    _tier = v!;
+                                    if (_tier == 'restaurant') {
+                                      _shopType = 'restaurant';
+                                    }
+                                  })),
                       DropdownButtonFormField<String>(
                           initialValue: _cycle,
                           decoration:

@@ -31,21 +31,23 @@ class _ProductsScreenState extends State<ProductsScreen> {
           StreamBuilder<Shop?>(
             stream: ShopService.watchCurrentShop(),
             builder: (context, snap) {
-              if (snap.data?.tier != ShopTier.restaurant) {
+              if (snap.data?.shopType != ShopType.restaurant) {
                 return const SizedBox.shrink();
               }
               return Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextButton.icon(
-                    icon: const Icon(Icons.egg_outlined, size: 18),
-                    label: const Text('วัตถุดิบ'),
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const IngredientsScreen()),
+                  if (Entitlements.canUseRecipes(
+                      snap.data!.tier, snap.data!.shopType))
+                    TextButton.icon(
+                      icon: const Icon(Icons.egg_outlined, size: 18),
+                      label: const Text('วัตถุดิบ'),
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const IngredientsScreen()),
+                      ),
                     ),
-                  ),
                   Padding(
                     padding: const EdgeInsets.only(right: 4),
                     child: TextButton.icon(
@@ -118,17 +120,23 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 return StreamBuilder<List<Product>>(
                   stream: ProductService.watchAll(),
                   builder: (ctx, snap) {
-                    if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+                    if (!snap.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
                     var products = snap.data!;
                     if (_search.isNotEmpty) {
                       products = products
                           .where((p) =>
-                              p.name.toLowerCase().contains(_search.toLowerCase()) ||
+                              p.name
+                                  .toLowerCase()
+                                  .contains(_search.toLowerCase()) ||
                               p.barcode.contains(_search))
                           .toList();
                     }
                     if (_category != 'ทั้งหมด') {
-                      products = products.where((p) => p.category == _category).toList();
+                      products = products
+                          .where((p) => p.category == _category)
+                          .toList();
                     }
                     if (products.isEmpty) {
                       return const Center(child: Text('ไม่พบสินค้า'));
@@ -167,13 +175,15 @@ class _ProductTile extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: flagLowStock ? Colors.red.shade100 : Colors.blue.shade100,
+          backgroundColor:
+              flagLowStock ? Colors.red.shade100 : Colors.blue.shade100,
           child: Icon(
             Icons.inventory_2_outlined,
             color: flagLowStock ? Colors.red : Colors.blue,
           ),
         ),
-        title: Text(product.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+        title: Text(product.name,
+            style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(
           '${product.category} · Barcode: ${product.barcode.isEmpty ? "-" : product.barcode}',
         ),
@@ -212,7 +222,8 @@ class _ProductTile extends StatelessWidget {
         ),
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => ProductFormScreen(product: product)),
+          MaterialPageRoute(
+              builder: (_) => ProductFormScreen(product: product)),
         ),
       ),
     );
@@ -243,7 +254,8 @@ class _ProductTile extends StatelessWidget {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ยกเลิก')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('ยกเลิก')),
           FilledButton(
             onPressed: () async {
               final qty = int.tryParse(ctrl.text) ?? 0;
@@ -252,7 +264,8 @@ class _ProductTile extends StatelessWidget {
               if (ctx.mounted) {
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(ctx).showSnackBar(
-                  SnackBar(content: Text('เพิ่มสต็อก ${product.name} +$qty ชิ้น')),
+                  SnackBar(
+                      content: Text('เพิ่มสต็อก ${product.name} +$qty ชิ้น')),
                 );
               }
             },

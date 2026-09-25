@@ -59,7 +59,7 @@ class _OrderQrScreenState extends State<OrderQrScreen> {
       _shopId = AuthService.shopId;
       _shopName = shop?.name ?? '';
       _isRestaurant =
-          shop != null && Entitlements.canUseTables(shop.tier);
+          shop != null && Entitlements.canUseTables(shop.tier, shop.shopType);
       _slug = settings['slug'] as String?;
       _mode = settings['tableOrderMode'] == 'prepaid' ? 'prepaid' : 'dineIn';
       _autoSend = settings['tableOrderAutoSend'] == true;
@@ -73,7 +73,8 @@ class _OrderQrScreenState extends State<OrderQrScreen> {
         errorCorrectionLevel: QrErrorCorrectLevel.H,
         backgroundColor: Colors.white,
         embeddedImage: const AssetImage(_qrLogoAsset),
-        embeddedImageStyle: QrEmbeddedImageStyle(size: Size(size * .18, size * .18)),
+        embeddedImageStyle:
+            QrEmbeddedImageStyle(size: Size(size * .18, size * .18)),
       );
 
   Future<void> _saveMode(String mode) async {
@@ -89,8 +90,7 @@ class _OrderQrScreenState extends State<OrderQrScreen> {
   Future<void> _exportPdf(List<({String label, String url})> entries) async {
     setState(() => _busy = true);
     try {
-      final logo =
-          (await rootBundle.load(_qrLogoAsset)).buffer.asUint8List();
+      final logo = (await rootBundle.load(_qrLogoAsset)).buffer.asUint8List();
       await QrPdfGenerator.printQrSheets(
         shopName: _shopName,
         entries: entries,
@@ -163,8 +163,7 @@ class _OrderQrScreenState extends State<OrderQrScreen> {
           FilledButton.icon(
             onPressed: _busy
                 ? null
-                : () => _exportPdf(
-                    [(label: 'รับกลับบ้าน', url: _takeawayUrl)]),
+                : () => _exportPdf([(label: 'รับกลับบ้าน', url: _takeawayUrl)]),
             icon: const Icon(Icons.print_outlined, size: 18),
             label: const Text('พิมพ์ / ส่งออก PDF'),
           ),
@@ -189,9 +188,7 @@ class _OrderQrScreenState extends State<OrderQrScreen> {
                     value: 'prepaid',
                     child: Text('จ่าย PromptPay ก่อน แบบสั่งออนไลน์')),
               ],
-              onChanged: _busy
-                  ? null
-                  : (v) => _saveMode(v ?? 'dineIn'),
+              onChanged: _busy ? null : (v) => _saveMode(v ?? 'dineIn'),
             ),
             if (_mode == 'dineIn')
               SwitchListTile(
@@ -232,7 +229,9 @@ class _OrderQrScreenState extends State<OrderQrScreen> {
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: SizedBox(
-                          width: 56, height: 56, child: _qr(_tableUrl(t.id), size: 56)),
+                          width: 56,
+                          height: 56,
+                          child: _qr(_tableUrl(t.id), size: 56)),
                       title: Text(t.name),
                       subtitle: t.section != null ? Text(t.section!) : null,
                       trailing: IconButton(
