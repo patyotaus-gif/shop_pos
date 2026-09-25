@@ -8,8 +8,26 @@ service cloud.firestore {
       // getShopPublic (/api/shopPublic) ที่คืนเฉพาะ field สาธารณะแทน.
       // (สินค้าใน subcollection products ยังอ่าน public ได้ — rule แยกด้านล่าง)
       allow read: if request.auth != null && request.auth.uid == shopId;
-      // เฉพาะเจ้าของร้านเท่านั้นที่แก้ไขข้อมูลร้านได้
-      allow write: if request.auth != null && request.auth.uid == shopId;
+      // Owners can create their trial and edit profile data. Subscription
+      // changes must go through server callables, including adminChangePlan.
+      allow create: if isOwner()
+        && request.resource.data.subscriptionStatus == 'trial'
+        && request.resource.data.get('subscriptionEndsAt', null) == null
+        && request.resource.data.trialEndsAt is timestamp
+        && request.resource.data.trialEndsAt <= request.time + duration.value(61, 'd')
+        && request.resource.data.tier in ['solo', 'lite', 'full', 'restaurant']
+        && request.resource.data.plan in ['monthly', 'yearly']
+        && request.resource.data.locations is int
+        && request.resource.data.locations >= 1
+        && request.resource.data.locations <= 10000
+        && request.resource.data.shopType == (request.resource.data.tier == 'restaurant' ? 'restaurant' : 'retail');
+      allow update: if isOwner()
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'tier', 'plan', 'locations', 'shopType', 'subscriptionStatus',
+          'trialEndsAt', 'subscriptionEndsAt', 'createdAt'
+        ]);
+      // Prevent deleting/recreating the shop to reset a trial or admin plan.
+      allow delete: if false;
 
       // ── Shorthand: owner of this shop ──
       function isOwner() {

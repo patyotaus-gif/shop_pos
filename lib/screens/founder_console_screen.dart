@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../models/hardware_request.dart';
 import '../models/supplier.dart';
 import '../services/admin_service.dart';
+import '../widgets/admin_plan_dialog.dart';
 
 /// Founder-only operations console — manage subscriptions, advance hardware
 /// shipments, and onboard/edit marketplace suppliers. Every mutation goes
@@ -270,6 +271,18 @@ class _ShopActionsSheetState extends State<_ShopActionsSheet> {
             if (_busy) const LinearProgressIndicator(),
             const _SheetLabel('การสมัครสมาชิก'),
             Wrap(spacing: 8, runSpacing: 8, children: [
+              ActionChip(
+                avatar: const Icon(Icons.edit_outlined, size: 18),
+                label: const Text('แก้แผนผู้ใช้'),
+                onPressed: _busy ? null : () async {
+                  final changed = await showDialog<bool>(context: context,
+                    barrierDismissible: false, builder: (_) => AdminPlanDialog(shop: shop));
+                  if (changed == true && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('เปลี่ยนแผนแล้ว วันหมดอายุคงเดิม')));
+                    Navigator.pop(context);
+                  }
+                },
+              ),
               for (final d in const [7, 30, 60])
                 ActionChip(
                   label: Text('+$d วันทดลอง'),

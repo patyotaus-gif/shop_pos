@@ -1379,6 +1379,9 @@ exports.opsMetrics = onCall(async (request) => {
 
 const ADMIN_TIERS = ["solo", "lite", "full", "restaurant"];
 const ADMIN_CYCLES = ["monthly", "yearly"];
+exports.adminChangePlan = onCall(require('./admin_change_plan').createChangePlan({
+  db: admin.firestore(), assertFounder, FieldValue: admin.firestore.FieldValue,
+}));
 
 // List every shop with the fields the console needs (subscription state +
 // its hardware requests). Sorted newest-first.
