@@ -19,6 +19,7 @@ typedef ModifierPick = ({List<OrderModifier> modifiers, String? notes});
 Future<ModifierPick?> showModifierPicker(
   BuildContext context, {
   required Product product,
+  List<ModifierGroup>? offlineGroups,
 }) {
   return showModalBottomSheet<ModifierPick>(
     context: context,
@@ -27,13 +28,15 @@ Future<ModifierPick?> showModifierPicker(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (_) => _ModifierPickerSheet(product: product),
+    builder: (_) =>
+        _ModifierPickerSheet(product: product, offlineGroups: offlineGroups),
   );
 }
 
 class _ModifierPickerSheet extends StatefulWidget {
-  const _ModifierPickerSheet({required this.product});
+  const _ModifierPickerSheet({required this.product, this.offlineGroups});
   final Product product;
+  final List<ModifierGroup>? offlineGroups;
 
   @override
   State<_ModifierPickerSheet> createState() => _ModifierPickerSheetState();
@@ -48,9 +51,11 @@ class _ModifierPickerSheetState extends State<_ModifierPickerSheet> {
   @override
   void initState() {
     super.initState();
-    _future = widget.product.modifierGroupIds.isEmpty
-        ? Future.value(const <ModifierGroup>[])
-        : ModifierService.getByIds(widget.product.modifierGroupIds);
+    _future = widget.offlineGroups != null
+        ? Future.value(widget.offlineGroups)
+        : widget.product.modifierGroupIds.isEmpty
+            ? Future.value(const <ModifierGroup>[])
+            : ModifierService.getByIds(widget.product.modifierGroupIds);
   }
 
   @override

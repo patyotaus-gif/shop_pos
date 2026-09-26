@@ -20,6 +20,11 @@ exports.staffManage = onCall(staffAccess.manage);
 exports.staffSwitchSession = onCall(staffAccess.switchSession);
 exports.staffWorkspace = onCall(staffAccess.workspace);
 exports.staffCheckout = onCall(staffAccess.checkout);
+const offlineSales = require('./offline_sales').createOfflineSales({
+  db: admin.firestore(), FieldValue: admin.firestore.FieldValue, Timestamp: admin.firestore.Timestamp,
+});
+exports.offlinePrepare = onCall(offlineSales.prepare);
+exports.offlineSync = onCall(offlineSales.sync);
 
 const stripeSecretKey = defineSecret("STRIPE_SECRET_KEY");
 const stripeWebhookSecret = defineSecret("STRIPE_WEBHOOK_SECRET");

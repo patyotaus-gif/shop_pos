@@ -32,8 +32,9 @@ const fs = require('node:fs');
     await assertFails(setDoc(doc(other, 'shops/other'), { ...data, subscriptionStatus: 'active' }));
     await assertFails(setDoc(doc(other, 'shops/other'), { ...data, trialEndsAt: Timestamp.fromMillis(Date.now() + 90 * 86400000) }));
     await assertFails(setDoc(doc(owner, 'shops/owner/planChanges/forged'), { actor: 'admin' }));
+    await assertFails(setDoc(doc(owner, 'shops/owner/offlinePermits/forged'), { expiresAt: Timestamp.fromMillis(Date.now()+86400000) }));
     const cashier = env.authenticatedContext('staff_test_uid', {staffRole:'cashier',staffShopId:'owner',staffId:'cashier',staffVersion:1}).firestore();
-    for (const path of ['shops/owner','shops/owner/settings/shop','shops/owner/products/item','shops/owner/sales/bill','shops/owner/staff/cashier','shops/owner/aiUsage/today']) {
+    for (const path of ['shops/owner','shops/owner/settings/shop','shops/owner/products/item','shops/owner/sales/bill','shops/owner/staff/cashier','shops/owner/aiUsage/today','shops/owner/offlinePermits/forged']) {
       const {getDoc} = require('firebase/firestore');
       await assertFails(getDoc(doc(cashier,path)));
       await assertFails(setDoc(doc(cashier,path),{name:'forged',role:'owner'}));

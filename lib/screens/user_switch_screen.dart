@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/staff_access_service.dart';
 import '../utils/operation_error.dart';
+import 'offline_cash_screen.dart';
 
 class UserSwitchScreen extends StatefulWidget {
   const UserSwitchScreen({super.key, this.loadStaff, this.switchTo});
@@ -71,6 +72,7 @@ class _UserSwitchScreenState extends State<UserSwitchScreen> {
       child: Scaffold(
         appBar: AppBar(title: const Text('เลือกผู้ใช้งาน')),
         body: ListView(padding: const EdgeInsets.all(20), children: [
+          const OfflineEntryButton(),
           const Text(
               'เจ้าของร้านจัดการข้อมูลและสิทธิ์ พนักงานขายและรับเงินได้ แต่ดูรายงาน ต้นทุน ตั้งค่า หรือคืนเงินไม่ได้'),
           const SizedBox(height: 16),

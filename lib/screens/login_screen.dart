@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'offline_cash_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 import '../widgets/app_version_text.dart';
@@ -116,6 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  const OfflineEntryButton(),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(20),
                     child: Image.asset(

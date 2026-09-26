@@ -21,6 +21,7 @@ import '../services/shop_service.dart';
 import '../services/auth_service.dart';
 import '../services/staff_access_service.dart';
 import 'user_switch_screen.dart';
+import 'offline_cash_screen.dart';
 import '../utils/receipt_generator.dart';
 import '../widgets/payment_sheet.dart';
 import '../widgets/modifier_picker_sheet.dart';
@@ -413,6 +414,8 @@ class _PosScreenState extends State<PosScreen> {
         ],
       ),
       body: Column(children: [
+        if (!_checkoutBusy && _pendingSale == null && _cart.isEmpty)
+          const OfflineEntryButton(allowPrepare: true),
         if (_checkingPending) const LinearProgressIndicator(),
         if (_pendingSale != null)
           Padding(

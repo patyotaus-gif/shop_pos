@@ -905,6 +905,11 @@ class _SalesReport extends StatelessWidget {
                             ),
                           ),
                           title: Row(children: [
+                            if (s.offlineReview.isNotEmpty)
+                              const Tooltip(
+                                  message: 'บิลออฟไลน์ต้องตรวจสอบ',
+                                  child: Icon(Icons.warning_amber,
+                                      color: Colors.orange)),
                             Expanded(
                               child: Text(
                                 s.isDebt
@@ -977,6 +982,9 @@ class _SalesReport extends StatelessWidget {
                     .textTheme
                     .titleMedium
                     ?.copyWith(fontWeight: FontWeight.bold)),
+            if (sale.offlineReview.isNotEmpty)
+              Text('บิลออฟไลน์ต้องตรวจสอบ: ${sale.offlineReview.join(' · ')}',
+                  style: const TextStyle(color: Colors.deepOrange)),
             const SizedBox(height: 12),
             ...sale.items.map((item) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 2),

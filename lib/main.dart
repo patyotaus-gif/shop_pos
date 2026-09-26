@@ -24,6 +24,8 @@ import 'screens/chat_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/user_switch_screen.dart';
 import 'screens/staff_mode_screen.dart';
+import 'screens/offline_cash_screen.dart';
+import 'services/offline_service.dart';
 import 'screens/tables_screen.dart';
 import 'services/entitlements.dart';
 import 'services/order_service.dart';
@@ -81,6 +83,7 @@ void main() async {
     // settings — but if it's already granted we start matching right away.
     await BankNotificationService.init().timeout(const Duration(seconds: 5));
     await minSplash;
+    OfflineService.start();
     runApp(const ShopPosApp());
   } catch (e, st) {
     runApp(_BootErrorApp(message: '$e', stack: '$st'));
@@ -180,6 +183,7 @@ class ShopPosApp extends StatelessWidget {
                   body: Center(
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
                 const Text('ตรวจสิทธิ์ไม่สำเร็จ กรุณาเข้าสู่ระบบใหม่'),
+                const OfflineEntryButton(),
                 TextButton(
                     onPressed: AuthService.signOut,
                     child: const Text('ออกจากระบบ')),

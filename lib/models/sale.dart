@@ -101,6 +101,7 @@ class Sale {
   /// Per-day receipt number (YYMMDD-NNN) assigned at checkout. Null for
   /// online-order sales (digital, not printed at a till) and legacy sales.
   final String? receiptNo;
+  final List<String> offlineReview;
 
   /// Restaurant table this bill closed from (null for retail/takeaway).
   final String? tableName;
@@ -124,6 +125,7 @@ class Sale {
     this.splitCount = 1,
     this.staffName,
     this.receiptNo,
+    this.offlineReview = const [],
     this.tableName,
   });
 
@@ -156,6 +158,8 @@ class Sale {
         splitCount: (data['splitCount'] ?? 1) as int,
         staffName: data['staffName'] as String?,
         receiptNo: data['receiptNo'] as String?,
+        offlineReview:
+            List<String>.from(data['offlineReview'] as List? ?? const []),
         tableName: data['tableName'] as String?,
       );
 

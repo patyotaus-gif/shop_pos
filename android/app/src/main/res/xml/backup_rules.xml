@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Device-bound keys and cash outbox must not be restored independently. -->
+    <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
+    <exclude domain="sharedpref" path="FlutterSecureKeyStorage.xml" />
+    <exclude domain="database" path="offline_cash.db" />
+    <exclude domain="database" path="offline_cash.db-wal" />
+    <exclude domain="database" path="offline_cash.db-shm" />
+</full-backup-content>
