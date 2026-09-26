@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/product.dart';
 import 'auth_service.dart';
+import 'staff_access_service.dart';
 
 class ProductService {
   static CollectionReference<Map<String, dynamic>> _col() =>
@@ -11,19 +12,28 @@ class ProductService {
 
   static Future<String?> currentShopId() async => AuthService.shopId;
 
-  static Stream<List<Product>> watchAll() => _col()
-      .orderBy('name')
-      .snapshots()
-      .map((s) => s.docs.map((d) => Product.fromFirestore(d.data(), d.id)).toList());
+  static Stream<List<Product>> watchAll() => AuthService.isStaff
+      ? StaffAccessService.watchWorkspace().map((w) => (w['products'] as List)
+          .map((p) => Product.fromFirestore(
+              Map<String, dynamic>.from(p as Map), p['id'] as String))
+          .toList())
+      : _col().orderBy('name').snapshots().map((s) =>
+          s.docs.map((d) => Product.fromFirestore(d.data(), d.id)).toList());
 
-  static Stream<List<Product>> watchLowStock() => _col()
-      .snapshots()
-      .map((s) => s.docs
+  static Stream<List<Product>> watchLowStock() =>
+      _col().snapshots().map((s) => s.docs
           .map((d) => Product.fromFirestore(d.data(), d.id))
           .where((p) => p.isLowStock)
           .toList());
 
   static Future<Product?> getByBarcode(String barcode) async {
+    if (AuthService.isStaff) {
+      final products = await watchAll().first;
+      for (final p in products) {
+        if (p.barcode == barcode) return p;
+      }
+      return null;
+    }
     final snap =
         await _col().where('barcode', isEqualTo: barcode).limit(1).get();
     if (snap.docs.isEmpty) return null;
@@ -44,6 +54,12 @@ class ProductService {
       _col().doc(id).update({'stock': FieldValue.increment(delta)});
 
   static const List<String> categories = [
-    'ทั่วไป', 'เครื่องดื่ม', 'ขนม', 'ของใช้', 'อาหารสด', 'ยา', 'อื่นๆ'
+    'ทั่วไป',
+    'เครื่องดื่ม',
+    'ขนม',
+    'ของใช้',
+    'อาหารสด',
+    'ยา',
+    'อื่นๆ'
   ];
 }

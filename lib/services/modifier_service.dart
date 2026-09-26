@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/modifier_group.dart';
 import 'auth_service.dart';
+import 'staff_access_service.dart';
 
 class ModifierService {
   static CollectionReference<Map<String, dynamic>> _col() =>
@@ -10,15 +11,20 @@ class ModifierService {
           .doc(AuthService.shopId)
           .collection('modifierGroups');
 
-  static Stream<List<ModifierGroup>> watchAll() => _col()
-      .orderBy('createdAt')
-      .snapshots()
-      .map((s) => s.docs
+  static Stream<List<ModifierGroup>> watchAll() => AuthService.isStaff
+      ? StaffAccessService.watchWorkspace().map((w) => (w['groups'] as List)
+          .map((g) => ModifierGroup.fromFirestore(
+              Map<String, dynamic>.from(g as Map), g['id'] as String))
+          .toList())
+      : _col().orderBy('createdAt').snapshots().map((s) => s.docs
           .map((d) => ModifierGroup.fromFirestore(d.data(), d.id))
           .toList());
 
   static Future<List<ModifierGroup>> getByIds(List<String> ids) async {
     if (ids.isEmpty) return const [];
+    if (AuthService.isStaff) {
+      return (await watchAll().first).where((g) => ids.contains(g.id)).toList();
+    }
     // Firestore 'in' tops out at 30 ids per query (which is plenty for a
     // single product's modifier groups — typical menu items have 2-3).
     final snap = await _col()

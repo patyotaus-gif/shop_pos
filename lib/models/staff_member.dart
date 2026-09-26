@@ -21,10 +21,9 @@ class StaffMember {
   final String id;
   final String name;
 
-  /// 4-digit PIN used to switch the active staff on the POS. Stored as
-  /// plain text — this is a low-stakes "who's at the till" marker, not a
-  /// security boundary (the shop owner already controls the device + the
-  /// Firebase login). Treated like a locker combo, not a password.
+  /// Transient PIN input for owner edits; blank preserves the existing PIN.
+  /// New credentials are salted/hashed on the server. Legacy plain PINs are
+  /// migrated after successful authentication and never verified locally.
   final String pin;
   final StaffRole role;
   final bool active;

@@ -22,6 +22,8 @@ import 'screens/product_form_screen.dart';
 import 'screens/orders_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/user_switch_screen.dart';
+import 'screens/staff_mode_screen.dart';
 import 'screens/tables_screen.dart';
 import 'services/entitlements.dart';
 import 'services/order_service.dart';
@@ -173,16 +175,32 @@ class ShopPosApp extends StatelessWidget {
             if (snap.connectionState == ConnectionState.waiting) {
               return const _PokpokSplash();
             }
+            if (snap.hasError) {
+              return Scaffold(
+                  body: Center(
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                const Text('ตรวจสิทธิ์ไม่สำเร็จ กรุณาเข้าสู่ระบบใหม่'),
+                TextButton(
+                    onPressed: AuthService.signOut,
+                    child: const Text('ออกจากระบบ')),
+              ])));
+            }
             if (snap.data == null) return const LoginScreen();
             // Load the founder custom claim for an already-signed-in user (app
             // relaunch); signIn() covers the fresh-login path. Fire-and-forget —
             // UI gates on the cached value once it resolves.
             AuthService.refreshFounderClaim();
-            return const SubscriptionGate(child: MainShell());
+            if (!AuthService.isStaff && !AuthService.ownerUnlocked) {
+              return UserSwitchScreen(key: ValueKey(snap.data!.uid));
+            }
+            return AuthService.isStaff
+                ? StaffModeScreen(key: ValueKey(snap.data!.uid))
+                : SubscriptionGate(
+                    child: MainShell(key: ValueKey(snap.data!.uid)));
           },
         ),
         onGenerateRoute: (settings) {
-          if (settings.name == '/product-form') {
+          if (settings.name == '/product-form' && !AuthService.isStaff) {
             final barcode = settings.arguments as String?;
             return MaterialPageRoute(
               builder: (_) => ProductFormScreen(initialBarcode: barcode),
@@ -498,6 +516,11 @@ class _MainShellState extends State<MainShell> {
 
             // Marketplace remains accessible from the Dashboard.
             final moreTabs = <AppNavigationItem>[
+              const AppNavigationItem(
+                  screen: UserSwitchScreen(),
+                  icon: Icons.switch_account_outlined,
+                  selectedIcon: Icons.switch_account,
+                  label: 'ผู้ใช้งาน'),
               if (hasTables)
                 const AppNavigationItem(
                   screen: ProductsScreen(),

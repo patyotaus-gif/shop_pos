@@ -44,7 +44,7 @@ class StaffScreen extends StatelessWidget {
                       child: Text(
                         cap < 0
                             ? 'เพิ่มพนักงานได้ไม่จำกัด · พนักงานเลือกตัวเองด้วย PIN ตอนขาย'
-                            : 'แผนนี้รองรับ $cap คน (รวมเจ้าของ) · พนักงานใช้ PIN ระบุตัวตนตอนขาย',
+                            : 'แผนนี้รองรับ $cap คน (รวมเจ้าของ) · พนักงานใช้ PIN เข้าโหมดขายแบบจำกัดสิทธิ์',
                         style: TextStyle(
                             fontSize: 12,
                             color: Theme.of(context)
@@ -69,8 +69,7 @@ class StaffScreen extends StatelessWidget {
                     : ListView.separated(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         itemCount: staff.length,
-                        separatorBuilder: (_, __) =>
-                            const Divider(height: 1),
+                        separatorBuilder: (_, __) => const Divider(height: 1),
                         itemBuilder: (_, i) => _StaffTile(staff: staff[i]),
                       ),
               ),
@@ -123,9 +122,9 @@ class _StaffTile extends StatelessWidget {
           style: TextStyle(color: cs.primary, fontWeight: FontWeight.w700),
         ),
       ),
-      title: Text(staff.name,
-          style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text('PIN ${staff.pin} · ${staff.role.label}'),
+      title:
+          Text(staff.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+      subtitle: const Text('พนักงานขาย · PIN ถูกปกปิด'),
       trailing: IconButton(
         icon: const Icon(Icons.edit_outlined),
         onPressed: () => showModalBottomSheet<void>(
@@ -161,7 +160,7 @@ class _StaffFormState extends State<_StaffForm> {
   void initState() {
     super.initState();
     _name = TextEditingController(text: widget.existing?.name ?? '');
-    _pin = TextEditingController(text: widget.existing?.pin ?? '');
+    _pin = TextEditingController();
   }
 
   @override
@@ -178,8 +177,8 @@ class _StaffFormState extends State<_StaffForm> {
       _toast('กรุณากรอกชื่อ');
       return;
     }
-    if (pin.length != 4 || int.tryParse(pin) == null) {
-      _toast('PIN ต้องเป็นตัวเลข 4 หลัก');
+    if ((!_isEdit || pin.isNotEmpty) && !RegExp(r'^\d{4,8}$').hasMatch(pin)) {
+      _toast('PIN ต้องเป็นตัวเลข 4–8 หลัก');
       return;
     }
     setState(() => _saving = true);
@@ -223,8 +222,8 @@ class _StaffFormState extends State<_StaffForm> {
     }
   }
 
-  void _toast(String m) => ScaffoldMessenger.of(context)
-      .showSnackBar(SnackBar(content: Text(m)));
+  void _toast(String m) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
 
   @override
   Widget build(BuildContext context) {
@@ -261,10 +260,11 @@ class _StaffFormState extends State<_StaffForm> {
           TextField(
             controller: _pin,
             keyboardType: TextInputType.number,
-            maxLength: 4,
+            maxLength: 8,
+            obscureText: true,
             decoration: const InputDecoration(
-              labelText: 'PIN 4 หลัก',
-              hintText: 'ใช้ระบุตัวตนตอนขาย',
+              labelText: 'PIN 4–8 หลัก',
+              hintText: 'แก้ไข: เว้นว่างเพื่อใช้ PIN เดิม',
               prefixIcon: Icon(Icons.pin_outlined),
               border: OutlineInputBorder(),
               counterText: '',

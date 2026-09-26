@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'auth_service.dart';
+import 'staff_access_service.dart';
 
 class SettingsService {
   static DocumentReference<Map<String, dynamic>> _doc() =>
@@ -10,6 +11,10 @@ class SettingsService {
           .doc('shop');
 
   static Future<Map<String, dynamic>> getSettings() async {
+    if (AuthService.isStaff) {
+      return Map<String, dynamic>.from(
+          (await StaffAccessService.workspace())['settings'] as Map);
+    }
     final snap = await _doc().get();
     return snap.data() ?? {};
   }

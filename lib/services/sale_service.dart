@@ -13,6 +13,8 @@ import 'notification_service.dart';
 import 'product_service.dart';
 import 'shop_service.dart';
 import 'shop_database.dart';
+import 'auth_service.dart';
+import 'staff_access_service.dart';
 
 class SaleService {
   static DocumentReference<Map<String, dynamic>> _shopDoc() =>
@@ -20,7 +22,9 @@ class SaleService {
   static CollectionReference<Map<String, dynamic>> _salesCol() =>
       _shopDoc().collection('sales');
   static bool _running = false;
-  static String _pendingKey(String shopId) => 'pending-checkout-$shopId';
+  static String _pendingKey(String shopId) => AuthService.isStaff
+      ? 'pending-checkout-$shopId-${AuthService.currentUser!.uid}'
+      : 'pending-checkout-$shopId';
 
   static Future<Sale?> pendingCheckout() async {
     final prefs = await SharedPreferences.getInstance();
@@ -110,8 +114,38 @@ class SaleService {
     final draft = Sale.fromFirestore(data, data['id'] as String);
     final Sale result;
     try {
-      result = await commitSale(shop, draft,
-          loyaltyCustomerId: data['loyaltyCustomerId'] as String?);
+      if (AuthService.isStaff) {
+        final response = await StaffAccessService.call('staffCheckout', {
+          'requestId': draft.id,
+          'items': draft.items
+              .map((i) => {
+                    'productId': i.productId,
+                    'quantity': i.quantity,
+                    'optionIds': i.modifiers.map((m) => m.optionId).toList(),
+                    'notes': i.notes,
+                  })
+              .toList(),
+          'paid': draft.paid,
+          'expectedTotal': draft.total,
+          'paymentMethod': draft.paymentMethod.name,
+          'discount': draft.discount,
+          'isDebt': draft.isDebt,
+        });
+        result = Sale.fromFirestore(
+            StaffAccessService.firestoreDates(response), draft.id);
+      } else {
+        result = await commitSale(shop, draft,
+            loyaltyCustomerId: data['loyaltyCustomerId'] as String?);
+      }
+    } on FirebaseFunctionsException catch (e) {
+      // These server validation failures occur before any sale is committed.
+      // Keep ambiguous network failures and revoked sessions pending for review.
+      if (AuthService.isStaff &&
+          ['invalid-argument', 'failed-precondition', 'not-found']
+              .contains(e.code)) {
+        await prefs.remove(key);
+      }
+      rethrow;
     } on StateError {
       // Validation failures occur before any write; this draft can be edited.
       await prefs.remove(key);

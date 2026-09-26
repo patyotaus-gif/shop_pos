@@ -8,7 +8,18 @@ const { shopTypeOf, canUseTables, canSelectTier } = require('./shop_capabilities
 
 admin.initializeApp();
 
+const staffAccess = require('./staff_access').createStaffAccess({
+  db: admin.firestore(), auth: admin.auth(), FieldValue: admin.firestore.FieldValue,
+  Timestamp: admin.firestore.Timestamp,
+});
+
 setGlobalOptions({ region: "asia-southeast1" });
+
+exports.staffList = onCall(staffAccess.list);
+exports.staffManage = onCall(staffAccess.manage);
+exports.staffSwitchSession = onCall(staffAccess.switchSession);
+exports.staffWorkspace = onCall(staffAccess.workspace);
+exports.staffCheckout = onCall(staffAccess.checkout);
 
 const stripeSecretKey = defineSecret("STRIPE_SECRET_KEY");
 const stripeWebhookSecret = defineSecret("STRIPE_WEBHOOK_SECRET");

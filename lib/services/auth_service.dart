@@ -2,13 +2,41 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 class AuthService {
   static final _auth = FirebaseAuth.instance;
+  // Not persisted: a remembered owner session opens the user selector on launch.
+  static bool ownerUnlocked = false;
 
-  static Stream<User?> get authStateStream => _auth.authStateChanges();
+  static String? _claimUid;
+  static Map<String, dynamic> _claims = {};
+  static bool get isStaff =>
+      _claimUid != null &&
+      _claimUid == currentUser?.uid &&
+      _claims['staffRole'] == 'cashier';
+  static String? get staffId => isStaff ? _claims['staffId'] as String? : null;
+  static Stream<User?> get authStateStream =>
+      _auth.idTokenChanges().asyncMap((user) async {
+        if (user != null) {
+          final token = await user.getIdTokenResult();
+          final claims = Map<String, dynamic>.from(token.claims ?? {});
+          if (user.uid.startsWith('staff_') &&
+              claims['staffRole'] != 'cashier') {
+            throw StateError('ไม่พบสิทธิ์พนักงาน กรุณาเข้าสู่ระบบใหม่');
+          }
+          _claims = claims;
+          _claimUid = user.uid;
+          _founderClaim = _claims['founder'] == true;
+        } else {
+          _founderClaim = false;
+          _claims = {};
+          _claimUid = null;
+        }
+        return user;
+      });
 
   static User? get currentUser => _auth.currentUser;
 
   /// shopId = Firebase Auth UID — ใช้เป็น key หลักใน Firestore
-  static String? get shopId => _auth.currentUser?.uid;
+  static String? get shopId =>
+      isStaff ? _claims['staffShopId'] as String? : _auth.currentUser?.uid;
 
   /// Bootstrap founder allowlist — mirrors FOUNDER_EMAILS in
   /// functions/index.js. Additional founders are granted the `founder` custom
@@ -22,6 +50,7 @@ class AuthService {
   static bool _founderClaim = false;
 
   static bool get isFounder {
+    if (isStaff) return false;
     final email = _auth.currentUser?.email?.toLowerCase();
     return _founderClaim || (email != null && _founderEmails.contains(email));
   }
@@ -45,11 +74,13 @@ class AuthService {
   }
 
   static Future<String?> register(String email, String password) async {
+    ownerUnlocked = true;
     try {
       await _auth.createUserWithEmailAndPassword(
           email: email, password: password);
       return null;
     } on FirebaseAuthException catch (e) {
+      ownerUnlocked = false;
       return switch (e.code) {
         'email-already-in-use' => 'อีเมลนี้ถูกใช้งานแล้ว',
         'invalid-email' => 'รูปแบบอีเมลไม่ถูกต้อง',
@@ -60,13 +91,17 @@ class AuthService {
   }
 
   static Future<String?> signIn(String email, String password) async {
+    ownerUnlocked = true;
     try {
       await _auth.signInWithEmailAndPassword(email: email, password: password);
       await refreshFounderClaim();
       return null;
     } on FirebaseAuthException catch (e) {
+      ownerUnlocked = false;
       return switch (e.code) {
-        'user-not-found' || 'wrong-password' || 'invalid-credential' =>
+        'user-not-found' ||
+        'wrong-password' ||
+        'invalid-credential' =>
           'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
         'invalid-email' => 'รูปแบบอีเมลไม่ถูกต้อง',
         'user-disabled' => 'บัญชีนี้ถูกระงับการใช้งาน',
@@ -77,6 +112,7 @@ class AuthService {
   }
 
   static Future<void> signOut() {
+    ownerUnlocked = false;
     _founderClaim = false;
     return _auth.signOut();
   }

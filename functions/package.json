@@ -5,8 +5,8 @@
   },
   "main": "index.js",
   "scripts": {
-    "test": "node escalation.test.js && node --test refund.test.js analytics.test.js analytics_backend.test.js admin_change_plan.test.js shop_capabilities.test.js",
-    "test:rules": "firebase emulators:exec --only firestore --project demo-pokpok-admin --config ../firebase.rules-test.json \"node admin_plan_rules.test.cjs\""
+    "test": "node escalation.test.js && node --test refund.test.js analytics.test.js analytics_backend.test.js admin_change_plan.test.js shop_capabilities.test.js staff_access.test.js",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-pokpok-admin --config ../firebase.rules-test.json \"node run_access_rules_tests.cjs\""
   },
   "dependencies": {
     "firebase-admin": "^12.0.0",

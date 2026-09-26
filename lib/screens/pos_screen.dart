@@ -12,14 +12,15 @@ import '../models/product.dart';
 import '../models/cart_item.dart';
 import '../models/customer.dart';
 import '../models/sale.dart';
-import '../models/staff_member.dart';
 import '../services/customer_service.dart';
 import '../services/entitlements.dart';
 import '../services/product_service.dart';
 import '../services/sale_service.dart';
 import '../services/settings_service.dart';
 import '../services/shop_service.dart';
-import '../services/staff_service.dart';
+import '../services/auth_service.dart';
+import '../services/staff_access_service.dart';
+import 'user_switch_screen.dart';
 import '../utils/receipt_generator.dart';
 import '../widgets/payment_sheet.dart';
 import '../widgets/modifier_picker_sheet.dart';
@@ -64,16 +65,27 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   Future<void> _loadShopContext() async {
-    final shop = await ShopService.getCurrentShop();
-    if (shop == null) return;
-    final staffEnabled = Entitlements.canUseStaff(shop.tier);
-    final active = staffEnabled ? await StaffService.getActive() : null;
-    if (mounted) {
-      setState(() {
-        _staffEnabled = staffEnabled;
-        _activeStaffName = active?.name;
-        _loyaltyEnabled = Entitlements.canUseLoyalty(shop.tier);
-      });
+    try {
+      final shop = await ShopService.getCurrentShop();
+      if (shop == null) return;
+      final staffEnabled =
+          !AuthService.isStaff && Entitlements.canUseStaff(shop.tier);
+      final name = AuthService.isStaff
+          ? (await StaffAccessService.workspace())['staffName'] as String?
+          : 'เจ้าของร้าน';
+      if (mounted) {
+        setState(() {
+          _staffEnabled = staffEnabled;
+          _activeStaffName = name;
+          _loyaltyEnabled =
+              !AuthService.isStaff && Entitlements.canUseLoyalty(shop.tier);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(operationError(e))));
+      }
     }
   }
 
@@ -204,6 +216,7 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   Future<void> _checkout({bool isDebt = false}) async {
+    if (AuthService.isStaff && isDebt) return;
     if (_checkoutBusy ||
         _checkingPending ||
         (_cart.isEmpty && _pendingSale == null)) {
@@ -361,31 +374,15 @@ class _PosScreenState extends State<PosScreen> {
     }
   }
 
-  /// Switch the active staff at the till. Lists staff profiles; tapping
-  /// one asks for that staff's 4-digit PIN to confirm (so a cashier can
-  /// only clock in as themselves). Attribution, not hard security.
+  /// Hand off to a separate authenticated cashier session after PIN validation.
   Future<void> _switchStaff() async {
-    final staff = await StaffService.getAll();
-    if (!mounted) return;
-    if (staff.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('ยังไม่มีพนักงาน — เพิ่มได้ที่ ตั้งค่า → พนักงาน')),
-      );
+    if (_cart.isNotEmpty || _pendingSale != null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('ปิดบิลหรือเคลียร์ตะกร้าก่อนเปลี่ยนผู้ใช้')));
       return;
     }
-    final picked = await showModalBottomSheet<StaffMember>(
-      context: context,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => _StaffPickerSheet(staff: staff),
-    );
-    if (picked != null && mounted) {
-      await StaffService.setActive(picked);
-      setState(() => _activeStaffName = picked.name);
-    }
+    await Navigator.push(
+        context, MaterialPageRoute(builder: (_) => const UserSwitchScreen()));
   }
 
   @override
@@ -1052,7 +1049,7 @@ class _CheckoutPanel extends StatelessWidget {
                   // wider than iOS's Thonburi/SF.
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: onDiscount,
+                      onPressed: AuthService.isStaff ? null : onDiscount,
                       icon: const Icon(Icons.discount_outlined, size: 18),
                       label: const FittedBox(
                         fit: BoxFit.scaleDown,
@@ -1063,7 +1060,8 @@ class _CheckoutPanel extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: hasItems ? onDebt : null,
+                      onPressed:
+                          !AuthService.isStaff && hasItems ? onDebt : null,
                       icon: const Icon(Icons.person_outline, size: 18),
                       label: const FittedBox(
                         fit: BoxFit.scaleDown,
@@ -1460,103 +1458,4 @@ class _OverlayPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_OverlayPainter old) => old.scanRect != scanRect;
-}
-
-/// Staff picker for the POS till. Tap a name → enter their 4-digit PIN →
-/// returns the matched StaffMember (or null on cancel/wrong PIN).
-class _StaffPickerSheet extends StatefulWidget {
-  const _StaffPickerSheet({required this.staff});
-  final List<StaffMember> staff;
-
-  @override
-  State<_StaffPickerSheet> createState() => _StaffPickerSheetState();
-}
-
-class _StaffPickerSheetState extends State<_StaffPickerSheet> {
-  StaffMember? _selected;
-  final _pin = TextEditingController();
-  String? _error;
-
-  @override
-  void dispose() {
-    _pin.dispose();
-    super.dispose();
-  }
-
-  void _confirm() {
-    if (_pin.text.trim() == _selected!.pin) {
-      Navigator.pop(context, _selected);
-    } else {
-      setState(() => _error = 'PIN ไม่ถูกต้อง');
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-          20, 16, 20, 16 + MediaQuery.of(context).viewInsets.bottom),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-              _selected == null
-                  ? 'ใครกำลังขาย?'
-                  : 'ใส่ PIN ของ ${_selected!.name}',
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 12),
-          if (_selected == null)
-            ...widget.staff.map((s) => ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: cs.primary.withValues(alpha: 0.12),
-                    child: Text(
-                      s.name.isNotEmpty ? s.name.characters.first : '?',
-                      style: TextStyle(
-                          color: cs.primary, fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                  title: Text(s.name),
-                  subtitle: Text(s.role.label),
-                  onTap: () => setState(() => _selected = s),
-                ))
-          else ...[
-            TextField(
-              controller: _pin,
-              keyboardType: TextInputType.number,
-              maxLength: 4,
-              autofocus: true,
-              obscureText: true,
-              onSubmitted: (_) => _confirm(),
-              decoration: InputDecoration(
-                labelText: 'PIN 4 หลัก',
-                errorText: _error,
-                border: const OutlineInputBorder(),
-                counterText: '',
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                TextButton(
-                  onPressed: () => setState(() {
-                    _selected = null;
-                    _pin.clear();
-                    _error = null;
-                  }),
-                  child: const Text('กลับ'),
-                ),
-                const Spacer(),
-                FilledButton(
-                  onPressed: _confirm,
-                  child: const Text('ยืนยัน'),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
 }

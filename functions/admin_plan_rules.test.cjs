@@ -32,6 +32,12 @@ const fs = require('node:fs');
     await assertFails(setDoc(doc(other, 'shops/other'), { ...data, subscriptionStatus: 'active' }));
     await assertFails(setDoc(doc(other, 'shops/other'), { ...data, trialEndsAt: Timestamp.fromMillis(Date.now() + 90 * 86400000) }));
     await assertFails(setDoc(doc(owner, 'shops/owner/planChanges/forged'), { actor: 'admin' }));
+    const cashier = env.authenticatedContext('staff_test_uid', {staffRole:'cashier',staffShopId:'owner',staffId:'cashier',staffVersion:1}).firestore();
+    for (const path of ['shops/owner','shops/owner/settings/shop','shops/owner/products/item','shops/owner/sales/bill','shops/owner/staff/cashier','shops/owner/aiUsage/today']) {
+      const {getDoc} = require('firebase/firestore');
+      await assertFails(getDoc(doc(cashier,path)));
+      await assertFails(setDoc(doc(cashier,path),{name:'forged',role:'owner'}));
+    }
     await env.withSecurityRulesDisabled(async context => {
       await assertSucceeds(updateDoc(doc(context.firestore(), 'shops/owner'), { tier: 'restaurant', shopType: 'restaurant' }));
     });

@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import '../models/shop.dart';
 import 'auth_service.dart';
+import 'staff_access_service.dart';
 
 class ShopService {
   static DocumentReference<Map<String, dynamic>> _doc() =>
@@ -30,11 +31,16 @@ class ShopService {
         6, (_) => _codeAlphabet[rng.nextInt(_codeAlphabet.length)]).join();
   }
 
-  static Stream<Shop?> watchCurrentShop() => _doc()
-      .snapshots()
-      .map((s) => s.exists ? Shop.fromFirestore(s.data()!, s.id) : null);
+  static Stream<Shop?> watchCurrentShop() => AuthService.isStaff
+      ? StaffAccessService.watchWorkspace().map((w) => Shop.fromFirestore(
+          StaffAccessService.firestoreDates(w['shop'] as Map),
+          AuthService.shopId!))
+      : _doc()
+          .snapshots()
+          .map((s) => s.exists ? Shop.fromFirestore(s.data()!, s.id) : null);
 
   static Future<Shop?> getCurrentShop() async {
+    if (AuthService.isStaff) return watchCurrentShop().first;
     final snap = await _doc().get();
     if (!snap.exists) return null;
     return Shop.fromFirestore(snap.data()!, snap.id);
