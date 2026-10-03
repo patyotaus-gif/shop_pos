@@ -36,6 +36,7 @@ import 'widgets/subscription_gate.dart';
 import 'widgets/update_prompt.dart';
 import 'widgets/side_navigation_shell.dart';
 import 'widgets/connection_status_banner.dart';
+import 'widgets/workspace_sections.dart';
 
 // Default to light — Pokpok is a light-brand design and does not follow
 // the device's system dark setting. Dark is opt-in (Settings), persisted
@@ -435,7 +436,7 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
-  String _selectedLabel = 'ภาพรวม';
+  String _selectedLabel = 'ขาย';
 
   @override
   void initState() {
@@ -475,75 +476,48 @@ class _MainShellState extends State<MainShell> {
 
             // Daily actions first, followed by the remaining pages in the sidebar.
             final primaryTabs = <AppNavigationItem>[
-              const AppNavigationItem(
-                screen: DashboardScreen(),
-                icon: Icons.dashboard_outlined,
-                selectedIcon: Icons.dashboard,
-                label: 'ภาพรวม',
+              AppNavigationItem(
+                screen: hasTables ? const TablesScreen() : const PosScreen(),
+                icon: hasTables
+                    ? Icons.table_restaurant_outlined
+                    : Icons.point_of_sale_outlined,
+                selectedIcon:
+                    hasTables ? Icons.table_restaurant : Icons.point_of_sale,
+                label: 'ขาย',
               ),
-              if (hasTables)
-                const AppNavigationItem(
-                  screen: TablesScreen(),
-                  icon: Icons.table_restaurant_outlined,
-                  selectedIcon: Icons.table_restaurant,
-                  label: 'โต๊ะ',
-                )
-              else
-                const AppNavigationItem(
-                  screen: PosScreen(),
-                  icon: Icons.point_of_sale_outlined,
-                  selectedIcon: Icons.point_of_sale,
-                  label: 'ขาย',
-                ),
+              AppNavigationItem(
+                screen: showDebts
+                    ? const WorkspaceSections(
+                        labels: ['ออเดอร์', 'ลูกหนี้ / ค้างชำระ'],
+                        pages: [OrdersScreen(), DebtScreen()])
+                    : const OrdersScreen(),
+                icon: Icons.shopping_bag_outlined,
+                selectedIcon: Icons.shopping_bag,
+                label: 'ออเดอร์',
+                badgeCount: newCount,
+              ),
+              const AppNavigationItem(
+                screen: ProductsScreen(),
+                icon: Icons.inventory_2_outlined,
+                selectedIcon: Icons.inventory_2,
+                label: 'สินค้า',
+              ),
+              const AppNavigationItem(
+                screen: WorkspaceSections(
+                    labels: ['ภาพรวม', 'รายงานยอดขาย'],
+                    pages: [DashboardScreen(), ReportScreen()]),
+                icon: Icons.bar_chart_outlined,
+                selectedIcon: Icons.bar_chart,
+                label: 'รายงาน',
+              ),
+            ];
+            final moreTabs = <AppNavigationItem>[
               if (hasTables)
                 const AppNavigationItem(
                   screen: KitchenScreen(),
                   icon: Icons.soup_kitchen_outlined,
                   selectedIcon: Icons.soup_kitchen,
                   label: 'ครัว',
-                )
-              else
-                const AppNavigationItem(
-                  screen: ProductsScreen(),
-                  icon: Icons.inventory_2_outlined,
-                  selectedIcon: Icons.inventory_2,
-                  label: 'สินค้า',
-                ),
-              AppNavigationItem(
-                screen: const OrdersScreen(),
-                icon: Icons.shopping_bag_outlined,
-                selectedIcon: Icons.shopping_bag,
-                label: 'ออเดอร์',
-                badgeCount: newCount,
-              ),
-            ];
-
-            // Marketplace remains accessible from the Dashboard.
-            final moreTabs = <AppNavigationItem>[
-              const AppNavigationItem(
-                  screen: UserSwitchScreen(),
-                  icon: Icons.switch_account_outlined,
-                  selectedIcon: Icons.switch_account,
-                  label: 'ผู้ใช้งาน'),
-              if (hasTables)
-                const AppNavigationItem(
-                  screen: ProductsScreen(),
-                  icon: Icons.inventory_2_outlined,
-                  selectedIcon: Icons.inventory_2,
-                  label: 'สินค้า',
-                ),
-              const AppNavigationItem(
-                screen: ReportScreen(),
-                icon: Icons.bar_chart_outlined,
-                selectedIcon: Icons.bar_chart,
-                label: 'รายงาน',
-              ),
-              if (showDebts)
-                const AppNavigationItem(
-                  screen: DebtScreen(),
-                  icon: Icons.people_outline,
-                  selectedIcon: Icons.people,
-                  label: 'ลูกหนี้',
                 ),
               const AppNavigationItem(
                 screen: ChatScreen(),
@@ -564,7 +538,6 @@ class _MainShellState extends State<MainShell> {
                 label: 'ตั้งค่า',
               ),
             ];
-
             final tabs = [...primaryTabs, ...moreTabs];
             // Match the page by identity when tier changes reorder the menu.
             final selected =

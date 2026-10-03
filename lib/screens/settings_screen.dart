@@ -1,5 +1,7 @@
 import '../widgets/settings_sections.dart';
 import 'dart:io';
+import 'package:url_launcher/url_launcher.dart';
+import 'user_switch_screen.dart';
 
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
@@ -46,6 +48,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _saving = false;
   bool _linkingAccount = false;
   bool _savingLine = false;
+  bool _rememberOwner = false;
+  bool _savingRemember = false;
   bool _savingPromptpay = false;
   bool _savingServiceCharge = false;
   bool _bankListenerGranted = false;
@@ -108,6 +112,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadSettings() async {
     try {
       final data = await SettingsService.getSettings();
+      final uid = AuthService.currentUser?.uid;
+      final remembered = uid != null &&
+          await AuthService.rememberedOwner
+              .matches(uid, isStaff: AuthService.isStaff);
       final granted = await BankNotificationService.isPermissionGranted();
       final shop = await ShopService.getCurrentShop();
       if (mounted) {
@@ -122,6 +130,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           final sc = (data['serviceChargePercent'] ?? 0).toDouble();
           _serviceChargeCtrl.text = sc == 0 ? '' : sc.toStringAsFixed(0);
           _bankListenerGranted = granted;
+          _rememberOwner = remembered;
           _shopType = shop?.shopType ?? ShopType.retail;
           _logoUrl = data['logoUrl'] as String?;
           _slug = data['slug'] as String?;
@@ -239,34 +248,83 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _saveLineSettings() async {
-    setState(() => _savingLine = true);
-    await SettingsService.saveLineSettings(
-      lineUserId: _lineUserIdCtrl.text.trim(),
-      enabled: _lineNotifyEnabled,
-    );
-    if (mounted) {
-      setState(() => _savingLine = false);
+  Future<void> _saveLineSettings({bool test = false}) async {
+    if (_savingLine) return;
+    final id = _lineUserIdCtrl.text.trim();
+    if ((_lineNotifyEnabled || test || id.isNotEmpty) &&
+        !LineService.isValidUserId(id)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'ใช้รหัสจากแชต Pokpok ที่ขึ้นต้นด้วย U ตามด้วย 32 ตัวอักษร ไม่ใช่ LINE ID ที่ตั้งเอง')));
+      return;
+    }
+    if (test && !_lineNotifyEnabled) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('บันทึกการตั้งค่า LINE แล้ว')),
+          const SnackBar(content: Text('เปิดแจ้งเตือนผ่าน LINE ก่อนทดสอบ')));
+      return;
+    }
+    setState(() => _savingLine = true);
+    try {
+      await SettingsService.saveLineSettings(
+        lineUserId: id,
+        enabled: _lineNotifyEnabled,
       );
+      if (test) await LineService.testConnection();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(test
+                  ? 'LINE รับคำขอส่งแล้ว กรุณาตรวจข้อความในแชต Pokpok'
+                  : 'บันทึกการตั้งค่า LINE แล้ว')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(test
+                ? 'ทดสอบไม่สำเร็จ ตรวจอินเทอร์เน็ต รหัสเชื่อมต่อ และการบล็อกบัญชี Pokpok แล้วลองใหม่'
+                : 'บันทึกไม่สำเร็จ กรุณาลองใหม่')));
+      }
+    } finally {
+      if (mounted) setState(() => _savingLine = false);
     }
   }
 
-  Future<void> _testLineNotify() async {
-    if (_lineUserIdCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('กรุณาใส่ LINE User ID ก่อน')),
-      );
-      return;
+  Future<void> _testLineNotify() => _saveLineSettings(test: true);
+
+  Future<void> _openLine() async {
+    try {
+      if (!await launchUrl(Uri.parse(LineService.officialAccountUrl),
+          mode: LaunchMode.externalApplication)) {
+        throw StateError('Cannot open LINE');
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content:
+                Text('เปิด LINE ไม่สำเร็จ กรุณาติดตั้ง LINE หรือลองใหม่')));
+      }
     }
-    await _saveLineSettings();
-    await LineService.sendMessage(
-        '✅ ทดสอบการแจ้งเตือน LINE จาก Pokpok POS สำเร็จ!');
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ส่งทดสอบแล้ว ตรวจสอบ LINE ของคุณ')),
-      );
+  }
+
+  Future<void> _setRememberOwner(bool value) async {
+    final uid = AuthService.currentUser?.uid;
+    if (uid == null || AuthService.isStaff || _savingRemember) return;
+    setState(() => _savingRemember = true);
+    try {
+      if (value) {
+        await AuthService.rememberedOwner.save(uid);
+      } else {
+        await AuthService.rememberedOwner.clear();
+      }
+      if (mounted) setState(() => _rememberOwner = value);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('บันทึกการจำบัญชีไม่สำเร็จ กรุณาลองใหม่')));
+      }
+    } finally {
+      if (mounted) setState(() => _savingRemember = false);
     }
   }
 
@@ -501,6 +559,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: Icons.person_outline,
                     children: [
                       // Account section
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('จำการเข้าใช้งานบนเครื่องนี้'),
+                        subtitle: const Text(
+                            'สำหรับเครื่องส่วนตัว เปิดแอปครั้งต่อไปแล้วเข้าร้านได้ทันที ไม่ควรเปิดบนเครื่องที่ใช้ร่วมกับพนักงาน'),
+                        value: _rememberOwner,
+                        onChanged: _savingRemember ? null : _setRememberOwner,
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.switch_account_outlined),
+                        title: const Text('สลับผู้ใช้งาน'),
+                        onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                                builder: (_) => const UserSwitchScreen())),
+                      ),
                       Text('บัญชีผู้ใช้',
                           style: Theme.of(context)
                               .textTheme
@@ -1080,7 +1153,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'วิธีเชื่อมต่อ LINE\n1. Add LINE OA ของร้าน\n2. ส่งข้อความใดก็ได้ → บอทตอบ User ID\n3. นำ ID มาใส่ด้านล่าง\nหรือส่ง "link:SHOP_ID" เพื่อเชื่อมอัตโนมัติ',
+                              '1. กดเปิด LINE Pokpok ด้านล่าง แล้วเพิ่มเพื่อน\n2. ส่งคำว่า ID ในแชต Pokpok\n3. คัดลอกรหัสที่ขึ้นต้นด้วย U มาวางด้านล่าง\n4. เปิดแจ้งเตือน แล้วกดทดสอบ\nรหัสนี้ไม่ใช่ LINE ID ที่คุณตั้งเอง',
                               style:
                                   TextStyle(fontSize: 12, color: Colors.grey),
                             ),
@@ -1088,6 +1161,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                          onPressed: _openLine,
+                          icon: const Icon(Icons.chat_bubble_outline),
+                          label: const Text('เปิด LINE Pokpok / เพิ่มเพื่อน')),
+                      const Text(
+                          'รับแจ้งเตือนออเดอร์และออเดอร์ค้าง เพื่อช่วยติดตามงานของร้าน'),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         secondary: const Icon(
@@ -1102,12 +1181,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       TextField(
                         controller: _lineUserIdCtrl,
                         decoration: const InputDecoration(
-                          labelText: 'LINE User ID',
+                          labelText: 'รหัสเชื่อมต่อจากแชต Pokpok',
                           hintText: 'Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
                           prefixIcon: Icon(Icons.chat_bubble_outline,
                               color: Color(0xFF06C755)),
                           border: OutlineInputBorder(),
-                          helperText: 'รับได้จากการส่งข้อความหาบอท LINE',
+                          helperText: 'ส่งคำว่า ID ในแชต Pokpok เพื่อรับรหัส',
+                          helperMaxLines: 2,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -1130,7 +1210,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           const SizedBox(width: 8),
                           OutlinedButton.icon(
-                            onPressed: _testLineNotify,
+                            onPressed: _savingLine ? null : _testLineNotify,
                             icon: const Icon(Icons.send_outlined,
                                 color: Color(0xFF06C755)),
                             label: const Text('ทดสอบ',

@@ -1063,25 +1063,11 @@ exports.lineWebhook = onRequest(
 exports.sendLineMessage = onCall(
   { secrets: [lineChannelAccessToken] },
   async (request) => {
-    const { shopId, message, messageType = "text" } = request.data;
-    if (!shopId || !message) throw new Error("shopId and message required");
-
-    const db = admin.firestore();
-    const settingDoc = await db
-      .collection("shops").doc(shopId)
-      .collection("settings").doc("shop")
-      .get();
-
-    const data = settingDoc.data() || {};
-    const lineUserId = data.lineUserId;
-    const enabled = data.lineNotifyEnabled !== false;
-
-    if (!lineUserId) throw new Error("LINE User ID not configured");
-    if (!enabled) return { skipped: true, reason: "LINE notify disabled" };
-
-    const messages = [{ type: "text", text: message }];
-    const ok = await _linePush(lineChannelAccessToken.value(), lineUserId, messages);
-    return { success: ok };
+    const { sendOwnerLineMessage } = require('./line_delivery');
+    return sendOwnerLineMessage({
+      request, db: admin.firestore(), HttpsError,
+      push: (to, messages) => _linePush(lineChannelAccessToken.value(), to, messages),
+    });
   }
 );
 

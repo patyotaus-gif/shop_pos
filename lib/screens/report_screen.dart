@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/shop_operation.dart';
+import '../widgets/safe_detail_sheet.dart';
+import '../widgets/refund_reason_dialog.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -997,7 +999,7 @@ class _SalesReportState extends State<_SalesReport> {
 
   void _showDetail(BuildContext context, Sale sale) {
     final bahtFmt = NumberFormat('#,##0.00', 'th_TH');
-    showModalBottomSheet(
+    showSafeDetailSheet<void>(
       context: context,
       builder: (ctx) => Padding(
         padding: const EdgeInsets.all(16),
@@ -1092,54 +1094,18 @@ class _RefundButton extends StatelessWidget {
     return OutlinedButton.icon(
       onPressed: () async {
         Navigator.pop(context);
-        final reasonCtrl = TextEditingController();
-        final confirm = await showDialog<bool>(
+        final reason = await showDialog<String>(
           context: context,
-          builder: (c) => AlertDialog(
-            title: const Text('คืนเงินลูกค้า'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('ยอด ฿${baht.format(sale.total)}'),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: reasonCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'เหตุผล (ไม่บังคับ)',
-                    hintText: 'เช่น สินค้าชำรุด',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                if (sale.paymentMethod == PaymentMethod.online)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8),
-                    child: Text('เงินจะถูกคืนผ่าน Stripe อัตโนมัติ',
-                        style: TextStyle(fontSize: 12, color: Colors.grey)),
-                  ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(c, false),
-                  child: const Text('ยกเลิก')),
-              FilledButton(
-                onPressed: () => Navigator.pop(c, true),
-                style: FilledButton.styleFrom(backgroundColor: Colors.red),
-                child: const Text('คืนเงิน'),
-              ),
-            ],
+          builder: (_) => RefundReasonDialog(
+            amount: baht.format(sale.total),
+            online: sale.paymentMethod == PaymentMethod.online,
           ),
         );
-        if (confirm == true) {
-          if (!context.mounted) return;
+        if (reason != null && context.mounted) {
           await performShopOperation(
-              context,
-              () =>
-                  SaleService.refundSale(sale, reason: reasonCtrl.text.trim()),
+              context, () => SaleService.refundSale(sale, reason: reason),
               success: 'บันทึกคืนเงินแล้ว');
         }
-        reasonCtrl.dispose();
       },
       icon: const Icon(Icons.undo, color: Colors.red),
       label: const Text('คืนเงิน', style: TextStyle(color: Colors.red)),
