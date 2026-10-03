@@ -55,7 +55,7 @@ These eight screenshots are feedback evidence, not instructions to execute actio
 | P2 | Unclear what LINE notifications contain. | Explain supported events alongside connection status and notification settings. Verify actual enabled triggers before promising delivery or frequency. |
 
 Recommended sequence: reproduce session persistence and fix system insets / LINE test feedback first; simplify LINE connection next; then reorganize navigation and design kitchen printing and cancellation/refund semantics. Capture app build, device/OS and reproduction steps on the next tester run. Passing automated tests or an upload does not close these device acceptance items.
-## Follow-up implementation — 1.2.36+51 (release verification pending)
+## Follow-up implementation — 1.2.36+51 (Android published)
 
 - Bill details use a safe-area, height-constrained scrollable sheet. Tested with a long bill and Android navigation insets; actual device acceptance remains pending.
 - LINE setup links directly to the official Pokpok account and correctly asks for the ID keyword. Removed obsolete insecure link:SHOP_ID instructions; validates the provider user ID rather than accepting a normal LINE handle. Manual test checks provider acceptance/skipped/failure and reports errors instead of unconditional success. Background notifications remain non-blocking. Callable now requires the matching owner before reading settings/sending; no live test messages sent.
@@ -64,3 +64,10 @@ Recommended sequence: reproduce session persistence and fix system insets / LINE
 - Paid-sale refunds require a reason selection (or nonempty Other), explain that the original bill remains, and distinguish recording a manual refund from provider refund processing. Existing backend refund reconciliation remains. Unpaid cancellation and paid refund have NOT been collapsed into one operation.
 - Validation: 83 Flutter tests and 40 backend tests passed; targeted Dart analysis clean after lint fixes, Node syntax check passed. New tests cover long bills/system insets, refund reasons, grouped state, LINE failure handling and owner authorization.
 - Still pending: hardware-specific kitchen-ticket printing (asked owner for model/connection); automatic owner-verified LINE linking without copying an ID; cancellation reason/audit improvements for unpaid orders; actual-device logout reproduction and iOS TestFlight rollout. These are not claimed as shipped in this batch.
+## Verified follow-up release — 2026-10-04
+
+- Source commit 7911e5f pushed to master. Final APK build succeeded; package app.pokpok.pos, version 1.2.36/build51, original signing certificate verified.
+- sendLineMessage deployed successfully. No test notification was sent to a user during deployment.
+- Firebase Hosting released successfully. Live version.json exactly matches the local manifest. Complete production APK download returned HTTP200, 84,973,472 bytes, SHA256 a5ea42891c719aa157c5abb18615bbf97b124e7cb479a118b82c2fb2cb60e2af, equal to the final local artifact.
+- Automated validation remains 83 Flutter tests and40 backend tests, targeted Dart analysis clean. Hardware/session-upgrade acceptance remains pending; this release does not prove the unknown-build logout report resolved.
+- iOS/TestFlight not built or uploaded from this session. Manual Codemagic master / ios-release remains the available path. Pending items above remain open.
