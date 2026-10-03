@@ -71,3 +71,8 @@ Recommended sequence: reproduce session persistence and fix system insets / LINE
 - Firebase Hosting released successfully. Live version.json exactly matches the local manifest. Complete production APK download returned HTTP200, 84,973,472 bytes, SHA256 a5ea42891c719aa157c5abb18615bbf97b124e7cb479a118b82c2fb2cb60e2af, equal to the final local artifact.
 - Automated validation remains 83 Flutter tests and40 backend tests, targeted Dart analysis clean. Hardware/session-upgrade acceptance remains pending; this release does not prove the unknown-build logout report resolved.
 - iOS/TestFlight not built or uploaded from this session. Manual Codemagic master / ios-release remains the available path. Pending items above remain open.
+## Retail order-link cleanup — source change, not yet released
+
+- Retail Orders hides its duplicate floating order-link action for all tiers, including the Orders/debt group. Restaurant Orders retains the existing action.
+- Retail navigation and QR-page title now say “ลิงก์และ QR สั่งสินค้า”; share text, pickup heading and PDF label use product-order wording. Copy/share/QR URLs and permissions are unchanged.
+- This change is not included in the published Android1.2.36+51 APK. User supplied evidence that iOS1.2.36(34) has been uploaded and is waiting for TestFlight review; that build also predates this cleanup. No build/release initiated for this small UI change.

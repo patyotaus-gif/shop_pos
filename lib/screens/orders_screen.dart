@@ -34,7 +34,8 @@ extension _OrderFilterX on _OrderFilter {
 }
 
 class OrdersScreen extends StatefulWidget {
-  const OrdersScreen({super.key});
+  const OrdersScreen({super.key, this.showOrderLink = true});
+  final bool showOrderLink;
 
   @override
   State<OrdersScreen> createState() => _OrdersScreenState();
@@ -88,7 +89,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           ),
         ],
       ),
-      floatingActionButton: _ShareLinkButton(),
+      floatingActionButton: widget.showOrderLink ? _ShareLinkButton() : null,
     );
   }
 }

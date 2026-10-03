@@ -487,10 +487,10 @@ class _MainShellState extends State<MainShell> {
               ),
               AppNavigationItem(
                 screen: showDebts
-                    ? const WorkspaceSections(
-                        labels: ['ออเดอร์', 'ลูกหนี้ / ค้างชำระ'],
-                        pages: [OrdersScreen(), DebtScreen()])
-                    : const OrdersScreen(),
+                    ? WorkspaceSections(
+                        labels: const ['ออเดอร์', 'ลูกหนี้ / ค้างชำระ'],
+                        pages: [OrdersScreen(showOrderLink: shopType == ShopType.restaurant), const DebtScreen()])
+                    : OrdersScreen(showOrderLink: shopType == ShopType.restaurant),
                 icon: Icons.shopping_bag_outlined,
                 selectedIcon: Icons.shopping_bag,
                 label: 'ออเดอร์',
@@ -525,11 +525,11 @@ class _MainShellState extends State<MainShell> {
                 selectedIcon: Icons.auto_awesome,
                 label: 'ผู้ช่วยร้าน',
               ),
-              const AppNavigationItem(
-                screen: OrderQrScreen(),
+              AppNavigationItem(
+                screen: OrderQrScreen(shopType: shopType),
                 icon: Icons.qr_code_2_outlined,
                 selectedIcon: Icons.qr_code_2,
-                label: 'QR สั่งอาหาร',
+                label: shopType == ShopType.retail ? 'ลิงก์และ QR สั่งสินค้า' : 'QR สั่งอาหาร',
               ),
               const AppNavigationItem(
                 screen: SettingsScreen(),

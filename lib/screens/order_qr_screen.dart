@@ -4,6 +4,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../models/restaurant_table.dart';
+import '../models/shop.dart';
 import '../services/auth_service.dart';
 import '../services/entitlements.dart';
 import '../services/settings_service.dart';
@@ -15,7 +16,8 @@ import '../utils/qr_pdf_generator.dart';
 /// Takeaway QR for every tier with online ordering; per-table QRs (and the
 /// dine-in mode switches) for the Restaurant tier.
 class OrderQrScreen extends StatefulWidget {
-  const OrderQrScreen({super.key});
+  const OrderQrScreen({super.key, this.shopType = ShopType.retail});
+  final ShopType shopType;
 
   @override
   State<OrderQrScreen> createState() => _OrderQrScreenState();
@@ -29,6 +31,8 @@ class _OrderQrScreenState extends State<OrderQrScreen> {
   bool _autoSend = false;
   bool _busy = false;
   String? _slug;
+  bool get _isRetail => widget.shopType == ShopType.retail;
+  String get _title => _isRetail ? 'ลิงก์และ QR สั่งสินค้า' : 'QR สั่งอาหาร';
 
   // The nicest link to hand out: the short /r/<slug> when set, else the long
   // takeaway URL.
@@ -106,19 +110,19 @@ class _OrderQrScreenState extends State<OrderQrScreen> {
     final cs = Theme.of(context).colorScheme;
     if (_shopId == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('QR สั่งอาหาร')),
+        appBar: AppBar(title: Text(_title)),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('QR สั่งอาหาร'), centerTitle: true),
+      appBar: AppBar(title: Text(_title), centerTitle: true),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           if (_busy) const LinearProgressIndicator(),
           // ── Takeaway ──
-          Text('สั่งกลับบ้าน (Takeaway)',
+          Text(_isRetail ? 'สั่งสินค้าออนไลน์ รับที่ร้าน' : 'สั่งกลับบ้าน (Takeaway)',
               style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 4),
           Text('ลูกค้าสแกน → สั่ง + จ่าย PromptPay ล่วงหน้า มารับที่ร้าน',
@@ -155,7 +159,7 @@ class _OrderQrScreenState extends State<OrderQrScreen> {
                 icon: const Icon(Icons.share, size: 16),
                 label: const Text('แชร์ลิงก์'),
                 onPressed: () => Share.share(
-                    'สั่งอาหารร้าน$_shopName ออนไลน์ 👉 $_shareUrl'),
+                    '${_isRetail ? 'สั่งสินค้า' : 'สั่งอาหาร'}ร้าน$_shopName ออนไลน์ 👉 $_shareUrl'),
               ),
             ),
           ]),
@@ -163,7 +167,7 @@ class _OrderQrScreenState extends State<OrderQrScreen> {
           FilledButton.icon(
             onPressed: _busy
                 ? null
-                : () => _exportPdf([(label: 'รับกลับบ้าน', url: _takeawayUrl)]),
+                : () => _exportPdf([(label: _isRetail ? 'สั่งสินค้า รับที่ร้าน' : 'รับกลับบ้าน', url: _takeawayUrl)]),
             icon: const Icon(Icons.print_outlined, size: 18),
             label: const Text('พิมพ์ / ส่งออก PDF'),
           ),
