@@ -86,3 +86,7 @@ Recommended sequence: reproduce session persistence and fix system insets / LINE
 - Firebase Hosting succeeded; live manifest matches local1.2.36/build52. Full APK download:84,973,400bytes; SHA2566c7f12c57aa9a635e8c64871df6cbc30b05abc0537a02cce5959885bb8b28f51 matches the release artifact.
 - This supersedes the source-only release notes above. Targeted Dart analysis passed for the latest UI changes; the prior full suite was83 Flutter/40backend tests. No physical-device acceptance performed in this build step.
 - iOS version stays1.2.36. Source is on master; Codemagic ios-release automatically uses the next App Store Connect build number. No Codemagic credentials available here, so no new iOS build was triggered. User's screenshot previously showed1.2.36(34) awaiting TestFlight review; current approval status not checked.
+## LINE friend QR — source change, not yet released
+
+- Added a responsive, white-background QR for LineService.officialAccountUrl on the LINE settings section, above the existing open-LINE button and connection-ID field. Tablet/POS users can scan with a phone; same-device users retain the button. Both use the same existing official account URL.
+- Updated instructions to describe scanning or opening LINE, sending ID, and pasting the returned code. No account linking or message is performed by displaying the QR. Physical scanning still needs acceptance; published Android1.2.36+52 predates this change.

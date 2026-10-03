@@ -1,6 +1,7 @@
 import '../widgets/settings_sections.dart';
 import 'dart:io';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'user_switch_screen.dart';
 
 import 'package:cloud_functions/cloud_functions.dart';
@@ -1153,7 +1154,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              '1. กดเปิด LINE Pokpok ด้านล่าง แล้วเพิ่มเพื่อน\n2. ส่งคำว่า ID ในแชต Pokpok\n3. คัดลอกรหัสที่ขึ้นต้นด้วย U มาวางด้านล่าง\n4. เปิดแจ้งเตือน แล้วกดทดสอบ\nรหัสนี้ไม่ใช่ LINE ID ที่คุณตั้งเอง',
+                              '1. สแกน QR หรือกดเปิด LINE Pokpok ด้านล่าง แล้วเพิ่มเพื่อน\n2. ส่งคำว่า ID ในแชต Pokpok\n3. คัดลอกรหัสที่ขึ้นต้นด้วย U มาวางด้านล่าง\n4. เปิดแจ้งเตือน แล้วกดทดสอบ\nรหัสนี้ไม่ใช่ LINE ID ที่คุณตั้งเอง',
                               style:
                                   TextStyle(fontSize: 12, color: Colors.grey),
                             ),
@@ -1161,6 +1162,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
+                      const Text('สแกนเพื่อเพิ่มเพื่อน LINE Pokpok',
+                          textAlign: TextAlign.center),
+                      const SizedBox(height: 8),
+                      Center(
+                        child: Semantics(
+                          label: 'QR เพิ่มเพื่อน LINE Pokpok ใช้ลิงก์เดียวกับปุ่มเปิด LINE',
+                          image: true,
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 200),
+                            child: AspectRatio(
+                              aspectRatio: 1,
+                              child: QrImageView(
+                                data: LineService.officialAccountUrl,
+                                backgroundColor: Colors.white,
+                                padding: const EdgeInsets.all(16),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                          'ใช้มือถือสแกนจากแท็บเล็ตหรือเครื่อง POS หากใช้เครื่องเดียวกันให้กดปุ่มด้านล่าง',
+                          textAlign: TextAlign.center),
                       OutlinedButton.icon(
                           onPressed: _openLine,
                           icon: const Icon(Icons.chat_bubble_outline),
