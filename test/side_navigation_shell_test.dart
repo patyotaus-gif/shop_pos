@@ -59,16 +59,11 @@ void main() {
   testWidgets('all destinations remain reachable on a small landscape screen',
       (tester) async {
     await openShell(tester, const Size(568, 320), textScale: 2);
-    await tester.scrollUntilVisible(
-      find.byKey(const ValueKey('nav-ตั้งค่า')),
-      150,
-      scrollable: find.descendant(
-        of: find.byKey(const PageStorageKey('side-navigation')),
-        matching: find.byType(Scrollable),
-      ),
-    );
-    await tester.tap(find.byKey(const ValueKey('nav-ตั้งค่า')));
-    await tester.pump();
+    await tester.tap(find.text('เพิ่มเติม'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('ตั้งค่า'), 150);
+    await tester.tap(find.text('ตั้งค่า'));
+    await tester.pumpAndSettle();
     expect(find.text('หน้าตั้งค่า'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -78,17 +73,13 @@ void main() {
     final semantics = tester.ensureSemantics();
     await openShell(tester, const Size(375, 812));
     expect(find.text('99+'), findsOneWidget);
-    final selected = tester.getSemantics(find.bySemanticsLabel('ขาย'));
-    expect(
-        selected,
-        matchesSemantics(
-          label: 'ขาย',
-          isButton: true,
-          isSelected: true,
-          hasSelectedState: true,
-          hasTapAction: true,
-        ));
-    expect(find.bySemanticsLabel('ออเดอร์, 123 ออเดอร์ใหม่'), findsOneWidget);
+    expect(find.byType(NavigationBar), findsOneWidget);
+    await tester.tap(find.text('ออเดอร์'));
+    await tester.pumpAndSettle();
+    expect(find.text('หน้าออเดอร์'), findsOneWidget);
+    await tester.tap(find.text('ขาย'));
+    await tester.pumpAndSettle();
+    expect(find.text('สินค้าในตะกร้า 0'), findsOneWidget);
     expect(tester.takeException(), isNull);
     semantics.dispose();
   });

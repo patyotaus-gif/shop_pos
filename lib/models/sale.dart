@@ -4,6 +4,28 @@ import 'order_modifier.dart';
 
 enum PaymentMethod { cash, transfer, qr, online }
 
+enum SalesChannel {
+  unspecified,
+  storefront,
+  dineIn,
+  takeaway,
+  lineMan,
+  grab,
+  otherDelivery
+}
+
+extension SalesChannelName on SalesChannel {
+  String get label => switch (this) {
+        SalesChannel.unspecified => 'ไม่ระบุช่องทาง',
+        SalesChannel.storefront => 'หน้าร้าน',
+        SalesChannel.dineIn => 'ทานที่ร้าน',
+        SalesChannel.takeaway => 'ซื้อกลับ',
+        SalesChannel.lineMan => 'LINE MAN',
+        SalesChannel.grab => 'Grab',
+        SalesChannel.otherDelivery => 'เดลิเวอรีอื่น',
+      };
+}
+
 extension PaymentMethodExt on PaymentMethod {
   String get label => switch (this) {
         PaymentMethod.cash => 'เงินสด',
@@ -81,6 +103,7 @@ class Sale {
   final bool isDebt;
   final String? customerName;
   final PaymentMethod paymentMethod;
+  final SalesChannel salesChannel;
   final bool isRefunded;
   final DateTime? refundedAt;
   final String? refundReason;
@@ -117,6 +140,7 @@ class Sale {
     this.isDebt = false,
     this.customerName,
     this.paymentMethod = PaymentMethod.cash,
+    this.salesChannel = SalesChannel.unspecified,
     this.isRefunded = false,
     this.refundedAt,
     this.refundReason,
@@ -145,6 +169,9 @@ class Sale {
         createdAt:
             (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         isDebt: data['isDebt'] ?? false,
+        salesChannel: SalesChannel.values.firstWhere(
+            (c) => c.name == data['salesChannel'],
+            orElse: () => SalesChannel.unspecified),
         customerName: data['customerName'],
         paymentMethod: PaymentMethod.values.firstWhere(
           (e) => e.name == (data['paymentMethod'] ?? 'cash'),
@@ -173,6 +200,8 @@ class Sale {
         'isDebt': isDebt,
         'customerName': customerName,
         'paymentMethod': paymentMethod.name,
+        if (salesChannel != SalesChannel.unspecified)
+          'salesChannel': salesChannel.name,
         if (serviceCharge > 0) 'serviceCharge': serviceCharge,
         if (splitCount > 1) 'splitCount': splitCount,
         if (staffName != null) 'staffName': staffName,

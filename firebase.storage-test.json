@@ -1,0 +1,8 @@
+{
+  "storage": { "rules": "storage.rules" },
+  "emulators": {
+    "storage": { "host": "127.0.0.1", "port": 9299 },
+    "ui": { "enabled": false },
+    "singleProjectMode": true
+  }
+}

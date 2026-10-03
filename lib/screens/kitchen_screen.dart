@@ -13,15 +13,23 @@ import '../services/table_service.dart';
 /// Designed for a tablet stand in the kitchen — large tap targets, no
 /// nested menus, status colours that read at arm's length.
 class KitchenScreen extends StatelessWidget {
-  const KitchenScreen({super.key});
+  const KitchenScreen({super.key, this.orders});
+  final Stream<List<TableOrder>>? orders;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('ครัว'), centerTitle: true),
       body: StreamBuilder<List<TableOrder>>(
-        stream: TableService.watchOpenOrders(),
+        stream: orders ?? TableService.watchOpenOrders(),
         builder: (context, snap) {
+          if (snap.hasError) {
+            return const Center(
+                child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text(
+                        'โหลดออเดอร์ครัวไม่สำเร็จ กรุณาตรวจการเชื่อมต่อแล้วเปิดหน้านี้ใหม่')));
+          }
           if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }

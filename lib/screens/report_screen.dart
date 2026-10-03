@@ -9,12 +9,13 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import '../models/sale.dart';
+import '../widgets/sales_insights.dart';
 import '../models/shop.dart';
 import '../services/entitlements.dart';
 import '../services/sale_service.dart';
 import '../services/settings_service.dart';
 import '../services/shop_service.dart';
-import '../utils/receipt_generator.dart';
+import 'sale_receipt_screen.dart';
 import '../widgets/upgrade_prompt.dart';
 
 class ReportScreen extends StatefulWidget {
@@ -35,9 +36,9 @@ class _ReportScreenState extends State<ReportScreen>
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 5, vsync: this);
+    _tab = TabController(length: 4, vsync: this);
     _tab.addListener(() {
-      if (_tab.index == 4 && !_tab.indexIsChanging) _pickCustomRange();
+      if (_tab.index == 3 && !_tab.indexIsChanging) _pickCustomRange();
     });
   }
 
@@ -53,13 +54,9 @@ class _ReportScreenState extends State<ReportScreen>
     return switch (idx) {
       0 =>
         DateTimeRange(start: DateTime(now.year, now.month, now.day), end: eod),
-      1 => DateTimeRange(start: DateTime(now.year, now.month, 1), end: eod),
-      2 => () {
-          final first = DateTime(now.year, now.month - 1, 1);
-          final last = DateTime(now.year, now.month, 0, 23, 59, 59);
-          return DateTimeRange(start: first, end: last);
-        }(),
-      3 => DateTimeRange(start: DateTime(now.year, 1, 1), end: eod),
+      1 => DateTimeRange(
+          start: DateTime(now.year, now.month, now.day - 6), end: eod),
+      2 => DateTimeRange(start: DateTime(now.year, now.month, 1), end: eod),
       _ => _customRange ??
           DateTimeRange(
               start: DateTime(now.year, now.month, now.day), end: eod),
@@ -68,9 +65,8 @@ class _ReportScreenState extends State<ReportScreen>
 
   String _titleFor(int idx) => switch (idx) {
         0 => 'วันนี้',
-        1 => 'เดือนนี้',
-        2 => 'เดือนที่แล้ว',
-        3 => 'ปีนี้',
+        1 => '7 วันล่าสุด',
+        2 => 'เดือนนี้',
         _ => _customRange != null
             ? '${_dayFmt.format(_customRange!.start)} – ${_dayFmt.format(_customRange!.end)}'
             : 'กำหนดเอง',
@@ -422,6 +418,13 @@ class _ReportScreenState extends State<ReportScreen>
           ),
 
           // ── 3. Top 10 Products ──
+          pw.Text('ยอดขายตามช่องทาง (ก่อนหักค่าธรรมเนียมแพลตฟอร์ม)',
+              style: pw.TextStyle(font: fontBold, fontSize: 11)),
+          for (final channel in SalesChannel.values)
+            if (active.any((s) => s.salesChannel == channel))
+              pw.Text(
+                  '${channel.label}: ฿${_baht.format(active.where((s) => s.salesChannel == channel).fold(0.0, (sum, s) => sum + s.total))}'),
+          pw.SizedBox(height: 12),
           sectionHeader('3. สินค้าขายดี 10 อันดับ  (ตามรายได้)'),
           pw.Table(
             border: pw.TableBorder.all(color: PdfColors.grey200),
@@ -591,7 +594,7 @@ class _ReportScreenState extends State<ReportScreen>
 
     buf.writeln('=== รายการขายทั้งหมด ===');
     buf.writeln(
-        'ลำดับ,วันที่,ลูกค้า,ช่องทาง,รายได้,ต้นทุน,กำไร,ส่วนลด,สถานะ,เหตุผลคืนเงิน');
+        'ลำดับ,วันที่,ลูกค้า,วิธีชำระเงิน,ช่องทางขาย,รายได้,ต้นทุน,กำไร,ส่วนลด,สถานะ,เหตุผลคืนเงิน');
 
     var i = 1;
     for (final s in allSales) {
@@ -605,6 +608,7 @@ class _ReportScreenState extends State<ReportScreen>
         '${DateFormat('dd/MM/yyyy HH:mm').format(s.createdAt)},'
         '"${s.customerName ?? ''}",'
         '$method,'
+        '${s.salesChannel.label},'
         '${s.total.toStringAsFixed(2)},'
         '${cost.toStringAsFixed(2)},'
         '${profit.toStringAsFixed(2)},'
@@ -667,9 +671,8 @@ class _ReportScreenState extends State<ReportScreen>
               tabAlignment: TabAlignment.start,
               tabs: const [
                 Tab(text: 'วันนี้'),
+                Tab(text: '7 วันล่าสุด'),
                 Tab(text: 'เดือนนี้'),
-                Tab(text: 'เดือนที่แล้ว'),
-                Tab(text: 'ปีนี้'),
                 Tab(text: 'กำหนดเอง'),
               ],
             ),
@@ -677,7 +680,7 @@ class _ReportScreenState extends State<ReportScreen>
           body: TabBarView(
             controller: _tab,
             children: List.generate(
-              5,
+              4,
               (i) => _SalesReport(
                 rangeBuilder: () => _rangeFor(i),
                 baht: _baht,
@@ -702,7 +705,7 @@ class _ProductStat {
 }
 
 // ── Sales Report Widget ──────────────────────────────────────────
-class _SalesReport extends StatelessWidget {
+class _SalesReport extends StatefulWidget {
   final DateTimeRange Function() rangeBuilder;
   final NumberFormat baht;
   final DateFormat dateFormat;
@@ -719,6 +722,16 @@ class _SalesReport extends StatelessWidget {
     required this.advanced,
   });
 
+  @override
+  State<_SalesReport> createState() => _SalesReportState();
+}
+
+class _SalesReportState extends State<_SalesReport> {
+  bool _history = false;
+  DateTimeRange Function() get rangeBuilder => widget.rangeBuilder;
+  NumberFormat get baht => widget.baht;
+  DateFormat get dateFormat => widget.dateFormat;
+  bool get advanced => widget.advanced;
   @override
   Widget build(BuildContext context) {
     final range = rangeBuilder();
@@ -753,6 +766,18 @@ class _SalesReport extends StatelessWidget {
 
         return Column(
           children: [
+            Padding(
+                padding: const EdgeInsets.all(8),
+                child: SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment(value: false, label: Text('ภาพรวม')),
+                      ButtonSegment(value: true, label: Text('ประวัติการขาย'))
+                    ],
+                    selected: {
+                      _history
+                    },
+                    onSelectionChanged: (values) =>
+                        setState(() => _history = values.first))),
             // ── Summary cards ──
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
@@ -878,88 +903,91 @@ class _SalesReport extends StatelessWidget {
             const Divider(height: 1),
             // ── Transaction list ──
             Expanded(
-              child: sales.isEmpty
-                  ? const Center(child: Text('ยังไม่มีรายการขาย'))
-                  : ListView.builder(
-                      itemCount: sales.length,
-                      itemBuilder: (ctx, i) {
-                        final s = sales[i];
-                        return ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: s.isRefunded
-                                ? Colors.red.shade100
-                                : s.isDebt
-                                    ? Colors.orange.shade100
-                                    : Colors.green.shade100,
-                            child: Icon(
-                              s.isRefunded
-                                  ? Icons.undo
-                                  : s.isDebt
-                                      ? Icons.person_outline
-                                      : Icons.check,
-                              color: s.isRefunded
-                                  ? Colors.red
-                                  : s.isDebt
-                                      ? Colors.orange
-                                      : Colors.green,
-                            ),
-                          ),
-                          title: Row(children: [
-                            if (s.offlineReview.isNotEmpty)
-                              const Tooltip(
-                                  message: 'บิลออฟไลน์ต้องตรวจสอบ',
-                                  child: Icon(Icons.warning_amber,
-                                      color: Colors.orange)),
-                            Expanded(
-                              child: Text(
-                                s.isDebt
-                                    ? 'เชื่อ: ${s.customerName}'
-                                    : s.paymentMethod.label,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  decoration: s.isRefunded
-                                      ? TextDecoration.lineThrough
-                                      : null,
-                                  color: s.isRefunded ? Colors.grey : null,
+              child: !_history
+                  ? SalesInsights(sales: sales)
+                  : sales.isEmpty
+                      ? const Center(child: Text('ยังไม่มีรายการขาย'))
+                      : ListView.builder(
+                          itemCount: sales.length,
+                          itemBuilder: (ctx, i) {
+                            final s = sales[i];
+                            return ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: s.isRefunded
+                                    ? Colors.red.shade100
+                                    : s.isDebt
+                                        ? Colors.orange.shade100
+                                        : Colors.green.shade100,
+                                child: Icon(
+                                  s.isRefunded
+                                      ? Icons.undo
+                                      : s.isDebt
+                                          ? Icons.person_outline
+                                          : Icons.check,
+                                  color: s.isRefunded
+                                      ? Colors.red
+                                      : s.isDebt
+                                          ? Colors.orange
+                                          : Colors.green,
                                 ),
                               ),
-                            ),
-                            if (s.isRefunded)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.shade100,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: const Text('คืนเงินแล้ว',
+                              title: Row(children: [
+                                if (s.offlineReview.isNotEmpty)
+                                  const Tooltip(
+                                      message: 'บิลออฟไลน์ต้องตรวจสอบ',
+                                      child: Icon(Icons.warning_amber,
+                                          color: Colors.orange)),
+                                Expanded(
+                                  child: Text(
+                                    s.isDebt
+                                        ? 'เชื่อ: ${s.customerName}'
+                                        : s.paymentMethod.label,
                                     style: TextStyle(
-                                        fontSize: 10, color: Colors.red)),
-                              ),
-                          ]),
-                          subtitle: Text(
-                              '${s.items.length} รายการ · ${dateFormat.format(s.createdAt)}'),
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text('฿${baht.format(s.total)}',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: s.isRefunded ? Colors.grey : null,
+                                      fontWeight: FontWeight.w600,
                                       decoration: s.isRefunded
                                           ? TextDecoration.lineThrough
-                                          : null)),
-                              if (s.discount > 0)
-                                Text('ลด ฿${baht.format(s.discount)}',
-                                    style: const TextStyle(
-                                        fontSize: 11, color: Colors.green)),
-                            ],
-                          ),
-                          onTap: () => _showDetail(ctx, s),
-                        );
-                      },
-                    ),
+                                          : null,
+                                      color: s.isRefunded ? Colors.grey : null,
+                                    ),
+                                  ),
+                                ),
+                                if (s.isRefunded)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.shade100,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text('คืนเงินแล้ว',
+                                        style: TextStyle(
+                                            fontSize: 10, color: Colors.red)),
+                                  ),
+                              ]),
+                              subtitle: Text(
+                                  '${s.items.length} รายการ · ${dateFormat.format(s.createdAt)}'),
+                              trailing: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text('฿${baht.format(s.total)}',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color:
+                                              s.isRefunded ? Colors.grey : null,
+                                          decoration: s.isRefunded
+                                              ? TextDecoration.lineThrough
+                                              : null)),
+                                  if (s.discount > 0)
+                                    Text('ลด ฿${baht.format(s.discount)}',
+                                        style: const TextStyle(
+                                            fontSize: 11, color: Colors.green)),
+                                ],
+                              ),
+                              onTap: () => _showDetail(ctx, s),
+                            );
+                          },
+                        ),
             ),
           ],
         );
@@ -1027,11 +1055,11 @@ class _SalesReport extends StatelessWidget {
             Row(children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () async {
+                  onPressed: () {
+                    final navigator = Navigator.of(context);
                     Navigator.pop(ctx);
-                    final shopName = await SettingsService.getShopName();
-                    await ReceiptGenerator.printReceipt(sale,
-                        shopName: shopName);
+                    navigator.push(MaterialPageRoute<void>(
+                        builder: (_) => SaleReceiptScreen(sale: sale)));
                   },
                   icon: const Icon(Icons.receipt_long_outlined),
                   label: const Text('ใบเสร็จ'),

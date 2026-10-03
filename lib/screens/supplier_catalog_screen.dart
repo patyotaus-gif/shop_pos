@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../widgets/supplier_quantity_dialog.dart';
 import 'package:intl/intl.dart';
 
 import '../models/marketplace_order.dart';
@@ -24,15 +25,14 @@ class SupplierCatalogScreen extends StatefulWidget {
   final List<MarketplaceOrderItem>? initialItems;
 
   @override
-  State<SupplierCatalogScreen> createState() =>
-      _SupplierCatalogScreenState();
+  State<SupplierCatalogScreen> createState() => _SupplierCatalogScreenState();
 }
 
 class _SupplierCatalogScreenState extends State<SupplierCatalogScreen> {
   static final _baht = NumberFormat('#,##0.00', 'th_TH');
 
   // productId → quantity
-  final Map<String, int> _cart = {};
+  final Map<String, double> _cart = {};
   // Snapshot of products so we can build order items without re-querying.
   final Map<String, SupplierProduct> _products = {};
   bool _placing = false;
@@ -49,8 +49,8 @@ class _SupplierCatalogScreenState extends State<SupplierCatalogScreen> {
   @override
   void initState() {
     super.initState();
-    _favSub = MarketplaceService.watchFavoriteIds(widget.supplier.id)
-        .listen((ids) {
+    _favSub =
+        MarketplaceService.watchFavoriteIds(widget.supplier.id).listen((ids) {
       if (mounted) setState(() => _favIds = ids);
     });
     MarketplaceService.previouslyOrderedProductIds(widget.supplier.id)
@@ -114,11 +114,12 @@ class _SupplierCatalogScreenState extends State<SupplierCatalogScreen> {
         return s + (p == null ? 0 : p.price * e.value);
       });
 
-  int get _itemCount => _cart.values.fold<int>(0, (s, q) => s + q);
+  int get _itemCount => _cart.length;
 
   bool get _meetsMinimum => _total >= widget.supplier.minOrder;
 
-  void _setQty(SupplierProduct p, int qty) {
+  void _setQty(SupplierProduct p, double qty) {
+    if (!qty.isFinite || (qty > 0 && qty < p.moq)) return;
     setState(() {
       _products[p.id] = p;
       if (qty <= 0) {
@@ -193,12 +194,9 @@ class _SupplierCatalogScreenState extends State<SupplierCatalogScreen> {
                       ? Image.network(
                           p.imageUrl!,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
-                              _detailPlaceholder(cs),
+                          errorBuilder: (_, __, ___) => _detailPlaceholder(cs),
                           loadingBuilder: (context, child, progress) =>
-                              progress == null
-                                  ? child
-                                  : _detailPlaceholder(cs),
+                              progress == null ? child : _detailPlaceholder(cs),
                         )
                       : _detailPlaceholder(cs),
                 ),
@@ -230,8 +228,7 @@ class _SupplierCatalogScreenState extends State<SupplierCatalogScreen> {
                         fontWeight: FontWeight.w700,
                         color: cs.onSurface.withValues(alpha: 0.6))),
                 const SizedBox(height: 4),
-                Text(desc,
-                    style: const TextStyle(fontSize: 14, height: 1.5)),
+                Text(desc, style: const TextStyle(fontSize: 14, height: 1.5)),
               ],
               const SizedBox(height: 20),
               if (p.available)
@@ -344,8 +341,7 @@ class _SupplierCatalogScreenState extends State<SupplierCatalogScreen> {
           if (products.isEmpty) {
             return Center(
               child: Text('ยังไม่มีสินค้าในแคตตาล็อก',
-                  style: TextStyle(
-                      color: cs.onSurface.withValues(alpha: 0.5))),
+                  style: TextStyle(color: cs.onSurface.withValues(alpha: 0.5))),
             );
           }
           return _buildGroupedList(products, cs);
@@ -376,8 +372,8 @@ class _CatalogRow extends StatelessWidget {
     required this.onShowDetail,
   });
   final SupplierProduct product;
-  final int quantity;
-  final void Function(int) onChanged;
+  final double quantity;
+  final void Function(double) onChanged;
   final bool isFavorite;
   final VoidCallback onToggleFavorite;
   final VoidCallback onShowDetail;
@@ -417,8 +413,7 @@ class _CatalogRow extends StatelessWidget {
                                 const SizedBox(width: 4),
                                 Icon(Icons.info_outline,
                                     size: 14,
-                                    color:
-                                        cs.onSurface.withValues(alpha: 0.4)),
+                                    color: cs.onSurface.withValues(alpha: 0.4)),
                               ],
                             ],
                           ),
@@ -472,10 +467,16 @@ class _CatalogRow extends StatelessWidget {
                             onChanged(next < product.moq ? 0 : next);
                           },
                         ),
-                        Text('$quantity',
-                            style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700)),
+                        TextButton(
+                            onPressed: () async {
+                              final value = await showSupplierQuantity(
+                                  context, quantity, product.moq, product.unit);
+                              if (value != null) onChanged(value);
+                            },
+                            child: Text('$quantity',
+                                style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700))),
                         IconButton(
                           icon: const Icon(Icons.add_circle_outline),
                           onPressed: () => onChanged(quantity + 1),
@@ -574,8 +575,7 @@ class _CartBar extends StatelessWidget {
                     Text('$itemCount รายการ',
                         style: TextStyle(
                             fontSize: 12,
-                            color:
-                                cs.onSurface.withValues(alpha: 0.6))),
+                            color: cs.onSurface.withValues(alpha: 0.6))),
                     Text('฿${baht.format(total)}',
                         style: TextStyle(
                             fontSize: 20,
@@ -586,8 +586,7 @@ class _CartBar extends StatelessWidget {
                 const SizedBox(width: 16),
                 Expanded(
                   child: FilledButton(
-                    onPressed:
-                        (placing || !meetsMinimum) ? null : onPlace,
+                    onPressed: (placing || !meetsMinimum) ? null : onPlace,
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),

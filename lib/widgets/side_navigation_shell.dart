@@ -75,6 +75,55 @@ class _SideNavigationShellState extends State<SideNavigationShell> {
         bottom: false,
         child: LayoutBuilder(
           builder: (context, constraints) {
+            if (constraints.maxWidth < 600) {
+              final count = widget.items.length > 4 ? 4 : widget.items.length;
+              return Column(children: [
+                Expanded(
+                    child: IndexedStack(index: widget.selectedIndex, children: [
+                  for (final item in widget.items)
+                    KeyedSubtree(key: ValueKey(item.label), child: item.screen),
+                ])),
+                if (widget.statusBanner != null) widget.statusBanner!,
+                NavigationBar(
+                  selectedIndex: widget.selectedIndex < count
+                      ? widget.selectedIndex
+                      : count,
+                  onDestinationSelected: (index) async {
+                    if (index < count) {
+                      widget.onSelected(index);
+                      return;
+                    }
+                    final chosen = await showModalBottomSheet<int>(
+                        context: context,
+                        builder: (context) => SafeArea(
+                                child: ListView(shrinkWrap: true, children: [
+                              for (var i = count; i < widget.items.length; i++)
+                                ListTile(
+                                    leading: Icon(widget.items[i].icon),
+                                    title: Text(widget.items[i].label),
+                                    selected: widget.selectedIndex == i,
+                                    onTap: () => Navigator.pop(context, i)),
+                            ])));
+                    if (chosen != null && mounted) widget.onSelected(chosen);
+                  },
+                  destinations: [
+                    for (var i = 0; i < count; i++)
+                      NavigationDestination(
+                          icon: Badge(
+                              isLabelVisible: widget.items[i].badgeCount > 0,
+                              label: Text(widget.items[i].badgeCount > 99
+                                  ? '99+'
+                                  : '${widget.items[i].badgeCount}'),
+                              child: Icon(widget.items[i].icon)),
+                          selectedIcon: Icon(widget.items[i].selectedIcon),
+                          label: widget.items[i].label),
+                    if (widget.items.length > count)
+                      const NavigationDestination(
+                          icon: Icon(Icons.more_horiz), label: 'เพิ่มเติม'),
+                  ],
+                ),
+              ]);
+            }
             final expanded = constraints.maxWidth >= 1000 && !_collapsed;
             final width = _collapsed
                 ? 56.0

@@ -37,7 +37,7 @@ class MarketplaceOrderItem {
   final String name;
   final String unit;
   final double price;
-  final int quantity;
+  final double quantity;
 
   const MarketplaceOrderItem({
     required this.productId,
@@ -55,7 +55,7 @@ class MarketplaceOrderItem {
         name: m['name'] ?? '',
         unit: m['unit'] ?? 'ชิ้น',
         price: (m['price'] ?? 0).toDouble(),
-        quantity: (m['quantity'] ?? 1) as int,
+        quantity: (m['quantity'] as num? ?? 1).toDouble(),
       );
 
   Map<String, dynamic> toMap() => {
@@ -101,10 +101,9 @@ class MarketplaceOrder {
     this.deliveredAt,
   });
 
-  double get subtotal =>
-      items.fold<double>(0, (s, i) => s + i.subtotal);
+  double get subtotal => items.fold<double>(0, (s, i) => s + i.subtotal);
 
-  int get itemCount => items.fold<int>(0, (s, i) => s + i.quantity);
+  int get itemCount => items.length;
 
   factory MarketplaceOrder.fromFirestore(
           Map<String, dynamic> data, String id) =>
@@ -115,8 +114,7 @@ class MarketplaceOrder {
         supplierId: data['supplierId'] ?? '',
         supplierName: data['supplierName'] ?? '',
         items: (data['items'] as List<dynamic>? ?? [])
-            .map((e) => MarketplaceOrderItem.fromMap(
-                e as Map<String, dynamic>))
+            .map((e) => MarketplaceOrderItem.fromMap(e as Map<String, dynamic>))
             .toList(),
         status: MarketplaceOrderStatus.values.firstWhere(
           (e) => e.name == (data['status'] ?? 'placed'),

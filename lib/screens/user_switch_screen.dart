@@ -79,8 +79,8 @@ class _UserSwitchScreenState extends State<UserSwitchScreen> {
           ListTile(
               leading: const Icon(Icons.admin_panel_settings_outlined),
               title: const Text('เจ้าของร้าน'),
-              subtitle:
-                  const Text('เข้าสู่ระบบด้วยอีเมลและรหัสผ่านเจ้าของร้าน'),
+              subtitle: const Text(
+                  'เข้าสู่ระบบด้วยบัญชีเจ้าของร้าน (อีเมล / Google / Apple)'),
               onTap: _busy ? null : _owner),
           const Divider(),
           if (_busy) const LinearProgressIndicator(),

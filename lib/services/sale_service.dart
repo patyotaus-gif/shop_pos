@@ -43,6 +43,7 @@ class SaleService {
     bool isDebt = false,
     String? customerName,
     PaymentMethod paymentMethod = PaymentMethod.cash,
+    SalesChannel salesChannel = SalesChannel.storefront,
     String? staffName,
     String? loyaltyCustomerId,
   }) async {
@@ -84,6 +85,7 @@ class SaleService {
             isDebt: isDebt,
             customerName: customerName,
             paymentMethod: paymentMethod,
+            salesChannel: salesChannel,
             staffName: staffName);
         validateSale(sale);
         final stored = {
@@ -128,6 +130,8 @@ class SaleService {
           'paid': draft.paid,
           'expectedTotal': draft.total,
           'paymentMethod': draft.paymentMethod.name,
+          if (draft.salesChannel != SalesChannel.unspecified)
+            'salesChannel': draft.salesChannel.name,
           'discount': draft.discount,
           'isDebt': draft.isDebt,
         });

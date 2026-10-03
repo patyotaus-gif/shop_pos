@@ -15,6 +15,7 @@ class PaymentResult {
   /// Cash received (cash method only) — used to compute change.
   /// For transfer/QR this equals the total.
   final double paid;
+  final SalesChannel salesChannel;
 
   /// Free-form reference (slip/transaction ID), optional, transfer only.
   final String? ref;
@@ -22,6 +23,7 @@ class PaymentResult {
   const PaymentResult({
     required this.method,
     required this.paid,
+    this.salesChannel = SalesChannel.storefront,
     this.ref,
   });
 }
@@ -37,8 +39,9 @@ class PaymentResult {
 ///     a single surface saves one tap and one screen transition.
 class _PaymentSheet extends StatefulWidget {
   final double total;
+  final SalesChannel initialChannel;
 
-  const _PaymentSheet({required this.total});
+  const _PaymentSheet({required this.total, required this.initialChannel});
 
   @override
   State<_PaymentSheet> createState() => _PaymentSheetState();
@@ -58,6 +61,7 @@ class _PaymentSheetState extends State<_PaymentSheet> {
   ];
 
   PaymentMethod _method = PaymentMethod.cash;
+  late SalesChannel _channel = widget.initialChannel;
   final _cashCtrl = TextEditingController();
   final _refCtrl = TextEditingController();
 
@@ -174,6 +178,7 @@ class _PaymentSheetState extends State<_PaymentSheet> {
       context,
       PaymentResult(
         method: _method,
+        salesChannel: _channel,
         paid: paid,
         ref: _method == PaymentMethod.transfer
             ? _refCtrl.text.trim().isEmpty
@@ -254,6 +259,18 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                 ),
                 const SizedBox(height: 20),
                 _buildMethodBody(cs),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<SalesChannel>(
+                    initialValue: _channel,
+                    decoration: const InputDecoration(labelText: 'ช่องทางขาย'),
+                    items: [
+                      for (final c in SalesChannel.values
+                          .where((c) => c != SalesChannel.unspecified))
+                        DropdownMenuItem(value: c, child: Text(c.label))
+                    ],
+                    onChanged: (value) {
+                      if (value != null) setState(() => _channel = value);
+                    }),
                 const SizedBox(height: 20),
                 FilledButton(
                   onPressed: _canConfirm ? _confirm : null,
@@ -261,8 +278,12 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     backgroundColor: _canConfirm ? Colors.green : null,
                   ),
-                  child: const Text('ยืนยันการชำระเงิน',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                  child: Text(
+                      _method == PaymentMethod.cash
+                          ? 'ยืนยันการชำระเงิน'
+                          : 'ได้รับเงินแล้ว ยืนยัน',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                 ),
                 const SizedBox(height: 6),
                 TextButton(
@@ -286,7 +307,8 @@ class _PaymentSheetState extends State<_PaymentSheet> {
             TextField(
               controller: _cashCtrl,
               autofocus: true,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
               ],
@@ -307,8 +329,8 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                   label: Text('฿${_baht.format(amt)}',
                       style: const TextStyle(fontSize: 12)),
                   onPressed: () {
-                    _cashCtrl.text = amt.toStringAsFixed(
-                        amt == amt.roundToDouble() ? 0 : 2);
+                    _cashCtrl.text =
+                        amt.toStringAsFixed(amt == amt.roundToDouble() ? 0 : 2);
                     setState(() {});
                   },
                 );
@@ -354,8 +376,7 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                 const Icon(Icons.warning_amber, color: Colors.orange),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(_ppError!,
-                      style: const TextStyle(fontSize: 13)),
+                  child: Text(_ppError!, style: const TextStyle(fontSize: 13)),
                 ),
               ],
             ),
@@ -393,14 +414,18 @@ class _PaymentSheetState extends State<_PaymentSheet> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextField(
-              controller: _refCtrl,
-              decoration: const InputDecoration(
-                labelText: 'เลขอ้างอิง (ไม่บังคับ)',
-                hintText: 'เช่น เลขสลิป 8 ตัวท้าย',
-                border: OutlineInputBorder(),
-              ),
-            ),
+            ExpansionTile(
+                title: const Text('เพิ่มเลขอ้างอิง (ไม่บังคับ)'),
+                children: [
+                  TextField(
+                    controller: _refCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'เลขอ้างอิง (ไม่บังคับ)',
+                      hintText: 'เช่น เลขสลิป 8 ตัวท้าย',
+                      border: OutlineInputBorder(),
+                    ),
+                  )
+                ]),
             const SizedBox(height: 8),
             const Text('ตรวจในแอปธนาคารแล้วกดยืนยัน',
                 style: TextStyle(fontSize: 12, color: Colors.grey)),
@@ -490,6 +515,7 @@ class _MethodButton extends StatelessWidget {
 Future<PaymentResult?> showPaymentSheet(
   BuildContext context, {
   required double total,
+  SalesChannel initialChannel = SalesChannel.storefront,
 }) {
   return showModalBottomSheet<PaymentResult>(
     context: context,
@@ -501,7 +527,8 @@ Future<PaymentResult?> showPaymentSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (ctx) => _PaymentSheet(total: total),
+    builder: (ctx) =>
+        _PaymentSheet(total: total, initialChannel: initialChannel),
   );
 }
 

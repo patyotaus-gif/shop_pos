@@ -2,6 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- Pokpok Google Sign-In START -->
+	<key>GIDClientID</key><string>1010156115465-k4guasnq24h7tflfkc63m33apcln93eo.apps.googleusercontent.com</string>
+	<key>CFBundleURLTypes</key><array><dict><key>CFBundleURLSchemes</key><array><string>com.googleusercontent.apps.1010156115465-k4guasnq24h7tflfkc63m33apcln93eo</string></array></dict></array>
+	<!-- Pokpok Google Sign-In END -->
+
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

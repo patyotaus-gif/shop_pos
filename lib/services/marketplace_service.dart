@@ -27,13 +27,9 @@ class MarketplaceService {
   /// supplier (fail-open — better to show too many than hide stock the
   /// shop could actually buy).
   static Stream<List<Supplier>> watchSuppliers({String? area}) =>
-      _suppliersCol()
-          .where('active', isEqualTo: true)
-          .snapshots()
-          .map((s) {
-        final list = s.docs
-            .map((d) => Supplier.fromFirestore(d.data(), d.id))
-            .toList();
+      _suppliersCol().where('active', isEqualTo: true).snapshots().map((s) {
+        final list =
+            s.docs.map((d) => Supplier.fromFirestore(d.data(), d.id)).toList();
         if (area == null || area.isEmpty) return list;
         return list
             .where((sup) => sup.area == null || sup.area == area)
@@ -49,11 +45,8 @@ class MarketplaceService {
   }
 
   static Stream<List<SupplierProduct>> watchCatalog(String supplierId) =>
-      _suppliersCol()
-          .doc(supplierId)
-          .collection('products')
-          .snapshots()
-          .map((s) => s.docs
+      _suppliersCol().doc(supplierId).collection('products').snapshots().map(
+          (s) => s.docs
               .map((d) => SupplierProduct.fromFirestore(d.data(), d.id))
               .toList());
 
@@ -128,6 +121,19 @@ class MarketplaceService {
     if (items.isEmpty) {
       throw StateError('ไม่มีรายการสั่งซื้อ');
     }
+    if (items.any((i) =>
+        !i.quantity.isFinite ||
+        i.quantity <= 0 ||
+        i.quantity > 1000000 ||
+        !i.subtotal.isFinite ||
+        !i.price.isFinite ||
+        i.price < 0)) {
+      throw StateError('จำนวนหรือราคาสั่งซื้อไม่ถูกต้อง');
+    }
+    if (items.fold(0.0, (amount, item) => amount + item.subtotal) <
+        supplier.minOrder) {
+      throw StateError('ยอดสั่งซื้อน้อยกว่าขั้นต่ำของซัพพลายเออร์');
+    }
     final shop = await ShopService.getCurrentShop();
     final shopId = AuthService.shopId!;
 
@@ -171,7 +177,10 @@ class MarketplaceService {
     batch.update(_shopOrdersCol().doc(order.id),
         {'status': MarketplaceOrderStatus.cancelled.name});
     batch.update(
-        _suppliersCol().doc(order.supplierId).collection('orders').doc(order.id),
+        _suppliersCol()
+            .doc(order.supplierId)
+            .collection('orders')
+            .doc(order.id),
         {'status': MarketplaceOrderStatus.cancelled.name});
     await batch.commit();
   }
@@ -183,8 +192,7 @@ class MarketplaceService {
   /// Function would own the money movement, but recording it on the doc
   /// keeps the data correct in the meantime.
   static Future<void> confirmDelivered(MarketplaceOrder order) async {
-    final fee =
-        double.parse((order.subtotal * takeRate).toStringAsFixed(2));
+    final fee = double.parse((order.subtotal * takeRate).toStringAsFixed(2));
     final patch = {
       'status': MarketplaceOrderStatus.delivered.name,
       'takeRate': fee,
@@ -193,7 +201,10 @@ class MarketplaceService {
     final batch = FirebaseFirestore.instance.batch();
     batch.update(_shopOrdersCol().doc(order.id), patch);
     batch.update(
-        _suppliersCol().doc(order.supplierId).collection('orders').doc(order.id),
+        _suppliersCol()
+            .doc(order.supplierId)
+            .collection('orders')
+            .doc(order.id),
         patch);
     await batch.commit();
   }

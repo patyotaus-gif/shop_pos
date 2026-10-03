@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'package:flutter/services.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:pdf/pdf.dart';
@@ -15,14 +15,22 @@ class ReceiptGenerator {
   /// Print/share a 58mm receipt. Shop name, address, tax id and logo are
   /// pulled from settings here so callers only pass the sale.
   static Future<void> printReceipt(Sale sale, {String? shopName}) async {
+    await Printing.sharePdf(
+        bytes: await buildReceipt(sale, shopName: shopName),
+        filename: 'receipt_${sale.receiptNo ?? sale.id}.pdf');
+  }
+
+  static Future<Uint8List> buildReceipt(Sale sale, {String? shopName}) async {
     final info = await SettingsService.getShopInfo();
     final name = shopName ?? info['name'] ?? 'ร้านของชำ';
     final address = (info['address'] ?? '').trim();
     final taxId = (info['taxId'] ?? '').trim();
     final logo = await _loadLogo();
 
-    final fontRegular = await PdfGoogleFonts.notoSansThaiRegular();
-    final fontBold = await PdfGoogleFonts.notoSansThaiBold();
+    final fontRegular = pw.Font.ttf(
+        await rootBundle.load('assets/fonts/IBMPlexSansThai-Regular.ttf'));
+    final fontBold = pw.Font.ttf(
+        await rootBundle.load('assets/fonts/IBMPlexSansThai-Bold.ttf'));
 
     final pdf = pw.Document(
       theme: pw.ThemeData.withFont(base: fontRegular, bold: fontBold),
@@ -142,9 +150,7 @@ class ReceiptGenerator {
       ),
     );
 
-    final fileTag = sale.receiptNo ?? sale.id;
-    await Printing.sharePdf(
-        bytes: await pdf.save(), filename: 'receipt_$fileTag.pdf');
+    return pdf.save();
   }
 
   /// Fetch the shop logo bytes (settings.logoUrl) for the receipt header.
@@ -154,7 +160,8 @@ class ReceiptGenerator {
       final settings = await SettingsService.getSettings();
       final url = (settings['logoUrl'] as String?) ?? '';
       if (url.isEmpty) return null;
-      final res = await http.get(Uri.parse(url));
+      final res =
+          await http.get(Uri.parse(url)).timeout(const Duration(seconds: 5));
       return res.statusCode == 200 ? res.bodyBytes : null;
     } catch (_) {
       return null;

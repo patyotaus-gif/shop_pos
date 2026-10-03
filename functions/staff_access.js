@@ -125,11 +125,12 @@ function createStaffAccess({db, auth, FieldValue, Timestamp, now=()=>new Date()}
   }
   async function checkout(request) {
     const ctx=await scope(request);if(!ctx.member) fail('permission-denied','ใช้สำหรับโหมดพนักงาน');
-    const {requestId,items,paid,paymentMethod,expectedTotal}=request.data||{};
+    const {requestId,items,paid,paymentMethod,expectedTotal,salesChannel}=request.data||{};
+    if(salesChannel!==undefined&&!['storefront','dineIn','takeaway','lineMan','grab','otherDelivery'].includes(salesChannel)) fail('invalid-argument','ช่องทางขายไม่ถูกต้อง');
     if(!idOk(requestId)||requestId.length<10||!['cash','transfer','qr'].includes(paymentMethod)||!Number.isFinite(paid)||paid<0||paid>1e9||!Number.isFinite(expectedTotal)||expectedTotal<0||expectedTotal>1e9) fail('invalid-argument','ข้อมูลชำระเงินไม่ถูกต้อง');
     if(request.data.discount || request.data.isDebt) fail('permission-denied','ส่วนลดและขายเชื่อให้เจ้าของร้านดำเนินการ');
     if(!Array.isArray(items)||!items.length||items.length>50||items.some(i=>!idOk(i.productId))) fail('invalid-argument','รายการสินค้าไม่ถูกต้อง');
-    const digest=crypto.createHash('sha256').update(JSON.stringify({items,paid,paymentMethod,expectedTotal})).digest('hex');
+    const digest=crypto.createHash('sha256').update(JSON.stringify({items,paid,paymentMethod,expectedTotal,...(salesChannel?{salesChannel}:{})})).digest('hex');
     const ref=ctx.ref.collection('sales').doc(requestId);
     return db.runTransaction(async tx=>{
       const [prior,member,shop]=await Promise.all([tx.get(ref),tx.get(ctx.ref.collection('staff').doc(ctx.user.token.staffId)),tx.get(ctx.ref)]);
@@ -155,7 +156,7 @@ function createStaffAccess({db, auth, FieldValue, Timestamp, now=()=>new Date()}
       const day=String((Number(datePart('year'))+543)%100).padStart(2,'0')+datePart('month')+datePart('day');
       const seq=count.data()?.day===day?Number(count.data().seq||0)+1:1;
       const sale={items:priced,total,discount:0,paid:paymentMethod==='cash'?paid:total,change:paymentMethod==='cash'?Math.round((paid-total)*100)/100:0,
-        paymentMethod,isDebt:false,isRefunded:false,createdAt:Timestamp.fromDate(now()),staffName:member.data().name,staffId:ctx.user.token.staffId,
+        paymentMethod,...(salesChannel?{salesChannel}:{}),isDebt:false,isRefunded:false,createdAt:Timestamp.fromDate(now()),staffName:member.data().name,staffId:ctx.user.token.staffId,
         staffUid:ctx.user.uid,requestDigest:digest,receiptNo:`S-${day}-${String(seq).padStart(3,'0')}`};
       tx.set(ref,sale);tx.set(counter,{day,seq});
       for(const [id,q] of quantities)if(products.get(id).stockMode!=='recipe')tx.update(ctx.ref.collection('products').doc(id),{stock:FieldValue.increment(-q)});

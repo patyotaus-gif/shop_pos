@@ -53,6 +53,8 @@ class StaffAccessService {
     final result =
         await call('staffSwitchSession', {'staffId': id, 'pin': pin});
     _cache = null;
+    await AuthService.rememberedOwner.clear();
+    AuthService.ownerUnlocked = false;
     await FirebaseAuth.instance
         .signInWithCustomToken(result['token'] as String);
     unlocked.value = true;

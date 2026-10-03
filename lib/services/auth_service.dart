@@ -1,8 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'notification_service.dart';
+import 'remembered_owner.dart';
 
 class AuthService {
   static final _auth = FirebaseAuth.instance;
-  // Not persisted: a remembered owner session opens the user selector on launch.
+  static final rememberedOwner = RememberedOwner();
+  // Shared devices remain locked; personal devices can explicitly opt in.
   static bool ownerUnlocked = false;
 
   static String? _claimUid;
@@ -12,25 +15,31 @@ class AuthService {
       _claimUid == currentUser?.uid &&
       _claims['staffRole'] == 'cashier';
   static String? get staffId => isStaff ? _claims['staffId'] as String? : null;
-  static Stream<User?> get authStateStream =>
+  static final Stream<User?> authStateStream =
       _auth.idTokenChanges().asyncMap((user) async {
-        if (user != null) {
-          final token = await user.getIdTokenResult();
-          final claims = Map<String, dynamic>.from(token.claims ?? {});
-          if (user.uid.startsWith('staff_') &&
-              claims['staffRole'] != 'cashier') {
-            throw StateError('ไม่พบสิทธิ์พนักงาน กรุณาเข้าสู่ระบบใหม่');
-          }
-          _claims = claims;
-          _claimUid = user.uid;
-          _founderClaim = _claims['founder'] == true;
-        } else {
-          _founderClaim = false;
-          _claims = {};
-          _claimUid = null;
-        }
-        return user;
-      });
+    if (_claimUid != user?.uid) NotificationService.stopFCM();
+    if (user != null) {
+      final token = await user.getIdTokenResult();
+      final claims = Map<String, dynamic>.from(token.claims ?? {});
+      if (user.uid.startsWith('staff_') && claims['staffRole'] != 'cashier') {
+        throw StateError('ไม่พบสิทธิ์พนักงาน กรุณาเข้าสู่ระบบใหม่');
+      }
+      _claims = claims;
+      _claimUid = user.uid;
+      _founderClaim = _claims['founder'] == true;
+      if (isStaff) {
+        ownerUnlocked = false;
+      } else if (!ownerUnlocked) {
+        ownerUnlocked = await rememberedOwner.matches(user.uid, isStaff: false);
+      }
+    } else {
+      _founderClaim = false;
+      _claims = {};
+      _claimUid = null;
+      ownerUnlocked = false;
+    }
+    return user;
+  });
 
   static User? get currentUser => _auth.currentUser;
 
@@ -90,11 +99,16 @@ class AuthService {
     }
   }
 
-  static Future<String?> signIn(String email, String password) async {
-    ownerUnlocked = true;
+  static Future<String?> signIn(String email, String password,
+      {bool remember = false}) async {
     try {
+      await rememberedOwner.clear();
+      ownerUnlocked = true;
       await _auth.signInWithEmailAndPassword(email: email, password: password);
       await refreshFounderClaim();
+      if (remember) {
+        await rememberedOwner.save(_auth.currentUser!.uid);
+      }
       return null;
     } on FirebaseAuthException catch (e) {
       ownerUnlocked = false;
@@ -108,13 +122,20 @@ class AuthService {
         'too-many-requests' => 'ลองใหม่อีกครั้งในภายหลัง',
         _ => 'เกิดข้อผิดพลาด: ${e.message}',
       };
+    } catch (_) {
+      return 'ไม่สามารถบันทึกการเข้าใช้งานบนเครื่องนี้ได้ กรุณาลองใหม่';
     }
   }
 
-  static Future<void> signOut() {
+  static Future<void> signOut() async {
+    NotificationService.stopFCM();
     ownerUnlocked = false;
     _founderClaim = false;
-    return _auth.signOut();
+    try {
+      await rememberedOwner.clear();
+    } finally {
+      await _auth.signOut();
+    }
   }
 
   static Future<String?> sendPasswordReset(String email) async {

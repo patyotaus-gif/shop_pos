@@ -1621,7 +1621,11 @@ exports.adminUpsertSupplierProduct = onCall(async (request) => {
       name: String(d.name),
       unit: String(d.unit || "ชิ้น"),
       price: Number(d.price || 0),
-      moq: Math.max(1, parseInt(d.moq || 1)),
+      moq: (() => {
+        const value = Number(d.moq ?? 1);
+        if (!Number.isFinite(value) || value <= 0 || value > 1000000) throw new HttpsError('invalid-argument', 'จำนวนสั่งขั้นต่ำไม่ถูกต้อง');
+        return value;
+      })(),
       available: d.available !== false,
     },
     { merge: true }

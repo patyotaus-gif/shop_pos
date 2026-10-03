@@ -12,7 +12,28 @@
           "package_name": "app.pokpok.pos"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1010156115465-i8cdfv3k606aktuukb0c3ukinr93lolb.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "app.pokpok.pos",
+            "certificate_hash": "9ae9a23238da7179ff3cd2adca299552fb5a8cc1"
+          }
+        },
+        {
+          "client_id": "1010156115465-rkn1jqla6ibckhb1bifbr5hc040pdflc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "app.pokpok.pos",
+            "certificate_hash": "382691a76cf170602024a8155104e8fa7fd9199f"
+          }
+        },
+        {
+          "client_id": "1010156115465-paapvt1i13bhj6ri570dba0grrp1j9p0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDmY7ZnGfbpB66zb1pJcS2I-NCgUsiu6QA"
@@ -20,7 +41,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1010156115465-paapvt1i13bhj6ri570dba0grrp1j9p0.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1010156115465-k4guasnq24h7tflfkc63m33apcln93eo.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "app.pokpok.pos"
+              }
+            }
+          ]
         }
       }
     }

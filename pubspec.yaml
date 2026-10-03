@@ -1,6 +1,6 @@
 name: shop_pos
 description: Mobile POS for convenience stores
-version: 1.2.29+44
+version: 1.2.35+50
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -63,6 +63,8 @@ dependencies:
   sqflite: ^2.4.2+1
   flutter_secure_storage: ^10.3.4
   cryptography: ^2.9.0
+  google_sign_in: ^7.2.0
+  file_saver: ^0.4.0
 
 flutter_launcher_icons:
   android: true
@@ -84,6 +86,7 @@ flutter:
 
   assets:
     - assets/icon/
+    - assets/auth/
 
   # Brand font — IBM Plex Sans Thai, matching the pok-pok.app website.
   # Bundled (not google_fonts) so the POS renders the brand face offline.

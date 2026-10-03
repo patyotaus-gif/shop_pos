@@ -4,6 +4,8 @@ import '../services/auth_service.dart';
 import '../services/notification_service.dart';
 import '../services/shop_service.dart';
 import '../screens/subscription_screen.dart';
+import '../screens/register_screen.dart';
+import '../screens/offline_cash_screen.dart';
 
 class SubscriptionGate extends StatelessWidget {
   final Widget child;
@@ -14,15 +16,32 @@ class SubscriptionGate extends StatelessWidget {
     return StreamBuilder<Shop?>(
       stream: ShopService.watchCurrentShop(),
       builder: (context, snap) {
-        if (snap.connectionState == ConnectionState.waiting || snap.data == null) {
+        if (snap.hasError) {
+          return Scaffold(
+              body: Center(
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('โหลดข้อมูลร้านไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ต'),
+            const OfflineEntryButton(),
+            TextButton(
+                onPressed: AuthService.signOut,
+                child: const Text('กลับไปเข้าสู่ระบบ')),
+          ])));
+        }
+        if (snap.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
+        if (snap.data == null) {
+          return const RegisterScreen(completeProfile: true);
+        }
+
         final shop = snap.data!;
         final shopId = AuthService.shopId;
-        if (shopId != null) NotificationService.initFCM(shopId);
+        if (shopId != null && !AuthService.isStaff) {
+          NotificationService.initFCM(shopId);
+        }
 
         // subscription หมดอายุ → ไปหน้า subscription
         if (!shop.isAccessAllowed) {
@@ -54,8 +73,7 @@ class _TrialBanner extends StatelessWidget {
           child: InkWell(
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(
-                  builder: (_) => const SubscriptionScreen()),
+              MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
             ),
             child: Container(
               width: double.infinity,

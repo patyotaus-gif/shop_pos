@@ -79,7 +79,7 @@ class SupplierProduct {
   final double price;
 
   /// Minimum order quantity for this item (in [unit]s).
-  final int moq;
+  final double moq;
 
   /// In stock / available right now.
   final bool available;
@@ -103,14 +103,13 @@ class SupplierProduct {
     this.description,
   });
 
-  factory SupplierProduct.fromFirestore(
-          Map<String, dynamic> data, String id) =>
+  factory SupplierProduct.fromFirestore(Map<String, dynamic> data, String id) =>
       SupplierProduct(
         id: id,
         name: data['name'] ?? '',
         unit: data['unit'] ?? 'ชิ้น',
         price: (data['price'] ?? 0).toDouble(),
-        moq: (data['moq'] ?? 1) as int,
+        moq: (data['moq'] as num? ?? 1).toDouble(),
         available: data['available'] ?? true,
         imageUrl: data['imageUrl'] as String?,
         description: data['description'] as String?,

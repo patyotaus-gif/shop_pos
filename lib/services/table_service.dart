@@ -84,10 +84,10 @@ class TableService {
   /// display to show all in-progress tickets in one place.
   static Stream<List<TableOrder>> watchOpenOrders() => _tableOrdersCol()
       .where('status', isEqualTo: 'open')
-      .orderBy('openedAt')
       .snapshots()
       .map((s) =>
-          s.docs.map((d) => TableOrder.fromFirestore(d.data(), d.id)).toList());
+          s.docs.map((d) => TableOrder.fromFirestore(d.data(), d.id)).toList()
+            ..sort((a, b) => a.openedAt.compareTo(b.openedAt)));
 
   /// Watch the single open order for [tableId] (or null if the table is
   /// available). Uses limit(1) since a table only ever has one open tab.
@@ -247,6 +247,7 @@ class TableService {
     required double paid,
     required double discount,
     required PaymentMethod paymentMethod,
+    SalesChannel salesChannel = SalesChannel.dineIn,
     double serviceChargePercent = 0,
     int splitCount = 1,
   }) async {
@@ -307,6 +308,7 @@ class TableService {
         change: change,
         createdAt: now,
         paymentMethod: paymentMethod,
+        salesChannel: salesChannel,
         customerName: 'โต๊ะ ${order.tableName}',
         serviceCharge: serviceCharge,
         splitCount: splitCount,

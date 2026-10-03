@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'notification_registration.dart';
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -54,38 +56,39 @@ class NotificationService {
     _initialized = true;
   }
 
-  // เรียกหลัง login — ขอ permission + บันทึก token ใน Firestore
+  static final _registration = NotificationRegistration();
+  static StreamSubscription<RemoteMessage>? _foregroundSubscription;
+
+  static void stopFCM() {
+    _registration.stop();
+    _foregroundSubscription?.cancel();
+    _foregroundSubscription = null;
+  }
+
   static Future<void> initFCM(String shopId) async {
     final messaging = FirebaseMessaging.instance;
-    final settings = await messaging.requestPermission();
-    if (settings.authorizationStatus == AuthorizationStatus.denied) return;
-
-    final token = await messaging.getToken();
-    if (token != null) {
-      await FirebaseFirestore.instance
-          .collection('shops')
-          .doc(shopId)
-          .set({'fcmToken': token}, SetOptions(merge: true));
-    }
-
-    // token เปลี่ยน (เช่น reinstall) → อัปเดต Firestore
-    messaging.onTokenRefresh.listen((newToken) {
-      FirebaseFirestore.instance
-          .collection('shops')
-          .doc(shopId)
-          .set({'fcmToken': newToken}, SetOptions(merge: true));
-    });
-
-    // แสดง notification เมื่อแอปอยู่ foreground — ใช้ channel เดียวกับที่
-    // FCM payload ระบุมา ไม่งั้น escalation (unconfirmed_order) จะโชว์บน
-    // new_orders แทน แล้ว vibration pattern ที่ตั้งใจแยกไว้จะไม่ทำงาน
-    FirebaseMessaging.onMessage.listen((message) {
+    _foregroundSubscription ??= FirebaseMessaging.onMessage.listen((message) {
       final n = message.notification;
       if (n != null) {
         _showLocal(
             n.title ?? '', n.body ?? '', n.android?.channelId ?? 'new_orders');
       }
     });
+    await _registration.start(
+      shopId,
+      getToken: () async {
+        final settings = await messaging.requestPermission();
+        if (settings.authorizationStatus == AuthorizationStatus.denied) {
+          return null;
+        }
+        return messaging.getToken();
+      },
+      tokenChanges: messaging.onTokenRefresh,
+      save: (id, token) => FirebaseFirestore.instance
+          .collection('shops')
+          .doc(id)
+          .update({'fcmToken': token}),
+    );
   }
 
   static Future<void> showLowStock(String productName, int stock) async {

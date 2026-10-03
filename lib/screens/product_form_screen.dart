@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../widgets/unit_cost_calculator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../models/ingredient.dart';
@@ -592,6 +593,20 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                   ),
                   const SizedBox(height: 16),
                   // ── ราคาโปรโมชัน (ไม่บังคับ) ──
+                  if (_stockMode != 'recipe')
+                    Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                            icon: const Icon(Icons.calculate_outlined),
+                            label: const Text('ช่วยคำนวณต้นทุนต่อหน่วย'),
+                            onPressed: () async {
+                              final cost =
+                                  await showUnitCostCalculator(context);
+                              if (cost != null && mounted) {
+                                setState(() =>
+                                    _costPrice.text = cost.toStringAsFixed(2));
+                              }
+                            })),
                   TextFormField(
                     controller: _salePrice,
                     keyboardType: TextInputType.number,

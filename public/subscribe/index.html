@@ -133,6 +133,9 @@
   <div class="login-card">
     <h1>ต่ออายุ Pokpok</h1>
     <p>เข้าสู่ระบบด้วยบัญชีร้านเดียวกับในแอป</p>
+    <button class="btn-primary" id="googleLoginBtn" style="background:white;color:#1f1f1f;border:1px solid #747775;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:10px"><img src="/auth/google.png" width="20" height="20" alt="">ดำเนินการต่อด้วย Google</button>
+    <button class="btn-primary" id="appleLoginBtn" style="background:#000;margin-bottom:18px">ดำเนินการต่อด้วย Apple</button>
+    <p style="margin-bottom:12px">หรือเข้าสู่ระบบด้วยอีเมล</p>
     <div class="field">
       <label>อีเมล</label>
       <input id="email" type="email" autocomplete="username" />
@@ -203,7 +206,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut }
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider, OAuthProvider }
     from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
   import { getFirestore, doc, getDoc }
     from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
@@ -259,6 +262,8 @@
   let pendingPayment = null;
 
   $("loginBtn").addEventListener("click", doLogin);
+  $("googleLoginBtn").addEventListener("click", () => socialLogin('google'));
+  $("appleLoginBtn").addEventListener("click", () => socialLogin('apple'));
   $("password").addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
   $("logoutBtn").addEventListener("click", () => signOut(auth));
   $("ppSlipBtn").addEventListener("click", () => $("ppSlipFile").click());
@@ -266,7 +271,29 @@
   $("ppCancel").addEventListener("click", closePromptPay);
   $("ppDoneBtn").addEventListener("click", () => location.reload());
 
+  let authBusy = false;
+  function setAuthBusy(value) {
+    authBusy = value;
+    for (const id of ['loginBtn','googleLoginBtn','appleLoginBtn']) $(id).disabled=value;
+  }
+  async function socialLogin(kind) {
+    if(authBusy)return;
+    setAuthBusy(true);$("loginErr").textContent="";
+    const provider=kind==='google'?new GoogleAuthProvider():new OAuthProvider('apple.com');
+    if(kind==='google')provider.setCustomParameters({prompt:'select_account'});
+    else {provider.addScope('email');provider.addScope('name');}
+    try {await signInWithPopup(auth,provider);}
+    catch(e) {
+      if(!['auth/popup-closed-by-user','auth/cancelled-popup-request'].includes(e.code)) {
+        $("loginErr").textContent=e.code==='auth/account-exists-with-different-credential'
+          ?'กรุณาเข้าสู่ระบบด้วยบัญชีเดิม แล้วเชื่อม Google/Apple จากหน้าตั้งค่าในแอป'
+          :'ช่องทางนี้ยังใช้งานไม่ได้ กรุณาลองใหม่หรือเข้าสู่ระบบด้วยอีเมล';
+      }
+    } finally {setAuthBusy(false);}
+  }
   async function doLogin() {
+    if(authBusy)return;
+    setAuthBusy(true);
     const btn = $("loginBtn");
     btn.disabled = true; $("loginErr").textContent = "";
     try {
@@ -274,7 +301,7 @@
     } catch (e) {
       $("loginErr").textContent = "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
     } finally {
-      btn.disabled = false;
+      setAuthBusy(false);
     }
   }
 
@@ -287,10 +314,16 @@
     }
     uid = user.uid;
     $("login-view").classList.add("hidden");
-    $("app-view").classList.remove("hidden");
+    $("app-view").classList.add("hidden");
     $("shopEmail").textContent = user.email || "";
     try {
       const snap = await getDoc(doc(db, "shops", uid));
+      if(auth.currentUser?.uid!==user.uid)return;
+      if (!snap.exists()) {
+        await signOut(auth);
+        $("loginErr").textContent='ยังไม่พบร้านในบัญชีนี้ กรุณาตั้งค่าร้านในแอป หรือเข้าบัญชีเดิมแล้วเชื่อม Google/Apple จากตั้งค่า';
+        return;
+      }
       if (snap.exists()) {
         $("shopName").textContent = snap.data().name || "ร้านของคุณ";
         const shop = snap.data();
@@ -299,13 +332,20 @@
         currentTier = legacyRestaurant ? 'restaurant' : (shop.tier || 'full');
         shopLocations = Math.max(1, parseInt(snap.data().locations || 1));
       }
-    } catch (_) {}
+    } catch (_) {
+      $("app-view").classList.add("hidden");
+      $("login-view").classList.remove("hidden");
+      $("loginErr").textContent='โหลดร้านไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ตแล้วเข้าสู่ระบบใหม่';
+      return;
+    }
     // Plan catalog — editable from the founder console (config/plans).
     try {
       const planSnap = await getDoc(doc(db, "config", "plans"));
       if (planSnap.exists() && planSnap.data().tiers) tiers = planSnap.data().tiers;
     } catch (_) {}
+    if(auth.currentUser?.uid!==user.uid)return;
     render();
+    $("app-view").classList.remove("hidden");
   });
 
   window.setBill = (c) => {

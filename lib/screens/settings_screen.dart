@@ -1,7 +1,9 @@
+import '../widgets/settings_sections.dart';
 import 'dart:io';
 
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
+import '../widgets/social_auth_buttons.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:image_picker/image_picker.dart';
 import '../models/hardware_request.dart';
@@ -42,6 +44,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _lineNotifyEnabled = false;
   bool _loading = true;
   bool _saving = false;
+  bool _linkingAccount = false;
   bool _savingLine = false;
   bool _savingPromptpay = false;
   bool _savingServiceCharge = false;
@@ -317,788 +320,866 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                // Shop info section
-                _SectionTitle('ข้อมูลร้าน'),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _shopNameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'ชื่อร้าน',
-                    hintText: 'ร้านของชำ',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _taxIdCtrl,
-                  keyboardType: TextInputType.number,
-                  maxLength: 13,
-                  decoration: const InputDecoration(
-                    labelText: 'เลขประจำตัวผู้เสียภาษี (ไม่บังคับ)',
-                    hintText: '0000000000000',
-                    border: OutlineInputBorder(),
-                    counterText: '',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _addressCtrl,
-                  maxLines: 2,
-                  decoration: const InputDecoration(
-                    labelText: 'ที่อยู่ร้าน',
-                    hintText: 'เลขที่ ถนน ตำบล อำเภอ จังหวัด รหัสไปรษณีย์',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Shop logo → head-band banner on the customer /order page.
-                Row(
-                  children: [
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(8),
-                        image: (_logoUrl?.isNotEmpty ?? false)
-                            ? DecorationImage(
-                                image: NetworkImage(_logoUrl!),
-                                fit: BoxFit.contain)
-                            : null,
+          : SettingsSections(
+              sections: [
+                SettingsSection(
+                    title: 'ข้อมูลร้าน',
+                    icon: Icons.storefront_outlined,
+                    children: [
+                      // Shop info section
+                      _SectionTitle('ข้อมูลร้าน'),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _shopNameCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'ชื่อร้าน',
+                          hintText: 'ร้านของชำ',
+                          border: OutlineInputBorder(),
+                        ),
                       ),
-                      child: (_logoUrl?.isNotEmpty ?? false)
-                          ? null
-                          : Icon(Icons.storefront_outlined,
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _taxIdCtrl,
+                        keyboardType: TextInputType.number,
+                        maxLength: 13,
+                        decoration: const InputDecoration(
+                          labelText: 'เลขประจำตัวผู้เสียภาษี (ไม่บังคับ)',
+                          hintText: '0000000000000',
+                          border: OutlineInputBorder(),
+                          counterText: '',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _addressCtrl,
+                        maxLines: 2,
+                        decoration: const InputDecoration(
+                          labelText: 'ที่อยู่ร้าน',
+                          hintText:
+                              'เลขที่ ถนน ตำบล อำเภอ จังหวัด รหัสไปรษณีย์',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Shop logo → head-band banner on the customer /order page.
+                      Row(
+                        children: [
+                          Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
                               color: Theme.of(context)
                                   .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.3)),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        'โลโก้ร้าน — แสดงเป็นแบนเนอร์บนหน้าสั่งของออนไลน์',
-                        style: TextStyle(fontSize: 13),
-                      ),
-                    ),
-                    if (_savingLogo)
-                      const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2))
-                    else ...[
-                      if (_logoUrl?.isNotEmpty ?? false)
-                        IconButton(
-                          tooltip: 'ลบโลโก้',
-                          icon: const Icon(Icons.delete_outline),
-                          onPressed: _removeLogo,
-                        ),
-                      TextButton(
-                        onPressed: _pickLogo,
-                        child: Text((_logoUrl?.isNotEmpty ?? false)
-                            ? 'เปลี่ยน'
-                            : 'เพิ่มโลโก้'),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 16),
-                // Short shareable link — pok-pok.app/r/<slug>
-                Text('ลิงก์ร้าน (สำหรับแชร์/ใส่ Google Maps)',
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.primary)),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Text('pok-pok.app/r/',
-                        style: TextStyle(fontSize: 13, color: Colors.grey)),
-                    Expanded(
-                      child: TextField(
-                        controller: _slugCtrl,
-                        decoration: const InputDecoration(
-                          hintText: 'ชื่อร้านภาษาอังกฤษ',
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                          helperText: 'a-z 0-9 - เท่านั้น',
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    _savingSlug
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2))
-                        : TextButton(
-                            onPressed: _saveSlug, child: const Text('บันทึก')),
-                  ],
-                ),
-                if (_slug?.isNotEmpty ?? false)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text('pok-pok.app/r/$_slug',
-                              style: const TextStyle(
-                                  fontSize: 13, fontWeight: FontWeight.w600)),
-                        ),
-                        TextButton.icon(
-                          icon: const Icon(Icons.copy, size: 16),
-                          label: const Text('คัดลอก'),
-                          onPressed: () {
-                            Clipboard.setData(ClipboardData(
-                                text: 'https://pok-pok.app/r/$_slug'));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('คัดลอกลิงก์แล้ว')));
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: FilledButton.tonalIcon(
-                    onPressed: _saving ? null : _save,
-                    icon: _saving
-                        ? const SizedBox(
-                            height: 16,
-                            width: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Icons.check, size: 18),
-                    label: const Text('บันทึกข้อมูลร้าน'),
-                  ),
-                ),
-
-                const SizedBox(height: 28),
-                const Divider(height: 1),
-                const SizedBox(height: 20),
-
-                // Plan — current tier + trial/billing status, with a tap
-                // target that opens the full SubscriptionScreen for
-                // upgrade/downgrade. Owner-facing source of truth for
-                // "ฉันใช้แผนไหนอยู่?" and "ทดลองเหลือกี่วัน?"
-                _SectionTitle('แผนปัจจุบัน'),
-                const SizedBox(height: 8),
-                StreamBuilder<Shop?>(
-                  stream: ShopService.watchCurrentShop(),
-                  builder: (context, snap) => Column(
-                    children: [
-                      _PlanTile(shop: snap.data),
-                      if (snap.data != null) ...[
-                        const SizedBox(height: 12),
-                        _PlanCapabilities(
-                            tier: snap.data!.tier,
-                            shopType: snap.data!.shopType),
-                        if (snap.data!.referralCode != null) ...[
-                          const SizedBox(height: 12),
-                          _ReferralCard(code: snap.data!.referralCode!),
-                        ],
-                      ],
-                    ],
-                  ),
-                ),
-
-                // Hardware tracker — only renders when there's an active
-                // shipment (Lite/Full/Restaurant). Solo shops never see it.
-                StreamBuilder<HardwareRequest?>(
-                  stream: HardwareService.watchActive(),
-                  builder: (context, snap) {
-                    final req = snap.data;
-                    if (req == null) return const SizedBox.shrink();
-                    return Column(
-                      children: [
-                        const SizedBox(height: 24),
-                        _SectionTitle('อุปกรณ์ของคุณ'),
-                        const SizedBox(height: 8),
-                        _HardwareTracker(request: req),
-                      ],
-                    );
-                  },
-                ),
-
-                // Staff — PIN profiles. Full/Restaurant opens management;
-                // Solo/Lite gets a locked tile that opens the upgrade prompt.
-                StreamBuilder<Shop?>(
-                  stream: ShopService.watchCurrentShop(),
-                  builder: (context, snap) {
-                    final tier = snap.data?.tier ?? ShopTier.full;
-                    final allowed = Entitlements.canUseStaff(tier);
-                    return Column(
-                      children: [
-                        const SizedBox(height: 24),
-                        _SectionTitle('พนักงาน'),
-                        const SizedBox(height: 8),
-                        InkWell(
-                          onTap: () {
-                            if (allowed) {
-                              Navigator.of(context).push(MaterialPageRoute(
-                                builder: (_) => StaffScreen(tier: tier),
-                              ));
-                            } else {
-                              showUpgradePrompt(context,
-                                  feature: EntitlementFeature.multiUser);
-                            }
-                          },
-                          borderRadius: BorderRadius.circular(12),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 4, vertical: 6),
-                            child: Row(
-                              children: [
-                                Icon(
-                                    allowed
-                                        ? Icons.people_alt_outlined
-                                        : Icons.lock_outline,
-                                    color: cs.primary,
-                                    size: 26),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Text('จัดการพนักงาน',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 15)),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        allowed
-                                            ? 'เพิ่มพนักงาน + PIN ระบุตัวตนตอนขาย'
-                                            : 'เพิ่มพนักงานหลายคน — อยู่ในแผน Full ขึ้นไป',
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            color: cs.onSurface
-                                                .withValues(alpha: 0.6)),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                if (allowed)
-                                  Icon(Icons.chevron_right,
-                                      color:
-                                          cs.onSurface.withValues(alpha: 0.4))
-                                else
-                                  Text('อัพเกรด',
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                          color: cs.primary)),
-                              ],
+                                  .surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(8),
+                              image: (_logoUrl?.isNotEmpty ?? false)
+                                  ? DecorationImage(
+                                      image: NetworkImage(_logoUrl!),
+                                      fit: BoxFit.contain)
+                                  : null,
                             ),
+                            child: (_logoUrl?.isNotEmpty ?? false)
+                                ? null
+                                : Icon(Icons.storefront_outlined,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.3)),
                           ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-
-                // Loyalty customers — Full/Restaurant opens the list;
-                // Solo/Lite gets a locked tile → upgrade prompt.
-                StreamBuilder<Shop?>(
-                  stream: ShopService.watchCurrentShop(),
-                  builder: (context, snap) {
-                    final tier = snap.data?.tier ?? ShopTier.full;
-                    final allowed = Entitlements.canUseLoyalty(tier);
-                    return Column(
-                      children: [
-                        const SizedBox(height: 24),
-                        _SectionTitle('ลูกค้าสะสมแต้ม'),
-                        const SizedBox(height: 8),
-                        InkWell(
-                          onTap: () {
-                            if (allowed) {
-                              Navigator.of(context).push(MaterialPageRoute(
-                                builder: (_) => const CustomersScreen(),
-                              ));
-                            } else {
-                              showUpgradePrompt(context,
-                                  feature: EntitlementFeature.loyalty);
-                            }
-                          },
-                          borderRadius: BorderRadius.circular(12),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 4, vertical: 6),
-                            child: Row(
-                              children: [
-                                Icon(
-                                    allowed
-                                        ? Icons.card_giftcard_outlined
-                                        : Icons.lock_outline,
-                                    color: cs.primary,
-                                    size: 26),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Text('สะสมแต้มลูกค้า',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 15)),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        allowed
-                                            ? 'ลูกค้าสะสมแต้มจากยอดซื้อ · ฿25 = 1 แต้ม'
-                                            : 'ระบบสะสมแต้ม — อยู่ในแผน Full ขึ้นไป',
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            color: cs.onSurface
-                                                .withValues(alpha: 0.6)),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                if (allowed)
-                                  Icon(Icons.chevron_right,
-                                      color:
-                                          cs.onSurface.withValues(alpha: 0.4))
-                                else
-                                  Text('อัพเกรด',
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                          color: cs.primary)),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-
-                // Ops dashboard — founder only. Cross-shop business
-                // metrics (MRR, conversion). The Cloud Function enforces
-                // the same allowlist server-side; this just hides the entry.
-                if (AuthService.isFounder) ...[
-                  const SizedBox(height: 24),
-                  _SectionTitle('ผู้ดูแลระบบ'),
-                  const SizedBox(height: 8),
-                  InkWell(
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => const OpsDashboardScreen(),
-                    )),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 4, vertical: 6),
-                      child: Row(
-                        children: [
-                          Icon(Icons.insights_outlined,
-                              color: cs.primary, size: 26),
-                          const SizedBox(width: 14),
+                          const SizedBox(width: 12),
                           const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('ภาพรวมธุรกิจ',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 15)),
-                                SizedBox(height: 2),
-                                Text('MRR · ร้านที่จ่ายเงิน · conversion',
-                                    style: TextStyle(fontSize: 12)),
-                              ],
+                            child: Text(
+                              'โลโก้ร้าน — แสดงเป็นแบนเนอร์บนหน้าสั่งของออนไลน์',
+                              style: TextStyle(fontSize: 13),
                             ),
                           ),
-                          Icon(Icons.chevron_right,
-                              color: cs.onSurface.withValues(alpha: 0.4)),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  InkWell(
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => const FounderConsoleScreen(),
-                    )),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 4, vertical: 6),
-                      child: Row(
-                        children: [
-                          Icon(Icons.admin_panel_settings_outlined,
-                              color: cs.primary, size: 26),
-                          const SizedBox(width: 14),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('คอนโซลผู้ดูแล',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 15)),
-                                SizedBox(height: 2),
-                                Text('จัดการสมาชิก · ฮาร์ดแวร์ · ซัพพลายเออร์',
-                                    style: TextStyle(fontSize: 12)),
-                              ],
-                            ),
-                          ),
-                          Icon(Icons.chevron_right,
-                              color: cs.onSurface.withValues(alpha: 0.4)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-
-                // Service charge — restaurant only. Auto-applied to every
-                // table tab on close. Set to 0 to disable.
-                if (_shopType == ShopType.restaurant) ...[
-                  const SizedBox(height: 24),
-                  _SectionTitle(
-                    'Service charge',
-                    helper: 'บวกเปอร์เซ็นต์บนยอดสินค้าตอนปิดบิล — 0 = ปิด',
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _serviceChargeCtrl,
-                          keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true),
-                          decoration: const InputDecoration(
-                            labelText: 'เปอร์เซ็นต์',
-                            hintText: '10',
-                            suffixText: '%',
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      FilledButton.tonalIcon(
-                        onPressed:
-                            _savingServiceCharge ? null : _saveServiceCharge,
-                        icon: _savingServiceCharge
-                            ? const SizedBox(
-                                height: 16,
-                                width: 16,
+                          if (_savingLogo)
+                            const SizedBox(
+                                width: 20,
+                                height: 20,
                                 child:
                                     CircularProgressIndicator(strokeWidth: 2))
-                            : const Icon(Icons.check, size: 18),
-                        label: const Text('บันทึก'),
-                        style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 14),
+                          else ...[
+                            if (_logoUrl?.isNotEmpty ?? false)
+                              IconButton(
+                                tooltip: 'ลบโลโก้',
+                                icon: const Icon(Icons.delete_outline),
+                                onPressed: _removeLogo,
+                              ),
+                            TextButton(
+                              onPressed: _pickLogo,
+                              child: Text((_logoUrl?.isNotEmpty ?? false)
+                                  ? 'เปลี่ยน'
+                                  : 'เพิ่มโลโก้'),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      // Short shareable link — pok-pok.app/r/<slug>
+                      Text('ลิงก์ร้าน (สำหรับแชร์/ใส่ Google Maps)',
+                          style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.primary)),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const Text('pok-pok.app/r/',
+                              style:
+                                  TextStyle(fontSize: 13, color: Colors.grey)),
+                          Expanded(
+                            child: TextField(
+                              controller: _slugCtrl,
+                              decoration: const InputDecoration(
+                                hintText: 'ชื่อร้านภาษาอังกฤษ',
+                                border: OutlineInputBorder(),
+                                isDense: true,
+                                helperText: 'a-z 0-9 - เท่านั้น',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          _savingSlug
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2))
+                              : TextButton(
+                                  onPressed: _saveSlug,
+                                  child: const Text('บันทึก')),
+                        ],
+                      ),
+                      if (_slug?.isNotEmpty ?? false)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text('pok-pok.app/r/$_slug',
+                                    style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600)),
+                              ),
+                              TextButton.icon(
+                                icon: const Icon(Icons.copy, size: 16),
+                                label: const Text('คัดลอก'),
+                                onPressed: () {
+                                  Clipboard.setData(ClipboardData(
+                                      text: 'https://pok-pok.app/r/$_slug'));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text('คัดลอกลิงก์แล้ว')));
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: FilledButton.tonalIcon(
+                          onPressed: _saving ? null : _save,
+                          icon: _saving
+                              ? const SizedBox(
+                                  height: 16,
+                                  width: 16,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2))
+                              : const Icon(Icons.check, size: 18),
+                          label: const Text('บันทึกข้อมูลร้าน'),
                         ),
                       ),
-                    ],
-                  ),
-                ],
 
-                const SizedBox(height: 32),
-                const Divider(),
-                const SizedBox(height: 16),
-
-                // Theme section
-                Text('การแสดงผล',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: cs.primary, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                ValueListenableBuilder<ThemeMode>(
-                  valueListenable: themeNotifier,
-                  builder: (context, mode, _) => SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    secondary: Icon(mode == ThemeMode.dark
-                        ? Icons.dark_mode
-                        : Icons.light_mode_outlined),
-                    title: const Text('โหมดมืด'),
-                    value: mode == ThemeMode.dark,
-                    onChanged: (val) {
-                      final m = val ? ThemeMode.dark : ThemeMode.light;
-                      themeNotifier.value = m;
-                      ThemeService.save(m);
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-                const Divider(),
-                const SizedBox(height: 16),
-
-                // PromptPay payment section
-                Text('รับเงินออนไลน์ (PromptPay)',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: cs.primary, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: cs.primaryContainer.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(10),
-                    border:
-                        Border.all(color: cs.primary.withValues(alpha: 0.3)),
-                  ),
-                  child: const Text(
-                    'ลูกค้าที่สั่งของออนไลน์จะเห็น QR PromptPay พร้อมจำนวนเงิน (มีเศษ\nสตางค์ระบุออเดอร์)\nเงินจะเข้าบัญชีร้านโดยตรง — Pokpok ไม่หักค่าธรรมเนียม',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _promptpayIdCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'PromptPay ID',
-                    hintText: 'เบอร์โทร (เช่น 0812345678) หรือเลขบัตรประชาชน',
-                    prefixIcon: Icon(Icons.qr_code_2),
-                    border: OutlineInputBorder(),
-                    helperText:
-                        '10 หลัก (เบอร์), 13 หลัก (บัตรประชาชน), หรือ 15 หลัก (e-wallet)',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _promptpayNameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'ชื่อบัญชีผู้รับ',
-                    hintText: 'นาย ก ข',
-                    prefixIcon: Icon(Icons.account_balance_outlined),
-                    border: OutlineInputBorder(),
-                    helperText:
-                        'แสดงในหน้าจ่ายเงินของลูกค้าเพื่อยืนยันความถูกต้อง',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: _savingPromptpay ? null : _savePromptPay,
-                    icon: _savingPromptpay
-                        ? const SizedBox(
-                            height: 16,
-                            width: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Icons.save_outlined),
-                    label: const Text('บันทึก PromptPay'),
-                  ),
-                ),
-
-                if (Platform.isAndroid) ...[
-                  const SizedBox(height: 24),
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: _bankListenerGranted
-                          ? Colors.green.withValues(alpha: 0.08)
-                          : Colors.amber.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: _bankListenerGranted
-                            ? Colors.green.withValues(alpha: 0.5)
-                            : Colors.amber.withValues(alpha: 0.6),
+                      const SizedBox(height: 28),
+                      const Divider(height: 1),
+                      const SizedBox(height: 20),
+                    ]),
+                SettingsSection(
+                    title: 'บัญชีและแพ็กเกจ',
+                    icon: Icons.person_outline,
+                    children: [
+                      // Account section
+                      Text('บัญชีผู้ใช้',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleSmall
+                              ?.copyWith(
+                                  color: cs.primary,
+                                  fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 12),
+                      const Text(
+                          'เชื่อมวิธีเข้าสู่ระบบกับร้านเดิม โดยไม่สร้างร้านใหม่'),
+                      SocialAuthButtons(
+                          link: true,
+                          onBusyChanged: (busy) {
+                            if (mounted) setState(() => _linkingAccount = busy);
+                          }),
+                      const SizedBox(height: 12),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          backgroundColor: cs.primaryContainer,
+                          child:
+                              Icon(Icons.person, color: cs.onPrimaryContainer),
+                        ),
+                        title: Text(user?.email ?? ''),
+                        subtitle: const Text('ผู้ดูแลระบบ'),
                       ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _linkingAccount ? null : _signOut,
+                          icon: const Icon(Icons.logout, color: Colors.red),
+                          label: const Text('ออกจากระบบ',
+                              style: TextStyle(color: Colors.red)),
+                          style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.red)),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const AppVersionText(),
+                      const SizedBox(height: 8),
+                      // Plan — current tier + trial/billing status, with a tap
+                      // target that opens the full SubscriptionScreen for
+                      // upgrade/downgrade. Owner-facing source of truth for
+                      // "ฉันใช้แผนไหนอยู่?" and "ทดลองเหลือกี่วัน?"
+                      _SectionTitle('แผนปัจจุบัน'),
+                      const SizedBox(height: 8),
+                      StreamBuilder<Shop?>(
+                        stream: ShopService.watchCurrentShop(),
+                        builder: (context, snap) => Column(
+                          children: [
+                            _PlanTile(shop: snap.data),
+                            if (snap.data != null) ...[
+                              const SizedBox(height: 12),
+                              _PlanCapabilities(
+                                  tier: snap.data!.tier,
+                                  shopType: snap.data!.shopType),
+                              if (snap.data!.referralCode != null) ...[
+                                const SizedBox(height: 12),
+                                _ReferralCard(code: snap.data!.referralCode!),
+                              ],
+                            ],
+                          ],
+                        ),
+                      ),
+
+                      // Hardware tracker — only renders when there's an active
+                      // shipment (Lite/Full/Restaurant). Solo shops never see it.
+                      StreamBuilder<HardwareRequest?>(
+                        stream: HardwareService.watchActive(),
+                        builder: (context, snap) {
+                          final req = snap.data;
+                          if (req == null) return const SizedBox.shrink();
+                          return Column(
+                            children: [
+                              const SizedBox(height: 24),
+                              _SectionTitle('อุปกรณ์ของคุณ'),
+                              const SizedBox(height: 8),
+                              _HardwareTracker(request: req),
+                            ],
+                          );
+                        },
+                      ),
+
+                      // Subscription section
+                      Text('แพ็กเกจการใช้งาน',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleSmall
+                              ?.copyWith(
+                                  color: cs.primary,
+                                  fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const SubscriptionScreen()),
+                          ),
+                          icon: const Icon(Icons.star_outline),
+                          label: const Text('จัดการแพ็กเกจ'),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      const Divider(),
+                      const SizedBox(height: 16),
+                    ]),
+                SettingsSection(
+                    title: 'พนักงานและการจัดการ',
+                    icon: Icons.groups_outlined,
+                    children: [
+                      // Staff — PIN profiles. Full/Restaurant opens management;
+                      // Solo/Lite gets a locked tile that opens the upgrade prompt.
+                      StreamBuilder<Shop?>(
+                        stream: ShopService.watchCurrentShop(),
+                        builder: (context, snap) {
+                          final tier = snap.data?.tier ?? ShopTier.full;
+                          final allowed = Entitlements.canUseStaff(tier);
+                          return Column(
+                            children: [
+                              const SizedBox(height: 24),
+                              _SectionTitle('พนักงาน'),
+                              const SizedBox(height: 8),
+                              InkWell(
+                                onTap: () {
+                                  if (allowed) {
+                                    Navigator.of(context)
+                                        .push(MaterialPageRoute(
+                                      builder: (_) => StaffScreen(tier: tier),
+                                    ));
+                                  } else {
+                                    showUpgradePrompt(context,
+                                        feature: EntitlementFeature.multiUser);
+                                  }
+                                },
+                                borderRadius: BorderRadius.circular(12),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 4, vertical: 6),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                          allowed
+                                              ? Icons.people_alt_outlined
+                                              : Icons.lock_outline,
+                                          color: cs.primary,
+                                          size: 26),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            const Text('จัดการพนักงาน',
+                                                style: TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 15)),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              allowed
+                                                  ? 'เพิ่มพนักงาน + PIN ระบุตัวตนตอนขาย'
+                                                  : 'เพิ่มพนักงานหลายคน — อยู่ในแผน Full ขึ้นไป',
+                                              style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: cs.onSurface
+                                                      .withValues(alpha: 0.6)),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      if (allowed)
+                                        Icon(Icons.chevron_right,
+                                            color: cs.onSurface
+                                                .withValues(alpha: 0.4))
+                                      else
+                                        Text('อัพเกรด',
+                                            style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w700,
+                                                color: cs.primary)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+
+                      // Loyalty customers — Full/Restaurant opens the list;
+                      // Solo/Lite gets a locked tile → upgrade prompt.
+                      StreamBuilder<Shop?>(
+                        stream: ShopService.watchCurrentShop(),
+                        builder: (context, snap) {
+                          final tier = snap.data?.tier ?? ShopTier.full;
+                          final allowed = Entitlements.canUseLoyalty(tier);
+                          return Column(
+                            children: [
+                              const SizedBox(height: 24),
+                              _SectionTitle('ลูกค้าสะสมแต้ม'),
+                              const SizedBox(height: 8),
+                              InkWell(
+                                onTap: () {
+                                  if (allowed) {
+                                    Navigator.of(context)
+                                        .push(MaterialPageRoute(
+                                      builder: (_) => const CustomersScreen(),
+                                    ));
+                                  } else {
+                                    showUpgradePrompt(context,
+                                        feature: EntitlementFeature.loyalty);
+                                  }
+                                },
+                                borderRadius: BorderRadius.circular(12),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 4, vertical: 6),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                          allowed
+                                              ? Icons.card_giftcard_outlined
+                                              : Icons.lock_outline,
+                                          color: cs.primary,
+                                          size: 26),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            const Text('สะสมแต้มลูกค้า',
+                                                style: TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 15)),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              allowed
+                                                  ? 'ลูกค้าสะสมแต้มจากยอดซื้อ · ฿25 = 1 แต้ม'
+                                                  : 'ระบบสะสมแต้ม — อยู่ในแผน Full ขึ้นไป',
+                                              style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: cs.onSurface
+                                                      .withValues(alpha: 0.6)),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      if (allowed)
+                                        Icon(Icons.chevron_right,
+                                            color: cs.onSurface
+                                                .withValues(alpha: 0.4))
+                                      else
+                                        Text('อัพเกรด',
+                                            style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w700,
+                                                color: cs.primary)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+
+                      // Ops dashboard — founder only. Cross-shop business
+                      // metrics (MRR, conversion). The Cloud Function enforces
+                      // the same allowlist server-side; this just hides the entry.
+                      if (AuthService.isFounder) ...[
+                        const SizedBox(height: 24),
+                        _SectionTitle('ผู้ดูแลระบบ'),
+                        const SizedBox(height: 8),
+                        InkWell(
+                          onTap: () =>
+                              Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => const OpsDashboardScreen(),
+                          )),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 6),
+                            child: Row(
+                              children: [
+                                Icon(Icons.insights_outlined,
+                                    color: cs.primary, size: 26),
+                                const SizedBox(width: 14),
+                                const Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text('ภาพรวมธุรกิจ',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 15)),
+                                      SizedBox(height: 2),
+                                      Text('MRR · ร้านที่จ่ายเงิน · conversion',
+                                          style: TextStyle(fontSize: 12)),
+                                    ],
+                                  ),
+                                ),
+                                Icon(Icons.chevron_right,
+                                    color: cs.onSurface.withValues(alpha: 0.4)),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        InkWell(
+                          onTap: () =>
+                              Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => const FounderConsoleScreen(),
+                          )),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 6),
+                            child: Row(
+                              children: [
+                                Icon(Icons.admin_panel_settings_outlined,
+                                    color: cs.primary, size: 26),
+                                const SizedBox(width: 14),
+                                const Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text('คอนโซลผู้ดูแล',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 15)),
+                                      SizedBox(height: 2),
+                                      Text(
+                                          'จัดการสมาชิก · ฮาร์ดแวร์ · ซัพพลายเออร์',
+                                          style: TextStyle(fontSize: 12)),
+                                    ],
+                                  ),
+                                ),
+                                Icon(Icons.chevron_right,
+                                    color: cs.onSurface.withValues(alpha: 0.4)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ]),
+                SettingsSection(
+                    title: 'การรับเงิน',
+                    icon: Icons.payments_outlined,
+                    children: [
+                      // Service charge — restaurant only. Auto-applied to every
+                      // table tab on close. Set to 0 to disable.
+                      if (_shopType == ShopType.restaurant) ...[
+                        const SizedBox(height: 24),
+                        _SectionTitle(
+                          'Service charge',
+                          helper:
+                              'บวกเปอร์เซ็นต์บนยอดสินค้าตอนปิดบิล — 0 = ปิด',
+                        ),
+                        const SizedBox(height: 12),
                         Row(
                           children: [
-                            Icon(
-                              _bankListenerGranted
-                                  ? Icons.notifications_active
-                                  : Icons.notifications_off_outlined,
-                              size: 18,
-                              color: _bankListenerGranted
-                                  ? Colors.green.shade700
-                                  : Colors.amber.shade800,
+                            Expanded(
+                              child: TextField(
+                                controller: _serviceChargeCtrl,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
+                                decoration: const InputDecoration(
+                                  labelText: 'เปอร์เซ็นต์',
+                                  hintText: '10',
+                                  suffixText: '%',
+                                  border: OutlineInputBorder(),
+                                ),
+                              ),
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Auto-confirm จาก notification ธนาคาร',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: _bankListenerGranted
-                                    ? Colors.green.shade800
-                                    : Colors.amber.shade900,
+                            const SizedBox(width: 12),
+                            FilledButton.tonalIcon(
+                              onPressed: _savingServiceCharge
+                                  ? null
+                                  : _saveServiceCharge,
+                              icon: _savingServiceCharge
+                                  ? const SizedBox(
+                                      height: 16,
+                                      width: 16,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2))
+                                  : const Icon(Icons.check, size: 18),
+                              label: const Text('บันทึก'),
+                              style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 14),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'เมื่อเปิดสิทธิ์ แอปจะอ่าน notification "เงินเข้า" จากแอปธนาคาร '
-                          '(K PLUS, SCB EASY, Krungthai NEXT, BBL, TTB, KMA) แล้ว '
-                          'ยืนยันออเดอร์ที่ยอดตรงกันให้อัตโนมัติ\n\n'
-                          '• อ่านเฉพาะแอปธนาคาร — ไม่ส่งเนื้อหา notification ออกจากเครื่อง\n'
-                          '• ปิดเมื่อไหร่ก็ได้ที่ Settings → Notification access',
+                      ],
+
+                      const SizedBox(height: 32),
+                      const Divider(),
+                      const SizedBox(height: 16),
+
+                      // PromptPay payment section
+                      Text('รับเงินออนไลน์ (PromptPay)',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleSmall
+                              ?.copyWith(
+                                  color: cs.primary,
+                                  fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: cs.primaryContainer.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: cs.primary.withValues(alpha: 0.3)),
+                        ),
+                        child: const Text(
+                          'ลูกค้าที่สั่งของออนไลน์จะเห็น QR PromptPay พร้อมจำนวนเงิน (มีเศษ\nสตางค์ระบุออเดอร์)\nเงินจะเข้าบัญชีร้านโดยตรง — Pokpok ไม่หักค่าธรรมเนียม',
                           style: TextStyle(fontSize: 12, color: Colors.grey),
                         ),
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            onPressed: _toggleBankListener,
-                            style: FilledButton.styleFrom(
-                              backgroundColor: _bankListenerGranted
-                                  ? Colors.green
-                                  : Colors.amber.shade800,
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _promptpayIdCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'PromptPay ID',
+                          hintText:
+                              'เบอร์โทร (เช่น 0812345678) หรือเลขบัตรประชาชน',
+                          prefixIcon: Icon(Icons.qr_code_2),
+                          border: OutlineInputBorder(),
+                          helperText:
+                              '10 หลัก (เบอร์), 13 หลัก (บัตรประชาชน), หรือ 15 หลัก (e-wallet)',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _promptpayNameCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'ชื่อบัญชีผู้รับ',
+                          hintText: 'นาย ก ข',
+                          prefixIcon: Icon(Icons.account_balance_outlined),
+                          border: OutlineInputBorder(),
+                          helperText:
+                              'แสดงในหน้าจ่ายเงินของลูกค้าเพื่อยืนยันความถูกต้อง',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: _savingPromptpay ? null : _savePromptPay,
+                          icon: _savingPromptpay
+                              ? const SizedBox(
+                                  height: 16,
+                                  width: 16,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2))
+                              : const Icon(Icons.save_outlined),
+                          label: const Text('บันทึก PromptPay'),
+                        ),
+                      ),
+
+                      if (Platform.isAndroid) ...[
+                        const SizedBox(height: 24),
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: _bankListenerGranted
+                                ? Colors.green.withValues(alpha: 0.08)
+                                : Colors.amber.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: _bankListenerGranted
+                                  ? Colors.green.withValues(alpha: 0.5)
+                                  : Colors.amber.withValues(alpha: 0.6),
                             ),
-                            icon: Icon(
-                              _bankListenerGranted
-                                  ? Icons.check_circle
-                                  : Icons.lock_open,
-                            ),
-                            label: Text(
-                              _bankListenerGranted
-                                  ? 'เปิดอยู่ — กดเพื่อจัดการ'
-                                  : 'เปิดสิทธิ์ Notification access',
-                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    _bankListenerGranted
+                                        ? Icons.notifications_active
+                                        : Icons.notifications_off_outlined,
+                                    size: 18,
+                                    color: _bankListenerGranted
+                                        ? Colors.green.shade700
+                                        : Colors.amber.shade800,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Auto-confirm จาก notification ธนาคาร',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      color: _bankListenerGranted
+                                          ? Colors.green.shade800
+                                          : Colors.amber.shade900,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              const Text(
+                                'เมื่อเปิดสิทธิ์ แอปจะอ่าน notification "เงินเข้า" จากแอปธนาคาร '
+                                '(K PLUS, SCB EASY, Krungthai NEXT, BBL, TTB, KMA) แล้ว '
+                                'ยืนยันออเดอร์ที่ยอดตรงกันให้อัตโนมัติ\n\n'
+                                '• อ่านเฉพาะแอปธนาคาร — ไม่ส่งเนื้อหา notification ออกจากเครื่อง\n'
+                                '• ปิดเมื่อไหร่ก็ได้ที่ Settings → Notification access',
+                                style:
+                                    TextStyle(fontSize: 12, color: Colors.grey),
+                              ),
+                              const SizedBox(height: 10),
+                              SizedBox(
+                                width: double.infinity,
+                                child: FilledButton.icon(
+                                  onPressed: _toggleBankListener,
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: _bankListenerGranted
+                                        ? Colors.green
+                                        : Colors.amber.shade800,
+                                  ),
+                                  icon: Icon(
+                                    _bankListenerGranted
+                                        ? Icons.check_circle
+                                        : Icons.lock_open,
+                                  ),
+                                  label: Text(
+                                    _bankListenerGranted
+                                        ? 'เปิดอยู่ — กดเพื่อจัดการ'
+                                        : 'เปิดสิทธิ์ Notification access',
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
-                    ),
-                  ),
-                ],
 
-                const SizedBox(height: 32),
-                const Divider(),
-                const SizedBox(height: 16),
-
-                // LINE Notification section
-                Text('การแจ้งเตือน LINE',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: cs.primary, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF06C755).withValues(alpha: 0.07),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                        color: const Color(0xFF06C755).withValues(alpha: 0.3)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                      const SizedBox(height: 32),
+                      const Divider(),
+                      const SizedBox(height: 16),
+                    ]),
+                SettingsSection(
+                    title: 'การแจ้งเตือน',
+                    icon: Icons.notifications_outlined,
                     children: [
-                      const Text(
-                        'วิธีเชื่อมต่อ LINE\n1. Add LINE OA ของร้าน\n2. ส่งข้อความใดก็ได้ → บอทตอบ User ID\n3. นำ ID มาใส่ด้านล่าง\nหรือส่ง "link:SHOP_ID" เพื่อเชื่อมอัตโนมัติ',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      // LINE Notification section
+                      Text('การแจ้งเตือน LINE',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleSmall
+                              ?.copyWith(
+                                  color: cs.primary,
+                                  fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color:
+                              const Color(0xFF06C755).withValues(alpha: 0.07),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: const Color(0xFF06C755)
+                                  .withValues(alpha: 0.3)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'วิธีเชื่อมต่อ LINE\n1. Add LINE OA ของร้าน\n2. ส่งข้อความใดก็ได้ → บอทตอบ User ID\n3. นำ ID มาใส่ด้านล่าง\nหรือส่ง "link:SHOP_ID" เพื่อเชื่อมอัตโนมัติ',
+                              style:
+                                  TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  secondary: const Icon(Icons.notifications_active_outlined,
-                      color: Color(0xFF06C755)),
-                  title: const Text('เปิดแจ้งเตือนผ่าน LINE'),
-                  value: _lineNotifyEnabled,
-                  onChanged: (val) => setState(() => _lineNotifyEnabled = val),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _lineUserIdCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'LINE User ID',
-                    hintText: 'Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-                    prefixIcon: Icon(Icons.chat_bubble_outline,
-                        color: Color(0xFF06C755)),
-                    border: OutlineInputBorder(),
-                    helperText: 'รับได้จากการส่งข้อความหาบอท LINE',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: _savingLine ? null : _saveLineSettings,
-                        style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF06C755)),
-                        icon: _savingLine
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white))
-                            : const Icon(Icons.save_outlined),
-                        label: const Text('บันทึก'),
+                      const SizedBox(height: 12),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        secondary: const Icon(
+                            Icons.notifications_active_outlined,
+                            color: Color(0xFF06C755)),
+                        title: const Text('เปิดแจ้งเตือนผ่าน LINE'),
+                        value: _lineNotifyEnabled,
+                        onChanged: (val) =>
+                            setState(() => _lineNotifyEnabled = val),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    OutlinedButton.icon(
-                      onPressed: _testLineNotify,
-                      icon: const Icon(Icons.send_outlined,
-                          color: Color(0xFF06C755)),
-                      label: const Text('ทดสอบ',
-                          style: TextStyle(color: Color(0xFF06C755))),
-                      style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFF06C755))),
-                    ),
-                  ],
-                ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _lineUserIdCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'LINE User ID',
+                          hintText: 'Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                          prefixIcon: Icon(Icons.chat_bubble_outline,
+                              color: Color(0xFF06C755)),
+                          border: OutlineInputBorder(),
+                          helperText: 'รับได้จากการส่งข้อความหาบอท LINE',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: FilledButton.icon(
+                              onPressed: _savingLine ? null : _saveLineSettings,
+                              style: FilledButton.styleFrom(
+                                  backgroundColor: const Color(0xFF06C755)),
+                              icon: _savingLine
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2, color: Colors.white))
+                                  : const Icon(Icons.save_outlined),
+                              label: const Text('บันทึก'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton.icon(
+                            onPressed: _testLineNotify,
+                            icon: const Icon(Icons.send_outlined,
+                                color: Color(0xFF06C755)),
+                            label: const Text('ทดสอบ',
+                                style: TextStyle(color: Color(0xFF06C755))),
+                            style: OutlinedButton.styleFrom(
+                                side:
+                                    const BorderSide(color: Color(0xFF06C755))),
+                          ),
+                        ],
+                      ),
 
-                const SizedBox(height: 32),
-                const Divider(),
-                const SizedBox(height: 16),
+                      const SizedBox(height: 32),
+                      const Divider(),
+                      const SizedBox(height: 16),
+                    ]),
+                SettingsSection(
+                    title: 'การแสดงผล',
+                    icon: Icons.palette_outlined,
+                    children: [
+                      // Theme section
+                      Text('การแสดงผล',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleSmall
+                              ?.copyWith(
+                                  color: cs.primary,
+                                  fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      ValueListenableBuilder<ThemeMode>(
+                        valueListenable: themeNotifier,
+                        builder: (context, mode, _) => SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          secondary: Icon(mode == ThemeMode.dark
+                              ? Icons.dark_mode
+                              : Icons.light_mode_outlined),
+                          title: const Text('โหมดมืด'),
+                          value: mode == ThemeMode.dark,
+                          onChanged: (val) {
+                            final m = val ? ThemeMode.dark : ThemeMode.light;
+                            themeNotifier.value = m;
+                            ThemeService.save(m);
+                          },
+                        ),
+                      ),
 
-                // Subscription section
-                Text('Subscription',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: cs.primary, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const SubscriptionScreen()),
-                    ),
-                    icon: const Icon(Icons.star_outline),
-                    label: const Text('จัดการ Subscription'),
-                  ),
-                ),
-                const SizedBox(height: 32),
-                const Divider(),
-                const SizedBox(height: 16),
-
-                // Account section
-                Text('บัญชีผู้ใช้',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: cs.primary, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: CircleAvatar(
-                    backgroundColor: cs.primaryContainer,
-                    child: Icon(Icons.person, color: cs.onPrimaryContainer),
-                  ),
-                  title: Text(user?.email ?? ''),
-                  subtitle: const Text('ผู้ดูแลระบบ'),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _signOut,
-                    icon: const Icon(Icons.logout, color: Colors.red),
-                    label: const Text('ออกจากระบบ',
-                        style: TextStyle(color: Colors.red)),
-                    style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.red)),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const AppVersionText(),
-                const SizedBox(height: 8),
+                      const SizedBox(height: 32),
+                      const Divider(),
+                      const SizedBox(height: 16),
+                    ]),
               ],
             ),
     );

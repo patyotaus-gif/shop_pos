@@ -5,10 +5,10 @@ import 'package:cloud_functions/cloud_functions.dart';
 import '../models/shop.dart';
 import 'auth_service.dart';
 import 'staff_access_service.dart';
+import 'shop_database.dart';
 
 class ShopService {
-  static DocumentReference<Map<String, dynamic>> _doc() =>
-      FirebaseFirestore.instance.collection('shops').doc(AuthService.shopId);
+  static DocumentReference<Map<String, dynamic>> _doc() => ShopDatabase.shop;
 
   /// Claim/change the shop's short-link slug (`pok-pok.app/r/{slug}`).
   /// Returns the normalized slug the server accepted. Throws on taken/invalid.
@@ -36,7 +36,8 @@ class ShopService {
           StaffAccessService.firestoreDates(w['shop'] as Map),
           AuthService.shopId!))
       : _doc()
-          .snapshots()
+          .snapshots(includeMetadataChanges: true)
+          .where((s) => s.exists || !s.metadata.isFromCache)
           .map((s) => s.exists ? Shop.fromFirestore(s.data()!, s.id) : null);
 
   static Future<Shop?> getCurrentShop() async {
@@ -62,7 +63,7 @@ class ShopService {
   }) async {
     final trialEndsAt = DateTime.now().add(const Duration(days: 60));
     final shop = Shop(
-      id: AuthService.shopId!,
+      id: _doc().id,
       name: name,
       email: email,
       subscriptionStatus: SubscriptionStatus.trial,
@@ -81,7 +82,11 @@ class ShopService {
         'acceptedAt': FieldValue.serverTimestamp(),
       };
     }
-    await _doc().set(data);
+    final ref = _doc();
+    await ref.firestore.runTransaction((tx) async {
+      if ((await tx.get(ref)).exists) return;
+      tx.set(ref, data);
+    });
   }
 
   static Future<void> updateName(String name) async {

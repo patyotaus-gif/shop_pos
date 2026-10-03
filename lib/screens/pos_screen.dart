@@ -1,3 +1,4 @@
+import '../widgets/cart_item_tile.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
@@ -16,13 +17,12 @@ import '../services/customer_service.dart';
 import '../services/entitlements.dart';
 import '../services/product_service.dart';
 import '../services/sale_service.dart';
-import '../services/settings_service.dart';
 import '../services/shop_service.dart';
 import '../services/auth_service.dart';
 import '../services/staff_access_service.dart';
 import 'user_switch_screen.dart';
 import 'offline_cash_screen.dart';
-import '../utils/receipt_generator.dart';
+import 'sale_receipt_screen.dart';
 import '../widgets/payment_sheet.dart';
 import '../widgets/modifier_picker_sheet.dart';
 import '../models/order_modifier.dart';
@@ -38,7 +38,6 @@ class PosScreen extends StatefulWidget {
 }
 
 class _PosScreenState extends State<PosScreen> {
-  final _baht = NumberFormat('#,##0.00', 'th_TH');
   final List<CartItem> _cart = [];
   double _discount = 0;
   bool _checkoutBusy = false;
@@ -229,6 +228,7 @@ class _PosScreenState extends State<PosScreen> {
       String? customerName;
       double paid = 0;
       var method = _paymentMethod;
+      var channel = SalesChannel.storefront;
       if (!retry) {
         if (isDebt) {
           customerName = await _askCustomerName();
@@ -237,6 +237,7 @@ class _PosScreenState extends State<PosScreen> {
           final result = await showPaymentSheet(context, total: _total);
           if (result == null || !mounted) return;
           method = result.method;
+          channel = result.salesChannel;
           paid = result.paid;
         }
       }
@@ -253,6 +254,7 @@ class _PosScreenState extends State<PosScreen> {
                   isDebt: isDebt,
                   customerName: customerName,
                   paymentMethod: method,
+                  salesChannel: channel,
                   staffName: _activeStaffName,
                   loyaltyCustomerId: _loyaltyCustomer?.id));
       if (!mounted) return;
@@ -307,38 +309,8 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   void _showReceiptDialog(Sale sale) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('ขายสำเร็จ'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.check_circle, color: Colors.green, size: 64),
-            const SizedBox(height: 8),
-            Text('ยอดรวม ฿${_baht.format(sale.total)}',
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            if (!sale.isDebt)
-              Text('เงินทอน ฿${_baht.format(sale.change)}',
-                  style: const TextStyle(fontSize: 16)),
-          ],
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('ปิด')),
-          FilledButton.icon(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              final shopName = await SettingsService.getShopName();
-              await ReceiptGenerator.printReceipt(sale, shopName: shopName);
-            },
-            icon: const Icon(Icons.receipt_long),
-            label: const Text('พิมพ์ใบเสร็จ'),
-          ),
-        ],
-      ),
-    );
+    Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => SaleReceiptScreen(sale: sale)));
   }
 
   Future<void> _setDiscount() async {
@@ -386,13 +358,54 @@ class _PosScreenState extends State<PosScreen> {
         context, MaterialPageRoute(builder: (_) => const UserSwitchScreen()));
   }
 
+  Widget _productCatalog(bool grid) => StreamBuilder<List<Product>>(
+      stream: ProductService.watchAll(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return const Center(
+              child: Text('โหลดสินค้าไม่สำเร็จ กรุณาตรวจการเชื่อมต่อ'));
+        }
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final products = snapshot.data!
+            .where((p) =>
+                _selectedCategory == 'ทั้งหมด' ||
+                p.category == _selectedCategory)
+            .toList()
+          ..sort((a, b) => a.name.compareTo(b.name));
+        if (products.isEmpty) {
+          return const Center(child: Text('ยังไม่มีสินค้าในหมวดนี้'));
+        }
+        Widget card(int i) => _PickerProductCard(
+            product: products[i],
+            onAdd:
+                products[i].stock <= 0 ? null : () => _addToCart(products[i]));
+        if (grid) {
+          return GridView.builder(
+              padding: const EdgeInsets.all(12),
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 180,
+                  mainAxisExtent: 148,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12),
+              itemCount: products.length,
+              itemBuilder: (_, i) => card(i));
+        }
+        return ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.all(8),
+            itemCount: products.length,
+            separatorBuilder: (_, index) => const SizedBox(width: 8),
+            itemBuilder: (_, i) => card(i));
+      });
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('POS'),
+        title: const Text('ขายหน้าร้าน'),
         centerTitle: true,
         actions: [
           if (_staffEnabled)
@@ -434,8 +447,9 @@ class _PosScreenState extends State<PosScreen> {
             child: AbsorbPointer(
                 absorbing:
                     _checkoutBusy || _checkingPending || _pendingSale != null,
-                child: Column(
-                  children: [
+                child: LayoutBuilder(builder: (context, constraints) {
+                  final wide = constraints.maxWidth >= 900;
+                  final controls = <Widget>[
                     // Product search
                     Padding(
                       padding: const EdgeInsets.symmetric(
@@ -451,7 +465,7 @@ class _PosScreenState extends State<PosScreen> {
                       builder: (ctx, snap) {
                         final cats = ['ทั้งหมด', ...ProductService.categories];
                         return SizedBox(
-                          height: 36,
+                          height: 48,
                           child: ListView(
                             scrollDirection: Axis.horizontal,
                             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -504,52 +518,18 @@ class _PosScreenState extends State<PosScreen> {
                         );
                       },
                     ),
-                    // Category-filtered product picker (only when a specific
-                    // category is selected — keeps "ทั้งหมด" view clean and lets
-                    // pinned + search carry the load there). Image cards with promo
-                    // badges; tap = add 1 to cart (no sheet — cashier speed).
-                    if (_selectedCategory != 'ทั้งหมด')
-                      StreamBuilder<List<Product>>(
-                        stream: ProductService.watchAll(),
-                        builder: (ctx, snap) {
-                          final all = snap.data ?? [];
-                          final inCategory = all
-                              .where((p) => p.category == _selectedCategory)
-                              .toList()
-                            ..sort((a, b) => a.name.compareTo(b.name));
-                          if (inCategory.isEmpty) {
-                            return Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Text(
-                                'ยังไม่มีสินค้าในหมวด "$_selectedCategory"',
-                                style: const TextStyle(
-                                    color: Colors.grey, fontSize: 12),
-                              ),
-                            );
-                          }
-                          return SizedBox(
-                            height: 132,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 4),
-                              itemCount: inCategory.length,
-                              itemBuilder: (ctx, i) {
-                                final p = inCategory[i];
-                                return Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: _PickerProductCard(
-                                    product: p,
-                                    onAdd: p.stock <= 0
-                                        ? null
-                                        : () => _addToCart(p),
-                                  ),
-                                );
-                              },
-                            ),
-                          );
-                        },
-                      ),
+                  ];
+                  final basket = Column(children: [
+                    Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                        child: Row(children: [
+                          const Icon(Icons.shopping_cart_outlined, size: 20),
+                          const SizedBox(width: 8),
+                          Text('รายการขาย',
+                              style: Theme.of(context).textTheme.titleMedium),
+                          const Spacer(),
+                          Text('${_cart.length} รายการ')
+                        ])),
                     // Cart
                     Expanded(
                       child: _cart.isEmpty
@@ -573,7 +553,7 @@ class _PosScreenState extends State<PosScreen> {
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 12),
                               itemCount: _cart.length,
-                              itemBuilder: (ctx, i) => _CartItemTile(
+                              itemBuilder: (ctx, i) => CartItemTile(
                                 item: _cart[i],
                                 onRemove: () => _removeFromCart(i),
                                 onQtyChanged: (qty) => _updateQty(i, qty),
@@ -640,8 +620,25 @@ class _PosScreenState extends State<PosScreen> {
                       onDebt: () => _checkout(isDebt: true),
                       hasItems: _cart.isNotEmpty,
                     ),
-                  ],
-                ))),
+                  ]);
+                  if (wide) {
+                    return Row(children: [
+                      Expanded(
+                          child: Column(children: [
+                        ...controls,
+                        Expanded(child: _productCatalog(true))
+                      ])),
+                      const VerticalDivider(width: 1),
+                      SizedBox(width: 380, child: basket),
+                    ]);
+                  }
+                  return Column(children: [
+                    ...controls,
+                    if (constraints.maxHeight >= 580)
+                      SizedBox(height: 148, child: _productCatalog(false)),
+                    Expanded(child: basket),
+                  ]);
+                }))),
       ]),
     );
   }
@@ -753,100 +750,6 @@ class _ProductSearchState extends State<_ProductSearch> {
             ),
           ),
       ],
-    );
-  }
-}
-
-class _CartItemTile extends StatelessWidget {
-  final CartItem item;
-  final VoidCallback onRemove;
-  final ValueChanged<int> onQtyChanged;
-
-  const _CartItemTile({
-    required this.item,
-    required this.onRemove,
-    required this.onQtyChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final baht = NumberFormat('#,##0.00', 'th_TH');
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      child: ListTile(
-        leading: (item.product.imagePath != null ||
-                (item.product.imageUrl ?? '').isNotEmpty)
-            ? ProductImage(
-                product: item.product,
-                width: 44,
-                height: 44,
-                borderRadius: BorderRadius.circular(6),
-              )
-            : null,
-        title: Text(item.product.name,
-            style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text('฿${baht.format(item.unitPrice)} × ${item.quantity}'
-            '${item.modifiers.isEmpty ? '' : '\n${item.modifiers.map((m) => m.optionName).join(', ')}'}'
-            '${item.notes == null ? '' : '\n${item.notes}'}'),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('฿${baht.format(item.subtotal)}',
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.remove_circle_outline),
-              onPressed: () => onQtyChanged(item.quantity - 1),
-            ),
-            GestureDetector(
-              onTap: () async {
-                final ctrl = TextEditingController(text: '${item.quantity}');
-                final result = await showDialog<int>(
-                  context: context,
-                  builder: (c) => AlertDialog(
-                    title: const Text('จำนวน'),
-                    content: TextField(
-                      controller: ctrl,
-                      keyboardType: TextInputType.number,
-                      autofocus: true,
-                      decoration:
-                          const InputDecoration(border: OutlineInputBorder()),
-                    ),
-                    actions: [
-                      TextButton(
-                          onPressed: () => Navigator.pop(c),
-                          child: const Text('ยกเลิก')),
-                      FilledButton(
-                        onPressed: () =>
-                            Navigator.pop(c, int.tryParse(ctrl.text)),
-                        child: const Text('ตกลง'),
-                      ),
-                    ],
-                  ),
-                );
-                if (result != null) onQtyChanged(result);
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text('${item.quantity}',
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.add_circle_outline),
-              onPressed: () => onQtyChanged(item.quantity + 1),
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.red),
-              onPressed: onRemove,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
