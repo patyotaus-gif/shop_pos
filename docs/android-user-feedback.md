@@ -21,7 +21,7 @@ Source: eight LINE conversation screenshots supplied by the owner. These are tes
 - Quantity edits coalesce rapid taps for 300 ms and serialize writes for each pending order line. Expected-quantity checks remain; errors cancel queued intent and alert the user. Payment, kitchen sending and navigation wait for confirmation.
 - Supplier MOQ and order quantities preserve decimals (e.g. 1.5 kg) through catalog, order serialization, reorders, and supplier portal. Quantity dialogs validate positive MOQ; order totals reject invalid numbers. This does not add actual-weight settlement or partial receiving.
 - Includes earlier kitchen/receipt fixes and opt-in remembered owner session. The latest installed iOS version confirmed by the user is TestFlight 1.2.13 (33); this code has not yet reached that device.
-- Validation: 78 Flutter tests, 35 backend tests, Dart analyze clean, Node syntax checks passed. Android release and limited backend deployment are in progress; update the release record only after live verification.
+- Validation: 79 Flutter tests, 35 backend tests, Dart analyze clean, Node syntax checks passed. Android 1.2.35+50 is published and the production download was verified on 2026-10-03. Backend staffCheckout and adminUpsertSupplierProduct deployments succeeded.
 
 ## Device/release acceptance still required
 
@@ -30,3 +30,12 @@ Source: eight LINE conversation screenshots supplied by the owner. These are tes
 3. Build/upload iOS through the configured Codemagic workflow and select the new TestFlight build. No Codemagic credentials are present in this Windows session.
 
 The server-side logo rule correction was deployed earlier; actual tester retry is unconfirmed. Actual-weight procurement settlement and partial receiving are future product work, outside these screenshot fixes.
+
+## Verified Android release — 2026-10-03
+
+- Final source: fdb68c1, including cart-state preservation across phone/tablet navigation layout changes on rotation; regression test passed.
+- Package app.pokpok.pos, version 1.2.35, build 50. APK signature matches the original signing certificate.
+- Published URL: https://pok-pok.app/app/pokpok.apk. Live version manifest matches the local manifest; HTTP 200; size 84,908,120 bytes.
+- Full production APK download SHA-256 matches the final build: 04cd7ed054ced48a68a791ad01dbc3d4eeeec4c77fd5f15c4d3f8f95d514fc3e.
+- Physical-device acceptance remains pending: install over the previous version with data retained; rapid quantity edits and kitchen flow; rotation; receipt preview/print/share/save; remembered login and staff restrictions; owner logo upload. No Android device was attached during release verification.
+- iOS has NOT been built or published in this session. In Codemagic, start master with workflow ios-release (iOS Release to TestFlight), then confirm the processed build in TestFlight before asking testers to update. Verify Google/Apple login and remembered login on the device. No Codemagic API access is configured in this session.
