@@ -39,6 +39,7 @@ class SideNavigationShell extends StatefulWidget {
 class _SideNavigationShellState extends State<SideNavigationShell> {
   bool _collapsed = false;
   bool _touched = false;
+  final _pageKeys = <String, GlobalKey>{};
   @override
   void initState() {
     super.initState();
@@ -81,7 +82,9 @@ class _SideNavigationShellState extends State<SideNavigationShell> {
                 Expanded(
                     child: IndexedStack(index: widget.selectedIndex, children: [
                   for (final item in widget.items)
-                    KeyedSubtree(key: ValueKey(item.label), child: item.screen),
+                    KeyedSubtree(
+                        key: _pageKeys.putIfAbsent(item.label, GlobalKey.new),
+                        child: item.screen),
                 ])),
                 if (widget.statusBanner != null) widget.statusBanner!,
                 NavigationBar(
@@ -280,7 +283,8 @@ class _SideNavigationShellState extends State<SideNavigationShell> {
                       children: [
                         for (final item in widget.items)
                           KeyedSubtree(
-                            key: ValueKey(item.label),
+                            key: _pageKeys.putIfAbsent(
+                                item.label, GlobalKey.new),
                             child: item.screen,
                           ),
                       ],

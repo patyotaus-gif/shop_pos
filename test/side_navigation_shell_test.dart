@@ -22,6 +22,20 @@ void main() {
     ));
   }
 
+  testWidgets('rotating between phone and sidebar layouts preserves cart',
+      (tester) async {
+    await openShell(tester, const Size(375, 812));
+    await tester.tap(find.byKey(const ValueKey('add-item')));
+    await tester.pump();
+    tester.view.physicalSize = const Size(812, 375);
+    await tester.pumpAndSettle();
+    expect(find.text('สินค้าในตะกร้า 1'), findsOneWidget);
+    tester.view.physicalSize = const Size(375, 812);
+    await tester.pumpAndSettle();
+    expect(find.text('สินค้าในตะกร้า 1'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('collapsing the menu preserves the page and saves the preference',
       (tester) async {
     await openShell(tester, const Size(1200, 900));
