@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+
 import 'package:intl/intl.dart';
 import '../models/order.dart';
-import '../services/auth_service.dart';
+
 import '../services/order_service.dart';
 
 /// Top-of-screen filter — replaces the old "รอดำเนินการ / ทั้งหมด" tabs.
@@ -34,8 +34,8 @@ extension _OrderFilterX on _OrderFilter {
 }
 
 class OrdersScreen extends StatefulWidget {
-  const OrdersScreen({super.key, this.showOrderLink = true});
-  final bool showOrderLink;
+  const OrdersScreen({super.key});
+
 
   @override
   State<OrdersScreen> createState() => _OrdersScreenState();
@@ -89,7 +89,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           ),
         ],
       ),
-      floatingActionButton: widget.showOrderLink ? _ShareLinkButton() : null,
+
     );
   }
 }
@@ -153,67 +153,6 @@ class _FilterChip extends StatelessWidget {
               ],
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ShareLinkButton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final shopId = AuthService.shopId ?? '';
-    final link = 'https://pok-pok.app/order/?shop=$shopId';
-
-    return FloatingActionButton.extended(
-      onPressed: () => _showLinkDialog(context, link),
-      icon: const Icon(Icons.link),
-      label: const Text('ลิงก์สั่งออนไลน์'),
-    );
-  }
-
-  void _showLinkDialog(BuildContext context, String link) {
-    showModalBottomSheet(
-      context: context,
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('ลิงก์สำหรับลูกค้า',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            const Text('แชร์ลิงก์นี้ให้ลูกค้าเพื่อให้สั่งสินค้าออนไลน์',
-                style: TextStyle(color: Colors.grey, fontSize: 13)),
-            const SizedBox(height: 16),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(link,
-                  style: const TextStyle(fontSize: 12, fontFamily: 'monospace')),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: () async {
-                  await Clipboard.setData(ClipboardData(text: link));
-                  if (!context.mounted) return;
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('คัดลอกลิงก์แล้ว')),
-                  );
-                },
-                icon: const Icon(Icons.copy),
-                label: const Text('คัดลอกลิงก์'),
-              ),
-            ),
-          ],
         ),
       ),
     );

@@ -76,3 +76,7 @@ Recommended sequence: reproduce session persistence and fix system insets / LINE
 - Retail Orders hides its duplicate floating order-link action for all tiers, including the Orders/debt group. Restaurant Orders retains the existing action.
 - Retail navigation and QR-page title now say “ลิงก์และ QR สั่งสินค้า”; share text, pickup heading and PDF label use product-order wording. Copy/share/QR URLs and permissions are unchanged.
 - This change is not included in the published Android1.2.36+51 APK. User supplied evidence that iOS1.2.36(34) has been uploaded and is waiting for TestFlight review; that build also predates this cleanup. No build/release initiated for this small UI change.
+## Order-link consolidation for both shop modes — source only
+
+- Owner confirmed restaurant Orders should also drop the duplicate link. Removed the floating link action, its dialog, unused imports and the temporary retail-only flag. Both shop modes now use the existing QR page for copying/sharing ordering links; per-table QR remains separate.
+- Targeted Dart analysis passed. Not built or published yet; this supersedes the earlier note that restaurant Orders retains the action.

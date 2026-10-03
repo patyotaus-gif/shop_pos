@@ -489,8 +489,8 @@ class _MainShellState extends State<MainShell> {
                 screen: showDebts
                     ? WorkspaceSections(
                         labels: const ['ออเดอร์', 'ลูกหนี้ / ค้างชำระ'],
-                        pages: [OrdersScreen(showOrderLink: shopType == ShopType.restaurant), const DebtScreen()])
-                    : OrdersScreen(showOrderLink: shopType == ShopType.restaurant),
+                        pages: [const OrdersScreen(), const DebtScreen()])
+                    : const OrdersScreen(),
                 icon: Icons.shopping_bag_outlined,
                 selectedIcon: Icons.shopping_bag,
                 label: 'ออเดอร์',
