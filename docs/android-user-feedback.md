@@ -80,3 +80,9 @@ Recommended sequence: reproduce session persistence and fix system insets / LINE
 
 - Owner confirmed restaurant Orders should also drop the duplicate link. Removed the floating link action, its dialog, unused imports and the temporary retail-only flag. Both shop modes now use the existing QR page for copying/sharing ordering links; per-table QR remains separate.
 - Targeted Dart analysis passed. Not built or published yet; this supersedes the earlier note that restaurant Orders retains the action.
+## Android 1.2.36+52 published — 2026-10-04
+
+- Built all current fixes from source4451141, including retail QR wording and removal of the duplicate Orders link in both shop modes. Package app.pokpok.pos and original signing certificate verified.
+- Firebase Hosting succeeded; live manifest matches local1.2.36/build52. Full APK download:84,973,400bytes; SHA2566c7f12c57aa9a635e8c64871df6cbc30b05abc0537a02cce5959885bb8b28f51 matches the release artifact.
+- This supersedes the source-only release notes above. Targeted Dart analysis passed for the latest UI changes; the prior full suite was83 Flutter/40backend tests. No physical-device acceptance performed in this build step.
+- iOS version stays1.2.36. Source is on master; Codemagic ios-release automatically uses the next App Store Connect build number. No Codemagic credentials available here, so no new iOS build was triggered. User's screenshot previously showed1.2.36(34) awaiting TestFlight review; current approval status not checked.
