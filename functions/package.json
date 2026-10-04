@@ -5,7 +5,7 @@
   },
   "main": "index.js",
   "scripts": {
-    "test": "node escalation.test.js && node --test refund.test.js analytics.test.js analytics_backend.test.js admin_change_plan.test.js shop_capabilities.test.js staff_access.test.js line_delivery.test.js",
+    "test": "node escalation.test.js && node --test refund.test.js analytics.test.js analytics_backend.test.js admin_change_plan.test.js shop_capabilities.test.js staff_access.test.js line_delivery.test.js slip_upload.test.js",
     "test:rules": "firebase emulators:exec --only firestore --project demo-pokpok-admin --config ../firebase.rules-test.json \"node run_access_rules_tests.cjs\"",
     "test:storage": "firebase emulators:exec --only storage --project demo-pokpok-storage --config ../firebase.storage-test.json \"node storage_rules.test.cjs\""
   },

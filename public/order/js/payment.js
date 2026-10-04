@@ -119,11 +119,12 @@ async function uploadSlip(event) {
   const slipBtn = document.getElementById('paySlipBtn');
   const status = document.getElementById('paySlipStatus');
   slipBtn.disabled = true;
-  slipBtn.innerHTML = '<span class="spinner"></span>กำลังตรวจสลิป...';
+  slipBtn.innerHTML = '<span class="spinner"></span>กำลังส่งสลิป...';
   status.className = 'busy';
-  status.textContent = 'อ่าน QR + ตรวจยอดเงิน...';
+  status.textContent = 'เตรียมรูปและส่งให้ร้านตรวจสอบ...';
 
   try {
+    if (file.size > 20 * 1024 * 1024) throw new Error('slip-file-too-large');
     // Convert image → base64. Compress large images first so we don't
     // POST a 10MB payload.
     const slipBase64 = await fileToBase64Compressed(file, 1600);
@@ -137,7 +138,8 @@ async function uploadSlip(event) {
         slipBase64,
       }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({success:false,
+      reason:res.status === 413 ? 'รูปสลิปใหญ่เกินไป กรุณาย่อรูปแล้วลองใหม่' : 'ระบบรับสลิปขัดข้องชั่วคราว กรุณาลองอีกครั้ง'}));
 
     if (!res.ok || data.success === false) {
       status.className = 'err';
@@ -148,15 +150,19 @@ async function uploadSlip(event) {
     }
 
     status.className = 'ok';
-    status.textContent = '✓ ยืนยันสำเร็จ! กำลังพาคุณไปหน้าออเดอร์...';
+    status.textContent = data.awaitingReview ? 'ส่งสลิปแล้ว รอร้านตรวจยอดเงินเข้าและยืนยัน' : 'กำลังเปิดหน้าออเดอร์...';
     setTimeout(() => {
-      window.location.href = `/order/success/?order=${pendingOrder.orderId}&auto=1`;
+      window.location.href = `/order/success/?order=${encodeURIComponent(pendingOrder.orderId)}${data.awaitingReview ? '&review=1' : ''}`;
     }, 1200);
   } catch (e) {
     status.className = 'err';
-    status.textContent = 'อัปโหลดล้มเหลว — ลองอีกครั้ง';
+    status.textContent = e.message === 'slip-file-too-large'
+      ? 'รูปต้นฉบับใหญ่เกิน 20 MB กรุณาย่อรูปหรือใช้ภาพหน้าจอสลิป'
+      : e.message === 'image load failed'
+        ? 'เปิดรูปนี้ไม่ได้ กรุณาใช้รูป JPG หรือ PNG หรือภาพหน้าจอสลิป'
+        : 'ส่งสลิปไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วลองอีกครั้ง โดยไม่ต้องโอนซ้ำ';
     slipBtn.disabled = false;
-    slipBtn.innerHTML = '📷 อัปโหลดสลิป — ยืนยันอัตโนมัติ';
+    slipBtn.innerHTML = '📷 อัปโหลดสลิปให้ร้านตรวจสอบ';
   }
 }
 

@@ -34,5 +34,14 @@
     </div>
     <div class="note">ร้านจะติดต่อกลับทางโทรศัพท์เมื่อสินค้าพร้อม</div>
   </div>
+<script>
+  if (new URLSearchParams(location.search).get('review') === '1') {
+    document.title = 'ส่งสลิปแล้ว รอร้านยืนยัน';
+    document.querySelector('h1').textContent = 'ส่งสลิปแล้ว รอร้านยืนยัน';
+    document.querySelector('.icon').textContent = '🧾';
+    document.querySelector('.subtitle').textContent = 'ร้านได้รับสลิปแล้ว และจะตรวจยอดเงินเข้าก่อนยืนยันออเดอร์';
+    document.querySelector('.note').textContent = 'หากโอนเงินแล้ว ไม่ต้องโอนซ้ำ กรุณารอร้านตรวจสอบ';
+  }
+</script>
 </body>
 </html>

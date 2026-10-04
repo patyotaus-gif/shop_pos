@@ -11,6 +11,7 @@ const products = [
   {id:'water',name:'น้ำดื่ม',price:10,stock:0,category:'เครื่องดื่ม'},
 ];
 let failKitchen = true, kitchenRequests = [];
+let failSlip = true, slipRequests = [];
 const server = http.createServer(async (req,res) => {
   const url = new URL(req.url,'http://localhost');
   if(url.pathname === '/api/shopPublic') {
@@ -29,6 +30,12 @@ const server = http.createServer(async (req,res) => {
     for await(const part of req) {} // Fixture only: no real payment created.
     res.setHeader('Content-Type','application/json');
     return res.end(JSON.stringify({orderId:'fixture-order',total:25,finalAmount:25,promptpayId:'0812345678',promptpayName:'ร้านทดสอบ'}));
+  }
+  if(url.pathname === '/api/verifyPromptPaySlip') {
+    let body='';for await(const part of req)body+=part;
+    slipRequests.push(JSON.parse(body));
+    res.setHeader('Content-Type','application/json');res.statusCode=failSlip?503:200;
+    return res.end(JSON.stringify(failSlip?{success:false,reason:'ลองส่งสลิปอีกครั้ง ไม่ต้องโอนซ้ำ'}:{success:true,awaitingReview:true}));
   }
   let file=path.resolve(root,'.'+url.pathname);
   if(!file.startsWith(root+path.sep)){res.statusCode=403;return res.end();}
@@ -105,11 +112,26 @@ const server = http.createServer(async (req,res) => {
     await page.locator('#customerName').fill('fixture');await page.locator('#customerPhone').fill('0800000000');
     await page.locator('#payBtn').click();await page.locator('#payOverlay.open').waitFor();
     assert.equal(await page.locator('#cartCount').textContent(),'0','accepted takeaway order clears draft');
+    const png=await page.screenshot();
+    const slip={name:'fixture.png',mimeType:'image/png',buffer:png};
+    await page.locator('#slipFileInput').setInputFiles(slip);
+    await page.locator('#paySlipStatus.err').waitFor();
+    assert.ok((await page.locator('#paySlipStatus').textContent()).includes('ไม่ต้องโอนซ้ำ'));
+    assert.equal(await page.locator('#paySlipBtn').isEnabled(),true);
+    assert.equal(slipRequests[0].orderId,'fixture-order');
+    assert.ok(slipRequests[0].slipBase64.startsWith('data:image/jpeg;base64,/9j/'),'PNG compressed to JPEG');
+    failSlip=false;
+    await page.locator('#slipFileInput').setInputFiles(slip);
+    await page.waitForURL('**/order/success/?order=fixture-order&review=1');
+    assert.ok((await page.locator('h1').textContent()).includes('รอร้านยืนยัน'));
+    assert.ok((await page.locator('.note').textContent()).includes('ไม่ต้องโอนซ้ำ'));
+    assert.equal(slipRequests.length,2,'same file can be retried');
+    await page.goto(base.replace('shop=fixture&table=t1','shop=single'));
     await page.reload();await page.locator('.product-card').first().waitFor();
     assert.equal(await page.locator('#cartCount').textContent(),'0','accepted payment order is not restored as a new cart');
     await page.setViewportSize({width:1024,height:800});
     assert.equal(await page.locator('#products').evaluate(n=>getComputedStyle(n).gridTemplateColumns.split(' ').length)>=3,true);
     assert.deepEqual(errors,[]);
-    console.log('PASS mobile grid 320/375/414 and desktop, categories/search, required choices, notes, refresh, kitchen failure/success, table isolation and takeaway draft clearing');
+    console.log('PASS mobile grid, categories/search, choices, notes, drafts, kitchen retry, slip PNG compression and same-file retry, truthful pending-review receipt');
   } finally {await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>server.close());
