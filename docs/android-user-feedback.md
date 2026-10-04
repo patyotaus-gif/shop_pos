@@ -90,3 +90,11 @@ Recommended sequence: reproduce session persistence and fix system insets / LINE
 
 - Added a responsive, white-background QR for LineService.officialAccountUrl on the LINE settings section, above the existing open-LINE button and connection-ID field. Tablet/POS users can scan with a phone; same-device users retain the button. Both use the same existing official account URL.
 - Updated instructions to describe scanning or opening LINE, sending ID, and pasting the returned code. No account linking or message is performed by displaying the QR. Physical scanning still needs acceptance; published Android1.2.36+52 predates this change.
+## Android 1.2.36+53 published — 2026-10-05
+
+- Released the authentication-recovery hotfix and previously committed LINE friend QR. Source commit 60558a8 was pushed to master. Explicit retry and resume-after-error recheck do not grant access until existing owner/staff checks succeed; network errors no longer automatically instruct sign-out.
+- Built from an isolated export of cee60ea plus the exact committed hotfix/version files. The pending order/accounting migration is deliberately excluded from this release. No Cloud Functions or Firestore rules deployed; existing terminals keep their current backend paths.
+- Isolated release validation: 88 Flutter tests passed and targeted Dart analysis clean. This is distinct from the working-tree 94-test run that includes unpublished accounting changes.
+- APK package app.pokpok.pos, version 1.2.36/build53, original signing certificate verified. Firebase Hosting succeeded. Live manifest returned build53; full public download verified package/version and matched the built file: 84,989,784 bytes, SHA256 2d18f5d456478f93e0dbd532295b1982b7d3fcf47975458238bf9ae13e13951f.
+- Download: https://pok-pok.app/app/pokpok.apk . Prior build52 APK retained locally for rollback. Logs: .remember/tmp/auth53-build.log, auth53-tests.log, auth53-analyze.log, auth53-deploy.log.
+- iOS source is on master with marketing version1.2.36 unchanged. Start Codemagic ios-release / iOS Release to TestFlight manually; no API/browser capability available to start it here. No new iOS build/upload or physical-device acceptance claimed. Exact tester-device root cause still requires installed build and reproduction evidence.
