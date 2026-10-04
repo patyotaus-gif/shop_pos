@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'notification_service.dart';
 import 'remembered_owner.dart';
@@ -15,33 +16,55 @@ class AuthService {
       _claimUid == currentUser?.uid &&
       _claims['staffRole'] == 'cashier';
   static String? get staffId => isStaff ? _claims['staffId'] as String? : null;
-  static final Stream<User?> authStateStream =
+  static Stream<User?> get authStateStream =>
       _auth.idTokenChanges().asyncMap((user) async {
-    if (_claimUid != user?.uid) NotificationService.stopFCM();
-    if (user != null) {
-      final token = await user.getIdTokenResult();
-      final claims = Map<String, dynamic>.from(token.claims ?? {});
-      if (user.uid.startsWith('staff_') && claims['staffRole'] != 'cashier') {
-        throw StateError('ไม่พบสิทธิ์พนักงาน กรุณาเข้าสู่ระบบใหม่');
-      }
-      _claims = claims;
-      _claimUid = user.uid;
-      _founderClaim = _claims['founder'] == true;
-      if (isStaff) {
-        ownerUnlocked = false;
-      } else if (!ownerUnlocked) {
-        ownerUnlocked = await rememberedOwner.matches(user.uid, isStaff: false);
-      }
-    } else {
-      _founderClaim = false;
-      _claims = {};
-      _claimUid = null;
-      ownerUnlocked = false;
-    }
-    return user;
-  });
+        if (_claimUid != user?.uid) NotificationService.stopFCM();
+        if (user != null) {
+          final token = await user
+              .getIdTokenResult()
+              .timeout(const Duration(seconds: 20));
+          final claims = Map<String, dynamic>.from(token.claims ?? {});
+          if (user.uid.startsWith('staff_') &&
+              claims['staffRole'] != 'cashier') {
+            throw StateError('ไม่พบสิทธิ์พนักงาน กรุณาเข้าสู่ระบบใหม่');
+          }
+          _claims = claims;
+          _claimUid = user.uid;
+          _founderClaim = _claims['founder'] == true;
+          if (isStaff) {
+            ownerUnlocked = false;
+          } else if (!ownerUnlocked) {
+            ownerUnlocked =
+                await rememberedOwner.matches(user.uid, isStaff: false);
+          }
+        } else {
+          _founderClaim = false;
+          _claims = {};
+          _claimUid = null;
+          ownerUnlocked = false;
+        }
+        return user;
+      });
 
   static User? get currentUser => _auth.currentUser;
+
+  static String sessionErrorMessage(Object? error) {
+    if (error is TimeoutException ||
+        (error is FirebaseAuthException &&
+            error.code == 'network-request-failed')) {
+      return 'เชื่อมต่อเพื่อตรวจสิทธิ์ไม่ได้ ตรวจอินเทอร์เน็ตแล้วลองอีกครั้ง';
+    }
+    if (error is FirebaseAuthException) {
+      if (error.code == 'user-disabled') {
+        return 'บัญชีนี้ถูกระงับ กรุณาติดต่อผู้ดูแลร้าน';
+      }
+      if (['user-token-expired', 'invalid-user-token', 'user-not-found']
+          .contains(error.code)) {
+        return 'เซสชันนี้ใช้ไม่ได้แล้ว กรุณาออกจากระบบแล้วเข้าสู่ระบบใหม่';
+      }
+    }
+    return 'ยังตรวจสิทธิ์ไม่สำเร็จ ลองอีกครั้ง หากยังไม่ได้ให้เข้าสู่ระบบใหม่';
+  }
 
   /// shopId = Firebase Auth UID — ใช้เป็น key หลักใน Firestore
   static String? get shopId =>

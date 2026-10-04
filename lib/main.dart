@@ -37,6 +37,7 @@ import 'widgets/update_prompt.dart';
 import 'widgets/side_navigation_shell.dart';
 import 'widgets/connection_status_banner.dart';
 import 'widgets/workspace_sections.dart';
+import 'widgets/recoverable_auth_builder.dart';
 
 // Default to light — Pokpok is a light-brand design and does not follow
 // the device's system dark setting. Dark is opt-in (Settings), persisted
@@ -173,9 +174,9 @@ class ShopPosApp extends StatelessWidget {
           fontFamily: _brandFont,
           useMaterial3: true,
         ),
-        home: StreamBuilder<User?>(
-          stream: AuthService.authStateStream,
-          builder: (context, snap) {
+        home: RecoverableAuthBuilder<User?>(
+          streamFactory: () => AuthService.authStateStream,
+          builder: (context, snap, retry) {
             if (snap.connectionState == ConnectionState.waiting) {
               return const _PokpokSplash();
             }
@@ -183,7 +184,11 @@ class ShopPosApp extends StatelessWidget {
               return Scaffold(
                   body: Center(
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Text('ตรวจสิทธิ์ไม่สำเร็จ กรุณาเข้าสู่ระบบใหม่'),
+                Text(AuthService.sessionErrorMessage(snap.error)),
+                FilledButton.icon(
+                    onPressed: retry,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('ลองตรวจสิทธิ์อีกครั้ง')),
                 const OfflineEntryButton(),
                 TextButton(
                     onPressed: AuthService.signOut,
@@ -529,7 +534,9 @@ class _MainShellState extends State<MainShell> {
                 screen: OrderQrScreen(shopType: shopType),
                 icon: Icons.qr_code_2_outlined,
                 selectedIcon: Icons.qr_code_2,
-                label: shopType == ShopType.retail ? 'ลิงก์และ QR สั่งสินค้า' : 'QR สั่งอาหาร',
+                label: shopType == ShopType.retail
+                    ? 'ลิงก์และ QR สั่งสินค้า'
+                    : 'QR สั่งอาหาร',
               ),
               const AppNavigationItem(
                 screen: SettingsScreen(),

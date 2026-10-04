@@ -1,8 +1,8 @@
 {
-    "version":  "1.2.36",
-    "build":  52,
-    "url":  "https://pok-pok.app/app/pokpok.apk",
-    "minSupportedBuild":  1,
-    "mandatory":  false,
-    "notes":  "รวมการแก้ไขล่าสุด · เอาปุ่มลิงก์ซ้ำออกจากหน้าออเดอร์ · รวมคัดลอก แชร์ และพิมพ์ไว้หน้า QR · ปรับคำสั่งสินค้าให้ตรงกับร้านค้าปลีก"
+  "version": "1.2.36",
+  "build": 53,
+  "url": "https://pok-pok.app/app/pokpok.apk",
+  "minSupportedBuild": 1,
+  "mandatory": false,
+  "notes": "แก้หน้าตรวจสิทธิ์ค้าง เพิ่มปุ่มลองใหม่และตรวจซ้ำเมื่อกลับเข้าแอป แยกข้อความปัญหาเครือข่าย และเพิ่ม QR เพื่อน LINE ในตั้งค่า"
 }
