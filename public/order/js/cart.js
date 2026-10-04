@@ -1,20 +1,23 @@
 // Cart state + cart drawer UI. State functions are DOM-free so Node can
 // test them; all DOM access lives in initCartUI/renderCartUI.
 //
-// A cart LINE is keyed by productId + its sorted option ids, so the same
-// dish with different add-ons stays on separate lines (mirrors the Dart
-// modifiersEqual rule). Products with no add-ons key by productId alone,
-// preserving the original merge-by-product behaviour.
-import { escHtml, fmtBaht } from './util.js';
+// A cart line includes the product, sorted option IDs and preparation note.
+// Identical configurations merge; different instructions must stay separate.
+import { escHtml, fmtBaht } from './util.js?v=20261005';
 
-const cart = {}; // lineKey -> { key, id, name, price, stock, quantity, optionIds, modifiers, notes }
+const cart = Object.create(null); // keyed by product, options AND preparation note
 const listeners = [];
 
-export function onCartChange(fn) { listeners.push(fn); }
+export function onCartChange(fn) { listeners.push(fn); return () => { const i = listeners.indexOf(fn); if (i >= 0) listeners.splice(i, 1); }; }
 function emit() { for (const fn of listeners) fn(); }
 
-export function lineKey(id, optionIds = []) {
-  return optionIds.length ? id + '|' + [...optionIds].sort().join(',') : id;
+export function lineKey(id, optionIds = [], notes = '') {
+  return JSON.stringify([id, [...optionIds].sort(), String(notes).trim()]);
+}
+
+export function clearCart() {
+  for (const key of Object.keys(cart)) delete cart[key];
+  emit();
 }
 
 export function items() { return Object.values(cart); }
@@ -31,10 +34,11 @@ export function getQty(id) {
 // meta = { name, price, stock } required on first add. Kept for the card
 // "+ เพิ่ม" button and upsell (both add plain lines).
 export function setQty(id, qty, meta) {
-  const key = id;
+  const key = lineKey(id);
   const existing = cart[key];
   const stock = existing ? existing.stock : (meta?.stock ?? 0);
-  const q = Math.max(0, Math.min(qty, stock));
+  const otherQty = getQty(id) - (existing?.quantity ?? 0);
+  const q = Math.max(0, Math.min(Math.floor(qty), stock - otherQty));
   if (q <= 0) {
     delete cart[key];
   } else if (existing) {
@@ -48,13 +52,13 @@ export function setQty(id, qty, meta) {
   emit();
 }
 
-export function addOne(id, meta) { setQty(id, cart[id]?.quantity ? cart[id].quantity + 1 : 1, meta); }
+export function addOne(id, meta) { setQty(id, (cart[lineKey(id)]?.quantity ?? 0) + 1, meta); }
 
 // Add a configured line (add-ons + optional note). qty is added to whatever
 // that exact configuration already holds; total product qty is capped at
 // stock. meta = { id, name, price(unit), stock, optionIds, modifiers, notes }.
 export function addLine(meta, qty = 1) {
-  const key = lineKey(meta.id, meta.optionIds);
+  const key = lineKey(meta.id, meta.optionIds, meta.notes);
   const existing = cart[key];
   const otherQty = getQty(meta.id) - (existing?.quantity ?? 0);
   const room = Math.max(0, meta.stock - otherQty);
@@ -62,7 +66,6 @@ export function addLine(meta, qty = 1) {
   if (q <= 0) { emit(); return; }
   if (existing) {
     existing.quantity = q;
-    if (meta.notes) existing.notes = meta.notes;
   } else {
     cart[key] = {
       key, id: meta.id, name: meta.name, price: meta.price, stock: meta.stock,

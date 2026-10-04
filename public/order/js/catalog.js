@@ -1,7 +1,7 @@
 // Product grid cards + product quantity bottom sheet.
 // DOM-free at import time (Node smoke test imports this module).
-import { escHtml, fmtBaht } from './util.js';
-import { addOne, getQty, addLine, onCartChange } from './cart.js';
+import { escHtml, fmtBaht } from './util.js?v=20261005';
+import { addOne, getQty, addLine, onCartChange } from './cart.js?v=20261005';
 
 const byId = {};      // productId -> product from shopPublic
 let sheetProduct = null; // product currently shown in the sheet
@@ -9,6 +9,9 @@ let sheetQtySelected = 1;
 let sheetSel = {};       // groupId -> Set(optionIds) chosen in the open sheet
 let allProducts = [];
 let selectedCategory = 'ทั้งหมด';
+let searchQuery = '';
+export const categoryOf = (p) => String(p.category || '').trim() || 'ทั่วไป';
+export const needsOptions = (p) => (p.modifierGroups || []).length > 0;
 
 // Selected option snapshots + price adjust for the open sheet.
 function sheetModifiers() {
@@ -39,7 +42,18 @@ function sheetRequiredMet() {
 // products without a category group under 'ทั่วไป'.
 export function filterByCategory(products, category) {
   if (category === 'ทั้งหมด') return products;
-  return products.filter((p) => (p.category || 'ทั่วไป') === category);
+  return products.filter((p) => categoryOf(p) === category);
+}
+
+export function filterProducts(products, category, query = '') {
+  const words = query.trim().toLocaleLowerCase('th').split(/\s+/).filter(Boolean);
+  return filterByCategory(products, category).filter((p) => {
+    const text = `${p.name || ''} ${categoryOf(p)}`.toLocaleLowerCase('th');
+    return words.every((word) => text.includes(word));
+  });
+}
+function renderFiltered() {
+  renderGrid(filterProducts(allProducts, selectedCategory, searchQuery));
 }
 
 // Promo badge math. Badge only when originalPrice > price and the rounded
@@ -58,12 +72,16 @@ export function promoInfo(price, originalPrice) {
 const meta = (p) => ({ name: p.name, price: p.price, stock: p.stock });
 
 export function initCatalog() {
+  document.getElementById('productSearch').addEventListener('input', (e) => {
+    searchQuery = e.target.value;
+    renderFiltered();
+  });
   document.getElementById('catBar').addEventListener('click', (e) => {
     const chip = e.target.closest('.cat-chip');
     if (!chip) return;
     selectedCategory = chip.dataset.cat;
     renderCategoryBar();
-    renderGrid(filterByCategory(allProducts, selectedCategory));
+    renderFiltered();
   });
   document.getElementById('products').addEventListener('click', (e) => {
     const card = e.target.closest('.product-card');
@@ -71,6 +89,7 @@ export function initCatalog() {
     const p = byId[card.dataset.id];
     if (!p || p.stock <= 0) return;
     if (e.target.closest('.add-btn')) {
+      if (needsOptions(p)) { openProductSheet(p.id); return; }
       addOne(p.id, meta(p));       // Add button = instant +1
       return;
     }
@@ -119,23 +138,23 @@ export function initCatalog() {
 
 export function renderProducts(products) {
   allProducts = products;
+  if (!products.some((p) => categoryOf(p) === selectedCategory)) selectedCategory = 'ทั้งหมด';
   for (const p of products) byId[p.id] = p;
   renderCategoryBar();
-  renderGrid(filterByCategory(products, selectedCategory));
+  renderFiltered();
 }
 
-// Horizontal chip strip above the grid. Hidden when the shop effectively
-// has a single category.
+// Keep the category visible even if the shop currently has only one.
 function renderCategoryBar() {
   const bar = document.getElementById('catBar');
-  const cats = [...new Set(allProducts.map((p) => p.category || 'ทั่วไป'))];
-  if (cats.length <= 1) {
+  const cats = [...new Set(allProducts.map(categoryOf))];
+  if (!cats.length) {
     bar.hidden = true;
     return;
   }
   bar.hidden = false;
   bar.innerHTML = ['ทั้งหมด', ...cats].map((c) =>
-    `<button class="cat-chip${c === selectedCategory ? ' selected' : ''}" type="button" data-cat="${escHtml(c)}">${escHtml(c)}</button>`
+    `<button class="cat-chip${c === selectedCategory ? ' selected' : ''}" aria-pressed="${c === selectedCategory}" type="button" data-cat="${escHtml(c)}">${escHtml(c)}</button>`
   ).join('');
 }
 
@@ -143,7 +162,7 @@ function renderGrid(products) {
   const container = document.getElementById('products');
   if (!products.length) {
     container.innerHTML =
-      '<p style="grid-column:1/-1;text-align:center;color:#A89E94;padding:40px">ยังไม่มีสินค้า</p>';
+      `<p class="catalog-empty">${allProducts.length ? 'ไม่พบสินค้า ลองเปลี่ยนคำค้นหรือเลือกหมวดทั้งหมด' : 'ยังไม่มีสินค้า'}</p>`;
     return;
   }
   container.innerHTML = products.map((p) => {
@@ -165,7 +184,7 @@ function renderGrid(products) {
             ${out ? '❌ หมด' : `📦 เหลือ ${p.stock}`}
           </div>
         </div>
-        <button class="add-btn" type="button" ${out ? 'disabled' : ''}>+ เพิ่ม</button>
+        <button class="add-btn" type="button" ${out ? 'disabled' : ''}>${needsOptions(p) ? 'เลือกตัวเลือก' : '+ เพิ่ม'}</button>
       </div>`;
   }).join('');
   refreshCards();

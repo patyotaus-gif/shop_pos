@@ -12,7 +12,7 @@
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/order/order.css" />
+  <link rel="stylesheet" href="/order/order.css?v=20261005" />
   <!-- Self-hosted qrcodejs (davidshimjs) — avoids CDN/CORB blocks -->
   <script src="qrcode.min.js"></script>
 </head>
@@ -41,6 +41,10 @@
 <div id="loading">กำลังโหลดสินค้า...</div>
 <div id="error" style="display:none"></div>
 <div id="closedState" style="display:none">ร้านปิดรับออเดอร์ชั่วคราว กรุณาแวะมาใหม่อีกครั้ง</div>
+<div id="catalogTools" class="catalog-tools" hidden>
+  <label for="productSearch">ค้นหาสินค้า / เมนู</label>
+  <input id="productSearch" type="search" placeholder="พิมพ์ชื่อสินค้า เมนู หรือหมวดหมู่" autocomplete="off" />
+</div>
 <div id="catBar" class="cat-bar" hidden></div>
 <div id="products" style="display:none"></div>
 
@@ -174,7 +178,7 @@
 <!-- Page entry. Module scripts execute in document order, so main.js runs
      first (defines window.__startOrderPage), then the App Check module below
      starts the page once a token getter is ready. -->
-<script type="module" src="/order/js/main.js"></script>
+<script type="module" src="/order/js/main.js?v=20261005"></script>
 
 <!-- App Check (reCAPTCHA v3). This page talks to HTTP functions with plain
      fetch(), so we run the SDK in a module and expose a best-effort token

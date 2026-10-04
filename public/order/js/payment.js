@@ -1,8 +1,8 @@
 // Order form + PromptPay payment + slip verification.
 // Logic moved VERBATIM from the old public/order/index.html inline script —
 // do not "improve" payload/CRC/compression code here.
-import { shopId, apiFetch, orderContext } from './util.js';
-import { items } from './cart.js';
+import { shopId, apiFetch, orderContext } from './util.js?v=20261005';
+import { items, clearCart } from './cart.js?v=20261005';
 // Payload builder now lives in the shared module (also used by /subscribe);
 // re-exported so this module's interface (and its Node tests) is unchanged.
 import { crc16, buildPromptPayPayload } from '../../js/promptpay-qr.js';
@@ -70,6 +70,8 @@ async function submitOrder() {
       return;
     }
     pendingOrder = data;
+    // The server accepted these items. Do not restore them as a new draft.
+    clearCart();
     closeOrderModal();
     showPaymentScreen(data);
   } catch (e) {

@@ -1,8 +1,8 @@
 // Pre-checkout upsell popup: the shop's pinned products + live promos the
 // customer hasn't added yet. Shown at most once per page load; skipped
 // silently when there are no candidates. DOM-free at import time.
-import { escHtml, fmtBaht } from './util.js';
-import { addOne, getQty } from './cart.js';
+import { escHtml, fmtBaht } from './util.js?v=20261005';
+import { addOne, getQty } from './cart.js?v=20261005';
 
 let shown = false;
 let candidates = [];
@@ -14,7 +14,7 @@ let continueLabel = 'ไปชำระเงินต่อ';
 export function pickUpsell(products, inCartIds) {
   const inCart = new Set(inCartIds);
   return products
-    .filter((p) => p.stock > 0 && !inCart.has(p.id) && (p.pinned || p.originalPrice))
+    .filter((p) => p.stock > 0 && !(p.modifierGroups || []).length && !inCart.has(p.id) && (p.pinned || p.originalPrice))
     .sort((a, b) => (b.pinned === true ? 1 : 0) - (a.pinned === true ? 1 : 0))
     .slice(0, 4);
 }

@@ -1,8 +1,8 @@
 // Dine-in table ordering (QR โต๊ะ, โหมดสั่งเข้าครัวจ่ายทีหลัง): sends the
 // cart to /api/createTableOrder — no customer form, no payment. Each round
 // appends to the table's open tab until staff closes the bill.
-import { shopId, apiFetch, orderContext, escHtml } from './util.js';
-import { items, setQty } from './cart.js';
+import { shopId, apiFetch, orderContext, escHtml } from './util.js?v=20261005';
+import { items, clearCart } from './cart.js?v=20261005';
 
 export function initTableOrder() {
   document.getElementById('kitchenSendBtn').addEventListener('click', submitTableOrder);
@@ -17,7 +17,9 @@ export function openTableOrderSheet() {
   const list = items();
   if (!list.length) return;
   document.getElementById('kitchenItems').innerHTML = list.map((i) =>
-    `<div class="cart-item"><div class="cart-item-name">${escHtml(i.name)} × ${i.quantity}</div></div>`
+    `<div class="cart-item"><div><div class="cart-item-name">${escHtml(i.name)} × ${i.quantity}</div>
+      <div class="cart-item-mods">${(i.modifiers || []).map(m => escHtml(m.optionName)).join(' · ')}</div>
+      ${i.notes ? `<div class="cart-item-mods">${escHtml(i.notes)}</div>` : ''}</div></div>`
   ).join('');
   document.getElementById('kitchenStatus').textContent = '';
   document.getElementById('kitchenStatus').className = '';
@@ -71,7 +73,7 @@ async function submitTableOrder() {
       return;
     }
     // Clear the cart so the next round starts fresh (appends to same tab).
-    for (const i of list) setQty(i.id, 0);
+    clearCart();
     document.getElementById('kitchenNote').value = '';
     document.getElementById('kitchenView').classList.add('hidden');
     document.getElementById('kitchenDone').classList.remove('hidden');
