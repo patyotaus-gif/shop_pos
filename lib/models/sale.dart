@@ -60,7 +60,19 @@ class SaleItem {
     this.notes,
   });
 
-  double get profit => (price - costPrice) * quantity;
+  double get unitCost {
+    final cost = costPrice +
+        modifiers.fold<double>(0, (value, m) => value + (m.costAdjust ?? 0));
+    return cost.isFinite ? (cost * 100).round() / 100 : 0;
+  }
+
+  double get profit => subtotal - unitCost * quantity;
+  bool get hasKnownCost =>
+      (costKnown == true || (costKnown == null && costPrice > 0)) &&
+      costPrice.isFinite &&
+      costPrice >= 0 &&
+      modifiers.every((m) =>
+          m.costAdjust != null && m.costAdjust!.isFinite && m.costAdjust! >= 0);
 
   factory SaleItem.fromMap(Map<String, dynamic> m) => SaleItem(
         productId: m['productId'] ?? '',
@@ -156,6 +168,26 @@ class Sale {
   /// Sum of line item subtotals — total minus service charge plus discount.
   /// Useful for receipts that want to show subtotal explicitly.
   double get itemsSubtotal => total - serviceCharge + discount;
+
+  /// Allocate the bill discount in satang; rounded lines must still sum exactly.
+  List<double> get itemNetRevenue {
+    final weights = items.map((i) => (i.subtotal * 100).round()).toList();
+    final sum = weights.fold<int>(0, (value, w) => value + w);
+    if (sum == 0) return List.filled(items.length, 0);
+    final cut = (discount * 100).round().clamp(0, sum);
+    final cuts = weights.map((w) => cut * w ~/ sum).toList();
+    final ranks = List.generate(items.length, (i) => i)
+      ..sort((a, b) {
+        final compare =
+            (cut * weights[b] % sum).compareTo(cut * weights[a] % sum);
+        return compare == 0 ? a.compareTo(b) : compare;
+      });
+    final remainder = cut - cuts.fold<int>(0, (value, c) => value + c);
+    for (var n = 0; n < remainder; n++) {
+      cuts[ranks[n]]++;
+    }
+    return List.generate(items.length, (i) => (weights[i] - cuts[i]) / 100);
+  }
 
   factory Sale.fromFirestore(Map<String, dynamic> data, String id) => Sale(
         id: id,

@@ -10,6 +10,7 @@ import '../models/table_order.dart';
 import '../utils/receipt_number.dart';
 import 'shop_database.dart';
 import 'sale_service.dart';
+import 'money_ledger.dart';
 
 /// Tables + their open tabs.
 ///
@@ -326,13 +327,32 @@ class TableService {
       final next = nextReceiptSeq(
           data?['day'] as String?, todayKey, (data?['seq'] ?? 0) as int);
 
+      final quantities = <String, int>{};
+      for (final item in order.items) {
+        quantities.update(item.productId, (q) => q + item.quantity,
+            ifAbsent: () => item.quantity);
+      }
+      final counted = <String, int>{};
+      for (final entry in quantities.entries) {
+        final product = await tx.get(_productsCol().doc(entry.key));
+        if (!product.exists) throw StateError('ไม่พบสินค้า กรุณาตรวจสอบบิล');
+        if (product.data()?['stockMode'] == 'recipe') continue;
+        if ((product.data()?['stock'] as num? ?? 0) < entry.value) {
+          throw StateError('สต็อกไม่พอ กรุณาตรวจสอบก่อนรับชำระ');
+        }
+        counted[entry.key] = entry.value;
+      }
+      final control = await MoneyLedger.read(tx, _shopDoc());
+
       tx.set(saleRef, {
         ...sale.toFirestore(),
         'receiptNo': formatReceiptNo(next.day, next.seq),
+        'accountingVersion': 1,
+        'stockDeducted': counted,
       });
-      for (final item in order.items) {
-        tx.update(_productsCol().doc(item.productId),
-            {'stock': FieldValue.increment(-item.quantity)});
+      for (final entry in counted.entries) {
+        tx.update(_productsCol().doc(entry.key),
+            {'stock': FieldValue.increment(-entry.value)});
       }
       tx.update(_tableOrdersCol().doc(order.id), {
         'status': TableOrderStatus.closed.name,
@@ -344,13 +364,15 @@ class TableService {
         'currentOrderId': FieldValue.delete(),
       });
       tx.set(counterRef, {'day': next.day, 'seq': next.seq});
+      MoneyLedger.recordSale(tx, _shopDoc(), control, saleRef.id, sale);
       return saleRef.id;
     });
   }
 
   /// Void the tab without creating a Sale (mistakes, walkouts). Frees the
   /// table; does NOT touch stock.
-  static Future<void> cancelOrder(TableOrder order) async {
+  static Future<void> cancelOrder(TableOrder order,
+      {String reason = 'ยกเลิกก่อนชำระ', bool consumePrepared = true}) async {
     final ref = _tableOrdersCol().doc(order.id);
     final tableRef = _tablesCol().doc(order.tableId);
     await ref.firestore.runTransaction((tx) async {
@@ -365,9 +387,89 @@ class TableService {
       if (table.data()?['currentOrderId'] != order.id) {
         throw StateError('โต๊ะเปลี่ยนบิลแล้ว');
       }
+      if (reason.trim().isEmpty) throw StateError('กรุณาระบุเหตุผลยกเลิก');
+      if (billingSignature(current) != billingSignature(order)) {
+        throw StateError('รายการเปลี่ยนแล้ว กรุณาตรวจสอบก่อนยกเลิก');
+      }
+      final prepared = consumePrepared
+          ? current.items
+              .where((i) => i.kitchenStatus != KitchenStatus.pending)
+              .toList()
+          : <TableOrderItem>[];
+      final productUsage = <String, int>{};
+      final ingredientUsage = <String, double>{};
+      final missing = <String>[];
+      void addIngredient(Map<String, dynamic> row, int quantity) {
+        final id = row['ingredientId'] as String?;
+        final amount = (row['qty'] as num? ?? 0).toDouble() * quantity;
+        if (id != null && amount > 0) {
+          ingredientUsage.update(id, (v) => v + amount, ifAbsent: () => amount);
+        }
+      }
+
+      for (final item in prepared) {
+        final product = await tx.get(_productsCol().doc(item.productId));
+        if (!product.exists) {
+          missing.add(item.productId);
+          continue;
+        }
+        final data = product.data()!;
+        if (data['stockMode'] == 'recipe') {
+          for (final line in (data['recipe'] as List? ?? const [])) {
+            addIngredient(Map<String, dynamic>.from(line), item.quantity);
+          }
+        } else {
+          productUsage.update(item.productId, (v) => v + item.quantity,
+              ifAbsent: () => item.quantity);
+        }
+        for (final modifier in item.modifiers) {
+          final group = await tx.get(
+              _shopDoc().collection('modifierGroups').doc(modifier.groupId));
+          for (final option
+              in (group.data()?['options'] as List? ?? const [])) {
+            if (option['id'] == modifier.optionId) {
+              for (final line
+                  in (option['ingredientUsage'] as List? ?? const [])) {
+                addIngredient(Map<String, dynamic>.from(line), item.quantity);
+              }
+            }
+          }
+        }
+      }
+      final liveUsage = <String, double>{};
+      for (final entry in ingredientUsage.entries) {
+        if ((await tx.get(_shopDoc().collection('ingredients').doc(entry.key)))
+            .exists) {
+          liveUsage[entry.key] = entry.value;
+        } else {
+          missing.add(entry.key);
+        }
+      }
+      for (final entry in productUsage.entries) {
+        tx.update(_productsCol().doc(entry.key),
+            {'stock': FieldValue.increment(-entry.value)});
+      }
+      for (final entry in liveUsage.entries) {
+        tx.update(_shopDoc().collection('ingredients').doc(entry.key),
+            {'stock': FieldValue.increment(-entry.value)});
+      }
+      if (prepared.isNotEmpty) {
+        tx.set(
+            _shopDoc().collection('inventoryWaste').doc('table-${order.id}'), {
+          'tableOrderId': order.id,
+          'reason': reason.trim(),
+          'createdAt': FieldValue.serverTimestamp(),
+          'items': prepared.map((i) => i.toMap()).toList(),
+          'productUsage': productUsage,
+          'ingredientUsage': liveUsage,
+          'missingInventory': missing,
+        });
+      }
       tx.update(ref, {
         'status': TableOrderStatus.cancelled.name,
-        'closedAt': Timestamp.now()
+        'closedAt': Timestamp.now(),
+        'cancelReason': reason.trim(),
+        'consumedPreparedItems': consumePrepared,
       });
       tx.update(tableRef, {
         'status': TableStatus.available.name,

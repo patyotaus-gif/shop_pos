@@ -26,6 +26,14 @@ const offlineSales = require('./offline_sales').createOfflineSales({
 exports.offlinePrepare = onCall(offlineSales.prepare);
 exports.offlineSync = onCall(offlineSales.sync);
 
+const orderAccounting = require('./order_accounting').handlers({db:admin.firestore(), FieldValue:admin.firestore.FieldValue, HttpsError});
+exports.confirmOrderPayment = onCall(orderAccounting.confirm);
+exports.transitionOrder = onCall(orderAccounting.transition);
+const cashAccounting=require('./cash_accounting').handlers({db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError});
+exports.openCashSession=onCall(cashAccounting.open);
+exports.closeCashSession=onCall(cashAccounting.close);
+exports.collectDebtPayment=onCall(cashAccounting.collectDebt);
+exports.getAccountingReview=onCall(require('./accounting_review').handler({db:admin.firestore(),HttpsError}));
 const stripeSecretKey = defineSecret("STRIPE_SECRET_KEY");
 const stripeWebhookSecret = defineSecret("STRIPE_WEBHOOK_SECRET");
 const lineChannelAccessToken = defineSecret("LINE_CHANNEL_ACCESS_TOKEN");
@@ -81,30 +89,9 @@ async function getBilling() {
 // Extend a shop's subscription after a verified payment (Stripe webhook
 // or PromptPay slip). Stacks on top of remaining time. Returns the new
 // end date.
-async function applySubscriptionPayment(shopId, tier, billingCycle, locations, planConfig) {
-  const shopRef = admin.firestore().collection("shops").doc(shopId);
-  const shopDoc = await shopRef.get();
-
-  let baseDate = new Date();
-  if (shopDoc.exists) {
-    const existingEnd = shopDoc.data().subscriptionEndsAt?.toDate();
-    if (existingEnd && existingEnd > baseDate) baseDate = existingEnd;
-  }
-  const newEndDate = new Date(baseDate.getTime() + planConfig.days * 24 * 60 * 60 * 1000);
-
-  await shopRef.set(
-    {
-      subscriptionStatus: "active",
-      subscriptionEndsAt: admin.firestore.Timestamp.fromDate(newEndDate),
-      tier,
-      shopType: tier === 'restaurant' ? 'restaurant' : shopTypeOf(shopDoc.exists ? shopDoc.data() : {}),
-      plan: billingCycle, // billing cycle — keep as plan for legacy
-      locations: Math.max(1, parseInt(locations || 1)),
-      lastPaymentAt: admin.firestore.FieldValue.serverTimestamp(),
-    },
-    { merge: true }
-  );
-  return newEndDate;
+async function applySubscriptionPayment(shopId, tier, billingCycle, locations, planConfig, paymentId) {
+  return require('./subscription_payment').apply({db:admin.firestore(),Timestamp:admin.firestore.Timestamp,
+    FieldValue:admin.firestore.FieldValue,shopId,tier,billingCycle,locations,planConfig,paymentId,shopTypeOf});
 }
 
 const MARKETPLACE_TAKE_RATE = 0.025; // 2.5% — applied at marketplace order
@@ -365,30 +352,29 @@ exports.createOrderCheckout = onRequest(
       return;
     }
 
-    const total = items.reduce((s, item) => s + item.price * item.quantity, 0);
-
-    if (total < 20) {
-      res.status(400).json({ error: "ยอดสั่งขั้นต่ำ ฿20" });
-      return;
-    }
-
-    for (const item of items) {
-      if (typeof item.productId !== 'string' || !item.productId || item.productId.includes('/')) {
-        res.status(400).json({ error: 'ข้อมูลสินค้าไม่ถูกต้อง' }); return;
+    if(items.length>100){res.status(400).json({error:'รายการมากเกินไป'});return;}
+    const groupsById = await loadModifierGroups(shopRef);
+    const pricedItems=[];
+    try {
+      for (const raw of items) {
+        if(!require('./order_accounting').validId(raw.productId) || !Number.isInteger(raw.quantity) || raw.quantity<1 || raw.quantity>99)throw new Error('ข้อมูลสินค้าไม่ถูกต้อง');
+        const p=(await shopRef.collection('products').doc(raw.productId).get()).data();
+        if(!p)throw new Error('ไม่พบสินค้า');
+        const line=priceLine({productId:raw.productId,quantity:raw.quantity,optionIds:raw.optionIds||[],notes:''},p,(p.modifierGroupIds||[]).map(id=>groupsById[id]).filter(Boolean),new Date());
+        pricedItems.push({productId:raw.productId,productName:line.productName,quantity:raw.quantity,price:Math.round(line.unitPrice*100)/100,
+          modifiers:line.modifiers,costPrice:Number(p.costPrice||0),costKnown:Number(p.costPrice)>0,category:String(p.category||'ทั่วไป')});
       }
-      const product = (await shopRef.collection('products').doc(item.productId).get()).data();
-      item.costPrice = Number(product?.costPrice || 0);
-      item.costKnown = Number(product?.costPrice) > 0;
-      item.category = String(product?.category || 'ไม่ทราบหมวดหมู่ ณ เวลาขาย');
-    }
-
+    } catch(e){res.status(400).json({error:e.message});return;}
+    const total=Math.round(pricedItems.reduce((sum,i)=>sum+i.price*i.quantity,0)*100)/100;
+    if(total<20){res.status(400).json({error:'ยอดสั่งขั้นต่ำ ฿20'});return;}
     // สร้าง order doc ก่อน (status: pendingPayment)
     const orderRef = shopRef.collection("orders").doc();
 
     await orderRef.set({
       customerName,
       customerPhone,
-      items,
+      items:pricedItems,
+      paymentMethod:'stripe',
       total,
       status: "pendingPayment",
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -400,7 +386,7 @@ exports.createOrderCheckout = onRequest(
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card", "promptpay"],
-      line_items: items.map((item) => ({
+      line_items: pricedItems.map((item) => ({
         price_data: {
           currency: "thb",
           product_data: { name: item.productName },
@@ -415,6 +401,7 @@ exports.createOrderCheckout = onRequest(
       client_reference_id: orderRef.id,
     });
 
+    await orderRef.update({stripeSessionId:session.id});
     res.json({ url: session.url, orderId: orderRef.id });
   }
 );
@@ -616,7 +603,7 @@ function hashString(s) {
 // Stripe webhook
 // ────────────────────────────────────────────────
 exports.stripeWebhook = onRequest(
-  { secrets: [stripeSecretKey, stripeWebhookSecret], rawBody: true },
+  { secrets: [stripeSecretKey, stripeWebhookSecret, lineChannelAccessToken], rawBody: true },
   async (req, res) => {
     const Stripe = require("stripe");
     const stripe = Stripe(stripeSecretKey.value());
@@ -635,8 +622,18 @@ exports.stripeWebhook = onRequest(
       return;
     }
 
-    if (event.type === "checkout.session.completed") {
+    if (event.type === 'refund.updated' || event.type === 'refund.created') {
+      const refund=event.data.object, metadata=refund.metadata||{};
+      if (refund.status==='succeeded' && metadata.pokpokShopId && metadata.pokpokSaleId) {
+        await require('./refund').refundSale({db:admin.firestore(),stripe,
+          shopId:metadata.pokpokShopId,saleId:metadata.pokpokSaleId,
+          reason:metadata.pokpokReason||'Stripe refund completed',returnToStock:metadata.pokpokReturnToStock==='true',
+          actor:'stripe',FieldValue:admin.firestore.FieldValue});
+      }
+    }
+    if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
       const session = event.data.object;
+      if (session.payment_status !== 'paid') {res.json({received:true});return;}
       const { shopId, type, plan, orderId, tier, billingCycle, locations } =
         session.metadata;
 
@@ -654,74 +651,12 @@ exports.stripeWebhook = onRequest(
           return;
         }
 
-        const orderRef = admin
-          .firestore()
-          .collection("shops")
-          .doc(shopId)
-          .collection("orders")
-          .doc(orderId);
-
-        const orderDoc = await orderRef.get();
-        if (!orderDoc.exists) {
-          console.error("Order not found:", orderId);
-          res.json({ received: true });
-          return;
-        }
-
-        // ลด stock สินค้าแต่ละชิ้น
-        const orderData = orderDoc.data();
-        const batch = admin.firestore().batch();
-        for (const item of orderData.items) {
-          const productRef = admin
-            .firestore()
-            .collection("shops")
-            .doc(shopId)
-            .collection("products")
-            .doc(item.productId);
-          batch.update(productRef, {
-            stock: admin.firestore.FieldValue.increment(-item.quantity),
-          });
-        }
-        await batch.commit();
-
-        // อัพเดต order status → paid
-        await orderRef.update({
-          status: "paid",
-          paidAt: admin.firestore.FieldValue.serverTimestamp(),
-          stripeSessionId: session.id,
-        });
-
-        // สร้าง sale record เพื่อให้ขึ้นใน dashboard/report
-        const saleRef = admin
-          .firestore()
-          .collection("shops")
-          .doc(shopId)
-          .collection("sales")
-          .doc();
-
-        await saleRef.set({
-          items: orderData.items.map((item) => ({
-            productId: item.productId,
-            productName: item.productName,
-            price: item.price,
-            quantity: item.quantity,
-            costPrice: item.costPrice ?? 0,
-            costKnown: item.costKnown ?? false,
-            ...(item.category ? { category: item.category } : {}),
-            subtotal: item.price * item.quantity,
-          })),
-          total: orderData.total,
-          discount: 0,
-          paid: orderData.total,
-          change: 0,
-          paymentMethod: "online",
-          isDebt: false,
-          customerName: orderData.customerName,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          orderId: orderRef.id,
-          stripePaymentIntentId: session.payment_intent || null,
-        });
-
+        const {confirmOrder} = require('./order_accounting');
+        const result = await confirmOrder({db:admin.firestore(),FieldValue:admin.firestore.FieldValue,
+          shopId,orderId,actor:'stripe',stripeSession:session,paymentRef:session.payment_intent});
+        if (result.alreadyRecorded) {res.json({received:true});return;}
+        const orderRef = admin.firestore().collection('shops').doc(shopId).collection('orders').doc(orderId);
+        const orderData = (await orderRef.get()).data();
         // ส่ง FCM notification ไปยังเจ้าของร้าน
         const shopDoc = await admin.firestore().collection("shops").doc(shopId).get();
         const fcmToken = shopDoc.data()?.fcmToken;
@@ -774,7 +709,8 @@ exports.stripeWebhook = onRequest(
           resolvedTier,
           resolvedCycle,
           Math.max(1, parseInt(locations || 1)),
-          planConfig
+          planConfig,
+          session.id
         );
 
         console.log(
@@ -800,8 +736,13 @@ exports.createRefund = onCall(
     if (!request.auth || request.auth.uid !== shopId) throw new HttpsError('permission-denied', 'Shop owner required');
     const { refundSale } = require('./refund');
     const Stripe = require('stripe');
-    return refundSale({db:admin.firestore(),stripe:Stripe(stripeSecretKey.value()),shopId,saleId,
-      reason:typeof reason==='string' ? reason.slice(0,500) : '',FieldValue:admin.firestore.FieldValue});
+    try { return await refundSale({db:admin.firestore(),stripe:Stripe(stripeSecretKey.value()),shopId,saleId,
+      reason:typeof reason==='string' ? reason.slice(0,500) : '',returnToStock:request.data.returnToStock===true,
+      refundMethod:request.data.refundMethod,actor:request.auth.uid,FieldValue:admin.firestore.FieldValue});
+    } catch(e) {
+      if(e.code===14)throw new HttpsError('unavailable','กรุณาลองบิลเดิมอีกครั้ง');
+      throw new HttpsError('failed-precondition',e.message);
+    }
   }
 );
 
@@ -2545,19 +2486,9 @@ exports.onSaleDeductIngredients = onDocumentCreated(
     const liveIds = Object.keys(usage);
     if (!liveIds.length) return;
 
-    await db.runTransaction(async (tx) => {
-      const saleSnap = await tx.get(snap.ref);
-      if (!saleSnap.exists || saleSnap.data().ingredientsDeducted) return;
-      for (const id of liveIds) {
-        tx.update(shopRef.collection("ingredients").doc(id), {
-          stock: admin.firestore.FieldValue.increment(-usage[id]),
-        });
-      }
-      tx.update(snap.ref, {
-        ingredientsDeducted: true,
-        ingredientUsage: usage,
-      });
-    });
+    const deducted = await require('./ingredient_accounting').deduct({db,shop:shopRef,saleRef:snap.ref,usage,
+      FieldValue:admin.firestore.FieldValue});
+    if (!deducted) return;
 
     // Low-stock alert only on the crossing (pre > threshold → post ≤) so a
     // busy night doesn't spam the owner on every sale.
@@ -2595,23 +2526,13 @@ exports.onSaleRefundRestoreIngredients = onDocumentUpdated(
     const before = event.data?.before?.data();
     const after = event.data?.after?.data();
     if (!before || !after) return;
-    if (before.isRefunded === true || after.isRefunded !== true) return;
+    if (after.isRefunded !== true || after.returnToStock === false) return;
     const usage = after.ingredientUsage;
     if (!usage || after.ingredientsRestored) return;
 
     const db = admin.firestore();
     const shopRef = db.collection("shops").doc(event.params.shopId);
-    await db.runTransaction(async (tx) => {
-      const saleSnap = await tx.get(event.data.after.ref);
-      if (saleSnap.data()?.ingredientsRestored) return;
-      for (const [id, qty] of Object.entries(usage)) {
-        tx.set(
-          shopRef.collection("ingredients").doc(id),
-          { stock: admin.firestore.FieldValue.increment(qty) },
-          { merge: true }
-        );
-      }
-      tx.update(event.data.after.ref, { ingredientsRestored: true });
-    });
+    await require('./ingredient_accounting').restore({db,shop:shopRef,saleRef:event.data.after.ref,
+      FieldValue:admin.firestore.FieldValue});
   }
 );

@@ -25,7 +25,18 @@ class DashboardScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('ภาพรวม'),
         centerTitle: true,
-        actions: [IconButton(tooltip:'คู่มือเริ่มตั้งค่าร้าน',icon:const Icon(Icons.help_outline),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>Scaffold(appBar:AppBar(title:const Text('เริ่มตั้งค่าร้าน')),body:const SingleChildScrollView(child:ShopSetupChecklist(alwaysShow:true))))))],
+        actions: [
+          IconButton(
+              tooltip: 'คู่มือเริ่มตั้งค่าร้าน',
+              icon: const Icon(Icons.help_outline),
+              onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => Scaffold(
+                          appBar: AppBar(title: const Text('เริ่มตั้งค่าร้าน')),
+                          body: const SingleChildScrollView(
+                              child: ShopSetupChecklist(alwaysShow: true))))))
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {},
@@ -37,20 +48,39 @@ class DashboardScreen extends StatelessWidget {
             StreamBuilder<List<Sale>>(
               stream: SaleService.watchToday(),
               builder: (ctx, snap) {
-                final sales = snap.data ?? [];
+                if (snap.hasError) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Text(
+                        'โหลดสรุปยอดไม่สำเร็จ กรุณาตรวจการเชื่อมต่อ ยอดที่ยังโหลดไม่ได้ไม่ใช่ยอดศูนย์'),
+                  );
+                }
+                if (!snap.hasData) return const LinearProgressIndicator();
+                final sales = (snap.data ?? <Sale>[])
+                    .where((s) => !s.isRefunded)
+                    .toList();
                 final revenue = sales.fold<double>(0, (s, e) => s + e.total);
-                final cashRevenue = sales.where((s) => !s.isDebt).fold<double>(0, (s, e) => s + e.total);
-                final debtRevenue = sales.where((s) => s.isDebt).fold<double>(0, (s, e) => s + e.total);
+                final cashRevenue = sales
+                    .where((s) =>
+                        !s.isDebt && s.paymentMethod == PaymentMethod.cash)
+                    .fold<double>(0, (s, e) => s + e.total);
+                final debtRevenue = sales
+                    .where((s) => s.isDebt)
+                    .fold<double>(0, (s, e) => s + e.total);
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('วันนี้', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                    Text('วันนี้',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
                     Row(
                       children: [
                         _BigCard(
-                          label: 'รายได้รวม',
+                          label: 'ยอดขายสุทธิ',
                           value: '฿${_baht.format(revenue)}',
                           icon: Icons.attach_money,
                           color: Colors.green,
@@ -68,14 +98,14 @@ class DashboardScreen extends StatelessWidget {
                     Row(
                       children: [
                         _BigCard(
-                          label: 'เงินสด',
+                          label: 'ขายรับเงินสด',
                           value: '฿${_baht.format(cashRevenue)}',
                           icon: Icons.payments_outlined,
                           color: Colors.teal,
                         ),
                         const SizedBox(width: 8),
                         _BigCard(
-                          label: 'ยอดเชื่อ',
+                          label: 'ขายเชื่อวันนี้',
                           value: '฿${_baht.format(debtRevenue)}',
                           icon: Icons.person_outline,
                           color: Colors.orange,
@@ -97,8 +127,7 @@ class DashboardScreen extends StatelessWidget {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(
-                      builder: (_) => const CashSessionScreen()),
+                  MaterialPageRoute(builder: (_) => const CashSessionScreen()),
                 ),
               ),
             ),
@@ -123,7 +152,8 @@ class DashboardScreen extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    subtitle: const Text('เปิด/ปิดรับออเดอร์จากหน้าเว็บลูกค้า (/order)'),
+                    subtitle: const Text(
+                        'เปิด/ปิดรับออเดอร์จากหน้าเว็บลูกค้า (/order)'),
                     value: !closed,
                     activeThumbColor: Colors.green,
                     onChanged: (open) =>
@@ -159,10 +189,14 @@ class DashboardScreen extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.warning_amber, color: Colors.orange, size: 18),
+                            const Icon(Icons.warning_amber,
+                                color: Colors.orange, size: 18),
                             const SizedBox(width: 4),
                             Text('สินค้าใกล้หมด (${products.length} รายการ)',
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.bold)),
                           ],
                         ),
                         const SizedBox(height: 8),
@@ -173,12 +207,15 @@ class DashboardScreen extends StatelessWidget {
                                 leading: const CircleAvatar(
                                   backgroundColor: Colors.red,
                                   radius: 16,
-                                  child: Icon(Icons.inventory_2_outlined, color: Colors.white, size: 16),
+                                  child: Icon(Icons.inventory_2_outlined,
+                                      color: Colors.white, size: 16),
                                 ),
                                 title: Text(p.name),
                                 trailing: Text(
                                   'เหลือ ${p.stock}',
-                                  style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.bold),
                                 ),
                               ),
                             )),
@@ -225,7 +262,10 @@ class DashboardScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('สินค้าขายดีวันนี้',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
                     ...top5.asMap().entries.map((e) => Card(
                           margin: const EdgeInsets.symmetric(vertical: 3),
@@ -246,9 +286,11 @@ class DashboardScreen extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text('${e.value.qty} ชิ้น',
-                                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold)),
                                 Text('฿${_baht.format(e.value.revenue)}',
-                                    style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                    style: const TextStyle(
+                                        fontSize: 11, color: Colors.grey)),
                               ],
                             ),
                           ),
@@ -268,7 +310,8 @@ class _TopItem {
   final String name;
   final int qty;
   final double revenue;
-  const _TopItem({required this.name, required this.qty, required this.revenue});
+  const _TopItem(
+      {required this.name, required this.qty, required this.revenue});
 }
 
 /// Entry point to the B2B marketplace ("สั่งของ"). A full-width banner on
@@ -333,7 +376,11 @@ class _BigCard extends StatelessWidget {
   final IconData icon;
   final Color color;
 
-  const _BigCard({required this.label, required this.value, required this.icon, required this.color});
+  const _BigCard(
+      {required this.label,
+      required this.value,
+      required this.icon,
+      required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -354,9 +401,13 @@ class _BigCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(value,
-                      style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 14),
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                          fontSize: 14),
                       overflow: TextOverflow.ellipsis),
-                  Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                  Text(label,
+                      style: const TextStyle(fontSize: 11, color: Colors.grey)),
                 ],
               ),
             ),

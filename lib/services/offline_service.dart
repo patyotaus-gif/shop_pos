@@ -45,6 +45,17 @@ class OfflineService {
           .extractBytes());
   static Future<List<Map<String, Object?>>> profiles() async =>
       (await store).permits();
+  static Future<int> pendingForShop(String shopId) async {
+    final local = await store;
+    final ids = (await local.permits())
+        .where((p) => p['shop'] == shopId)
+        .map((p) => p['id'])
+        .toSet();
+    return (await local.receipts())
+        .where((r) => ids.contains(r['permit']) && r['status'] != 'synced')
+        .length;
+  }
+
   static Future<Map<String, dynamic>> prepare(String pin) async {
     if (!RegExp(r'^\d{6,8}$').hasMatch(pin)) {
       throw StateError('ใช้ PIN ออฟไลน์ 6–8 หลัก');

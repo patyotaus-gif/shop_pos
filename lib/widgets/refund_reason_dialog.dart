@@ -1,16 +1,30 @@
 import 'package:flutter/material.dart';
+import '../models/sale.dart';
+
+class RefundDecision {
+  const RefundDecision(this.reason, this.returnToStock, this.method);
+  final String reason;
+  final bool returnToStock;
+  final PaymentMethod method;
+}
 
 class RefundReasonDialog extends StatefulWidget {
   const RefundReasonDialog(
-      {super.key, required this.amount, required this.online});
+      {super.key,
+      required this.amount,
+      required this.online,
+      this.debt = false});
   final String amount;
   final bool online;
+  final bool debt;
   @override
   State<RefundReasonDialog> createState() => _RefundReasonDialogState();
 }
 
 class _RefundReasonDialogState extends State<RefundReasonDialog> {
   String? _reason;
+  bool _returnToStock = false;
+  PaymentMethod _method = PaymentMethod.cash;
   final _other = TextEditingController();
   @override
   void dispose() {
@@ -50,6 +64,29 @@ class _RefundReasonDialogState extends State<RefundReasonDialog> {
             onChanged: (_) => setState(() {}),
           ),
         const SizedBox(height: 12),
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          value: _returnToStock,
+          title: const Text('คืนสินค้า / วัตถุดิบเข้าสต็อก'),
+          subtitle: const Text('เลือกเฉพาะของที่ยังนำกลับไปขายหรือใช้ได้'),
+          onChanged: (value) => setState(() => _returnToStock = value ?? false),
+        ),
+        if (widget.debt) ...[
+          const Text('ยกเลิกหนี้คงค้าง และคืนเฉพาะเงินที่รับชำระแล้ว'),
+          DropdownButtonFormField<PaymentMethod>(
+            initialValue: _method,
+            decoration: const InputDecoration(
+                labelText: 'ช่องทางคืนเงินที่รับชำระหนี้'),
+            items: [
+              PaymentMethod.cash,
+              PaymentMethod.transfer,
+              PaymentMethod.qr
+            ]
+                .map((m) => DropdownMenuItem(value: m, child: Text(m.label)))
+                .toList(),
+            onChanged: (m) => setState(() => _method = m ?? PaymentMethod.cash),
+          ),
+        ],
         Text(widget.online
             ? 'ระบบจะส่งคำขอคืนเงินผ่านผู้ให้บริการชำระเงิน'
             : 'การบันทึกนี้ไม่โอนเงินคืนอัตโนมัติ โปรดคืนเงินให้ลูกค้าตามช่องทางที่รับชำระ'),
@@ -60,7 +97,8 @@ class _RefundReasonDialogState extends State<RefundReasonDialog> {
         FilledButton(
           onPressed: reason == null || reason.isEmpty
               ? null
-              : () => Navigator.pop(context, reason),
+              : () => Navigator.pop(
+                  context, RefundDecision(reason, _returnToStock, _method)),
           child: const Text('ยืนยันคืนเงิน'),
         ),
       ],

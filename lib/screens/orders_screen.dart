@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../models/order.dart';
 
 import '../services/order_service.dart';
+import '../widgets/shop_operation.dart';
 
 /// Top-of-screen filter — replaces the old "รอดำเนินการ / ทั้งหมด" tabs.
 /// `action` is the default because that's what the shop owner opens this
@@ -36,7 +37,6 @@ extension _OrderFilterX on _OrderFilter {
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
 
-
   @override
   State<OrdersScreen> createState() => _OrdersScreenState();
 }
@@ -63,9 +63,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     StreamBuilder<List<ShopOrder>>(
                       stream: OrderService.watchAll(),
                       builder: (context, snap) {
-                        final count = (snap.data ?? const [])
-                            .where(f.matches)
-                            .length;
+                        final count =
+                            (snap.data ?? const []).where(f.matches).length;
                         return _FilterChip(
                           label: f.label,
                           count: count,
@@ -89,7 +88,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
           ),
         ],
       ),
-
     );
   }
 }
@@ -117,8 +115,7 @@ class _FilterChip extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(100),
         child: Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -133,8 +130,8 @@ class _FilterChip extends StatelessWidget {
               if (count > 0) ...[
                 const SizedBox(width: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 6, vertical: 1),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                   decoration: BoxDecoration(
                     color: selected
                         ? cs.onPrimary.withValues(alpha: 0.2)
@@ -169,8 +166,12 @@ class _OrderList extends StatelessWidget {
     return StreamBuilder<List<ShopOrder>>(
       stream: stream,
       builder: (ctx, snap) {
-        if (snap.hasError) return const Center(child: Text('โหลดข้อมูลไม่สำเร็จ'));
-        if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+        if (snap.hasError) {
+          return const Center(child: Text('โหลดข้อมูลไม่สำเร็จ'));
+        }
+        if (!snap.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
         final orders = snap.data!.where(filter.matches).toList();
         if (orders.isEmpty) {
           // Tailor the empty copy to the chip so the user knows whether
@@ -184,8 +185,7 @@ class _OrderList extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.inbox_outlined,
-                    size: 64, color: Colors.grey),
+                const Icon(Icons.inbox_outlined, size: 64, color: Colors.grey),
                 const SizedBox(height: 8),
                 Text(msg, style: const TextStyle(color: Colors.grey)),
               ],
@@ -327,7 +327,8 @@ class _OrderCard extends StatelessWidget {
                   const SizedBox(width: 6),
                 ],
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: _statusColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
@@ -340,6 +341,10 @@ class _OrderCard extends StatelessWidget {
                 ),
               ],
             ),
+            if (order.bankMatchPending &&
+                order.status == OrderStatus.pendingPayment)
+              const Text(
+                  'พบแจ้งเตือนยอดเงินตรงกัน โปรดตรวจเงินเข้าในแอปธนาคารก่อนยืนยัน'),
             if (order.slipUrl != null) ...[
               const SizedBox(height: 8),
               GestureDetector(
@@ -470,10 +475,48 @@ class _PendingPaymentActions extends StatelessWidget {
       ),
     );
     if (ok != true) return;
-    await OrderService.confirmPaid(
-      order.id,
-      paymentRef: refCtrl.text.trim().isEmpty ? null : refCtrl.text.trim(),
-    );
+    if (!context.mounted) return;
+    await performShopOperation(
+        context,
+        () => OrderService.confirmPaid(
+              order.id,
+              paymentRef:
+                  refCtrl.text.trim().isEmpty ? null : refCtrl.text.trim(),
+            ),
+        success: 'บันทึกรับเงินและยอดขายแล้ว');
+    refCtrl.dispose();
+  }
+
+  Future<void> _cancel(BuildContext context) async {
+    final ctrl = TextEditingController();
+    final reason = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+              title: const Text('ยกเลิกออเดอร์ที่ยังไม่ชำระ'),
+              content: TextField(
+                  controller: ctrl,
+                  maxLength: 500,
+                  decoration:
+                      const InputDecoration(labelText: 'เหตุผลที่ยกเลิก')),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('กลับ')),
+                FilledButton(
+                    onPressed: () {
+                      if (ctrl.text.trim().isNotEmpty) {
+                        Navigator.pop(ctx, ctrl.text.trim());
+                      }
+                    },
+                    child: const Text('ยืนยันยกเลิก')),
+              ],
+            ));
+    ctrl.dispose();
+    if (reason == null || !context.mounted) return;
+    await performShopOperation(
+        context,
+        () => OrderService.updateStatus(order.id, OrderStatus.cancelled,
+            reason: reason));
   }
 
   @override
@@ -481,8 +524,7 @@ class _PendingPaymentActions extends StatelessWidget {
     return Row(
       children: [
         OutlinedButton(
-          onPressed: () =>
-              OrderService.updateStatus(order.id, OrderStatus.cancelled),
+          onPressed: () => _cancel(context),
           style: OutlinedButton.styleFrom(
             foregroundColor: Colors.red,
             side: const BorderSide(color: Colors.red),
@@ -511,8 +553,10 @@ class _ActionButtons extends StatelessWidget {
   final ShopOrder order;
   const _ActionButtons({required this.order});
 
-  Future<void> _update(OrderStatus status) =>
-      OrderService.updateStatus(order.id, status);
+  Future<void> _update(BuildContext context, OrderStatus status) async {
+    await performShopOperation(
+        context, () => OrderService.updateStatus(order.id, status));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -520,18 +564,29 @@ class _ActionButtons extends StatelessWidget {
       children: [
         // Cancel
         OutlinedButton(
-          onPressed: () => _update(OrderStatus.cancelled),
+          onPressed: () => showDialog<void>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                    title: const Text('ออเดอร์นี้รับชำระแล้ว'),
+                    content: const Text(
+                        'คืนเงินได้ที่ รายงาน → รายการขาย → เลือกบิล → คืนเงิน เพื่อให้ยอดขาย สต็อก และเงินในรอบตรงกัน'),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('ตกลง'))
+                    ],
+                  )),
           style: OutlinedButton.styleFrom(
               foregroundColor: Colors.red,
               side: const BorderSide(color: Colors.red),
               padding: const EdgeInsets.symmetric(horizontal: 12)),
-          child: const Text('ยกเลิก', style: TextStyle(fontSize: 13)),
+          child: const Text('คืนเงิน', style: TextStyle(fontSize: 13)),
         ),
         const SizedBox(width: 8),
         // Main action
         Expanded(
           child: FilledButton(
-            onPressed: () => _update(_nextStatus),
+            onPressed: () => _update(context, _nextStatus),
             style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 12)),
             child: Text(_nextLabel, style: const TextStyle(fontSize: 13)),

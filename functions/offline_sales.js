@@ -1,4 +1,5 @@
 const crypto = require('node:crypto');
+const {ledgerContext,writeMovement,saleMovement}=require('./money_ledger');
 const { HttpsError } = require('firebase-functions/v2/https');
 const { priceCart, staffCap } = require('./staff_access');
 const { effectivePriceOf } = require('./tableorder');
@@ -80,9 +81,14 @@ function createOfflineSales({db, Timestamp, FieldValue, now = () => new Date()})
         }
       }
       const receiptNo='O-'+data.id;
-      tx.create(saleRef,{items,total,paid:data.paid,change:Math.round((data.paid-total)*100)/100,discount:0,paymentMethod:'cash',isDebt:false,isRefunded:false,
+      const context=await ledgerContext(tx,ctx.shop);
+      if(!context.sessionId || (context.openedAt && +sold<context.openedAt.toMillis()))review.push('เงินสดอยู่นอกรอบปัจจุบัน ต้องตรวจสอบรอบรับเงิน');
+      const sale={items,total,paid:data.paid,change:Math.round((data.paid-total)*100)/100,discount:0,paymentMethod:'cash',isDebt:false,isRefunded:false,
         createdAt:Timestamp.fromDate(sold),syncedAt:Timestamp.fromDate(now()),receiptNo,staffName:p.name,staffId:p.staffId,staffUid:p.uid,
-        offline:true,offlinePermitId:data.permitId,offlineDigest:digest,offlineReview:review,needsReview:review.length>0});
+        offline:true,offlinePermitId:data.permitId,offlineDigest:digest,offlineReview:review,needsReview:review.length>0,
+        accountingVersion:1,stockDeducted:Object.fromEntries(updates.map(u=>[u.ref.id,u.qty]))};
+      tx.create(saleRef,sale);
+      writeMovement(tx,ctx.shop,context,'sale-'+saleRef.id,{...saleMovement(sale,ctx.uid),saleId:saleRef.id},FieldValue);
       for(const u of updates)tx.update(u.ref,{stock:FieldValue.increment(-u.qty)});
       return {id:data.id,receiptNo,review};
     });

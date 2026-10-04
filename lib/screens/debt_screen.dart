@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../widgets/shop_operation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/debt.dart';
@@ -17,8 +19,12 @@ class DebtScreen extends StatelessWidget {
       body: StreamBuilder<List<Debt>>(
         stream: DebtService.watchUnpaid(),
         builder: (ctx, snap) {
-          if (snap.hasError) return const Center(child: Text('โหลดข้อมูลไม่สำเร็จ'));
-          if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+          if (snap.hasError) {
+            return const Center(child: Text('โหลดข้อมูลไม่สำเร็จ'));
+          }
+          if (!snap.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
           final debts = snap.data!;
           final totalDebt = debts.fold<double>(0, (s, e) => s + e.remaining);
 
@@ -27,7 +33,8 @@ class DebtScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.check_circle_outline, size: 64, color: Colors.green),
+                  Icon(Icons.check_circle_outline,
+                      size: 64, color: Colors.green),
                   SizedBox(height: 8),
                   Text('ไม่มีลูกหนี้คงค้าง'),
                 ],
@@ -50,7 +57,8 @@ class DebtScreen extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('ยอดหนี้รวม',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16)),
                     Text('฿${_baht.format(totalDebt)}',
                         style: const TextStyle(
                             fontWeight: FontWeight.bold,
@@ -108,7 +116,8 @@ class _DebtTile extends StatelessWidget {
                         fontSize: 16)),
                 if (debt.paidAmount > 0)
                   Text('ชำระแล้ว ฿${_baht.format(debt.paidAmount)}',
-                      style: const TextStyle(fontSize: 11, color: Colors.green)),
+                      style:
+                          const TextStyle(fontSize: 11, color: Colors.green)),
               ],
             ),
             const SizedBox(width: 4),
@@ -201,22 +210,20 @@ class _DebtTile extends StatelessWidget {
                                 child: Icon(
                                   s.isRefunded ? Icons.undo : Icons.check,
                                   size: 16,
-                                  color: s.isRefunded
-                                      ? Colors.red
-                                      : Colors.green,
+                                  color:
+                                      s.isRefunded ? Colors.red : Colors.green,
                                 ),
                               ),
                               title: Text(
                                 s.items
-                                    .map((e) =>
-                                        '${e.productName}×${e.quantity}')
+                                    .map(
+                                        (e) => '${e.productName}×${e.quantity}')
                                     .join(', '),
                                 style: const TextStyle(fontSize: 13),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              subtitle:
-                                  Text(_dateTime.format(s.createdAt)),
+                              subtitle: Text(_dateTime.format(s.createdAt)),
                               trailing: Text(
                                 '฿${_baht.format(s.total)}',
                                 style: TextStyle(
@@ -224,9 +231,7 @@ class _DebtTile extends StatelessWidget {
                                   decoration: s.isRefunded
                                       ? TextDecoration.lineThrough
                                       : null,
-                                  color: s.isRefunded
-                                      ? Colors.grey
-                                      : null,
+                                  color: s.isRefunded ? Colors.grey : null,
                                 ),
                               ),
                             );
@@ -244,44 +249,84 @@ class _DebtTile extends StatelessWidget {
     );
   }
 
-  void _showPayDialog(BuildContext context) {
+  Future<void> _showPayDialog(BuildContext context) async {
     final ctrl = TextEditingController();
-    showDialog(
+    final requestId = FirebaseFirestore.instance.collection('_ids').doc().id;
+    String method = 'cash';
+    bool busy = false;
+    await showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('รับชำระ: ${debt.customerName}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('ยอดคงค้าง: ฿${_baht.format(debt.remaining)}',
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: ctrl,
-              keyboardType: TextInputType.number,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'จำนวนที่รับ',
-                prefixText: '฿',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ยกเลิก')),
-          FilledButton(
-            onPressed: () async {
-              final amount = double.tryParse(ctrl.text) ?? 0;
-              if (amount <= 0) return;
-              await DebtService.recordPayment(debt.id, amount);
-              if (ctx.mounted) Navigator.pop(ctx);
-            },
-            child: const Text('บันทึก'),
-          ),
-        ],
-      ),
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+          builder: (ctx, setState) => PopScope(
+                canPop: !busy,
+                child: AlertDialog(
+                  title: const Text('รับชำระหนี้'),
+                  content: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Text(debt.customerName),
+                    Text('คงค้าง ฿${_baht.format(debt.remaining)}'),
+                    TextField(
+                        controller: ctrl,
+                        enabled: !busy,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        decoration: const InputDecoration(
+                            labelText: 'จำนวนเงินที่รับชำระ')),
+                    DropdownButtonFormField<String>(
+                      initialValue: method,
+                      decoration:
+                          const InputDecoration(labelText: 'ช่องทางรับเงิน'),
+                      items: const [
+                        DropdownMenuItem(value: 'cash', child: Text('เงินสด')),
+                        DropdownMenuItem(
+                            value: 'transfer', child: Text('โอนเงิน')),
+                        DropdownMenuItem(value: 'qr', child: Text('QR Code'))
+                      ],
+                      onChanged: busy
+                          ? null
+                          : (v) => setState(() => method = v ?? 'cash'),
+                    ),
+                  ]),
+                  actions: [
+                    TextButton(
+                        onPressed: busy ? null : () => Navigator.pop(ctx),
+                        child: const Text('กลับ')),
+                    FilledButton(
+                        onPressed: busy
+                            ? null
+                            : () async {
+                                final amount =
+                                    double.tryParse(ctrl.text.trim());
+                                if (amount == null ||
+                                    !amount.isFinite ||
+                                    amount <= 0 ||
+                                    amount > debt.remaining) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text(
+                                              'กรอกจำนวนมากกว่า 0 และไม่เกินยอดคงค้าง')));
+                                  return;
+                                }
+                                setState(() => busy = true);
+                                final ok = await performShopOperation(
+                                    ctx,
+                                    () => DebtService.recordPayment(
+                                        debt.id, amount,
+                                        requestId: requestId,
+                                        method: method,
+                                        expectedPaidAmount: debt.paidAmount));
+                                if (!ctx.mounted) return;
+                                if (ok) {
+                                  Navigator.pop(ctx);
+                                } else {
+                                  setState(() => busy = false);
+                                }
+                              },
+                        child: const Text('ยืนยันรับเงิน')),
+                  ],
+                ),
+              )),
     );
+    ctrl.dispose();
   }
 }

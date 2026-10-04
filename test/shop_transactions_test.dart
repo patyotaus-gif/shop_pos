@@ -58,6 +58,24 @@ void main() {
   });
   tearDown(() => ShopDatabase.overrideShop = null);
 
+  test('daily report includes the final fractional second, excludes next day',
+      () async {
+    final end = DateTime(2026, 10, 4, 23, 59, 59);
+    for (final entry in {
+      'last': end.add(const Duration(milliseconds: 999)),
+      'next': DateTime(2026, 10, 5),
+      'previous': DateTime(2026, 10, 3, 23, 59, 59),
+    }.entries) {
+      await shop.collection('sales').doc(entry.key).set({
+        ...sale(id: entry.key).toFirestore(),
+        'createdAt': Timestamp.fromDate(entry.value),
+      });
+    }
+    final rows =
+        await SaleService.watchByRange(DateTime(2026, 10, 4), end).first;
+    expect(rows.map((s) => s.id), ['last']);
+  });
+
   test('replaying checkout deducts once, allocates one receipt and one debt',
       () async {
     final draft = sale(debt: true);
@@ -84,15 +102,55 @@ void main() {
         (await shop.collection('products').doc('tea').get()).data()!['stock'],
         0);
   });
-  test('repeated refund restores stock only once and removes linked debt',
+  test('recipe checkout does not decrement a second counted product stock',
       () async {
-    final saved = await SaleService.commitSale(shop, sale(debt: true));
-    await SaleService.refundLocal(shop, saved.id);
-    await SaleService.refundLocal(shop, saved.id);
+    await shop
+        .collection('products')
+        .doc('tea')
+        .update({'stockMode': 'recipe', 'stock': 0});
+    await SaleService.commitSale(shop, sale());
     expect(
         (await shop.collection('products').doc('tea').get()).data()!['stock'],
-        5);
-    expect((await shop.collection('debts').get()).docs, isEmpty);
+        0);
+    expect(
+        (await shop.collection('sales').doc('sale-1').get())
+            .data()!['stockDeducted'],
+        isEmpty);
+  });
+  test('cancelling prepared food records waste once without inventing a sale',
+      () async {
+    final id = await open();
+    await shop.collection('products').doc('tea').update({
+      'stockMode': 'recipe',
+      'recipe': [
+        {'ingredientId': 'leaf', 'qty': 2}
+      ]
+    });
+    await shop.collection('ingredients').doc('leaf').set({'stock': 10});
+    await shop.collection('tableOrders').doc(id).update({
+      'items': [dish.copyWith(kitchenStatus: KitchenStatus.sent).toMap()]
+    });
+    final order = await readOrder(id);
+    await TableService.cancelOrder(order, reason: 'ลูกค้าไม่รับอาหาร');
+    await TableService.cancelOrder(order, reason: 'ลูกค้าไม่รับอาหาร');
+    expect(
+        (await shop.collection('ingredients').doc('leaf').get())
+            .data()!['stock'],
+        8);
+    expect((await shop.collection('inventoryWaste').get()).docs.length, 1);
+    expect((await shop.collection('sales').get()).docs, isEmpty);
+  });
+  test('checkout records one immutable cash movement across retries', () async {
+    await shop
+        .collection('cashControl')
+        .doc('current')
+        .set({'sessionId': 'session'});
+    await SaleService.commitSale(shop, sale());
+    await SaleService.commitSale(shop, sale());
+    final rows = await shop.collection('moneyMovements').get();
+    expect(rows.docs.length, 1);
+    expect(rows.docs.single.data()['amountMinor'], 2000);
+    expect(rows.docs.single.data()['sessionId'], 'session');
   });
   test(
       'persisted unresolved checkout reuses a previously committed sale after restart',

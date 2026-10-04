@@ -34,6 +34,33 @@ service cloud.firestore {
       function isOwner() {
         return request.auth != null && request.auth.uid == shopId;
       }
+      function legacyAccounting() {
+        let settings = /databases/$(database)/documents/shops/$(shopId)/accountingSettings/current;
+        return !exists(settings) || get(settings).data.get('enabled', false) != true;
+      }
+      match /accountingSettings/{id} {
+        allow read: if isOwner();
+        allow write: if false;
+      }
+      function validSaleMovement(m, s) {
+        let control = /databases/$(database)/documents/shops/$(shopId)/cashControl/current;
+        let before = exists(control) ? get(control).data : {};
+        let after = getAfter(control).data;
+        let late = before.get('openedAt', null) != null && m.occurredAt < before.openedAt;
+        let session = late ? null : before.get('sessionId', null);
+        return m.kind == 'sale' && m.schemaVersion == 1
+          && m.occurredAt is timestamp && m.recordedAt == request.time
+          && s.total is number && s.total >= 0 && s.total <= 1000000000
+          && m.salesMinor is int && m.salesMinor >= s.total * 100 - 0.5
+          && m.salesMinor < s.total * 100 + 0.5
+          && m.amountMinor == (s.isDebt ? 0 : m.salesMinor)
+          && m.debtMinor == (s.isDebt ? m.salesMinor : 0)
+          && m.method == (s.isDebt ? 'credit' : s.paymentMethod)
+          && m.method in ['credit', 'cash', 'transfer', 'qr', 'online']
+          && m.get('refundMinor', 0) == 0
+          && m.sessionId == session && m.needsReconciliation == (session == null)
+          && after.revision == before.get('revision', 0) + 1;
+      }
 
       // สินค้าอ่านได้เฉพาะเจ้าของ — หน้าสั่งของลูกค้าดึงผ่าน Cloud Function
       // getShopPublic (whitelist field, ซ่อนราคาทุน) ไม่อ่าน Firestore ตรง
@@ -43,11 +70,45 @@ service cloud.firestore {
       }
 
       match /sales/{saleId} {
-        allow read, write: if isOwner();
+        allow read: if isOwner();
+        allow create: if isOwner() && legacyAccounting() && request.resource.data.get('accountingVersion', 0) != 1;
+        allow update, delete: if isOwner() && legacyAccounting() && resource.data.get('accountingVersion', 0) != 1;
+        allow create: if isOwner()
+          && request.resource.data.accountingVersion == 1
+          && request.resource.data.isRefunded == false
+          && getAfter(/databases/$(database)/documents/shops/$(shopId)/moneyMovements/$('sale-' + saleId)).data.saleId == saleId;
+        // Money and refund history are immutable to devices; server callables adjust them.
+        allow update, delete: if false;
       }
 
       match /debts/{debtId} {
-        allow read, write: if isOwner();
+        allow read: if isOwner();
+        allow create, update, delete: if isOwner() && legacyAccounting();
+        allow create: if isOwner() && request.resource.data.paidAmount == 0
+          && request.resource.data.saleId == debtId
+          && getAfter(/databases/$(database)/documents/shops/$(shopId)/sales/$(debtId)).data.isDebt == true;
+        allow update, delete: if false;
+      }
+      match /debtPayments/{paymentId} {
+        allow read: if isOwner();
+      }
+      match /moneyMovements/{movementId} {
+        allow read: if isOwner();
+        allow create: if isOwner() && request.resource.data.kind == 'sale'
+          && movementId == 'sale-' + request.resource.data.saleId
+          && request.resource.data.recordedAt == request.time
+          && getAfter(/databases/$(database)/documents/shops/$(shopId)/sales/$(request.resource.data.saleId)).data.accountingVersion == 1
+          && validSaleMovement(request.resource.data,
+            getAfter(/databases/$(database)/documents/shops/$(shopId)/sales/$(request.resource.data.saleId)).data);
+        allow update, delete: if false;
+      }
+      match /cashControl/{controlId} {
+        allow read: if isOwner();
+        allow create: if isOwner() && controlId == 'current'
+          && request.resource.data.keys().hasOnly(['revision']) && request.resource.data.revision == 1;
+        allow update: if isOwner() && controlId == 'current'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['revision'])
+          && request.resource.data.revision == resource.data.revision + 1;
       }
 
       match /settings/{settingId} {
@@ -57,7 +118,12 @@ service cloud.firestore {
       // orders สร้างและอ่านโดย Function (admin) เท่านั้น
       // เจ้าของร้านอ่าน/อัพเดตได้ผ่าน auth
       match /orders/{orderId} {
-        allow read, write: if isOwner();
+        allow read: if isOwner();
+        allow create, update, delete: if isOwner() && legacyAccounting();
+        allow update: if isOwner() && resource.data.status == 'pendingPayment'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'bankMatchStatus', 'bankMatchAt', 'bankMatchRef', 'paymentSender', 'autoConfirmed'
+          ]) && request.resource.data.autoConfirmed == false;
       }
 
       // ── Restaurant mode (PR 2-4) ──
@@ -80,13 +146,19 @@ service cloud.firestore {
       match /ingredientPurchases/{purchaseId} {
         allow read, write: if isOwner();
       }
+      match /inventoryWaste/{wasteId} {
+        allow read, create: if isOwner();
+        allow update, delete: if false;
+      }
 
       // ── Receipt counter + end-of-day cash sessions ──
       match /counters/{counterId} {
         allow read, write: if isOwner();
       }
       match /cashSessions/{sessionId} {
-        allow read, write: if isOwner();
+        allow read: if isOwner();
+        allow create: if isOwner() && legacyAccounting() && request.resource.data.get('accountingVersion', 0) != 1;
+        allow update, delete: if isOwner() && legacyAccounting() && resource.data.get('accountingVersion', 0) != 1;
       }
 
       // ── Hardware shipments (Phase D) ──

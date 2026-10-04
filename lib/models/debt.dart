@@ -8,6 +8,7 @@ class Debt {
   final DateTime createdAt;
   final String saleId;
   final String note;
+  final bool cancelled;
 
   const Debt({
     required this.id,
@@ -17,9 +18,11 @@ class Debt {
     required this.createdAt,
     required this.saleId,
     this.note = '',
+    this.cancelled = false,
   });
 
-  double get remaining => amount - paidAmount;
+  double get remaining =>
+      cancelled ? 0 : (amount - paidAmount).clamp(0, double.infinity);
   bool get isPaid => remaining <= 0;
 
   factory Debt.fromFirestore(Map<String, dynamic> data, String id) => Debt(
@@ -27,9 +30,11 @@ class Debt {
         customerName: data['customerName'] ?? '',
         amount: (data['amount'] ?? 0).toDouble(),
         paidAmount: (data['paidAmount'] ?? 0).toDouble(),
-        createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        createdAt:
+            (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         saleId: data['saleId'] ?? '',
         note: data['note'] ?? '',
+        cancelled: data['cancelledAt'] != null,
       );
 
   Map<String, dynamic> toFirestore() => {

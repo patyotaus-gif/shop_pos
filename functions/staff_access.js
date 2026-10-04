@@ -1,4 +1,5 @@
 const crypto = require('node:crypto');
+const {ledgerContext,writeMovement,saleMovement}=require('./money_ledger');
 const { HttpsError } = require('firebase-functions/v2/https');
 const { priceLine, effectivePriceOf } = require('./tableorder');
 const fail = (code, message) => { throw new HttpsError(code, message); };
@@ -158,7 +159,11 @@ function createStaffAccess({db, auth, FieldValue, Timestamp, now=()=>new Date()}
       const sale={items:priced,total,discount:0,paid:paymentMethod==='cash'?paid:total,change:paymentMethod==='cash'?Math.round((paid-total)*100)/100:0,
         paymentMethod,...(salesChannel?{salesChannel}:{}),isDebt:false,isRefunded:false,createdAt:Timestamp.fromDate(now()),staffName:member.data().name,staffId:ctx.user.token.staffId,
         staffUid:ctx.user.uid,requestDigest:digest,receiptNo:`S-${day}-${String(seq).padStart(3,'0')}`};
+      const context=await ledgerContext(tx,ctx.ref);
+      sale.accountingVersion=1;
+      sale.stockDeducted=Object.fromEntries([...quantities].filter(([id])=>products.get(id).stockMode!=='recipe'));
       tx.set(ref,sale);tx.set(counter,{day,seq});
+      writeMovement(tx,ctx.ref,context,'sale-'+ref.id,{...saleMovement(sale,ctx.user.uid),saleId:ref.id},FieldValue);
       for(const [id,q] of quantities)if(products.get(id).stockMode!=='recipe')tx.update(ctx.ref.collection('products').doc(id),{stock:FieldValue.increment(-q)});
       return publicSale({id:ref.id,...sale});
     });

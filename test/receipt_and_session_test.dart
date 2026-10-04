@@ -70,14 +70,14 @@ void main() {
       expect(s.expectedCash, 650);
     });
 
-    test('cash refunds reduce expected cash', () {
+    test('refunded sales are not deducted a second time', () {
       final s = summarizeSession([
         _sale(total: 100, method: PaymentMethod.cash),
         _sale(total: 40, method: PaymentMethod.cash, isRefunded: true),
       ], 0);
       expect(s.cashSales, 100);
       expect(s.refundTotal, 40);
-      expect(s.expectedCash, 60); // 0 + 100 − 40
+      expect(s.expectedCash, 100); // The refunded 40 is already excluded.
     });
 
     test('overShort sign: positive = เกิน, negative = ขาด', () {

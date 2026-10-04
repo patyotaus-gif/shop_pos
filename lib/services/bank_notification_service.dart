@@ -13,7 +13,7 @@ import 'auth_service.dart';
 /// pipeline. When a banking app posts an incoming-funds notification, we:
 ///   1. parse the amount + sender out of the notification text,
 ///   2. look for a pendingPayment order whose finalAmount matches,
-///   3. flip that order to 'paid' and stamp the bank ref.
+///   3. attach an unverified matching hint for the owner's bank check.
 ///
 /// iOS is silently a no-op — Apple doesn't expose other apps' notifications.
 class BankNotificationService {
@@ -121,7 +121,8 @@ class BankNotificationService {
     }).toList();
 
     if (matches.isEmpty) {
-      debugPrint('[BankNotificationService] no pending order at ${transfer.amount}');
+      debugPrint(
+          '[BankNotificationService] no pending order at ${transfer.amount}');
       return;
     }
     if (matches.length > 1) {
@@ -134,14 +135,14 @@ class BankNotificationService {
 
     final orderRef = matches.single.reference;
     await orderRef.update({
-      'status': OrderStatus.paid.name,
-      'paidAt': FieldValue.serverTimestamp(),
-      'paymentRef': 'auto:${transfer.bankCode}',
+      'bankMatchStatus': 'awaitingOwner',
+      'bankMatchAt': FieldValue.serverTimestamp(),
+      'bankMatchRef': 'notification:${transfer.bankCode}',
       'paymentSender': transfer.sender,
-      'autoConfirmed': true,
+      'autoConfirmed': false,
     });
     debugPrint(
-      '[BankNotificationService] auto-confirmed ${orderRef.id} via ${transfer.bankCode}',
+      '[BankNotificationService] matched for owner review ${orderRef.id} via ${transfer.bankCode}',
     );
   }
 }

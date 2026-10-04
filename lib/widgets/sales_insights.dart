@@ -12,14 +12,16 @@ Map<String, ProductSalesTotal> productSalesTotals(
     List<Sale> sales, String? category) {
   final totals = <String, ProductSalesTotal>{};
   for (final sale in sales.where((s) => !s.isRefunded)) {
-    for (final item in sale.items) {
+    final revenues = sale.itemNetRevenue;
+    for (var n = 0; n < sale.items.length; n++) {
+      final item = sale.items[n];
       if (category != null && (item.category ?? 'ไม่ระบุหมวด') != category) {
         continue;
       }
       final total = totals.putIfAbsent(
           item.productId, () => ProductSalesTotal(item.productName));
       total.quantity += item.quantity;
-      total.revenue += item.subtotal;
+      total.revenue += revenues[n];
     }
   }
   return totals;
@@ -64,7 +66,7 @@ class _SalesInsightsState extends State<SalesInsights> {
                   '฿${active.where((s) => s.salesChannel == channel).fold(0.0, (sum, s) => sum + s.total).toStringAsFixed(2)}')),
       const Divider(),
       const Text('สินค้าขายดี', style: TextStyle(fontWeight: FontWeight.bold)),
-      const Text('ยอดสินค้าก่อนส่วนลดท้ายบิล ไม่รวมบิลคืนเงิน'),
+      const Text('ยอดสินค้าหลังแบ่งส่วนลดท้ายบิล ไม่รวมค่าบริการและบิลคืนเงิน'),
       DropdownButton<String>(
           isExpanded: true,
           value: selected ?? '',

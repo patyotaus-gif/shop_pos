@@ -46,24 +46,41 @@ class ZReportGenerator {
             pw.SizedBox(height: 4),
             pw.Text('เปิดรอบ: ${_dt.format(session.openedAt)}',
                 style: const pw.TextStyle(fontSize: 8)),
-            pw.Text('ปิดรอบ: ${_dt.format(DateTime.now())}',
+            pw.Text(
+                'ปิดรอบ: ${session.closedAt == null ? 'ยังไม่ปิดรอบ' : _dt.format(session.closedAt!)}',
                 style: const pw.TextStyle(fontSize: 8)),
             pw.Divider(),
             _row('จำนวนบิล', '${summary.billCount}'),
-            _row('ยอดขายรวม', _baht.format(summary.grossTotal), bold: true),
+            _row(session.accountingVersion == 1 ? 'ยอดขายสุทธิ' : 'ยอดขายรวม',
+                _baht.format(summary.grossTotal),
+                bold: true),
+            _row('รับชำระหนี้', _baht.format(summary.debtCollections)),
+            if (summary.pendingOrderCount > 0 ||
+                summary.openTableCount > 0) ...[
+              pw.Text('ยังไม่รวมในยอดขายรอบนี้',
+                  style: const pw.TextStyle(fontSize: 9)),
+              _row('  ออเดอร์รอชำระ', '${summary.pendingOrderCount}'),
+              _row('  บิลโต๊ะที่ยังเปิด', '${summary.openTableCount}'),
+            ],
             pw.SizedBox(height: 4),
-            pw.Text('แยกตามวิธีจ่าย',
-                style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+            pw.Text('รับเงินหักคืน แยกวิธีจ่าย',
+                style:
+                    pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
             for (final m in PaymentMethod.values)
-              if ((summary.byMethod[m.name] ?? 0) > 0)
+              if ((summary.byMethod[m.name] ?? 0) != 0)
                 _row('  ${m.label}', _baht.format(summary.byMethod[m.name]!)),
-            if (summary.debtTotal > 0)
-              _row('  เชื่อ (ยังไม่ได้เงิน)', _baht.format(summary.debtTotal)),
+            if (summary.debtTotal != 0)
+              _row(
+                  session.accountingVersion == 1
+                      ? '  หนี้เพิ่ม/ลดในรอบ'
+                      : '  ขายเชื่อ',
+                  _baht.format(summary.debtTotal)),
             if (summary.refundTotal > 0)
               _row('  คืนเงิน', '-${_baht.format(summary.refundTotal)}'),
             pw.Divider(),
             pw.Text('เงินสดในลิ้นชัก',
-                style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                style:
+                    pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
             _row('  เงินทอนเริ่มต้น', _baht.format(summary.openingFloat)),
             _row('  ขายเงินสด', _baht.format(summary.cashSales)),
             _row('  ควรมี', _baht.format(summary.expectedCash), bold: true),
@@ -92,11 +109,13 @@ class ZReportGenerator {
           pw.Text(label,
               style: pw.TextStyle(
                   fontSize: 10,
-                  fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal)),
+                  fontWeight:
+                      bold ? pw.FontWeight.bold : pw.FontWeight.normal)),
           pw.Text(value,
               style: pw.TextStyle(
                   fontSize: 10,
-                  fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal)),
+                  fontWeight:
+                      bold ? pw.FontWeight.bold : pw.FontWeight.normal)),
         ],
       );
 }

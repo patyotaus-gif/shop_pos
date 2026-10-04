@@ -30,9 +30,10 @@ Future<T> runShopOperation<T>(BuildContext context, Future<T> Function() action,
 
 Future<bool> performShopOperation(
     BuildContext context, Future<void> Function() action,
-    {String success = 'บันทึกแล้ว'}) async {
+    {String success = 'บันทึกแล้ว',
+    String message = 'กำลังบันทึก กรุณารอสักครู่'}) async {
   try {
-    await runShopOperation(context, action);
+    await runShopOperation(context, action, message: message);
     if (context.mounted) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(success)));

@@ -181,7 +181,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(granted
-            ? 'เปิดสิทธิ์อ่าน notification ธนาคารแล้ว — ออเดอร์จะ confirm อัตโนมัติ'
+            ? 'เปิดสิทธิ์แล้ว — ระบบจะช่วยจับคู่ยอด ให้ตรวจเงินเข้าแล้วกดยืนยัน'
             : 'ยังไม่ได้รับสิทธิ์ — ลองอีกครั้งใน Settings → Notification access'),
         backgroundColor: granted ? Colors.green : null,
       ),
@@ -1090,7 +1090,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               const Text(
                                 'เมื่อเปิดสิทธิ์ แอปจะอ่าน notification "เงินเข้า" จากแอปธนาคาร '
                                 '(K PLUS, SCB EASY, Krungthai NEXT, BBL, TTB, KMA) แล้ว '
-                                'ยืนยันออเดอร์ที่ยอดตรงกันให้อัตโนมัติ\n\n'
+                                'แสดงออเดอร์ที่ยอดตรงกันให้เจ้าของตรวจสอบก่อนยืนยัน\n\n'
                                 '• อ่านเฉพาะแอปธนาคาร — ไม่ส่งเนื้อหา notification ออกจากเครื่อง\n'
                                 '• ปิดเมื่อไหร่ก็ได้ที่ Settings → Notification access',
                                 style:
@@ -1167,7 +1167,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: 8),
                       Center(
                         child: Semantics(
-                          label: 'QR เพิ่มเพื่อน LINE Pokpok ใช้ลิงก์เดียวกับปุ่มเปิด LINE',
+                          label:
+                              'QR เพิ่มเพื่อน LINE Pokpok ใช้ลิงก์เดียวกับปุ่มเปิด LINE',
                           image: true,
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 200),

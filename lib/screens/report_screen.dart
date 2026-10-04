@@ -18,6 +18,7 @@ import '../services/sale_service.dart';
 import '../services/settings_service.dart';
 import '../services/shop_service.dart';
 import 'sale_receipt_screen.dart';
+import 'money_movements_screen.dart';
 import '../widgets/upgrade_prompt.dart';
 
 class ReportScreen extends StatefulWidget {
@@ -106,9 +107,15 @@ class _ReportScreenState extends State<ReportScreen>
     final refundTotal = refunded.fold<double>(0, (a, s) => a + s.total);
     final netRevenue = grossRevenue - refundTotal;
     final cogs = active.fold<double>(0,
-        (a, s) => a + s.items.fold(0, (b, i) => b + i.costPrice * i.quantity));
-    final grossProfit = netRevenue - cogs;
-    final margin = netRevenue > 0 ? grossProfit / netRevenue * 100 : 0.0;
+        (a, s) => a + s.items.fold(0, (b, i) => b + i.unitCost * i.quantity));
+    final costComplete = active.isNotEmpty &&
+        active.every((s) => s.items.every((i) => i.hasKnownCost));
+    final itemRevenue = active.fold<double>(
+        0,
+        (value, s) =>
+            value + s.itemNetRevenue.fold<double>(0, (v, r) => v + r));
+    final grossProfit = itemRevenue - cogs;
+    final margin = itemRevenue > 0 ? grossProfit / itemRevenue * 100 : 0.0;
     final avgPerBill = active.isNotEmpty ? netRevenue / active.length : 0.0;
 
     final byMethod = <String, double>{};
@@ -119,12 +126,15 @@ class _ReportScreenState extends State<ReportScreen>
 
     final productMap = <String, _ProductStat>{};
     for (final s in active) {
-      for (final item in s.items) {
+      final revenues = s.itemNetRevenue;
+      for (var n = 0; n < s.items.length; n++) {
+        final item = s.items[n];
         final stat = productMap.putIfAbsent(
             item.productName, () => _ProductStat(item.productName));
         stat.qty += item.quantity;
-        stat.revenue += item.subtotal;
-        stat.profit += item.profit;
+        stat.revenue += revenues[n];
+        stat.profit += revenues[n] - item.unitCost * item.quantity;
+        stat.costKnown = stat.costKnown && item.hasKnownCost;
       }
     }
     final top10 = productMap.values.toList()
@@ -316,9 +326,13 @@ class _ReportScreenState extends State<ReportScreen>
             metricBox('ต้นทุนสินค้าขาย', '฿${b.format(cogs)}',
                 bg: const PdfColor.fromInt(0xFFFFF7ED),
                 fg: const PdfColor.fromInt(0xFFC2410C)),
-            metricBox('กำไรขั้นต้น  ${margin.toStringAsFixed(1)}%',
-                '฿${b.format(grossProfit)}',
-                bg: tealLight, fg: teal),
+            metricBox(
+                costComplete
+                    ? 'กำไรขั้นต้น  ${margin.toStringAsFixed(1)}%'
+                    : 'กำไรขั้นต้น',
+                costComplete ? '฿${b.format(grossProfit)}' : 'ต้นทุนไม่ครบ',
+                bg: tealLight,
+                fg: teal),
             metricBox('จำนวนบิล', '${active.length} บิล',
                 bg: const PdfColor.fromInt(0xFFF8FAFC), fg: slate),
           ]),
@@ -350,16 +364,22 @@ class _ReportScreenState extends State<ReportScreen>
               thinLine(),
               plRow('รายได้สุทธิ  (Net Revenue)', '฿${b.format(netRevenue)}',
                   bold: true),
+              plRow('ยอดสินค้าหลังส่วนลด ไม่รวมค่าบริการ/เศษสตางค์',
+                  '฿${b.format(itemRevenue)}'),
               plRow('  (-) ต้นทุนสินค้าขาย  (COGS)', '(฿${b.format(cogs)})',
                   indent: true, color: PdfColors.grey700),
               totalLine(),
-              plRow('กำไรขั้นต้น  (Gross Profit)', '฿${b.format(grossProfit)}',
+              plRow('กำไรขั้นต้น  (Gross Profit)',
+                  costComplete ? '฿${b.format(grossProfit)}' : 'ต้นทุนไม่ครบ',
                   bold: true,
                   color: grossProfit >= 0
                       ? const PdfColor.fromInt(0xFF0F766E)
                       : const PdfColor.fromInt(0xFFDC2626)),
-              plRow('อัตรากำไรขั้นต้น  (Gross Margin)',
-                  '${margin.toStringAsFixed(2)}%',
+              plRow(
+                  'อัตรากำไรขั้นต้น  (Gross Margin)',
+                  costComplete
+                      ? '${margin.toStringAsFixed(2)}%'
+                      : 'ต้นทุนไม่ครบ',
                   bold: true,
                   color: grossProfit >= 0
                       ? const PdfColor.fromInt(0xFF0F766E)
@@ -462,7 +482,10 @@ class _ReportScreenState extends State<ReportScreen>
                     td('${e.value.qty}', align: pw.TextAlign.right),
                     td('฿${b.format(e.value.revenue)}',
                         align: pw.TextAlign.right),
-                    td('฿${b.format(e.value.profit)}',
+                    td(
+                        e.value.costKnown
+                            ? '฿${b.format(e.value.profit)}'
+                            : 'ต้นทุนไม่ครบ',
                         align: pw.TextAlign.right,
                         color: const PdfColor.fromInt(0xFF0F766E)),
                     td('${m.toStringAsFixed(1)}%', align: pw.TextAlign.right),
@@ -499,8 +522,14 @@ class _ReportScreenState extends State<ReportScreen>
                 final idx = entry.key;
                 final s = entry.value;
                 final cost = s.items
-                    .fold<double>(0, (a, i) => a + i.costPrice * i.quantity);
-                final profit = s.isRefunded ? 0.0 : s.total - cost;
+                    .fold<double>(0, (a, i) => a + i.unitCost * i.quantity);
+                final lineCostComplete =
+                    s.items.every((item) => item.hasKnownCost);
+                final profit = s.isRefunded
+                    ? 0.0
+                    : s.itemNetRevenue
+                            .fold<double>(0, (value, r) => value + r) -
+                        cost;
                 final isRef = s.isRefunded;
                 final rowBg = isRef
                     ? rubyLight
@@ -532,7 +561,12 @@ class _ReportScreenState extends State<ReportScreen>
                         color: textColor),
                     td(isRef ? '-' : '฿${b.format(cost)}',
                         align: pw.TextAlign.right, color: textColor),
-                    td(isRef ? '-' : '฿${b.format(profit)}',
+                    td(
+                        isRef
+                            ? '-'
+                            : !lineCostComplete
+                                ? 'ต้นทุนไม่ครบ'
+                                : '฿${b.format(profit)}',
                         align: pw.TextAlign.right,
                         color:
                             isRef ? ruby : const PdfColor.fromInt(0xFF0F766E)),
@@ -565,9 +599,15 @@ class _ReportScreenState extends State<ReportScreen>
     final refundTotal = refunded.fold<double>(0, (a, s) => a + s.total);
     final netRevenue = grossRevenue - refundTotal;
     final cogs = active.fold<double>(0,
-        (a, s) => a + s.items.fold(0, (b, i) => b + i.costPrice * i.quantity));
-    final grossProfit = netRevenue - cogs;
-    final margin = netRevenue > 0 ? grossProfit / netRevenue * 100 : 0.0;
+        (a, s) => a + s.items.fold(0, (b, i) => b + i.unitCost * i.quantity));
+    final costComplete = active.isNotEmpty &&
+        active.every((s) => s.items.every((i) => i.hasKnownCost));
+    final itemRevenue = active.fold<double>(
+        0,
+        (value, s) =>
+            value + s.itemNetRevenue.fold<double>(0, (v, r) => v + r));
+    final grossProfit = itemRevenue - cogs;
+    final margin = itemRevenue > 0 ? grossProfit / itemRevenue * 100 : 0.0;
 
     final buf = StringBuffer();
 
@@ -587,8 +627,10 @@ class _ReportScreenState extends State<ReportScreen>
     buf.writeln('คืนเงิน,${refundTotal.toStringAsFixed(2)}');
     buf.writeln('รายได้สุทธิ,${netRevenue.toStringAsFixed(2)}');
     buf.writeln('ต้นทุนสินค้าขาย (COGS),${cogs.toStringAsFixed(2)}');
-    buf.writeln('กำไรขั้นต้น,${grossProfit.toStringAsFixed(2)}');
-    buf.writeln('อัตรากำไรขั้นต้น,${margin.toStringAsFixed(2)}%');
+    buf.writeln(
+        'กำไรขั้นต้น,${costComplete ? grossProfit.toStringAsFixed(2) : 'ต้นทุนไม่ครบ'}');
+    buf.writeln(
+        'อัตรากำไรขั้นต้น,${costComplete ? margin.toStringAsFixed(2) : 'ต้นทุนไม่ครบ'}');
     buf.writeln('จำนวนบิลทั้งหมด,${allSales.length}');
     buf.writeln('บิลปกติ,${active.length}');
     buf.writeln('บิลคืนเงิน,${refunded.length}');
@@ -601,8 +643,11 @@ class _ReportScreenState extends State<ReportScreen>
     var i = 1;
     for (final s in allSales) {
       final cost = s.items
-          .fold<double>(0, (a, item) => a + item.costPrice * item.quantity);
-      final profit = s.isRefunded ? 0.0 : s.total - cost;
+          .fold<double>(0, (a, item) => a + item.unitCost * item.quantity);
+      final lineCostComplete = s.items.every((item) => item.hasKnownCost);
+      final profit = s.isRefunded
+          ? 0.0
+          : s.itemNetRevenue.fold<double>(0, (value, r) => value + r) - cost;
       final method = s.isDebt ? 'เชื่อ' : s.paymentMethod.label;
       final status = s.isRefunded ? 'คืนเงิน' : 'ปกติ';
       buf.writeln(
@@ -613,7 +658,7 @@ class _ReportScreenState extends State<ReportScreen>
         '${s.salesChannel.label},'
         '${s.total.toStringAsFixed(2)},'
         '${cost.toStringAsFixed(2)},'
-        '${profit.toStringAsFixed(2)},'
+        '${lineCostComplete ? profit.toStringAsFixed(2) : 'ต้นทุนไม่ครบ'},'
         '${s.discount.toStringAsFixed(2)},'
         '$status,'
         '"${s.refundReason ?? ''}"',
@@ -653,6 +698,13 @@ class _ReportScreenState extends State<ReportScreen>
             title: const Text('รายงาน'),
             centerTitle: true,
             actions: [
+              IconButton(
+                  tooltip: 'เงินเข้า–ออกและตรวจยอด',
+                  icon: const Icon(Icons.account_balance_wallet_outlined),
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const MoneyMovementsScreen()))),
               IconButton(
                 icon: Icon(
                     advanced ? Icons.table_chart_outlined : Icons.lock_outline),
@@ -703,6 +755,7 @@ class _ProductStat {
   int qty = 0;
   double revenue = 0;
   double profit = 0;
+  bool costKnown = true;
   _ProductStat(this.name);
 }
 
@@ -759,9 +812,15 @@ class _SalesReportState extends State<_SalesReport> {
         final cogs = active.fold<double>(
             0,
             (a, s) =>
-                a + s.items.fold(0, (b, i) => b + i.costPrice * i.quantity));
-        final grossProfit = netRevenue - cogs;
-        final margin = netRevenue > 0 ? grossProfit / netRevenue * 100 : 0.0;
+                a + s.items.fold(0, (b, i) => b + i.unitCost * i.quantity));
+        final costComplete = active.isNotEmpty &&
+            active.every((s) => s.items.every((i) => i.hasKnownCost));
+        final itemRevenue = active.fold<double>(
+            0,
+            (value, s) =>
+                value + s.itemNetRevenue.fold<double>(0, (v, r) => v + r));
+        final grossProfit = itemRevenue - cogs;
+        final margin = itemRevenue > 0 ? grossProfit / itemRevenue * 100 : 0.0;
         final debtTotal = active
             .where((s) => s.isDebt)
             .fold<double>(0, (a, s) => a + s.total);
@@ -799,7 +858,7 @@ class _SalesReportState extends State<_SalesReport> {
                         color: cs.primary),
                     const SizedBox(width: 8),
                     _Card(
-                        label: 'ยอดเชื่อ',
+                        label: 'ขายเชื่อ',
                         value: '฿${baht.format(debtTotal)}',
                         icon: Icons.person_outline,
                         color: Colors.orange),
@@ -822,8 +881,8 @@ class _SalesReportState extends State<_SalesReport> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           _PLItem(
-                              label: 'รายได้สุทธิ',
-                              value: '฿${baht.format(netRevenue)}',
+                              label: 'ยอดสินค้าสุทธิ',
+                              value: '฿${baht.format(itemRevenue)}',
                               color: Colors.green),
                           const Text('−', style: TextStyle(color: Colors.grey)),
                           _PLItem(
@@ -832,8 +891,12 @@ class _SalesReportState extends State<_SalesReport> {
                               color: Colors.redAccent),
                           const Text('=', style: TextStyle(color: Colors.grey)),
                           _PLItem(
-                            label: 'กำไรขั้นต้น ${margin.toStringAsFixed(1)}%',
-                            value: '฿${baht.format(grossProfit)}',
+                            label: costComplete
+                                ? 'กำไรขั้นต้น ${margin.toStringAsFixed(1)}%'
+                                : 'กำไรขั้นต้น',
+                            value: costComplete
+                                ? '฿${baht.format(grossProfit)}'
+                                : 'ต้นทุนไม่ครบ',
                             color: grossProfit >= 0 ? Colors.teal : Colors.red,
                             bold: true,
                           ),
@@ -1094,16 +1157,21 @@ class _RefundButton extends StatelessWidget {
     return OutlinedButton.icon(
       onPressed: () async {
         Navigator.pop(context);
-        final reason = await showDialog<String>(
+        final reason = await showDialog<RefundDecision>(
           context: context,
           builder: (_) => RefundReasonDialog(
             amount: baht.format(sale.total),
             online: sale.paymentMethod == PaymentMethod.online,
+            debt: sale.isDebt,
           ),
         );
         if (reason != null && context.mounted) {
           await performShopOperation(
-              context, () => SaleService.refundSale(sale, reason: reason),
+              context,
+              () => SaleService.refundSale(sale,
+                  reason: reason.reason,
+                  returnToStock: reason.returnToStock,
+                  refundMethod: reason.method),
               success: 'บันทึกคืนเงินแล้ว');
         }
       },

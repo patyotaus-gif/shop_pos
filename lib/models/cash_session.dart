@@ -15,6 +15,8 @@ class CashSession {
   final String? closedBy;
   final double? countedCash;
   final SessionSummary? summary; // snapshot written at close
+  final int accountingVersion;
+  final bool needsReconciliation;
 
   const CashSession({
     required this.id,
@@ -26,6 +28,8 @@ class CashSession {
     this.closedBy,
     this.countedCash,
     this.summary,
+    this.accountingVersion = 0,
+    this.needsReconciliation = false,
   });
 
   factory CashSession.fromFirestore(Map<String, dynamic> d, String id) =>
@@ -38,6 +42,8 @@ class CashSession {
         closedAt: (d['closedAt'] as Timestamp?)?.toDate(),
         closedBy: d['closedBy'] as String?,
         countedCash: (d['countedCash'] as num?)?.toDouble(),
+        accountingVersion: (d['accountingVersion'] as num? ?? 0).toInt(),
+        needsReconciliation: d['needsReconciliation'] == true,
         summary: d['summary'] is Map
             ? SessionSummary.fromMap(Map<String, dynamic>.from(d['summary']))
             : null,
@@ -55,6 +61,9 @@ class SessionSummary {
   final double cashSales;
   final double expectedCash; // openingFloat + cashSales − cashRefunds
   final double openingFloat;
+  final double debtCollections;
+  final int pendingOrderCount;
+  final int openTableCount;
 
   const SessionSummary({
     required this.billCount,
@@ -65,6 +74,9 @@ class SessionSummary {
     required this.cashSales,
     required this.expectedCash,
     required this.openingFloat,
+    this.debtCollections = 0,
+    this.pendingOrderCount = 0,
+    this.openTableCount = 0,
   });
 
   double overShort(double countedCash) => countedCash - expectedCash;
@@ -78,6 +90,9 @@ class SessionSummary {
         'cashSales': cashSales,
         'expectedCash': expectedCash,
         'openingFloat': openingFloat,
+        'debtCollections': debtCollections,
+        'pendingOrderCount': pendingOrderCount,
+        'openTableCount': openTableCount,
       };
 
   factory SessionSummary.fromMap(Map<String, dynamic> m) => SessionSummary(
@@ -92,25 +107,26 @@ class SessionSummary {
         cashSales: (m['cashSales'] ?? 0).toDouble(),
         expectedCash: (m['expectedCash'] ?? 0).toDouble(),
         openingFloat: (m['openingFloat'] ?? 0).toDouble(),
+        debtCollections: (m['debtCollections'] ?? 0).toDouble(),
+        pendingOrderCount: (m['pendingOrderCount'] as num? ?? 0).toInt(),
+        openTableCount: (m['openTableCount'] as num? ?? 0).toInt(),
       );
 }
 
-/// Pure aggregation over the sales in a session window. Debt bills count in
-/// gross but not in any cash/method tally (no money changed hands yet).
-/// Refunded bills are subtracted from expected cash when they were cash.
+/// Legacy same-window preview only. Live closing uses dated money movements
+/// on the server, including collections and refunds of older sales.
 SessionSummary summarizeSession(List<Sale> sales, double openingFloat) {
   final byMethod = <String, double>{};
-  double gross = 0, debt = 0, refund = 0, cashSales = 0, cashRefunds = 0;
+  double gross = 0, debt = 0, refund = 0, cashSales = 0;
 
   for (final s in sales) {
+    if (s.isRefunded) {
+      refund += s.total;
+      continue;
+    }
     gross += s.total;
     if (s.isDebt) {
       debt += s.total;
-      continue;
-    }
-    if (s.isRefunded) {
-      refund += s.total;
-      if (s.paymentMethod == PaymentMethod.cash) cashRefunds += s.total;
       continue;
     }
     final key = s.paymentMethod.name;
@@ -125,7 +141,7 @@ SessionSummary summarizeSession(List<Sale> sales, double openingFloat) {
     debtTotal: debt,
     refundTotal: refund,
     cashSales: cashSales,
-    expectedCash: openingFloat + cashSales - cashRefunds,
+    expectedCash: openingFloat + cashSales,
     openingFloat: openingFloat,
   );
 }

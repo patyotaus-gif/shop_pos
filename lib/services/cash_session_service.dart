@@ -1,23 +1,30 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/cash_session.dart';
-import '../models/sale.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_service.dart';
+import 'offline_service.dart';
+import 'package:flutter/foundation.dart';
 
 /// End-of-day cash sessions (ปิดยอดสิ้นวัน). One open session at a time; the
 /// Z-report summary is snapshotted on close so history never re-queries.
 class CashSessionService {
+  static Future<bool> accountingEnabled() async {
+    final snap = await FirebaseFirestore.instance
+        .collection('shops')
+        .doc(AuthService.shopId)
+        .collection('accountingSettings')
+        .doc('current')
+        .get(const GetOptions(source: Source.server));
+    return snap.data()?['enabled'] == true;
+  }
+
   static CollectionReference<Map<String, dynamic>> _col() =>
       FirebaseFirestore.instance
           .collection('shops')
           .doc(AuthService.shopId)
           .collection('cashSessions');
-
-  static CollectionReference<Map<String, dynamic>> _sales() =>
-      FirebaseFirestore.instance
-          .collection('shops')
-          .doc(AuthService.shopId)
-          .collection('sales');
 
   /// The currently open session, or null. Stream so the dashboard/screen
   /// reflect open/closed live.
@@ -40,40 +47,67 @@ class CashSessionService {
   static Future<void> open({
     required double openingFloat,
     String? openedBy,
+    bool acknowledgeDeviceUpdate = false,
   }) async {
-    await _col().add({
-      'openedAt': FieldValue.serverTimestamp(),
-      if (openedBy != null) 'openedBy': openedBy,
-      'openingFloat': openingFloat,
-      'status': 'open',
-    });
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'pending-cash-open-${AuthService.shopId}';
+    final id = prefs.getString(key) ?? _col().doc().id;
+    if (!await prefs.setString(key, id)) {
+      throw StateError('เก็บคำขอเปิดรอบไม่สำเร็จ กรุณาลองใหม่');
+    }
+    try {
+      await FirebaseFunctions.instanceFor(region: 'asia-southeast1')
+          .httpsCallable('openCashSession')
+          .call({
+        'shopId': AuthService.shopId,
+        'requestId': id,
+        'openingFloat': openingFloat,
+        'acknowledgeDeviceUpdate': acknowledgeDeviceUpdate,
+      });
+    } on FirebaseFunctionsException catch (e) {
+      if (e.details is Map && e.details['reason'] == 'closed-open-request') {
+        await prefs.remove(key);
+      }
+      rethrow;
+    }
+    await prefs.remove(key);
   }
 
-  /// Close [session]: pull its sales window, compute the summary, reconcile
-  /// against [countedCash], and snapshot. Returns the summary for the
-  /// Z-report.
-  static Future<SessionSummary> close(
+  /// Close against the server's immutable money movements and return its saved
+  /// session. A repeated close returns the first count and summary unchanged.
+  static Future<CashSession> close(
     CashSession session, {
     required double countedCash,
     String? closedBy,
+    bool acknowledgeLegacy = false,
   }) async {
-    final now = DateTime.now();
-    final snap = await _sales()
-        .where('createdAt',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(session.openedAt))
-        .where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(now))
-        .get();
-    final sales =
-        snap.docs.map((d) => Sale.fromFirestore(d.data(), d.id)).toList();
-    final summary = summarizeSession(sales, session.openingFloat);
-
-    await _col().doc(session.id).update({
-      'status': 'closed',
-      'closedAt': Timestamp.fromDate(now),
-      if (closedBy != null) 'closedBy': closedBy,
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+    if (prefs.getKeys().any((key) =>
+        key.startsWith('pending-checkout-${AuthService.shopId}') &&
+        prefs.getString(key) != null)) {
+      throw StateError('มีบิลออนไลน์รอยืนยัน กรุณาตรวจบิลเดิมก่อนปิดรอบ');
+    }
+    if (!kIsWeb &&
+        [TargetPlatform.android, TargetPlatform.iOS]
+            .contains(defaultTargetPlatform) &&
+        await OfflineService.pendingForShop(AuthService.shopId!) > 0) {
+      throw StateError('ซิงก์บิลออฟไลน์ที่ค้างในเครื่องให้ครบก่อนปิดรอบ');
+    }
+    await FirebaseFunctions.instanceFor(region: 'asia-southeast1')
+        .httpsCallable('closeCashSession')
+        .call({
+      'shopId': AuthService.shopId,
+      'sessionId': session.id,
       'countedCash': countedCash,
-      'summary': summary.toMap(),
+      'acknowledgeLegacy': acknowledgeLegacy,
     });
-    return summary;
+    return get(session.id);
+  }
+
+  static Future<CashSession> get(String id) async {
+    final doc =
+        await _col().doc(id).get(const GetOptions(source: Source.server));
+    return CashSession.fromFirestore(doc.data()!, doc.id);
   }
 }

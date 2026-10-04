@@ -71,7 +71,11 @@ void main() {
     final totals = productSalesTotals([sale(), sale(refunded: true)], 'อาหาร');
     expect(totals.keys, ['a']);
     expect(totals['a']!.quantity, 2);
-    expect(totals['a']!.revenue, 100);
+    expect(totals['a']!.revenue,
+        91.67); // 10 baht bill discount is allocated proportionally.
+    final all = productSalesTotals([sale()], null);
+    expect(
+        all.values.fold<double>(0, (value, row) => value + row.revenue), 110);
   });
   test('channel survives saved sale round trip; legacy remains unspecified',
       () {

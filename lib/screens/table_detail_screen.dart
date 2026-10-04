@@ -329,28 +329,50 @@ class _OpenOrderViewState extends State<TableOrderView> {
   }
 
   Future<void> _cancel() async {
+    final reason = TextEditingController();
+    bool consumePrepared = true;
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('ยกเลิกออเดอร์?'),
-        content: const Text(
-            'รายการในออเดอร์จะถูกทิ้ง — ไม่ตัดสต็อก ใช้กรณีลูกค้าไม่รับ/walk out'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('กลับ')),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('ยกเลิกออเดอร์'),
-          ),
-        ],
-      ),
+      builder: (ctx) => StatefulBuilder(
+          builder: (ctx, setDialogState) => AlertDialog(
+                title: const Text('ยกเลิกออเดอร์?'),
+                content: Column(mainAxisSize: MainAxisSize.min, children: [
+                  const Text('เก็บประวัติยกเลิกไว้โดยไม่สร้างยอดขาย'),
+                  TextField(
+                      controller: reason,
+                      maxLength: 500,
+                      decoration:
+                          const InputDecoration(labelText: 'เหตุผลที่ยกเลิก')),
+                  CheckboxListTile(
+                      value: consumePrepared,
+                      title: const Text('รายการที่ส่งครัวเริ่มทำแล้ว'),
+                      subtitle: const Text(
+                          'ตัดสินค้าและวัตถุดิบของรายการที่ส่งครัวเป็นของเสีย หากยังไม่เริ่มทำให้เอาเครื่องหมายออก'),
+                      onChanged: (value) => setDialogState(
+                          () => consumePrepared = value ?? true)),
+                ]),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('กลับ')),
+                  FilledButton(
+                    onPressed: () {
+                      if (reason.text.trim().isNotEmpty) {
+                        Navigator.pop(ctx, true);
+                      }
+                    },
+                    style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                    child: const Text('ยกเลิกออเดอร์'),
+                  ),
+                ],
+              )),
     );
     if (confirm != true || !mounted) return;
     try {
       await runShopOperation(
-          context, () => TableService.cancelOrder(widget.order));
+          context,
+          () => TableService.cancelOrder(widget.order,
+              reason: reason.text.trim(), consumePrepared: consumePrepared));
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {

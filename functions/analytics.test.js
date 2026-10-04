@@ -54,13 +54,14 @@ test('no baseline and empty stores have no invented percentage or margin', () =>
   const r = report([]); assert.equal(r.changePercent, null); assert.equal(r.current.grossProfit, null);
   assert.equal(r.current.daily.length, 7); assert.equal(r.current.daily.reduce((s, d) => s + d.net, 0), 0);
 });
-test('paid PromptPay orders count once, linked Stripe orders never double count', () => {
+test('unlinked paid orders are flagged, never silently added to sale revenue', () => {
   const orders = [sale('linked', { status: 'paid', paidAt: new Date('2026-09-03T08:00:00Z') }),
     sale('pp', { status: 'completed', finalAmount: 100.25 }), sale('pending', { status: 'pendingPayment' }),
     sale('cancel', { status: 'cancelled' }), sale('stripe', { status: 'paid', stripeSessionId: 'session' })];
   const r = report([sale('s', { orderId: 'linked' })], { orders });
-  assert.equal(r.current.net, 200.25); assert.equal(r.current.count, 2); assert.equal(r.current.adjustment, .25);
-  assert.equal(r.current.estimatedPaidAt, 1);
+  assert.equal(r.current.net, 100); assert.equal(r.current.count, 1); assert.equal(r.current.adjustment, 0);
+  assert.equal(r.unlinkedPaidOrderCount, 2);
+  assert.equal(r.current.estimatedPaidAt, 0);
 });
 test('refund belongs to original sale cohort even if refunded later', () => {
   const r = report([sale('ref', { createdAt: new Date('2026-08-27T08:00:00Z'), isRefunded: true, refundedAt: now })]);

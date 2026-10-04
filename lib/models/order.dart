@@ -73,6 +73,7 @@ class ShopOrder {
   /// verify or bank notification) rather than the shop owner tapping
   /// "ได้รับเงินแล้ว" manually.
   final bool autoConfirmed;
+  final bool bankMatchPending;
 
   final OrderStatus status;
   final DateTime createdAt;
@@ -93,6 +94,7 @@ class ShopOrder {
     this.paymentRef,
     this.slipUrl,
     this.autoConfirmed = false,
+    this.bankMatchPending = false,
     required this.status,
     required this.createdAt,
     this.paidAt,
@@ -114,11 +116,13 @@ class ShopOrder {
         paymentRef: data['paymentRef'] as String?,
         slipUrl: data['slipUrl'] as String?,
         autoConfirmed: data['autoConfirmed'] as bool? ?? false,
+        bankMatchPending: data['bankMatchStatus'] == 'awaitingOwner',
         status: OrderStatus.values.firstWhere(
           (e) => e.name == (data['status'] ?? 'pendingPayment'),
           orElse: () => OrderStatus.pendingPayment,
         ),
-        createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        createdAt:
+            (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         paidAt: (data['paidAt'] as Timestamp?)?.toDate(),
         orderType: data['orderType'] as String?,
         tableName: data['tableName'] as String?,

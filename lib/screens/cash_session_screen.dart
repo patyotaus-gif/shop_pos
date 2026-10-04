@@ -5,6 +5,8 @@ import '../models/cash_session.dart';
 import '../services/cash_session_service.dart';
 import '../services/staff_service.dart';
 import '../utils/zreport_generator.dart';
+import '../widgets/shop_operation.dart';
+import 'money_movements_screen.dart';
 
 /// ปิดยอดสิ้นวัน — open a cash session (with the drawer's starting float),
 /// then close it: count the drawer, see over/short, print the Z-report.
@@ -18,10 +20,24 @@ class CashSessionScreen extends StatelessWidget {
       body: StreamBuilder<CashSession?>(
         stream: CashSessionService.watchOpen(),
         builder: (context, snap) {
+          if (snap.hasError) {
+            return const Center(
+                child: Text('โหลดรอบขายไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อ'));
+          }
+          if (snap.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
           final open = snap.data;
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              ListTile(
+                  leading: const Icon(Icons.account_balance_wallet_outlined),
+                  title: const Text('เงินเข้า–ออกและรายการรอตรวจสอบ'),
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const MoneyMovementsScreen()))),
               if (open == null)
                 _OpenCard()
               else
@@ -33,9 +49,10 @@ class CashSessionScreen extends StatelessWidget {
               StreamBuilder<List<CashSession>>(
                 stream: CashSessionService.watchHistory(),
                 builder: (context, hs) {
-                  final list = (hs.data ?? const [])
-                      .where((s) => s.closed)
-                      .toList();
+                  if (hs.hasError) return const Text('โหลดประวัติไม่สำเร็จ');
+                  if (!hs.hasData) return const LinearProgressIndicator();
+                  final list =
+                      (hs.data ?? const []).where((s) => s.closed).toList();
                   if (list.isEmpty) {
                     return Text('ยังไม่มีประวัติ',
                         style: TextStyle(
@@ -93,34 +110,67 @@ class _OpenCard extends StatelessWidget {
 }
 
 Future<void> _openDialog(BuildContext context) async {
+  var enabled = false;
+  final loaded = await performShopOperation(context, () async {
+    enabled = await CashSessionService.accountingEnabled();
+  }, message: 'กำลังตรวจสถานะรอบขาย', success: 'ตรวจสถานะรอบขายแล้ว');
+  if (!loaded || !context.mounted) return;
+  var accepted = enabled;
   final ctrl = TextEditingController(text: '0');
   final ok = await showDialog<bool>(
     context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('เปิดรอบ'),
-      content: TextField(
-        controller: ctrl,
-        autofocus: true,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        decoration: const InputDecoration(
-            labelText: 'เงินทอนเริ่มต้นในลิ้นชัก (บาท)',
-            prefixText: '฿',
-            border: OutlineInputBorder()),
-      ),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('ยกเลิก')),
-        FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('เปิดรอบ')),
-      ],
-    ),
+    builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+              title: const Text('เปิดรอบ'),
+              content: SingleChildScrollView(
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                TextField(
+                  controller: ctrl,
+                  autofocus: true,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                      labelText: 'เงินทอนเริ่มต้นในลิ้นชัก (บาท)',
+                      prefixText: '฿',
+                      border: OutlineInputBorder()),
+                ),
+                if (!enabled) ...[
+                  const SizedBox(height: 12),
+                  const Text(
+                      'เริ่มใช้ระบบปิดยอดใหม่กับร้านนี้ เมื่อเริ่มแล้วเครื่องรุ่นเก่าจะบันทึกการเงินไม่ได้ ต้องอัปเดต Android และ iOS ทุกเครื่องก่อน'),
+                  const SizedBox(height: 8),
+                  const Text(
+                      'ระบบเริ่มนับจากรอบนี้ ยอดก่อนเริ่มยังเก็บไว้และต้องตรวจสอบแยก เงินสดเดิมในลิ้นชักให้รวมในเงินทอนเริ่มต้น'),
+                  CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('อัปเดตทุกเครื่องและซิงก์บิลครบแล้ว'),
+                      value: accepted,
+                      onChanged: (value) =>
+                          setDialogState(() => accepted = value == true)),
+                ],
+              ])),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('ยกเลิก')),
+                FilledButton(
+                    onPressed: accepted ? () => Navigator.pop(ctx, true) : null,
+                    child: const Text('เปิดรอบ')),
+              ],
+            )),
   );
   if (ok != true) return;
-  final float = double.tryParse(ctrl.text.trim().replaceAll(',', '')) ?? 0;
+  final float = double.tryParse(ctrl.text.trim().replaceAll(',', ''));
+  ctrl.dispose();
+  if (float == null || !float.isFinite || float < 0 || !context.mounted) return;
   final staff = await StaffService.getActive();
-  await CashSessionService.open(openingFloat: float, openedBy: staff?.name);
+  if (!context.mounted) return;
+  await performShopOperation(
+      context,
+      () => CashSessionService.open(
+          openingFloat: float,
+          openedBy: staff?.name,
+          acknowledgeDeviceUpdate: accepted));
 }
 
 class _OpenSessionCard extends StatelessWidget {
@@ -150,6 +200,9 @@ class _OpenSessionCard extends StatelessWidget {
             Text('เปิดเมื่อ ${_dt.format(session.openedAt)}'
                 '${session.openedBy != null ? ' โดย ${session.openedBy}' : ''}'),
             Text('เงินทอนเริ่มต้น ฿${_baht.format(session.openingFloat)}'),
+            if (session.accountingVersion != 1)
+              const Text(
+                  'รอบเก่า: ประวัติรับชำระหนี้และคืนเงินไม่ครบ ปิดเก็บยอดนับจริงไว้ตรวจสอบ แล้วเปิดรอบใหม่ได้'),
             const SizedBox(height: 12),
             FilledButton.icon(
               style: FilledButton.styleFrom(backgroundColor: cs.error),
@@ -175,6 +228,10 @@ Future<void> _closeDialog(BuildContext context, CashSession session) async {
         children: [
           const Text('นับเงินสดจริงในลิ้นชักตอนนี้ แล้วกรอกจำนวน',
               style: TextStyle(fontSize: 13)),
+          const Text('ซิงก์บิลออฟไลน์จากทุกเครื่องให้ครบก่อนปิดรอบ'),
+          if (session.accountingVersion != 1)
+            const Text(
+                'การยืนยันจะเก็บรอบเก่าเป็น “รอตรวจสอบ” ไม่คำนวณยอดเกิน/ขาดจากข้อมูลที่ไม่ครบ'),
           const SizedBox(height: 12),
           TextField(
             controller: ctrl,
@@ -193,7 +250,7 @@ Future<void> _closeDialog(BuildContext context, CashSession session) async {
         FilledButton(
           onPressed: () {
             final v = double.tryParse(ctrl.text.trim().replaceAll(',', ''));
-            if (v == null) return;
+            if (v == null || !v.isFinite || v < 0) return;
             Navigator.pop(ctx, v);
           },
           child: const Text('ปิดรอบ'),
@@ -203,11 +260,31 @@ Future<void> _closeDialog(BuildContext context, CashSession session) async {
   );
   if (counted == null) return;
   final staff = await StaffService.getActive();
-  final summary = await CashSessionService.close(session,
-      countedCash: counted, closedBy: staff?.name);
+  if (!context.mounted) return;
+  SessionSummary? result;
+  CashSession? closedSession;
+  final ok = await performShopOperation(context, () async {
+    closedSession = await CashSessionService.close(session,
+        countedCash: counted,
+        closedBy: staff?.name,
+        acknowledgeLegacy: session.accountingVersion != 1);
+    result = closedSession!.summary;
+  }, success: 'ปิดรอบแล้ว');
+  if (!ok) return;
+  if (result == null) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'เก็บยอดนับจริงของรอบเก่าแล้ว ยังต้องตรวจสอบประวัติเงิน สามารถเปิดรอบใหม่ได้')));
+    }
+    return;
+  }
+  final summary = result!;
   if (!context.mounted) return;
 
-  final overShort = summary.overShort(counted);
+  // Another terminal may have closed this session first. Show the saved count.
+  final savedCounted = closedSession!.countedCash ?? counted;
+  final overShort = summary.overShort(savedCounted);
   await showDialog<void>(
     context: context,
     builder: (ctx) => AlertDialog(
@@ -216,9 +293,13 @@ Future<void> _closeDialog(BuildContext context, CashSession session) async {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sumRow('ยอดขายรวม', '฿${_baht.format(summary.grossTotal)}'),
+          _sumRow('ยอดขายสุทธิในรอบ', '฿${_baht.format(summary.grossTotal)}'),
+          _sumRow('รับชำระหนี้', '฿${_baht.format(summary.debtCollections)}'),
+          if (summary.pendingOrderCount > 0 || summary.openTableCount > 0)
+            Text(
+                'ยังไม่รวมออเดอร์รอชำระ ${summary.pendingOrderCount} รายการ และบิลโต๊ะที่ยังเปิด ${summary.openTableCount} บิล'),
           _sumRow('เงินสดควรมี', '฿${_baht.format(summary.expectedCash)}'),
-          _sumRow('นับได้จริง', '฿${_baht.format(counted)}'),
+          _sumRow('นับได้จริง', '฿${_baht.format(savedCounted)}'),
           const Divider(),
           _sumRow(
             overShort >= 0 ? 'เกิน' : 'ขาด',
@@ -238,7 +319,9 @@ Future<void> _closeDialog(BuildContext context, CashSession session) async {
           onPressed: () async {
             Navigator.pop(ctx);
             await ZReportGenerator.print(
-                session: session, summary: summary, countedCash: counted);
+                session: closedSession!,
+                summary: summary,
+                countedCash: savedCounted);
           },
         ),
       ],
@@ -275,7 +358,9 @@ class _HistoryTile extends StatelessWidget {
           ? _dt.format(session.closedAt!)
           : _dt.format(session.openedAt)),
       subtitle: Text(s == null
-          ? '—'
+          ? (session.needsReconciliation
+              ? 'รอตรวจสอบ · นับจริง ฿${_baht.format(counted)}'
+              : 'ไม่มีสรุปยอด')
           : 'ขาย ฿${_baht.format(s.grossTotal)} · ${s.billCount} บิล · '
               '${over == 0 ? 'ตรง' : over > 0 ? 'เกิน ฿${_baht.format(over)}' : 'ขาด ฿${_baht.format(over.abs())}'}'),
       trailing: s == null

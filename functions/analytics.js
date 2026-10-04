@@ -53,14 +53,8 @@ function knownCost(item) {
 }
 function unitCost(item) { return Number(item.costPrice) + (item.modifiers || []).reduce((s, m) => s + m.costAdjust, 0); }
 function normalizeOrders(sales, orders) {
-  const linked = new Set(sales.map(s => s.orderId).filter(Boolean));
-  const extra = orders.filter(o => !linked.has(o.id) && !o.stripeSessionId &&
-    ['paid', 'accepted', 'ready', 'completed'].includes(o.status)).map(o => ({
-    ...o, source: 'orders', createdAt: o.paidAt || o.createdAt,
-    estimatedPaidAt: !o.paidAt, total: o.finalAmount ?? o.total, discount: o.discount || 0,
-    items: (o.items || []).map(i => ({ ...i, subtotal: Number(i.price) * Number(i.quantity) })),
-  }));
-  return [...sales.map(s => ({ ...s, source: 'sales' })), ...extra];
+  // Financial totals use the same sale records as POS reports. Orphans require reconciliation.
+  return sales.map(s => ({ ...s, source: 'sales' }));
 }
 function summarize(records, fromDay, toDay, zone) {
   const products = new Map(), categories = new Map(), hours = new Map(), daily = new Map();
@@ -138,6 +132,7 @@ function buildAnalysis({ sales, orders = [], events = [], settings = {}, days = 
     change: amount(money(current.net) - money(previous.net)),
     changePercent: previous.net ? Math.round((current.net / previous.net - 1) * 1000) / 10 : null,
     productChanges: changes, events,
+    unlinkedPaidOrderCount: orders.filter(o => ['paid','accepted','ready','completed'].includes(o.status) && !sales.some(s => s.orderId === o.id)).length,
     settings: { timeZone: zone, openWeekdays: settings.openWeekdays || [], configured: !!settings.timeZone },
     notes: [
       'เปรียบเทียบวันปฏิทินที่จบแล้ว ไม่รวมวันนี้; ช่วง 30/90 วันอาจมีจำนวนวันในสัปดาห์ต่างกัน',
@@ -145,7 +140,7 @@ function buildAnalysis({ sales, orders = [], events = [], settings = {}, days = 
       'คืนเงินหักกลับจากช่วงวันที่ขายตามสถานะล่าสุด ไม่ใช่รายงานกระแสเงินสดวันคืนเงิน; รวมขายเชื่อ',
       'กำไรขั้นต้นหักส่วนลดตามสัดส่วนสินค้า ไม่รวมค่าบริการ/เศษสตางค์ ค่าเช่า ค่าแรง ภาษี หรือค่าใช้จ่ายอื่น',
       'ต้นทุนศูนย์ในบิลเก่าและรายการตัวเลือกอาหารที่ไม่มีต้นทุนแยกถือว่าต้นทุนไม่ครบ ไม่ใช้ต้นทุนปัจจุบันแทนอดีต',
-      'รวมออเดอร์ออนไลน์ที่ชำระแล้วและยังไม่มีบิลขายเชื่อมโยง; ออเดอร์ยกเลิกไม่ถือว่าเป็นหลักฐานคืนเงิน',
+      'นับเฉพาะบิลขายที่บันทึกแล้วเหมือนหน้ารายงาน; ออเดอร์เก่าที่จ่ายแล้วแต่ไม่มีบิลขายต้องตรวจสอบแยก',
       'วันไม่มียอดไม่ได้แปลว่าปิดร้าน; บันทึกบริบทและวันเปิดเป็นข้อมูลประกอบ ไม่ยืนยันสาเหตุของยอดที่เปลี่ยน',
       'ประวัติสินค้าหมดและการเปลี่ยนโปรโมชันอัตโนมัติเริ่มหลังเปิดใช้ฟีเจอร์ ไม่มีประวัติไม่ได้แปลว่าไม่เคยเกิด',
     ] };
