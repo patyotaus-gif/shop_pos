@@ -1,3 +1,4 @@
+import 'order_ticket_screen.dart';
 import 'package:flutter/material.dart';
 
 import 'package:intl/intl.dart';
@@ -282,6 +283,13 @@ class _OrderCard extends StatelessWidget {
                       Text(order.customerPhone,
                           style: const TextStyle(
                               color: Colors.grey, fontSize: 13)),
+                      if (order.pickupDescription != null)
+                        Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(order.pickupDescription!,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF7A1F2B)))),
                       // QR-link context: โต๊ะ / รับกลับบ้าน
                       if (order.tableName != null ||
                           order.orderType == 'takeaway')
@@ -374,8 +382,10 @@ class _OrderCard extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('${item.productName} × ${item.quantity}',
-                          style: const TextStyle(fontSize: 13)),
+                      Expanded(
+                          child: Text(
+                              '${item.productName} × ${item.quantity}${item.preparationNote.isEmpty ? '' : '\n${item.preparationNote}'}',
+                              style: const TextStyle(fontSize: 13))),
                       Text('฿${_baht.format(item.subtotal)}',
                           style: const TextStyle(fontSize: 13)),
                     ],
@@ -413,6 +423,15 @@ class _OrderCard extends StatelessWidget {
                 ),
               ],
             ),
+            Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  icon: const Icon(Icons.print_outlined),
+                  label: const Text('ใบงาน / พิมพ์ / PDF'),
+                  onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                          builder: (_) => OrderTicketScreen(order: order))),
+                )),
             // Action buttons
             if (order.status == OrderStatus.pendingPayment) ...[
               const SizedBox(height: 10),

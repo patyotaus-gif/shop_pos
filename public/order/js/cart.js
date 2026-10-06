@@ -3,7 +3,7 @@
 //
 // A cart line includes the product, sorted option IDs and preparation note.
 // Identical configurations merge; different instructions must stay separate.
-import { escHtml, fmtBaht } from './util.js?v=20261005';
+import { escHtml, fmtBaht } from './util.js?v=20261007';
 
 const cart = Object.create(null); // keyed by product, options AND preparation note
 const listeners = [];

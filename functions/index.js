@@ -1,3 +1,4 @@
+const pickupScheduling = require('./pickup');
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
@@ -298,6 +299,7 @@ exports.getShopPublic = onRequest({ cors: true }, async (req, res) => {
   const settings = settingsSnap.data() || {};
 
   const out = { name: shop.name || "ร้านค้า", products };
+  out.pickup = await pickupScheduling.availability(db.collection("shops").doc(shopId), settings.pickup);
   if (settings.logoUrl) out.logoUrl = settings.logoUrl;
   // Owner-paused ordering — client still gets name/logo so the closed
   // page can show shop identity, just no products/cart wiring.
@@ -457,7 +459,7 @@ exports.createPromptPayOrder = onRequest(
     }
     if (!(await _verifyAppCheck(req, res))) return;
 
-    const { shopId, customerName, customerPhone, items, tableId, tableName, orderType } = req.body;
+    const { shopId, customerName, customerPhone, items, tableId, tableName, orderType, pickupSlot, pickupMode, requestId } = req.body;
     if (!shopId || !customerName || !customerPhone || !Array.isArray(items) || items.length === 0) {
       res.status(400).json({ error: "ข้อมูลไม่ครบ" });
       return;
@@ -552,11 +554,19 @@ exports.createPromptPayOrder = onRequest(
       return;
     }
 
+    if (requestId != null && !/^[a-f0-9-]{36}$/i.test(requestId)) {
+      res.status(400).json({ error: "รหัสคำขอไม่ถูกต้อง กรุณาเปิดหน้าสั่งใหม่" }); return;
+    }
+    const requestSignature = require('node:crypto').createHash('sha256').update(JSON.stringify({
+      customerName, customerPhone, items, tableId: tableId || null, tableName: tableName || null,
+      orderType: safeOrderType, pickupSlot: pickupSlot || null, pickupMode: pickupMode || null,
+    })).digest('hex');
     // Create order doc first so its ID seeds the unique cents
-    const orderRef = admin
+    const ordersRef = admin
       .firestore()
       .collection("shops").doc(shopId)
-      .collection("orders").doc();
+      .collection("orders");
+    const orderRef = requestId ? ordersRef.doc(`web-${requestId}`) : ordersRef.doc();
 
     // Unique cents per order: 1..99 satang. The server computes this
     // once and writes it to Firestore as finalAmount; both app and web
@@ -565,7 +575,8 @@ exports.createPromptPayOrder = onRequest(
     const cents = (hashString(orderRef.id) % 99) + 1;
     const finalAmount = Math.round((total + cents / 100) * 100) / 100;
 
-    await orderRef.set({
+    const orderData = {
+      requestSignature,
       customerName,
       customerPhone,
       items: pricedItems,
@@ -577,12 +588,23 @@ exports.createPromptPayOrder = onRequest(
       ...(safeOrderType ? { orderType: safeOrderType } : {}),
       ...(tableId ? { tableId: String(tableId).slice(0, 64) } : {}),
       ...(tableName ? { tableName: String(tableName).slice(0, 64) } : {}),
-    });
+    };
+    let pickup;
+    try {
+      pickup = await pickupScheduling.createWithPickup({
+        db: admin.firestore(), shopRef, orderRef, order: orderData, requestedSlot: pickupSlot, pickupMode,
+      });
+    } catch (error) {
+      console.error("Pickup reservation failed", error.code || "validation");
+      res.status(409).json({ error: error.message?.startsWith("ช่วงเวลา") || error.message?.startsWith("ร้านปิด") || error.message?.startsWith("เวลานัด") ? error.message : "บันทึกออเดอร์ไม่สำเร็จ กรุณาลองใหม่" });
+      return;
+    }
 
     res.json({
       orderId: orderRef.id,
-      total,
-      finalAmount,
+      pickupLabel: pickup.pickupLabel || null,
+      total: pickup.total,
+      finalAmount: pickup.finalAmount,
       promptpayId,
       promptpayName,
     });

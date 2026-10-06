@@ -18,12 +18,14 @@ class OrderItem {
   final String productName;
   final double price;
   final int quantity;
+  final String preparationNote;
 
   const OrderItem({
     required this.productId,
     required this.productName,
     required this.price,
     required this.quantity,
+    this.preparationNote = '',
   });
 
   double get subtotal => price * quantity;
@@ -33,6 +35,11 @@ class OrderItem {
         productName: m['productName'] ?? '',
         price: (m['price'] ?? 0).toDouble(),
         quantity: m['quantity'] ?? 1,
+        preparationNote: [
+          ...((m['modifiers'] as List?) ?? [])
+              .map((v) => v is Map ? (v['optionName'] ?? '').toString() : ''),
+          (m['notes'] ?? m['preparationNote'] ?? '').toString(),
+        ].where((s) => s.isNotEmpty).join(' • '),
       );
 
   Map<String, dynamic> toMap() => {
@@ -40,6 +47,7 @@ class OrderItem {
         'productName': productName,
         'price': price,
         'quantity': quantity,
+        if (preparationNote.isNotEmpty) 'preparationNote': preparationNote,
       };
 }
 
@@ -82,6 +90,16 @@ class ShopOrder {
   /// QR-link context tags (display-only): 'takeaway' | 'dineInPrepaid'.
   final String? orderType;
   final String? tableName;
+  final String? pickupMode;
+  final DateTime? pickupStartAt;
+  final DateTime? pickupEndAt;
+  final String? pickupLabel;
+
+  String? get pickupDescription => pickupLabel != null
+      ? 'นัดรับ $pickupLabel (เวลาไทย)'
+      : pickupMode == 'asap'
+          ? 'รับเร็วที่สุด • รอร้านแจ้งพร้อมรับ'
+          : null;
 
   const ShopOrder({
     required this.id,
@@ -100,6 +118,10 @@ class ShopOrder {
     this.paidAt,
     this.orderType,
     this.tableName,
+    this.pickupMode,
+    this.pickupStartAt,
+    this.pickupEndAt,
+    this.pickupLabel,
   }) : finalAmount = finalAmount ?? total;
 
   factory ShopOrder.fromFirestore(Map<String, dynamic> data, String id) =>
@@ -126,5 +148,9 @@ class ShopOrder {
         paidAt: (data['paidAt'] as Timestamp?)?.toDate(),
         orderType: data['orderType'] as String?,
         tableName: data['tableName'] as String?,
+        pickupMode: data['pickupMode'] as String?,
+        pickupStartAt: (data['pickupStartAt'] as Timestamp?)?.toDate(),
+        pickupEndAt: (data['pickupEndAt'] as Timestamp?)?.toDate(),
+        pickupLabel: data['pickupLabel'] as String?,
       );
 }

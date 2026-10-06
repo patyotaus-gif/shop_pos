@@ -1,3 +1,4 @@
+import '../widgets/pickup_settings_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -31,6 +32,7 @@ class _OrderQrScreenState extends State<OrderQrScreen> {
   bool _autoSend = false;
   bool _busy = false;
   String? _slug;
+  Map<String, dynamic> _pickupSettings = {};
   bool get _isRetail => widget.shopType == ShopType.retail;
   String get _title => _isRetail ? 'ลิงก์และ QR สั่งสินค้า' : 'QR สั่งอาหาร';
 
@@ -67,6 +69,8 @@ class _OrderQrScreenState extends State<OrderQrScreen> {
       _slug = settings['slug'] as String?;
       _mode = settings['tableOrderMode'] == 'prepaid' ? 'prepaid' : 'dineIn';
       _autoSend = settings['tableOrderAutoSend'] == true;
+      _pickupSettings =
+          Map<String, dynamic>.from(settings['pickup'] as Map? ?? {});
     });
   }
 
@@ -122,7 +126,10 @@ class _OrderQrScreenState extends State<OrderQrScreen> {
         children: [
           if (_busy) const LinearProgressIndicator(),
           // ── Takeaway ──
-          Text(_isRetail ? 'สั่งสินค้าออนไลน์ รับที่ร้าน' : 'สั่งกลับบ้าน (Takeaway)',
+          Text(
+              _isRetail
+                  ? 'สั่งสินค้าออนไลน์ รับที่ร้าน'
+                  : 'สั่งกลับบ้าน (Takeaway)',
               style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 4),
           Text('ลูกค้าสแกน → สั่ง + จ่าย PromptPay ล่วงหน้า มารับที่ร้าน',
@@ -167,11 +174,18 @@ class _OrderQrScreenState extends State<OrderQrScreen> {
           FilledButton.icon(
             onPressed: _busy
                 ? null
-                : () => _exportPdf([(label: _isRetail ? 'สั่งสินค้า รับที่ร้าน' : 'รับกลับบ้าน', url: _takeawayUrl)]),
+                : () => _exportPdf([
+                      (
+                        label:
+                            _isRetail ? 'สั่งสินค้า รับที่ร้าน' : 'รับกลับบ้าน',
+                        url: _takeawayUrl
+                      )
+                    ]),
             icon: const Icon(Icons.print_outlined, size: 18),
             label: const Text('พิมพ์ / ส่งออก PDF'),
           ),
 
+          PickupSettingsCard(initial: _pickupSettings),
           if (_isRestaurant) ...[
             const Divider(height: 36),
             // ── โหมดโต๊ะ ──

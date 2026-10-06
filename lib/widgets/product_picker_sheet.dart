@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/product.dart';
 import '../services/product_service.dart';
+import 'sale_product_grid.dart';
 
 /// Bottom sheet that lets the cashier pick a product to add to a table tab.
 /// Supports search + category chips; tap a product to return it via Navigator.
@@ -40,8 +41,8 @@ class _ProductPickerSheetState extends State<_ProductPickerSheet> {
       minChildSize: 0.5,
       expand: false,
       builder: (_, scrollCtrl) => Padding(
-        padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom),
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
         child: Column(
           children: [
             const SizedBox(height: 8),
@@ -77,7 +78,8 @@ class _ProductPickerSheetState extends State<_ProductPickerSheet> {
                   border: OutlineInputBorder(),
                   isDense: true,
                 ),
-                onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
+                onChanged: (v) =>
+                    setState(() => _query = v.trim().toLowerCase()),
               ),
             ),
             const SizedBox(height: 8),
@@ -109,19 +111,16 @@ class _ProductPickerSheetState extends State<_ProductPickerSheet> {
                         height: 40,
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 16),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
                           itemCount: categories.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(width: 6),
+                          separatorBuilder: (_, __) => const SizedBox(width: 6),
                           itemBuilder: (_, i) {
                             final c = categories[i];
                             final selected = c == _category;
                             return ChoiceChip(
                               label: Text(c),
                               selected: selected,
-                              onSelected: (_) =>
-                                  setState(() => _category = c),
+                              onSelected: (_) => setState(() => _category = c),
                             );
                           },
                         ),
@@ -134,19 +133,10 @@ class _ProductPickerSheetState extends State<_ProductPickerSheet> {
                                     style: TextStyle(
                                         color: cs.onSurface
                                             .withValues(alpha: 0.5))))
-                            : GridView.builder(
+                            : SaleProductGrid(
                                 controller: scrollCtrl,
-                                padding: const EdgeInsets.fromLTRB(
-                                    16, 4, 16, 16),
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 3,
-                                  childAspectRatio: 1.0,
-                                  crossAxisSpacing: 10,
-                                  mainAxisSpacing: 10,
-                                ),
                                 itemCount: filtered.length,
-                                itemBuilder: (_, i) => _ProductTile(
+                                itemBuilder: (_, i) => SaleProductCard(
                                   product: filtered[i],
                                   onTap: () =>
                                       Navigator.pop(context, filtered[i]),
@@ -159,52 +149,6 @@ class _ProductPickerSheetState extends State<_ProductPickerSheet> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ProductTile extends StatelessWidget {
-  const _ProductTile({required this.product, required this.onTap});
-
-  final Product product;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Material(
-      color: cs.surfaceContainerHighest,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                product.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600, fontSize: 13),
-              ),
-              Align(
-                alignment: Alignment.bottomRight,
-                child: Text(
-                  '฿${product.price.toStringAsFixed(0)}',
-                  style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: cs.primary),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

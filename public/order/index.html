@@ -12,7 +12,7 @@
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/order/order.css?v=20261005" />
+  <link rel="stylesheet" href="/order/order.css?v=20261007" />
   <!-- Self-hosted qrcodejs (davidshimjs) — avoids CDN/CORB blocks -->
   <script src="qrcode.min.js"></script>
 </head>
@@ -119,6 +119,13 @@
       <label>เบอร์โทรศัพท์</label>
       <input id="customerPhone" type="tel" placeholder="08X-XXX-XXXX" />
     </div>
+    <div id="pickupFields" class="field">
+      <label for="pickupMode">เวลามารับที่ร้าน</label>
+      <select id="pickupMode"><option value="asap">รับเร็วที่สุดที่ร้านจัดให้ได้</option><option value="scheduled">เลือกช่วงเวลามารับ</option></select>
+      <select id="pickupSlot" aria-label="ช่วงเวลามารับ" hidden></select>
+      <p id="pickupHint" role="status"></p>
+      <button id="pickupRefresh" type="button">ตรวจช่วงเวลาอีกครั้ง</button>
+    </div>
     <p style="font-size:.72rem;color:#6B5E60;line-height:1.5;margin:2px 0 10px">
       การสั่งซื้อถือว่าคุณยอมรับ
       <a href="/privacy" target="_blank" rel="noopener" style="color:#7A1F2B">นโยบายความเป็นส่วนตัว</a>
@@ -138,6 +145,7 @@
 <div id="payOverlay">
   <div id="payCard">
     <div class="pp-logo">PROMPT PAY</div>
+    <p id="payPickup"></p>
     <h2>สแกนเพื่อชำระเงิน</h2>
     <p class="pay-subtitle">เปิดแอปธนาคารแล้วสแกน QR ด้านล่าง</p>
 
@@ -178,7 +186,7 @@
 <!-- Page entry. Module scripts execute in document order, so main.js runs
      first (defines window.__startOrderPage), then the App Check module below
      starts the page once a token getter is ready. -->
-<script type="module" src="/order/js/main.js?v=20261005"></script>
+<script type="module" src="/order/js/main.js?v=20261007"></script>
 
 <!-- App Check (reCAPTCHA v3). This page talks to HTTP functions with plain
      fetch(), so we run the SDK in a module and expose a best-effort token

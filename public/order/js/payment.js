@@ -1,23 +1,27 @@
+import { initPickup, refreshPickup, pickupPayload } from './pickup.js?v=20261007';
 // Order form + PromptPay payment + slip verification.
 // Logic moved VERBATIM from the old public/order/index.html inline script —
 // do not "improve" payload/CRC/compression code here.
-import { shopId, apiFetch, orderContext } from './util.js?v=20261005';
-import { items, clearCart } from './cart.js?v=20261005';
+import { shopId, apiFetch, orderContext } from './util.js?v=20261007';
+import { items, clearCart } from './cart.js?v=20261007';
 // Payload builder now lives in the shared module (also used by /subscribe);
 // re-exported so this module's interface (and its Node tests) is unchanged.
 import { crc16, buildPromptPayPayload } from '../../js/promptpay-qr.js';
 export { crc16, buildPromptPayPayload };
 
 let pendingOrder = null;
+let lastRequest = null;
 
 export function openOrderModal() {
   document.getElementById('modalOverlay').classList.add('open');
+  refreshPickup();
 }
 function closeOrderModal() {
   document.getElementById('modalOverlay').classList.remove('open');
 }
 
 export function initPayment() {
+  initPickup();
   document.getElementById('payBtn').addEventListener('click', submitOrder);
   document.getElementById('cancelBtn').addEventListener('click', closeOrderModal);
   document.getElementById('paySlipBtn').addEventListener('click', () =>
@@ -33,6 +37,8 @@ async function submitOrder() {
   if (!name) { alert('กรุณากรอกชื่อ'); return; }
   if (!phone) { alert('กรุณากรอกเบอร์โทร'); return; }
 
+  let pickup;
+  try { pickup = pickupPayload(); } catch (error) { alert(error.message); return; }
   const orderItems = items().map((i) => ({
     productId: i.id,
     quantity: i.quantity,
@@ -40,6 +46,8 @@ async function submitOrder() {
     ...(i.notes ? { notes: i.notes } : {}),
   }));
 
+  const signature = JSON.stringify({ name, phone, orderItems, pickup });
+  if (!lastRequest || lastRequest.signature !== signature) lastRequest = { signature, id: crypto.randomUUID() };
   const payBtn = document.getElementById('payBtn');
   payBtn.disabled = true;
   payBtn.innerHTML = '<span class="spinner"></span>กำลังดำเนินการ...';
@@ -50,6 +58,8 @@ async function submitOrder() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         shopId,
+        ...pickup,
+        requestId: lastRequest.id,
         customerName: name,
         customerPhone: phone,
         items: orderItems,
@@ -67,9 +77,11 @@ async function submitOrder() {
     const data = await res.json();
     if (!res.ok || !data.orderId) {
       alert('เกิดข้อผิดพลาด: ' + (data.error || 'กรุณาลองใหม่'));
+      if (res.status === 409) await refreshPickup();
       return;
     }
     pendingOrder = data;
+    lastRequest = null;
     // The server accepted these items. Do not restore them as a new draft.
     clearCart();
     closeOrderModal();
@@ -82,7 +94,8 @@ async function submitOrder() {
   }
 }
 
-function showPaymentScreen({ finalAmount, total, promptpayId, promptpayName }) {
+function showPaymentScreen({ finalAmount, total, promptpayId, promptpayName, pickupLabel }) {
+  document.getElementById('payPickup').textContent = pickupLabel ? `นัดรับ ${pickupLabel} (เวลาประเทศไทย)` : '';
   const payload = buildPromptPayPayload(promptpayId, finalAmount);
   const qrEl = document.getElementById('payQrCanvas');
   qrEl.innerHTML = '';  // wipe any previous render
@@ -152,7 +165,7 @@ async function uploadSlip(event) {
     status.className = 'ok';
     status.textContent = data.awaitingReview ? 'ส่งสลิปแล้ว รอร้านตรวจยอดเงินเข้าและยืนยัน' : 'กำลังเปิดหน้าออเดอร์...';
     setTimeout(() => {
-      window.location.href = `/order/success/?order=${encodeURIComponent(pendingOrder.orderId)}${data.awaitingReview ? '&review=1' : ''}`;
+      window.location.href = `/order/success/?order=${encodeURIComponent(pendingOrder.orderId)}${data.awaitingReview ? '&review=1' : ''}${pendingOrder.pickupLabel ? '&pickup=' + encodeURIComponent(pendingOrder.pickupLabel) : ''}`;
     }, 1200);
   } catch (e) {
     status.className = 'err';

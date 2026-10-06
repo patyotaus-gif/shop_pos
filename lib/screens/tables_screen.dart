@@ -25,20 +25,29 @@ class TablesScreen extends StatelessWidget {
           if (tables.isEmpty) {
             return _EmptyState(onAdd: () => _addTable(context));
           }
-          return GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              childAspectRatio: 0.95,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-            ),
-            itemCount: tables.length,
-            itemBuilder: (_, i) => _TableCard(
-              table: tables[i],
-              onTap: () => _openDetail(context, tables[i]),
-              onLongPress: () => _editTable(context, tables[i]),
-            ),
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              // Keep the phone's three columns. On wider layouts, add columns
+              // so cards stay at most 180 logical pixels wide after padding.
+              final columns = constraints.maxWidth < 600
+                  ? 3
+                  : ((constraints.maxWidth - 32 + 12) / (180 + 12)).ceil();
+              return GridView.builder(
+                padding: const EdgeInsets.all(16),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  childAspectRatio: 0.95,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                ),
+                itemCount: tables.length,
+                itemBuilder: (_, i) => _TableCard(
+                  table: tables[i],
+                  onTap: () => _openDetail(context, tables[i]),
+                  onLongPress: () => _editTable(context, tables[i]),
+                ),
+              );
+            },
           );
         },
       ),
@@ -119,11 +128,13 @@ class _TableCard extends StatelessWidget {
                 children: [
                   Icon(
                     Icons.table_restaurant_outlined,
-                    color: occupied ? cs.primary : cs.onSurface.withValues(alpha: 0.5),
+                    color: occupied
+                        ? cs.primary
+                        : cs.onSurface.withValues(alpha: 0.5),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: border.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(100),
@@ -151,8 +162,7 @@ class _TableCard extends StatelessWidget {
                   Row(
                     children: [
                       Icon(Icons.person_outline,
-                          size: 12,
-                          color: cs.onSurface.withValues(alpha: 0.5)),
+                          size: 12, color: cs.onSurface.withValues(alpha: 0.5)),
                       const SizedBox(width: 2),
                       Text('${table.capacity}',
                           style: TextStyle(
@@ -163,8 +173,7 @@ class _TableCard extends StatelessWidget {
                         Text('· ${table.section}',
                             style: TextStyle(
                                 fontSize: 11,
-                                color:
-                                    cs.onSurface.withValues(alpha: 0.6))),
+                                color: cs.onSurface.withValues(alpha: 0.6))),
                       ],
                     ],
                   ),
@@ -199,8 +208,7 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 6),
             Text('เพิ่มโต๊ะแรกเพื่อเริ่มรับออเดอร์',
                 style: TextStyle(
-                    fontSize: 13,
-                    color: cs.onSurface.withValues(alpha: 0.6))),
+                    fontSize: 13, color: cs.onSurface.withValues(alpha: 0.6))),
             const SizedBox(height: 24),
             FilledButton.icon(
               onPressed: onAdd,

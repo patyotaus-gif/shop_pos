@@ -1,8 +1,8 @@
 // Dine-in table ordering (QR โต๊ะ, โหมดสั่งเข้าครัวจ่ายทีหลัง): sends the
 // cart to /api/createTableOrder — no customer form, no payment. Each round
 // appends to the table's open tab until staff closes the bill.
-import { shopId, apiFetch, orderContext, escHtml } from './util.js?v=20261005';
-import { items, clearCart } from './cart.js?v=20261005';
+import { shopId, apiFetch, orderContext, escHtml } from './util.js?v=20261007';
+import { items, clearCart } from './cart.js?v=20261007';
 
 export function initTableOrder() {
   document.getElementById('kitchenSendBtn').addEventListener('click', submitTableOrder);

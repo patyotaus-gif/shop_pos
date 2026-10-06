@@ -10,6 +10,7 @@ import '../models/product.dart';
 import '../models/modifier_group.dart';
 import '../services/offline_service.dart';
 import '../widgets/modifier_picker_sheet.dart';
+import '../widgets/sale_product_grid.dart';
 import '../utils/operation_error.dart';
 
 class OfflineEntryButton extends StatelessWidget {
@@ -392,14 +393,13 @@ class _OfflineCashState extends State<OfflineCashScreen>
                           labelText: 'ค้นหาสินค้าหรือบาร์โค้ด',
                           prefixIcon: Icon(Icons.search)))),
               Expanded(
-                  child: ListView.builder(
+                  child: SaleProductGrid(
                       itemCount: products.length,
                       itemBuilder: (context, i) {
                         final p = products[i];
-                        return ListTile(
-                            title: Text(p.name),
-                            subtitle: Text('฿${p.price.toStringAsFixed(2)}'),
-                            trailing: const Icon(Icons.add_circle_outline),
+                        return SaleProductCard(
+                            product: p,
+                            showPromotion: false,
                             onTap: _busy || expired ? null : () => _add(p));
                       })),
               const Divider(),

@@ -31,7 +31,8 @@ class OrderService {
               a.status != OrderStatus.pendingPayment) {
             return 1;
           }
-          return a.createdAt.compareTo(b.createdAt);
+          return (a.pickupStartAt ?? a.createdAt)
+              .compareTo(b.pickupStartAt ?? b.createdAt);
         });
         return orders;
       });

@@ -1,13 +1,13 @@
 // Entry point. The inline App Check module in index.html calls
 // window.__startOrderPage() AFTER setting window.__appCheckToken, so the
 // first /api/shopPublic call always carries a token (endpoint is enforced).
-import { shopId, tableParam, takeawayParam, orderContext, apiFetch, escHtml } from './util.js?v=20261005';
-import { initCatalog, renderProducts } from './catalog.js?v=20261005';
-import { initCartUI } from './cart.js?v=20261005';
-import { initPayment, openOrderModal } from './payment.js?v=20261005';
-import { initUpsell, maybeShowUpsell } from './upsell.js?v=20261005';
-import { initTableOrder, openTableOrderSheet } from './tableorder.js?v=20261005';
-import { initCartPersistence } from './cart-store.js?v=20261005';
+import { shopId, tableParam, takeawayParam, orderContext, apiFetch, escHtml } from './util.js?v=20261007';
+import { initCatalog, renderProducts } from './catalog.js?v=20261007';
+import { initCartUI } from './cart.js?v=20261007';
+import { initPayment, openOrderModal } from './payment.js?v=20261007';
+import { initUpsell, maybeShowUpsell } from './upsell.js?v=20261007';
+import { initTableOrder, openTableOrderSheet } from './tableorder.js?v=20261007';
+import { initCartPersistence } from './cart-store.js?v=20261007';
 
 function showError(msg) {
   document.getElementById('loading').style.display = 'none';

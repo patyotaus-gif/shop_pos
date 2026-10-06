@@ -11,13 +11,14 @@ const products = [
   {id:'water',name:'น้ำดื่ม',price:10,stock:0,category:'เครื่องดื่ม'},
 ];
 let failKitchen = true, kitchenRequests = [];
-let failSlip = true, slipRequests = [];
+let failSlip = true, slipRequests = [], checkoutRequests = [];
+const pickupSlots = [{id:'1791340200000', label:'07/10/2026 09:30–09:45 น.'}, {id:'1791341100000', label:'07/10/2026 09:45–10:00 น.'}];
 const server = http.createServer(async (req,res) => {
   const url = new URL(req.url,'http://localhost');
   if(url.pathname === '/api/shopPublic') {
     res.setHeader('Content-Type','application/json');
     const menu = url.searchParams.get('shop') === 'single' ? products.map(p=>({...p,category:'ทั่วไป'})) : products;
-    return res.end(JSON.stringify({name:'ร้านทดสอบ',products:menu, ...(url.searchParams.has('table') ?
+    return res.end(JSON.stringify({name:'ร้านทดสอบ',products:menu, ...(url.searchParams.get('shop') === 'pickup' ? {pickup:{enabled:true,slots:pickupSlots}} : {}), ...(url.searchParams.has('table') ?
       {table:{id:url.searchParams.get('table'),name:'A1'},tableOrderMode:'postpaid'} : {})}));
   }
   if(url.pathname === '/api/createTableOrder') {
@@ -27,9 +28,10 @@ const server = http.createServer(async (req,res) => {
     return res.end(JSON.stringify(failKitchen?{error:'ลองใหม่'}:{success:true}));
   }
   if(url.pathname === '/api/createPromptPayOrder') {
-    for await(const part of req) {} // Fixture only: no real payment created.
+    let body='';for await(const part of req)body+=part;
+    const checkout=JSON.parse(body);checkoutRequests.push(checkout);
     res.setHeader('Content-Type','application/json');
-    return res.end(JSON.stringify({orderId:'fixture-order',total:25,finalAmount:25,promptpayId:'0812345678',promptpayName:'ร้านทดสอบ'}));
+    return res.end(JSON.stringify({orderId:'fixture-order',pickupLabel:pickupSlots.find(s=>s.id===checkout.pickupSlot)?.label,total:25,finalAmount:25,promptpayId:'0812345678',promptpayName:'ร้านทดสอบ'}));
   }
   if(url.pathname === '/api/verifyPromptPaySlip') {
     let body='';for await(const part of req)body+=part;
@@ -44,7 +46,7 @@ const server = http.createServer(async (req,res) => {
   let data=fs.readFileSync(file);
   if(file.endsWith('order'+path.sep+'index.html')) {
     data=Buffer.from(data.toString().replace(/<script type="module">[\s\S]*?<\/script>/g,
-      '<script type="module">import "/order/js/main.js?v=20261005"; window.__startOrderPage();</script>'));
+      '<script type="module">import "/order/js/main.js?v=20261007"; window.__startOrderPage();</script>'));
   }
   res.setHeader('Content-Type',file.endsWith('.js')?'text/javascript; charset=utf-8':file.endsWith('.css')?'text/css; charset=utf-8':file.endsWith('.html')?'text/html; charset=utf-8':'application/octet-stream');
   res.end(data);
@@ -110,6 +112,7 @@ const server = http.createServer(async (req,res) => {
     await page.locator('[data-id="tea"] .add-btn').click();
     await page.locator('#cartBtn').click();await page.locator('#checkoutBtn').click();
     await page.locator('#customerName').fill('fixture');await page.locator('#customerPhone').fill('0800000000');
+    await page.locator('#pickupHint').filter({hasText:'ร้านยังไม่เปิด'}).waitFor();
     await page.locator('#payBtn').click();await page.locator('#payOverlay.open').waitFor();
     assert.equal(await page.locator('#cartCount').textContent(),'0','accepted takeaway order clears draft');
     const png=await page.screenshot();
@@ -131,6 +134,29 @@ const server = http.createServer(async (req,res) => {
     assert.equal(await page.locator('#cartCount').textContent(),'0','accepted payment order is not restored as a new cart');
     await page.setViewportSize({width:1024,height:800});
     assert.equal(await page.locator('#products').evaluate(n=>getComputedStyle(n).gridTemplateColumns.split(' ').length)>=3,true);
+    await page.setViewportSize({width:320,height:640});
+    await page.goto(base.replace('shop=fixture&table=t1','shop=pickup'));
+    await page.locator('[data-id="tea"] .add-btn').click();
+    await page.locator('#cartBtn').click();await page.locator('#checkoutBtn').click();
+    await page.locator('#pickupHint').filter({hasText:'เวลาประเทศไทย'}).waitFor();
+    assert.ok(await page.locator('#pickupSlot').isDisabled(), 'ASAP picks first available slot');
+    assert.equal(await page.locator('#pickupSlot').inputValue(),pickupSlots[0].id);
+    await page.locator('#pickupMode').selectOption('scheduled');
+    await page.locator('#pickupSlot').selectOption(pickupSlots[1].id);
+    const modalBox = await page.locator('#modal').boundingBox();
+    assert.ok(modalBox.y >= 0 && modalBox.y + modalBox.height <= 640, 'pickup form fits small mobile height');
+    assert.ok(await page.locator('#modal').evaluate(n=>n.scrollWidth<=n.clientWidth), 'no pickup form horizontal overflow');
+    await page.screenshot({path:'.remember/tmp/release55-pickup-form.png'});
+    await page.locator('#customerName').fill('pickup fixture');await page.locator('#customerPhone').fill('0800000000');
+    await page.locator('#payBtn').click();await page.locator('#payOverlay.open').waitFor();
+    assert.equal(checkoutRequests.at(-1).pickupSlot,pickupSlots[1].id);
+    assert.equal(checkoutRequests.at(-1).pickupMode,'scheduled');
+    assert.match(checkoutRequests.at(-1).requestId,/^[a-f0-9-]{36}$/);
+    assert.ok((await page.locator('#payPickup').textContent()).includes('09:45–10:00'));
+    await page.screenshot({path:'.remember/tmp/release55-pickup-payment.png'});
+    await page.locator('#slipFileInput').setInputFiles(slip);
+    await page.waitForURL('**/order/success/**');
+    assert.ok((await page.locator('#pickup').textContent()).includes('09:45–10:00'));
     assert.deepEqual(errors,[]);
     console.log('PASS mobile grid, categories/search, choices, notes, drafts, kitchen retry, slip PNG compression and same-file retry, truthful pending-review receipt');
   } finally {await browser.close();}
