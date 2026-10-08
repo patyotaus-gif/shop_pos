@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'ingredient_checkout.dart';
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -206,6 +207,11 @@ class SaleService {
             ifAbsent: () => item.quantity);
       }
       final counted = <String, int>{};
+      final reservationData =
+          (await tx.get(shop.collection('inventoryControl').doc('online')))
+                  .data() ??
+              {};
+      final reserved = reservationData['products'] as Map? ?? {};
       for (final entry in quantities.entries) {
         final product =
             await tx.get(shop.collection('products').doc(entry.key));
@@ -214,7 +220,9 @@ class SaleService {
         }
         if (product.data()?['stockMode'] == 'recipe') continue;
         counted[entry.key] = entry.value;
-        if ((product.data()?['stock'] as num? ?? 0) < entry.value) {
+        if ((product.data()?['stock'] as num? ?? 0) -
+                (reserved[entry.key] as num? ?? 0) <
+            entry.value) {
           throw StateError(
               'สินค้าคงเหลือไม่พอ: ${product.data()?['name'] ?? entry.key}');
         }
@@ -224,6 +232,8 @@ class SaleService {
           : shop.collection('customers').doc(loyaltyCustomerId);
       final customer = customerRef == null ? null : await tx.get(customerRef);
       final control = await MoneyLedger.read(tx, shop);
+      final ingredientUsage = await IngredientCheckout.read(
+          tx, shop, draft.items, reservationData['ingredients'] as Map? ?? {});
       final day = receiptDay(draft.createdAt);
       final next = nextReceiptSeq(counter.data()?['day'] as String?, day,
           (counter.data()?['seq'] as num? ?? 0).toInt());
@@ -232,11 +242,14 @@ class SaleService {
         'receiptNo': formatReceiptNo(next.day, next.seq),
         'accountingVersion': 1,
         'stockDeducted': counted,
+        'ingredientsDeducted': true,
+        'ingredientUsage': ingredientUsage,
         if (customer?.exists == true) 'loyaltyCustomerId': loyaltyCustomerId,
         if (customer?.exists == true)
           'loyaltyPointsAwarded': CustomerService.pointsFor(draft.total),
       };
       tx.set(saleRef, payload);
+      IngredientCheckout.write(tx, shop, ingredientUsage);
       for (final entry in counted.entries) {
         tx.update(shop.collection('products').doc(entry.key),
             {'stock': FieldValue.increment(-entry.value)});

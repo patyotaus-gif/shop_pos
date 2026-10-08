@@ -34,20 +34,31 @@ async function confirmOrder({db,FieldValue,shopId,orderId,actor,paymentRef,strip
     for(const [id,quantity] of quantities) {
       const ref=shop.collection('products').doc(id), product=(await tx.get(ref)).data();
       if(!product){review.push('Product removed: '+id);continue;}
-      if(product.stockMode==='recipe') continue;
+      if(order.inventoryReservation ? !order.inventoryReservation.products[id] : product.stockMode==='recipe') continue;
       if(Number(product.stock||0)<quantity) review.push('Insufficient stock: '+id);
       updates.push({ref,quantity});
     }
+    const ingredientUpdates=[];
+    if(order.inventoryReservation) for(const [id,qty] of Object.entries(order.inventoryReservation.ingredients || {})) {
+      const ref=shop.collection('ingredients').doc(id), ingredient=(await tx.get(ref)).data();
+      if(!ingredient){review.push('Ingredient removed: '+id);continue;}
+      if(Number(ingredient.stock||0)<qty)review.push('Insufficient ingredient: '+id);
+      ingredientUpdates.push({ref,qty});
+    }
+    const release=await require('./order_inventory').prepareRelease(tx,shop,order);
     const context=await ledgerContext(tx,shop);
     const now=FieldValue.serverTimestamp();
     const sale={items:order.items.map(i=>({...i,subtotal:minor(i.price*i.quantity)/100})),total:amount/100,
-      discount:0,paid:amount/100,change:0,paymentMethod:stripeSession?'online':'qr',salesChannel:'takeaway',
+      discount:0,paid:amount/100,change:0,paymentMethod:stripeSession?'online':'qr',salesChannel:order.orderType==='dineInPrepaid'?'dineIn':'takeaway',
       isDebt:false,isRefunded:false,customerName:order.customerName||'',createdAt:now,orderId,
       receiptNo:'WEB-'+orderId,accountingVersion:1,needsReview:review.length>0,offlineReview:review,
       stockDeducted:Object.fromEntries(updates.map(u=>[u.ref.id,u.quantity])),
+      ...(order.inventoryReservation?{ingredientsDeducted:true,ingredientUsage:Object.fromEntries(ingredientUpdates.map(u=>[u.ref.id,u.qty]))}:{}),
       ...(stripeSession?{stripePaymentIntentId:stripeSession.payment_intent||null}:{})};
     tx.create(saleRef,sale);
+    release();
     for(const u of updates)tx.update(u.ref,{stock:FieldValue.increment(-u.quantity)});
+    for(const u of ingredientUpdates)tx.update(u.ref,{stock:FieldValue.increment(-u.qty)});
     tx.update(orderRef,{status:'paid',paidAt:now,saleId:saleRef.id,paymentRef:paymentRef||null,
       confirmedBy:actor,...(stripeSession?{stripeSessionId:stripeSession.id}:{autoConfirmed:false})});
     writeMovement(tx,shop,context,'sale-'+saleRef.id,{...saleMovement(sale,actor),saleId:saleRef.id,orderId},FieldValue);
@@ -75,6 +86,10 @@ function handlers({db,FieldValue,HttpsError}) {
           if(old.paymentMethod==='stripe'||old.stripeSessionId)throw new HttpsError('failed-precondition','ต้องตรวจสอบสถานะชำระเงินออนไลน์ก่อนยกเลิก');
           if(typeof reason!=='string'||!reason.trim())throw new HttpsError('invalid-argument','กรุณาระบุเหตุผลยกเลิก');
         } else if(next[old.status]!==status)throw new HttpsError('failed-precondition','สถานะออเดอร์เปลี่ยนแล้ว');
+        if(status==='cancelled'){
+          const release=await require('./order_inventory').prepareRelease(tx,db.collection('shops').doc(shopId),old);
+          release();
+        }
         tx.update(ref,{status,statusUpdatedAt:FieldValue.serverTimestamp(),statusUpdatedBy:request.auth.uid,
           ...(status==='cancelled'?{cancelReason:reason.trim().slice(0,500)}:{})});
         return {success:true};

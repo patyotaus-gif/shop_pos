@@ -149,7 +149,15 @@ function createStaffAccess({db, auth, FieldValue, Timestamp, now=()=>new Date()}
       if(Math.abs(total-expectedTotal)>0.009) fail('failed-precondition','ราคาสินค้าเปลี่ยน กรุณาติดต่อเจ้าของร้านก่อนรับเงินเพิ่ม');
       if(paymentMethod==='cash'&&paid<total) fail('invalid-argument','จำนวนเงินรับไม่พอ');
       const quantities=new Map();for(const i of priced) quantities.set(i.productId,(quantities.get(i.productId)||0)+i.quantity);
-      for(const [id,q] of quantities)if(products.get(id).stockMode!=='recipe'&&Number(products.get(id).stock||0)<q)fail('failed-precondition','สต็อกไม่พอ กรุณาติดต่อเจ้าของร้าน');
+      const reserved=(await tx.get(ctx.ref.collection('inventoryControl').doc('online'))).data() || {};
+      for(const [id,q] of quantities)if(products.get(id).stockMode!=='recipe'&&Number(products.get(id).stock||0)-Number(reserved.products?.[id]||0)<q)fail('failed-precondition','สต็อกไม่พอหรือถูกจองออนไลน์ กรุณาติดต่อเจ้าของร้าน');
+      const usage=require('./inventory').computeUsage(priced,Object.fromEntries(products),Object.fromEntries(groups)),ingredientUpdates=[];
+      for(const [id,qty] of Object.entries(usage)){
+        const ref=ctx.ref.collection('ingredients').doc(id),ing=(await tx.get(ref)).data();
+        const held=Number(reserved.ingredients?.[id]||0);
+        if(held>0 && Number(ing?.stock||0)-qty+1e-9<held)fail('failed-precondition','วัตถุดิบถูกจองออนไลน์ กรุณาติดต่อเจ้าของร้าน');
+        if(ing)ingredientUpdates.push({ref,qty});
+      }
       // Separate prefix/counter from owner devices, whose local timezone may differ.
       const counter=ctx.ref.collection('counters').doc('staffReceipt'),count=await tx.get(counter);
       const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now());
@@ -161,8 +169,11 @@ function createStaffAccess({db, auth, FieldValue, Timestamp, now=()=>new Date()}
         staffUid:ctx.user.uid,requestDigest:digest,receiptNo:`S-${day}-${String(seq).padStart(3,'0')}`};
       const context=await ledgerContext(tx,ctx.ref);
       sale.accountingVersion=1;
+      sale.ingredientsDeducted=true;
+      sale.ingredientUsage=Object.fromEntries(ingredientUpdates.map(u=>[u.ref.id,u.qty]));
       sale.stockDeducted=Object.fromEntries([...quantities].filter(([id])=>products.get(id).stockMode!=='recipe'));
       tx.set(ref,sale);tx.set(counter,{day,seq});
+      for(const u of ingredientUpdates)tx.update(u.ref,{stock:FieldValue.increment(-u.qty)});
       writeMovement(tx,ctx.ref,context,'sale-'+ref.id,{...saleMovement(sale,ctx.user.uid),saleId:ref.id},FieldValue);
       for(const [id,q] of quantities)if(products.get(id).stockMode!=='recipe')tx.update(ctx.ref.collection('products').doc(id),{stock:FieldValue.increment(-q)});
       return publicSale({id:ref.id,...sale});

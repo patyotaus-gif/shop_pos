@@ -60,12 +60,14 @@ async function createWithPickup({ db, shopRef, orderRef, order, requestedSlot, p
     if (prior.exists) {
       const saved = prior.data();
       if (!order.requestSignature || saved.requestSignature !== order.requestSignature || saved.status !== 'pendingPayment')
-        throw Error('ช่วงเวลาหรือออเดอร์เปลี่ยนไป กรุณาตรวจออเดอร์เดิมกับร้าน');
-      return { pickupLabel: saved.pickupLabel || null, total: saved.total, finalAmount: saved.finalAmount };
+        throw Object.assign(Error('ช่วงเวลาหรือออเดอร์เปลี่ยนไป กรุณาตรวจออเดอร์เดิมกับร้าน'),{existingOrder:true});
+      return { pickupLabel: saved.pickupLabel || null, total: saved.total, finalAmount: saved.finalAmount,
+        promptpayIdSnapshot:saved.promptpayIdSnapshot, promptpayNameSnapshot:saved.promptpayNameSnapshot };
     }
     const settings = (await tx.get(shopRef.collection('settings').doc('shop'))).data() || {};
     if (settings.ordersClosed === true) throw Error('ร้านปิดรับออเดอร์ชั่วคราว');
     const c = config(settings.pickup);
+    const inventory = order.items?.length ? await require('./order_inventory').reserve(tx, shopRef, order.items) : null;
     let pickup = {};
     if (order.tableId || order.orderType === 'dineInPrepaid') {
       if (requestedSlot) throw Error('เวลานัดรับใช้สำหรับออเดอร์รับกลับบ้านเท่านั้น');
@@ -91,8 +93,10 @@ async function createWithPickup({ db, shopRef, orderRef, order, requestedSlot, p
       if (requestedSlot) throw Error('ร้านปิดการนัดรับล่วงหน้า กรุณาเลือกใหม่');
       pickup = { pickupMode: 'asap' };
     }
-    tx.create(orderRef, { ...order, ...pickup });
-    return { ...pickup, total: order.total, finalAmount: order.finalAmount };
+    if (inventory) inventory.write();
+    tx.create(orderRef, { ...order, ...pickup, ...(inventory ? {inventoryReservation:inventory.reservation} : {}) });
+    return { ...pickup, total: order.total, finalAmount: order.finalAmount,
+      promptpayIdSnapshot:order.promptpayIdSnapshot, promptpayNameSnapshot:order.promptpayNameSnapshot };
   });
 }
 module.exports = { config, slots, availability, createWithPickup };

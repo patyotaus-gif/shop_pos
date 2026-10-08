@@ -1,8 +1,8 @@
 // Pre-checkout upsell popup: the shop's pinned products + live promos the
 // customer hasn't added yet. Shown at most once per page load; skipped
 // silently when there are no candidates. DOM-free at import time.
-import { escHtml, fmtBaht } from './util.js?v=20261007';
-import { addOne, getQty } from './cart.js?v=20261007';
+import { escHtml, fmtBaht } from './util.js?v=20261009';
+import { addOne, getQty } from './cart.js?v=20261009';
 
 let shown = false;
 let candidates = [];

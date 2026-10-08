@@ -4,8 +4,8 @@ const {Jimp}=require('jimp');
 const {createSlipUpload,decodeSlip,MAX_BYTES}=require('./slip_upload');
 const imagePromise=new Jimp({width:8,height:8,color:0xffffffff}).getBuffer('image/jpeg');
 async function image(){return 'data:image/jpeg;base64,'+(await imagePromise).toString('base64');}
-function fixture({status='pendingPayment',exists=true,appCheck=true,saveError=false,race=false,txError=false,lostResponse=false}={}) {
-  let data={status,total:75,finalAmount:75.91};
+function fixture({status='pendingPayment',exists=true,appCheck=true,saveError=false,race=false,txError=false,lostResponse=false,customerTokenHash}={}) {
+  let data={status,total:75,finalAmount:75.91,...(customerTokenHash?{customerTokenHash}:{})};
   const saves=[],updates=[],deletes=[],logs=[];
   const snap=()=>({exists,data:()=>({...data})});
   const ref={get:async()=>snap()};
@@ -40,6 +40,14 @@ test('accepts a slip without a readable QR as evidence, never marks paid',async(
 });
 test('invalid App Check is rejected before saving any image',async()=>{
   const f=fixture({appCheck:false});assert.equal((await f.call(await body())).statusCode,401);assert.equal(f.saves.length,0);
+});
+test('protected new orders require the customer capability before storing slips',async()=>{
+  const token='a'.repeat(64),f=fixture({customerTokenHash:require('./customer_order').tokenHash(token)});
+  assert.equal((await f.call(await body())).statusCode,403);
+  assert.equal((await f.call({...await body(),customerToken:'b'.repeat(64)})).statusCode,403);
+  assert.equal(f.saves.length,0);
+  assert.equal((await f.call({...await body(),customerToken:token})).statusCode,200);
+  assert.equal(f.data().status,'pendingPayment');
 });
 test('invalid document path rejected',async()=>{
   const f=fixture();assert.equal((await f.call({...await body(),shopId:'../shop'})).statusCode,400);assert.equal(f.saves.length,0);

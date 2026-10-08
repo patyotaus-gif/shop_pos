@@ -21,6 +21,9 @@ exports.staffManage = onCall(staffAccess.manage);
 exports.staffSwitchSession = onCall(staffAccess.switchSession);
 exports.staffWorkspace = onCall(staffAccess.workspace);
 exports.staffCheckout = onCall(staffAccess.checkout);
+const kitchenPrint = require('./kitchen_print').handlers({db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError});
+exports.claimKitchenPrint = onCall(kitchenPrint.claim);
+exports.finishKitchenPrint = onCall(kitchenPrint.finish);
 const offlineSales = require('./offline_sales').createOfflineSales({
   db: admin.firestore(), FieldValue: admin.firestore.FieldValue, Timestamp: admin.firestore.Timestamp,
 });
@@ -260,6 +263,7 @@ exports.getShopPublic = onRequest({ cors: true }, async (req, res) => {
     };
   }
 
+  const inventoryState = await require('./order_inventory').readState(db.collection('shops').doc(shopId));
   const products = [];
   const now = Date.now();
   for (const doc of prodSnap.docs) {
@@ -281,7 +285,7 @@ exports.getShopPublic = onRequest({ cors: true }, async (req, res) => {
       name: p.name || "",
       price: onSale ? sale : regular,
       ...(onSale ? { originalPrice: regular } : {}),
-      stock: p.stock,
+      stock: require('./order_inventory').menuStock(doc.id, inventoryState),
       category: p.category || "",
       imageUrl: p.imageUrl || "",
       // Upsell popup material: pinned products are the shop's own picks.
@@ -418,6 +422,9 @@ exports.verifyPromptPaySlip = onRequest(
   require('./slip_upload').createSlipUpload({db:admin.firestore(),getBucket:()=>admin.storage().bucket(),
     FieldValue:admin.firestore.FieldValue,verifyAppCheck:_verifyAppCheck})
 );
+exports.customerOrder = onRequest({cors:true}, require('./customer_order').handler({
+  db:admin.firestore(),FieldValue:admin.firestore.FieldValue,verifyAppCheck:_verifyAppCheck,
+}));
 
 // Extract amount from an EMVCo PromptPay QR payload (tag "54" = amount).
 function parseEmvAmount(payload) {
@@ -459,12 +466,16 @@ exports.createPromptPayOrder = onRequest(
     }
     if (!(await _verifyAppCheck(req, res))) return;
 
-    const { shopId, customerName, customerPhone, items, tableId, tableName, orderType, pickupSlot, pickupMode, requestId } = req.body;
+    const { shopId, customerName, customerPhone, items, tableId, tableName, orderType, pickupSlot, pickupMode, requestId, customerToken } = req.body;
     if (!shopId || !customerName || !customerPhone || !Array.isArray(items) || items.length === 0) {
       res.status(400).json({ error: "ข้อมูลไม่ครบ" });
       return;
     }
     // Optional context tags from QR links (display-only).
+    const customerAccess = require('./customer_order');
+    if (!customerAccess.normalizePhone(customerPhone) || (customerToken != null && !customerAccess.validToken(customerToken))) {
+      res.status(400).json({error:'กรุณากรอกเบอร์โทรให้ถูกต้อง เช่น 0812345678 หรือ +66812345678'}); return;
+    }
     const safeOrderType = ["takeaway", "dineInPrepaid"].includes(orderType)
       ? orderType
       : null;
@@ -560,6 +571,7 @@ exports.createPromptPayOrder = onRequest(
     const requestSignature = require('node:crypto').createHash('sha256').update(JSON.stringify({
       customerName, customerPhone, items, tableId: tableId || null, tableName: tableName || null,
       orderType: safeOrderType, pickupSlot: pickupSlot || null, pickupMode: pickupMode || null,
+      customerTokenHash: customerToken ? customerAccess.tokenHash(customerToken) : null,
     })).digest('hex');
     // Create order doc first so its ID seeds the unique cents
     const ordersRef = admin
@@ -577,6 +589,9 @@ exports.createPromptPayOrder = onRequest(
 
     const orderData = {
       requestSignature,
+      ...(customerToken ? {customerTokenHash:customerAccess.tokenHash(customerToken)} : {}),
+      promptpayIdSnapshot: promptpayId,
+      promptpayNameSnapshot: promptpayName,
       customerName,
       customerPhone,
       items: pricedItems,
@@ -596,7 +611,8 @@ exports.createPromptPayOrder = onRequest(
       });
     } catch (error) {
       console.error("Pickup reservation failed", error.code || "validation");
-      res.status(409).json({ error: error.message?.startsWith("ช่วงเวลา") || error.message?.startsWith("ร้านปิด") || error.message?.startsWith("เวลานัด") ? error.message : "บันทึกออเดอร์ไม่สำเร็จ กรุณาลองใหม่" });
+      const known = /^(ช่วงเวลา|ร้านปิด|เวลานัด|สินค้า|สูตร|กรุณาให้ร้าน)/.test(error.message || '');
+      res.status(known ? 409 : 503).json({ error: known ? error.message : "บันทึกออเดอร์ไม่สำเร็จ กรุณาลองใหม่",existingOrder:error.existingOrder===true });
       return;
     }
 
@@ -605,8 +621,8 @@ exports.createPromptPayOrder = onRequest(
       pickupLabel: pickup.pickupLabel || null,
       total: pickup.total,
       finalAmount: pickup.finalAmount,
-      promptpayId,
-      promptpayName,
+      promptpayId: pickup.promptpayIdSnapshot || promptpayId,
+      promptpayName: pickup.promptpayNameSnapshot ?? promptpayName,
     });
   }
 );

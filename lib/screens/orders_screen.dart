@@ -1,4 +1,5 @@
 import 'order_ticket_screen.dart';
+import 'kitchen_screen.dart';
 import 'package:flutter/material.dart';
 
 import 'package:intl/intl.dart';
@@ -400,17 +401,18 @@ class _OrderCard extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    if (order.status == OrderStatus.pendingPayment &&
-                        order.finalAmount != order.total)
+                    if (order.status != OrderStatus.cancelled)
                       Text(
-                        'ยอดที่ต้องโอน',
+                        order.status == OrderStatus.pendingPayment
+                            ? 'ยอดที่ต้องชำระ'
+                            : 'ยอดรับเงิน',
                         style: TextStyle(
                           color: Colors.grey.shade600,
                           fontSize: 11,
                         ),
                       ),
                     Text(
-                      '฿${_baht.format(order.status == OrderStatus.pendingPayment ? order.finalAmount : order.total)}',
+                      '฿${_baht.format(order.paymentMethod == 'stripe' ? order.total : order.finalAmount)}',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
@@ -433,6 +435,15 @@ class _OrderCard extends StatelessWidget {
                           builder: (_) => OrderTicketScreen(order: order))),
                 )),
             // Action buttons
+            if ([OrderStatus.paid, OrderStatus.accepted, OrderStatus.ready]
+                .contains(order.status))
+              TextButton.icon(
+                icon: const Icon(Icons.soup_kitchen_outlined),
+                label: const Text('จอครัว / พิมพ์ที่ครัว'),
+                onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                        builder: (_) => const KitchenScreen())),
+              ),
             if (order.status == OrderStatus.pendingPayment) ...[
               const SizedBox(height: 10),
               _PendingPaymentActions(order: order),

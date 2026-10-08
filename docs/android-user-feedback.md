@@ -194,3 +194,109 @@ See [order-accounting-audit.md](order-accounting-audit.md) for payment/order/cas
 - Verified at 2026-10-06T14:12:17.635Z; all12 ordering HTML/CSS/module assets matched local hashes and returned no-cache. The previous APK is preserved locally at .remember/tmp/pokpok-build54-backup.apk. Evidence/logs: .remember/tmp/release55-* (private, ignored).
 - No production shop's scheduling was enabled or hours changed. Owners must update their shop devices, then enable and configure pickup in the link/QR ordering screen. Existing orders remain unchanged.
 - iOS source version1.2.38 is prepared for master. Manual Codemagic New build → master → iOS Release to TestFlight remains necessary. Codemagic assigns its next iOS build number; Android55 is not a claim about the iOS build. TestFlight processing/review and actual device tests are still outstanding.
+
+## Exploratory user-journey audit — 2026-10-09, source 1.2.38+55
+
+Requested scope: act through ordinary owner, staff and customer tasks and find defects. This audit does not certify that every feature works. No production shop records, actual payments, product implementation, version numbers or deployments were changed. The `audit56-*` evidence prefix is a local audit identifier, not a release/build number.
+
+### Reproduced findings
+
+Priorities: P1 = address before expanding the pilot; P2 = next usability/correctness batch. These are findings, not fixes.
+
+| ID | Priority | User journey / actual result | Required behavior |
+| --- | --- | --- | --- |
+| UX-02 | P1 | Create online QR order, then refresh before uploading the slip. Payment screen disappears, cart is empty and the original pending order has no recovery entry. Reproduced in local browser. | Persist a secure reference and offer “ดำเนินการชำระ/ส่งสลิปต่อ” for the existing order. Re-fetch its authoritative status; do not create a new order or ask for another transfer. |
+| UX-01 | P1 | Press “ยกเลิกออเดอร์” on the QR screen and confirm. No cancellation request is sent; only the overlay and in-memory pending reference are cleared. Backend pickup tests separately confirm that pending reservations continue consuming capacity until explicitly cancelled. | Distinguish closing the payment screen from cancelling an unpaid order. Implement an authorized, race-safe server transition that reconciles payment/slip state and releases capacity only after a confirmed cancellation. Do not delete a potentially paid order. |
+| DATA-01 | P1 | With one stock unit, two separate customers both receive payable QR orders. After both simulated receipts are confirmed in the emulator, stock is **-1**. A direct checkout at stock zero also succeeds. | Check/reserve availability transactionally before requesting payment, with safe release/reconciliation. Keep recording money actually received even when stock is short; suppressing a confirmed sale would corrupt accounting. |
+| DATA-03 | P1 for recipe menus | Recipe dish has finished-goods stock zero but ingredient stock available. Actual public-menu handler returns stock zero with no recipe availability. Browser using that response shape disables Add. | Use recipe/ingredient availability consistently instead of treating finished-goods stock as the only availability signal. Revalidate on checkout. |
+| DATA-02 | P2 | Create a valid prepaid table QR order, then confirm its simulated payment. Saved sale channel is **takeaway**, even though order type is dineInPrepaid. | Derive the channel from the validated order type; test dine-in and takeaway separately so channel reports are meaningful. |
+| UI-04 | P2 | Emulator sale records **50.03** including the order's matching satang; base order total is **50.00**. Source of the paid order card selects the base total, while pending card uses finalAmount. | Display the actual paid amount consistently, with any base-price/matching-satang breakdown labelled. This audit found a display mismatch, not missing money. Card rendering itself was reviewed in source, not on a physical device. |
+| UX-03 | P2 | Enter **abc** in customer phone, submit checkout: both browser and actual server handler accept it. | Validate and normalize supported phone formats on both sides with an actionable message; do not reject legitimate international formats accidentally. |
+
+Reproduction code and evidence:
+
+- `scripts/audit_customer_journeys.cjs`: shipped HTML/JS in headless Edge at 375×812, local fixture APIs, external requests blocked. Evidence: `.remember/tmp/audit56-browser-findings.json`, `audit56-cancel.png`, `audit56-payment-reload.png`.
+- `functions/audit_order_journeys.cjs`: actual extracted checkout/menu handlers and `confirmOrder` module against isolated Firestore emulator (`demo-pokpok-admin`). App Check is stubbed and modifier-group loading is stubbed; this does not test deployed HTTP middleware, bank verification or production trigger delivery. Evidence: `.remember/tmp/audit56-backend-findings.json`.
+- These scripts deliberately assert the current defects. Exit zero means the defects were reproduced, **not** that these journeys passed acceptance. Convert them to desired-behavior regressions when fixing each issue. No real bank transfer occurred.
+- Source anchors: `public/order/js/payment.js` (`cancelPay`, in-memory pendingOrder); `functions/index.js` (`createPromptPayOrder`, `getShopPublic`); `functions/order_accounting.js` (`salesChannel`); `lib/screens/orders_screen.dart` (paid amount selection); `public/order/js/catalog.js` (stock-based availability).
+
+### Additional source-review findings requiring device/workflow acceptance
+
+- **UI-05 / P2 — short phone viewport hides product cards.** `lib/screens/pos_screen.dart` includes the catalog only when available content height is at least 580 logical pixels in the narrow layout. Smaller screens, landscape or keyboard/system UI can fall below it. Search remains, but browsing products disappears. Test the complete POS screen at short heights, not only the standalone grid; keep a reachable product browser.
+- **FLOW-01 / P1 for shops using the kitchen display — online orders and kitchen queues are separate.** `KitchenScreen` subscribes to open `TableOrder` records. Online `ShopOrder` confirmation/status transitions update the orders/sales collections and do not populate that queue. Online orders have their own status controls and preparation PDF. Decide and clearly expose a unified send-to-kitchen/print workflow; an empty kitchen display must not imply there are no online meals to prepare. No physical kitchen/device run was performed.
+- **Staff role scope is narrower than restaurant operations.** `StaffModeScreen` deliberately exposes POS sales/receipt and tells staff the owner manages tables/kitchen. This is an explicit current limitation, not proof of a permission bug. A restaurant pilot needs a decision on cashier/server/kitchen roles before delegating those tasks; keep owner-only financial/configuration privileges protected.
+
+### Validation completed in this audit
+
+| Area | Evidence / result | Scope limit |
+| --- | --- | --- |
+| Flutter regression | **99 passed**: auth recovery/remembered owner, social buttons/onboarding, staff switching, entitlements, cart/grid, restaurant workflows, receipts, sessions, offline and accounting cases | Automated widget/unit tests; not a full installed-device walkthrough or real Google/Apple sign-in |
+| Backend regression | **81 passed** plus escalation script: payments/accounting/refunds, analytics, capabilities, staff, LINE delivery, slips and pickup | Unit/stub coverage; does not establish live provider delivery |
+| Firestore access/integration | Passed admin-plan rules, staff access, offline sales, accounting and pickup suites | Isolated emulator: includes concurrent payments/close, immutable summaries and pickup reservations; no historical-shop reconciliation |
+| Storage access | Passed owner logo create/update/delete; public read; denial for foreign owner, staff and anonymous writes; image type/size/path limits | Rules-level emulator test, not image selection/compression/upload on a customer's device |
+| Existing online-browser journeys | Passed categories/search, responsive grid, required choices, notes, draft restore, kitchen retry, slip PNG compression and same-file retry, pending-review completion | Headless Edge with fixture APIs at mobile and desktop widths; no actual funds moved |
+| New exploratory journeys | Reproduced the findings above | Browser fixtures and isolated backend emulator are separate checks, not a production end-to-end transaction |
+
+Logs are private/ignored under `.remember/tmp/audit56-*`; raw Firebase logs may contain sensitive environment metadata and must not be shared. Test success does not erase the newly reproduced gaps.
+
+### Still not tested
+
+- Physical Android/iOS installation/update, OS process termination and remembered login, actual Google/Apple auth, camera/gallery/file picker, slow/mobile network and offline multi-device recovery. No Android device was attached; no iOS simulator is available on this Windows machine.
+- Actual Bluetooth/system printer output, bank receipts, deployed App Check/auth behavior, LINE/FCM delivery and a complete real-store closing reconciliation. No customer's historical financial records were read or rewritten.
+- End-to-end supplier ordering, subscription purchase/renewal, AI features and every inventory/import/export setting. Existing unit coverage is not a substitute for these journeys.
+- User reported Codemagic working again, but the new iOS build's TestFlight availability was not independently confirmed.
+
+Suggested repair order: payment recovery/cancellation → stock and recipe availability → online kitchen handoff → channel/amount consistency → short-screen browsing/contact validation. Then repeat the affected regressions and a real-device pilot from order placement through receipt and day close. No claim of full-app acceptance yet.
+
+## Audit repairs and two kitchen output modes — 2026-10-09 (source only)
+
+Status: implemented locally; no APK/IPA build, version bump, commit, push or deployment in this repair batch. The historical audit above describes the pre-fix behavior. Latest published Android remains 1.2.38+55.
+
+### Implemented repairs
+
+- UX-01 / UX-02: customer QR checkout persists an order request and a random capability before sending it. Refresh and ambiguous network replies recover the same order, original amount and current server status instead of creating another payable order. Cancellation is a server transaction, allowed only for an unpaid pending order without known slip/payment evidence; it releases stock and pickup reservations. Customers must confirm they have not transferred. External money not yet reported to the system cannot be detected by this check.
+- DATA-01 / DATA-03: online checkout reserves counted products and recipe/modifier ingredients transactionally, preventing simultaneous customers reserving the last unit twice. Public recipe availability is calculated from ingredients. Updated native POS/table checkout and staff checkout respect online holds; recipe deduction and sale snapshots are atomic and existing deduction triggers skip already-deducted sales. Confirmation preserves actual received money even if a later inventory conflict needs reconciliation. Cancellation/refund paths release or restore the appropriate stock once.
+- DATA-02 / UI-04: prepaid table orders record dine-in sales channels; order cards display the actual PromptPay amount, including matching satang, for both pending and paid orders.
+- UX-03: phone formats are checked and normalized in the browser and server, including supported international numbers.
+- UI-05: short mobile/landscape POS layouts retain a reachable product picker and cart controls. Recipe product cards no longer depend solely on finished-goods stock.
+- FLOW-01: kitchen includes paid online orders with preparation notes and pickup times alongside table orders. Unpaid online orders do not enter the preparation queue. Table and online preparation actions continue using their authoritative records without adding another sale.
+
+### Kitchen operation
+
+Open Kitchen, or the kitchen/print shortcut on a table or paid online order, and choose a shop setting:
+
+1. Screen: view preparation tickets and update readiness.
+2. Kitchen printer: view the pending print queue, tap print, select a printer through the operating system, then explicitly confirm that the paper arrived. This is manual printing, not background network printing.
+
+Print jobs use server-side claims to prevent simultaneous printing by two devices. New table items can be printed separately; duplicate/recovery printing requires an explicit action and marks the ticket as a reprint. Cancelled/failed printing remains visible for review. Closed/completed orders with unacknowledged tickets remain reachable; closed table items cannot change cooking status. Printing does not create payment, sale or cash movement records.
+
+Current output is a Thai-font 80 mm multipage PDF using the existing system printing service. No direct ESC/POS, Bluetooth or USB driver was added. Actual model/connection compatibility and paper output remain untested; the user's printer model has been requested. A successful OS callback alone is not treated as paper receipt.
+
+### Verification
+
+- Flutter: 106 tests passed, including combined kitchen queues, closed unprinted tickets, small-screen layouts, long Thai kitchen PDFs, and counted/recipe stock reservation guards. Focused kitchen tests and changed-file analysis repeated after final navigation/read-only changes.
+- Backend: 82 tests passed plus the existing escalation check.
+- Firestore Emulator: admin/staff/offline/accounting/pickup suites and new customer integration passed. New coverage includes reservation races, secure status/cancellation, token isolation, evidence guards, recipe snapshots/deduction/refund, sales channel and kitchen print claim/retry/new-line/permission handling.
+- Headless Edge: existing customer ordering fixtures passed; new recovery fixtures passed invalid-phone rejection, refresh recovery, server cancellation, lost-response same-order retry, and review/paid screens hiding transfer instructions. Fixtures do not establish real bank or deployed provider behavior.
+- Changed Dart files analyze cleanly; git diff whitespace check passed. Private evidence is under .remember/tmp/fix-audit-*. Raw Firebase logs must not be shared. Historical audit reproduction scripts remain explicitly labelled as expected-defect evidence, not release gates.
+
+### Release and acceptance still required
+
+Deploy compatible backend/rules before updated Hosting and native clients. New endpoints: customerOrder, claimKitchenPrint, finishKitchenPrint. Changed handlers include getShopPublic, createPromptPayOrder, verifyPromptPaySlip, confirmOrderPayment, transitionOrder and staffCheckout. Publish the new customerOrder Hosting rewrite, ordering assets, additive Firestore access rules and a new native build together. Existing ingredient triggers already honor the ingredientsDeducted marker.
+
+Recovery uses the same browser's saved capability. Cleared storage, another device, or old orders created before this capability require owner assistance. Legacy checkout requests remain compatible; the current customer UI uses PromptPay, and unused legacy Stripe checkout is not a newly redesigned recovery flow.
+
+Pending reservations do not expire silently while a customer may have transferred. Update all terminals: older clients and offline sales may consume stock without seeing these new online holds and need reconciliation. Previously received money must not be discarded to fix a stock conflict. No historical production financial records were rewritten.
+
+Staff remains deliberately restricted to its existing POS scope; no new table/kitchen privileges were granted. Physical Android/iOS upgrade, real sign-in, actual bank/slip services, printer output and a full real-store order-to-day-close acceptance remain outstanding. These local automated results are not full-app or hardware certification.
+
+### Publication verified — Android 1.2.39+56 (2026-10-09)
+
+- User authorized publishing this complete repair batch. Signed release APK built successfully, then package/version/signature checked before replacing the hosted APK. Package app.pokpok.pos, version 1.2.39, build 56, 85,989,696 bytes. Certificate SHA256 f7dc70e0464fed06f8c0d14907ef71a75effb566e41e67d1aa685491dff547eb matches build55.
+- Deployed Firestore rules and 10 functions successfully before Hosting: customerOrder, claimKitchenPrint, finishKitchenPrint, getShopPublic, createPromptPayOrder, verifyPromptPaySlip, confirmOrderPayment, transitionOrder, staffCheckout and stripeWebhook. The webhook deployment includes the shared confirmation/reservation changes. No shop settings or customer financial records were manually changed.
+- Published the customer ordering website, customerOrder rewrite, APK and version manifest to Firebase Hosting. Full public download https://pok-pok.app/app/pokpok.apk verified at 2026-10-08T15:09:43.937Z: SHA256 dc63f8696ec172a3b5a89ec0cbfb80c63cb67684a1810ad29fbb97d4b633198a, byte count and manifest match the built artifact. All 13 ordering assets match local SHA256 and return no-cache.
+- Unauthenticated production probes to shopPublic, createPromptPayOrder, customerOrder and verifyPromptPaySlip returned401; both kitchen print callables denied access with403/PERMISSION_DENIED. No smoke probe created an order or print job. These are deployment/access checks, not real bank/customer acceptance.
+- Verification reuses the passed repair gates: Flutter106, backend82, Firestore access/integration and browser journeys; final kitchen4 tests and kitchen/orders analysis passed after the last small UI edits. Release logs and verification JSON are private under .remember/tmp/release56-*. Previous APK retained at .remember/tmp/pokpok-build55-backup.apk.
+- Android update is optional in the existing manifest (minSupportedBuild1, mandatory false). All shop terminals should update to honor the new stock holds. Matching signature establishes upgrade signing compatibility; no physical install-over-existing or data-retention acceptance was performed here.
+- iOS source version is1.2.39. Use Codemagic New build, master, workflow iOS Release to TestFlight; the workflow assigns the next iOS build number from App Store Connect, independently of Android56. Manual build remains required. No new IPA upload, TestFlight availability or Apple review completion is claimed.
+- Kitchen selection is available in the Kitchen screen, with shortcuts from table/order details. Actual hardware printing, real payment/sign-in, offline multi-device use and complete real-store closing remain device acceptance items. This release does not add a direct Bluetooth/USB printer driver.

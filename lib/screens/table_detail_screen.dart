@@ -13,6 +13,7 @@ import '../widgets/payment_sheet.dart';
 import '../widgets/product_picker_sheet.dart';
 import '../widgets/split_bill_sheet.dart';
 import 'sale_receipt_screen.dart';
+import 'kitchen_screen.dart';
 
 /// Order workflow for a single table. Three states:
 /// 1. No open tab → big "เปิดออเดอร์" CTA
@@ -255,8 +256,12 @@ class _OpenOrderViewState extends State<TableOrderView> {
           message: 'กำลังส่งออเดอร์เข้าครัว');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('ส่งครัวแล้ว'),
+          SnackBar(
+            content: const Text('ส่งเข้าคิวครัวแล้ว'),
+            action: SnackBarAction(
+                label: 'จอครัว / พิมพ์',
+                onPressed: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const KitchenScreen()))),
             backgroundColor: Colors.green,
           ),
         );

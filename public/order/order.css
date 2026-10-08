@@ -655,3 +655,5 @@ header h1 {
 #pickupHint { font-size:.8rem; color:#6B5E60; }
 #pickupRefresh { background:transparent; color:#7A1F2B; border:0; padding:8px 0; font:inherit; }
 #payPickup { font-weight:600; color:#7A1F2B; }
+/* Component display rules must not override hidden payment/review controls. */
+[hidden] { display: none !important; }

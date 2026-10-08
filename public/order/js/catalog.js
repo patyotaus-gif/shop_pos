@@ -1,7 +1,7 @@
 // Product grid cards + product quantity bottom sheet.
 // DOM-free at import time (Node smoke test imports this module).
-import { escHtml, fmtBaht } from './util.js?v=20261007';
-import { addOne, getQty, addLine, onCartChange } from './cart.js?v=20261007';
+import { escHtml, fmtBaht } from './util.js?v=20261009';
+import { addOne, getQty, addLine, onCartChange } from './cart.js?v=20261009';
 
 const byId = {};      // productId -> product from shopPublic
 let sheetProduct = null; // product currently shown in the sheet

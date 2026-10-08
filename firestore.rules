@@ -114,6 +114,14 @@ service cloud.firestore {
       match /settings/{settingId} {
         allow read, write: if isOwner();
       }
+      match /kitchenPrintJobs/{jobId} {
+        allow read: if isOwner();
+        allow write: if false;
+      }
+      match /inventoryControl/{controlId} {
+        allow read: if isOwner();
+        allow write: if false;
+      }
 
       // orders สร้างและอ่านโดย Function (admin) เท่านั้น
       // เจ้าของร้านอ่าน/อัพเดตได้ผ่าน auth

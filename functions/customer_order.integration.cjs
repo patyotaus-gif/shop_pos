@@ -1,0 +1,93 @@
+// Real Firestore transactions, isolated demo emulator. Never performs a bank transfer.
+const assert=require('node:assert/strict');
+const admin=require('firebase-admin');
+const {randomBytes,randomUUID}=require('node:crypto');
+const {confirmOrder}=require('./order_accounting');
+(async()=>{
+  if(!process.env.FIRESTORE_EMULATOR_HOST)throw Error('Emulator required');
+  const app=admin.initializeApp({projectId:'demo-pokpok-admin'},'customer-regression');
+  try{
+    const db=app.firestore(),FieldValue=admin.firestore.FieldValue,shopId='customer-regression',shop=db.doc('shops/'+shopId);
+    await shop.set({name:'Test shop'});
+    await shop.collection('settings').doc('shop').set({promptpayId:'0812345678',tableOrderMode:'prepaid'});
+    await shop.collection('products').doc('last').set({name:'Last',price:50,stock:1});
+    const source=require('node:fs').readFileSync(require.resolve('./index'),'utf8'),exported={};
+    const scope={exports:exported,onRequest:(_,fn)=>fn,admin:{firestore:Object.assign(()=>db,{FieldValue})},
+      _verifyAppCheck:async()=>true,loadModifierGroups:async()=>({}),priceLine:require('./tableorder').priceLine,
+      pickupScheduling:require('./pickup'),require,console};
+    require('node:vm').runInNewContext(source.slice(source.indexOf('exports.createPromptPayOrder ='),source.indexOf('exports.stripeWebhook =')),scope);
+    require('node:vm').runInNewContext(source.slice(source.indexOf('exports.getShopPublic ='),source.indexOf('exports.createOrderCheckout =')),scope);
+    const call=async(fn,body,method='POST')=>{
+      const out={status:200},res={set(){},status(n){out.status=n;return this;},json(d){out.data=d;},send(){}};
+      await fn({method,body,query:{shop:shopId}},res);return out;
+    };
+    const payload=extra=>({shopId,customerName:'Customer',customerPhone:'0812345678',customerToken:randomBytes(32).toString('hex'),
+      requestId:randomUUID(),items:[{productId:'last',quantity:1}],...extra});
+    const checkout=b=>call(exported.createPromptPayOrder,b);
+    const customer=require('./customer_order').handler({db,FieldValue,verifyAppCheck:async()=>true});
+    const action=(b,a)=>call(customer,{shopId,orderId:'web-'+b.requestId,customerToken:b.customerToken,action:a});
+    const a=payload(),b=payload();
+    const concurrent=await Promise.all([checkout(a),checkout(b)]);
+    assert.equal(concurrent.filter(r=>r.status===200).length,1,'only last stock unit can be reserved');
+    const winner=concurrent[0].status===200?a:b;
+    assert.equal((await call(exported.getShopPublic,null,'GET')).data.products.find(p=>p.id==='last').stock,0);
+    assert.deepEqual(await checkout(winner),concurrent.find(r=>r.status===200),'same request retries idempotently');
+    assert.equal((await checkout({...winner,customerToken:randomBytes(32).toString('hex')})).status,409,'knowing request ID never grants recovery');
+    assert.equal((await action({...winner,customerToken:randomBytes(32).toString('hex')},'status')).status,403);
+    assert.equal((await action(winner,'status')).data.status,'pendingPayment');
+    assert.equal((await action(winner,'cancel')).data.status,'cancelled');
+    assert.equal((await action(winner,'cancel')).data.status,'cancelled','cancel retry safe');
+    assert.equal((await shop.collection('inventoryControl').doc('online').get()).data().products.last,0,'cancel releases POS hold');
+    assert.equal((await call(exported.getShopPublic,null,'GET')).data.products.find(p=>p.id==='last').stock,1);
+    const replacement=payload();assert.equal((await checkout(replacement)).status,200);
+    await shop.collection('orders').doc('web-'+replacement.requestId).update({slipUrl:'emulator-only'});
+    assert.equal((await action(replacement,'cancel')).status,409,'never discard submitted payment evidence');
+    await confirmOrder({db,FieldValue,shopId,orderId:'web-'+replacement.requestId,actor:shopId});
+    assert.equal((await action(replacement,'status')).data.status,'paid');
+    assert.equal((await shop.collection('products').doc('last').get()).data().stock,0);
+    assert.equal((await shop.collection('inventoryControl').doc('online').get()).data().products.last,0,'confirmation releases hold atomically');
+    assert.equal((await checkout(payload())).status,409,'zero-stock requests rejected');
+    assert.equal((await checkout(payload({customerPhone:'abc'}))).status,400);
+    await shop.collection('products').doc('last').update({stock:10});
+    await shop.collection('tables').doc('a1').set({name:'A1'});
+    const table=payload({orderType:'dineInPrepaid',tableId:'a1',customerPhone:'+61 412 345 678'});
+    assert.equal((await checkout(table)).status,200);
+    const tableSale=await confirmOrder({db,FieldValue,shopId,orderId:'web-'+table.requestId,actor:shopId});
+    const sale=(await shop.collection('sales').doc(tableSale.saleId).get()).data();
+    assert.equal(sale.salesChannel,'dineIn');
+    assert.equal(sale.total,(await action(table,'status')).data.finalAmount);
+    await shop.collection('products').doc('rice').set({name:'Recipe',price:60,stock:0,stockMode:'recipe',recipe:[{ingredientId:'rice',qty:1}]});
+    await shop.collection('ingredients').doc('rice').set({name:'Rice',stock:2});
+    assert.equal((await call(exported.getShopPublic,null,'GET')).data.products.find(p=>p.id==='rice').stock,2);
+    const recipe=payload({items:[{productId:'rice',quantity:2}]});
+    assert.equal((await checkout(recipe)).status,200);
+    assert.equal((await call(exported.getShopPublic,null,'GET')).data.products.find(p=>p.id==='rice').stock,0);
+    assert.equal((await checkout(payload({items:[{productId:'rice',quantity:1}]}))).status,409);
+    const recipeSale=await confirmOrder({db,FieldValue,shopId,orderId:'web-'+recipe.requestId,actor:shopId});
+    const saleRef=shop.collection('sales').doc(recipeSale.saleId);
+    assert.equal((await shop.collection('ingredients').doc('rice').get()).data().stock,0);
+    assert.equal(await require('./ingredient_accounting').deduct({db,shop,saleRef,usage:{rice:2},FieldValue}),false,'trigger cannot double-deduct');
+    await saleRef.update({isRefunded:true,returnToStock:true});
+    await require('./ingredient_accounting').restore({db,shop,saleRef,FieldValue});
+    await require('./ingredient_accounting').restore({db,shop,saleRef,FieldValue});
+    assert.equal((await shop.collection('ingredients').doc('rice').get()).data().stock,2,'refund restores snapshot once');
+    const kp=require('./kitchen_print').handlers({db,FieldValue,HttpsError:class extends Error{constructor(c,m){super(m);this.code=c;}}});
+    const req=data=>({auth:{uid:shopId,token:{}},data:{shopId,...data}});
+    const orderRef=shop.collection('tableOrders').doc('k1');
+    const line={id:'one',productName:'Dish',quantity:1,kitchenStatus:'sent'};
+    await orderRef.set({status:'open',tableName:'A1',items:[line]});
+    const printResults=await Promise.allSettled([1,2].map(()=>kp.claim(req({source:'table',orderId:'k1'}))));
+    assert.equal(printResults.filter(r=>r.status==='fulfilled').length,1,'two terminals cannot claim same print');
+    const job=printResults.find(r=>r.status==='fulfilled').value;
+    await kp.finish(req({...job,received:false}));
+    const retry=await kp.claim(req({source:'table',orderId:'k1'}));
+    await kp.finish(req({...retry,received:true}));
+    assert.equal((await kp.claim(req({source:'table',orderId:'k1'}))).alreadyPrinted,true);
+    await orderRef.update({status:'closed',items:[line,{...line,id:'two',productName:'Extra'}]});
+    const extra=await kp.claim(req({source:'table',orderId:'k1'}));
+    assert.equal(extra.lines.length,1);assert.equal(extra.lines[0].name,'Extra','only new lines, even after close');
+    await assert.rejects(()=>kp.finish(req({...job,received:true})),/เปลี่ยน/);
+    await assert.rejects(()=>kp.claim({auth:{uid:'staff',token:{staffRole:'cashier'}},data:{shopId,source:'table',orderId:'k1'}}));
+    console.log('PASS reservation concurrency, secure recovery/cancel, evidence guard, recipe availability/deduction/refund, channel, phone, kitchen print claim/retry/new-lines/permissions');
+  }finally{await app.delete();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

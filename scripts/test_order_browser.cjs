@@ -12,6 +12,7 @@ const products = [
 ];
 let failKitchen = true, kitchenRequests = [];
 let failSlip = true, slipRequests = [], checkoutRequests = [];
+const fixtureOrders = new Map();
 const pickupSlots = [{id:'1791340200000', label:'07/10/2026 09:30–09:45 น.'}, {id:'1791341100000', label:'07/10/2026 09:45–10:00 น.'}];
 const server = http.createServer(async (req,res) => {
   const url = new URL(req.url,'http://localhost');
@@ -27,15 +28,29 @@ const server = http.createServer(async (req,res) => {
     res.setHeader('Content-Type','application/json');res.statusCode=failKitchen?503:200;
     return res.end(JSON.stringify(failKitchen?{error:'ลองใหม่'}:{success:true}));
   }
+  if(url.pathname === '/api/customerOrder') {
+    let body='';for await(const part of req)body+=part;
+    const r=JSON.parse(body),o=fixtureOrders.get(r.orderId);
+    res.setHeader('Content-Type','application/json');
+    if(!o || o.customerToken!==r.customerToken){res.statusCode=403;return res.end(JSON.stringify({error:'Access denied'}));}
+    if(r.action==='cancel'){
+      if(o.awaitingReview || o.status!=='pendingPayment'){res.statusCode=409;return res.end(JSON.stringify({error:'Contact shop'}));}
+      o.status='cancelled';
+    }
+    return res.end(JSON.stringify(o));
+  }
   if(url.pathname === '/api/createPromptPayOrder') {
     let body='';for await(const part of req)body+=part;
     const checkout=JSON.parse(body);checkoutRequests.push(checkout);
     res.setHeader('Content-Type','application/json');
-    return res.end(JSON.stringify({orderId:'fixture-order',pickupLabel:pickupSlots.find(s=>s.id===checkout.pickupSlot)?.label,total:25,finalAmount:25,promptpayId:'0812345678',promptpayName:'ร้านทดสอบ'}));
+    const id='web-'+checkout.requestId;
+    if(!fixtureOrders.has(id))fixtureOrders.set(id,{orderId:id,status:'pendingPayment',customerToken:checkout.customerToken,pickupLabel:pickupSlots.find(s=>s.id===checkout.pickupSlot)?.label,total:25,finalAmount:25,promptpayId:'0812345678',promptpayName:'ร้านทดสอบ'});
+    return res.end(JSON.stringify(fixtureOrders.get(id)));
   }
   if(url.pathname === '/api/verifyPromptPaySlip') {
     let body='';for await(const part of req)body+=part;
     slipRequests.push(JSON.parse(body));
+    if(!failSlip){const o=fixtureOrders.get(JSON.parse(body).orderId);if(o)o.awaitingReview=true;}
     res.setHeader('Content-Type','application/json');res.statusCode=failSlip?503:200;
     return res.end(JSON.stringify(failSlip?{success:false,reason:'ลองส่งสลิปอีกครั้ง ไม่ต้องโอนซ้ำ'}:{success:true,awaitingReview:true}));
   }
@@ -121,11 +136,11 @@ const server = http.createServer(async (req,res) => {
     await page.locator('#paySlipStatus.err').waitFor();
     assert.ok((await page.locator('#paySlipStatus').textContent()).includes('ไม่ต้องโอนซ้ำ'));
     assert.equal(await page.locator('#paySlipBtn').isEnabled(),true);
-    assert.equal(slipRequests[0].orderId,'fixture-order');
+    assert.equal(slipRequests[0].orderId,'web-'+checkoutRequests[0].requestId);
     assert.ok(slipRequests[0].slipBase64.startsWith('data:image/jpeg;base64,/9j/'),'PNG compressed to JPEG');
     failSlip=false;
     await page.locator('#slipFileInput').setInputFiles(slip);
-    await page.waitForURL('**/order/success/?order=fixture-order&review=1');
+    await page.waitForURL('**/order/success/?order=web-*&review=1');
     assert.ok((await page.locator('h1').textContent()).includes('รอร้านยืนยัน'));
     assert.ok((await page.locator('.note').textContent()).includes('ไม่ต้องโอนซ้ำ'));
     assert.equal(slipRequests.length,2,'same file can be retried');

@@ -73,6 +73,13 @@
         }
       },
       {
+        "source": "/api/customerOrder",
+        "function": {
+          "functionId": "customerOrder",
+          "region": "asia-southeast1"
+        }
+      },
+      {
         "source": "/api/verifyPromptPaySlip",
         "function": {
           "functionId": "verifyPromptPaySlip",

@@ -42,13 +42,15 @@ function createSlipUpload({db, getBucket, FieldValue, verifyAppCheck, logger=con
     if (req.method === 'OPTIONS') return res.status(204).send('');
     if (req.method !== 'POST') return res.status(405).json({error:'Method Not Allowed'});
     if (!(await verifyAppCheck(req,res))) return;
-    const {shopId,orderId,slipBase64}=req.body || {};
+    const {shopId,orderId,slipBase64,customerToken}=req.body || {};
     if (!validId(shopId) || !validId(orderId)) return res.status(400).json({error:'invalid_order',reason:'ลิงก์ออเดอร์ไม่ถูกต้อง'});
     let stage='readOrder', uploadedFile, attached=false;
     try {
       const ref=db.collection('shops').doc(shopId).collection('orders').doc(orderId);
       const order=await ref.get();
       if (!order.exists) throw new SlipError(404,'order_not_found','ไม่พบออเดอร์นี้ กรุณาติดต่อร้าน');
+      if(order.data().customerTokenHash && !require('./customer_order').authorized(order.data(),customerToken))
+        throw new SlipError(403,'invalid_access','เปิดออเดอร์จากเบราว์เซอร์ที่ใช้สั่ง หรือสอบถามร้านพร้อมเลขออเดอร์');
       if (order.data().status !== 'pendingPayment') throw new SlipError(409,'order_processed','ออเดอร์นี้ดำเนินการแล้ว กรุณาตรวจสอบกับร้านก่อนส่งสลิปซ้ำ');
       stage='decodeImage';
       const bytes=await decodeSlip(slipBase64);

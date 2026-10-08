@@ -12,7 +12,7 @@
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/order/order.css?v=20261007" />
+  <link rel="stylesheet" href="/order/order.css?v=20261009" />
   <!-- Self-hosted qrcodejs (davidshimjs) — avoids CDN/CORB blocks -->
   <script src="qrcode.min.js"></script>
 </head>
@@ -41,6 +41,7 @@
 <div id="loading">กำลังโหลดสินค้า...</div>
 <div id="error" style="display:none"></div>
 <div id="closedState" style="display:none">ร้านปิดรับออเดอร์ชั่วคราว กรุณาแวะมาใหม่อีกครั้ง</div>
+<button id="resumePaymentBtn" type="button" hidden style="margin:12px;padding:12px">เปิดออเดอร์เดิม / ส่งสลิปต่อ</button>
 <div id="catalogTools" class="catalog-tools" hidden>
   <label for="productSearch">ค้นหาสินค้า / เมนู</label>
   <input id="productSearch" type="search" placeholder="พิมพ์ชื่อสินค้า เมนู หรือหมวดหมู่" autocomplete="off" />
@@ -145,8 +146,9 @@
 <div id="payOverlay">
   <div id="payCard">
     <div class="pp-logo">PROMPT PAY</div>
+    <p id="payOrderId" style="overflow-wrap:anywhere"></p>
     <p id="payPickup"></p>
-    <h2>สแกนเพื่อชำระเงิน</h2>
+    <h2 id="payHeading">สแกนเพื่อชำระเงิน</h2>
     <p class="pay-subtitle">เปิดแอปธนาคารแล้วสแกน QR ด้านล่าง</p>
 
     <div id="payQrBox">
@@ -180,13 +182,14 @@
     </p>
 
     <button id="payCancelBtn" type="button">ยกเลิกออเดอร์</button>
+    <button id="payCloseBtn" type="button">กลับไปดูเมนู</button>
   </div>
 </div>
 
 <!-- Page entry. Module scripts execute in document order, so main.js runs
      first (defines window.__startOrderPage), then the App Check module below
      starts the page once a token getter is ready. -->
-<script type="module" src="/order/js/main.js?v=20261007"></script>
+<script type="module" src="/order/js/main.js?v=20261009"></script>
 
 <!-- App Check (reCAPTCHA v3). This page talks to HTTP functions with plain
      fetch(), so we run the SDK in a module and expose a best-effort token

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'ingredient_checkout.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 
@@ -85,6 +86,14 @@ class TableService {
   /// display to show all in-progress tickets in one place.
   static Stream<List<TableOrder>> watchOpenOrders() => _tableOrdersCol()
       .where('status', isEqualTo: 'open')
+      .snapshots()
+      .map((s) =>
+          s.docs.map((d) => TableOrder.fromFirestore(d.data(), d.id)).toList()
+            ..sort((a, b) => a.openedAt.compareTo(b.openedAt)));
+
+  // Paid/closed tabs stay reachable in printer mode until their tickets are acknowledged.
+  static Stream<List<TableOrder>> watchKitchenOrders() => _tableOrdersCol()
+      .where('status', whereIn: ['open', 'closed'])
       .snapshots()
       .map((s) =>
           s.docs.map((d) => TableOrder.fromFirestore(d.data(), d.id)).toList()
@@ -333,23 +342,35 @@ class TableService {
             ifAbsent: () => item.quantity);
       }
       final counted = <String, int>{};
+      final reservationData = (await tx
+                  .get(_shopDoc().collection('inventoryControl').doc('online')))
+              .data() ??
+          {};
+      final reserved = reservationData['products'] as Map? ?? {};
       for (final entry in quantities.entries) {
         final product = await tx.get(_productsCol().doc(entry.key));
         if (!product.exists) throw StateError('ไม่พบสินค้า กรุณาตรวจสอบบิล');
         if (product.data()?['stockMode'] == 'recipe') continue;
-        if ((product.data()?['stock'] as num? ?? 0) < entry.value) {
+        if ((product.data()?['stock'] as num? ?? 0) -
+                (reserved[entry.key] as num? ?? 0) <
+            entry.value) {
           throw StateError('สต็อกไม่พอ กรุณาตรวจสอบก่อนรับชำระ');
         }
         counted[entry.key] = entry.value;
       }
       final control = await MoneyLedger.read(tx, _shopDoc());
+      final ingredientUsage = await IngredientCheckout.read(tx, _shopDoc(),
+          saleItems, reservationData['ingredients'] as Map? ?? {});
 
       tx.set(saleRef, {
         ...sale.toFirestore(),
         'receiptNo': formatReceiptNo(next.day, next.seq),
         'accountingVersion': 1,
         'stockDeducted': counted,
+        'ingredientsDeducted': true,
+        'ingredientUsage': ingredientUsage,
       });
+      IngredientCheckout.write(tx, _shopDoc(), ingredientUsage);
       for (final entry in counted.entries) {
         tx.update(_productsCol().doc(entry.key),
             {'stock': FieldValue.increment(-entry.value)});

@@ -1,5 +1,5 @@
 // Drafts belong to one browser tab and one shop/table. Never trust saved prices.
-import { items, addLine, clearCart, onCartChange } from './cart.js?v=20261007';
+import { items, addLine, clearCart, onCartChange } from './cart.js?v=20261009';
 
 export function cartStorageKey(shop, mode, table) {
   return 'pokpok-draft-v1:' + JSON.stringify([shop, mode, table || null]);

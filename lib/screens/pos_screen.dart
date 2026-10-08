@@ -30,6 +30,7 @@ import '../widgets/shop_operation.dart';
 import '../utils/operation_error.dart';
 import '../widgets/product_image.dart';
 import '../widgets/sale_product_grid.dart';
+import '../widgets/compact_catalog_button.dart';
 
 class PosScreen extends StatefulWidget {
   const PosScreen({super.key});
@@ -382,9 +383,13 @@ class _PosScreenState extends State<PosScreen> {
           itemCount: products.length,
           itemBuilder: (_, i) => SaleProductCard(
             product: products[i],
-            unavailableLabel: products[i].stock <= 0 ? 'หมด' : null,
-            onTap:
-                products[i].stock <= 0 ? null : () => _addToCart(products[i]),
+            unavailableLabel:
+                !products[i].isRecipeMode && products[i].stock <= 0
+                    ? 'หมด'
+                    : null,
+            onTap: !products[i].isRecipeMode && products[i].stock <= 0
+                ? null
+                : () => _addToCart(products[i]),
           ),
         );
       });
@@ -621,14 +626,20 @@ class _PosScreenState extends State<PosScreen> {
                       SizedBox(width: 380, child: basket),
                     ]);
                   }
-                  return Column(children: [
+                  final narrow = Column(children: [
                     ...controls,
-                    if (constraints.maxHeight >= 580)
+                    if (constraints.maxHeight < 580)
+                      CompactCatalogButton(catalog: (_) => _productCatalog())
+                    else
                       SizedBox(
                           height: constraints.maxHeight >= 700 ? 240 : 170,
                           child: _productCatalog()),
                     Expanded(child: basket),
                   ]);
+                  return constraints.maxHeight < 520
+                      ? SingleChildScrollView(
+                          child: SizedBox(height: 520, child: narrow))
+                      : narrow;
                 }))),
       ]),
     );

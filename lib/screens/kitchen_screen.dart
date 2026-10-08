@@ -3,60 +3,290 @@ import '../widgets/shop_operation.dart';
 
 import '../models/table_order.dart';
 import '../services/table_service.dart';
+import '../models/order.dart';
+import '../services/order_service.dart';
+import '../services/settings_service.dart';
+import '../services/kitchen_print_service.dart';
 
-/// Kitchen display — one card per table tab that has any item the kitchen
-/// is working on (sent or ready). Cashier hits "ส่งครัว" on the table
-/// detail screen → cards show up here → kitchen taps each item to mark it
-/// ready. Pending items (not yet sent) are hidden so the kitchen only
-/// sees what the cashier has confirmed.
-///
-/// Designed for a tablet stand in the kitchen — large tap targets, no
-/// nested menus, status colours that read at arm's length.
-class KitchenScreen extends StatelessWidget {
-  const KitchenScreen({super.key, this.orders});
+class KitchenScreen extends StatefulWidget {
+  const KitchenScreen(
+      {super.key,
+      this.orders,
+      this.onlineOrders,
+      this.settings,
+      this.printJobs});
   final Stream<List<TableOrder>>? orders;
+  final Stream<List<ShopOrder>>? onlineOrders;
+  final Stream<Map<String, dynamic>>? settings;
+  final Stream<Map<String, Map<String, dynamic>>>? printJobs;
+  @override
+  State<KitchenScreen> createState() => _KitchenScreenState();
+}
+
+class _KitchenScreenState extends State<KitchenScreen> {
+  late final tableStream = widget.orders ?? TableService.watchKitchenOrders();
+  late final onlineStream = widget.onlineOrders ??
+      (widget.orders != null
+          ? Stream.value(<ShopOrder>[])
+          : OrderService.watchAll());
+  late final settingsStream = widget.settings ??
+      (widget.orders != null
+          ? Stream.value(<String, dynamic>{})
+          : SettingsService.watchSettings());
+  late final printStream = widget.printJobs ??
+      (widget.orders != null
+          ? Stream.value(<String, Map<String, dynamic>>{})
+          : KitchenPrintService.watchJobs());
+  bool needsPrint(Map? job, int count) =>
+      job == null ||
+      job['status'] != 'printed' ||
+      ((job['printedKeys'] as List?)?.length ?? 0) < count;
+  @override
+  Widget build(BuildContext context) => Scaffold(
+      appBar: AppBar(title: const Text('ครัว')),
+      body: StreamBuilder<Map<String, dynamic>>(
+          stream: settingsStream,
+          builder: (context, settings) {
+            if (settings.hasError) {
+              return const Center(child: Text('โหลดวิธีรับงานครัวไม่สำเร็จ'));
+            }
+            if (!settings.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final printer = settings.data!['kitchenOutput'] == 'printer';
+            return Column(children: [
+              Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(
+                            value: 'screen',
+                            icon: Icon(Icons.monitor),
+                            label: Text('จอครัว')),
+                        ButtonSegment(
+                            value: 'printer',
+                            icon: Icon(Icons.print),
+                            label: Text('เครื่องพิมพ์ครัว'))
+                      ],
+                      selected: {
+                        printer ? 'printer' : 'screen'
+                      },
+                      onSelectionChanged: (v) => performShopOperation(
+                          context,
+                          () => SettingsService.saveSettings(
+                              {'kitchenOutput': v.first})))),
+              if (printer)
+                const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                        'เลือกเครื่องพิมพ์ครัวที่ระบบรองรับ แล้วตรวจรับกระดาษ • พิมพ์เฉพาะรายการใหม่ได้')),
+              Expanded(
+                  child: StreamBuilder<List<TableOrder>>(
+                      stream: tableStream,
+                      builder: (context, tables) => StreamBuilder<
+                              List<ShopOrder>>(
+                          stream: onlineStream,
+                          builder: (context, online) => StreamBuilder<
+                                  Map<String, Map<String, dynamic>>>(
+                              stream: printStream,
+                              builder: (context, jobs) {
+                                if (tables.hasError ||
+                                    online.hasError ||
+                                    jobs.hasError) {
+                                  return const Center(
+                                      child: Text(
+                                          'โหลดออเดอร์ครัวไม่สำเร็จ กรุณาตรวจการเชื่อมต่อแล้วเปิดหน้านี้ใหม่'));
+                                }
+                                if (!tables.hasData ||
+                                    !online.hasData ||
+                                    !jobs.hasData) {
+                                  return const Center(
+                                      child: CircularProgressIndicator());
+                                }
+                                final ts = tables.data!
+                                    .where((o) =>
+                                        o.status !=
+                                            TableOrderStatus.cancelled &&
+                                        o.items.any((i) =>
+                                            i.kitchenStatus !=
+                                            KitchenStatus.pending) &&
+                                        (o.status == TableOrderStatus.open ||
+                                            (printer &&
+                                                needsPrint(
+                                                    jobs.data!['table-${o.id}'],
+                                                    o.items
+                                                        .where((i) =>
+                                                            i.kitchenStatus !=
+                                                            KitchenStatus
+                                                                .pending)
+                                                        .length))))
+                                    .toList();
+                                final os = online.data!
+                                    .where((o) =>
+                                        [
+                                          OrderStatus.paid,
+                                          OrderStatus.accepted,
+                                          OrderStatus.ready
+                                        ].contains(o.status) ||
+                                        (printer &&
+                                            o.status == OrderStatus.completed &&
+                                            needsPrint(
+                                                jobs.data!['online-${o.id}'],
+                                                o.items.length)))
+                                    .toList()
+                                  ..sort((a, b) =>
+                                      (a.pickupStartAt ?? a.createdAt)
+                                          .compareTo(
+                                              b.pickupStartAt ?? b.createdAt));
+                                if (ts.isEmpty && os.isEmpty) {
+                                  return const _EmptyKitchen();
+                                }
+                                return ListView(
+                                    padding: const EdgeInsets.all(12),
+                                    children: [
+                                      for (final o in os)
+                                        Card(
+                                            child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(12),
+                                                child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                          o.tableName == null
+                                                              ? 'ออนไลน์ • รับกลับบ้าน'
+                                                              : 'ออนไลน์ • โต๊ะ ${o.tableName}',
+                                                          style: const TextStyle(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold)),
+                                                      Text(
+                                                          '${o.customerName} • ${o.status.label}'),
+                                                      if (o.pickupDescription !=
+                                                          null)
+                                                        Text(o
+                                                            .pickupDescription!),
+                                                      for (final i in o.items)
+                                                        ListTile(
+                                                            dense: true,
+                                                            title: Text(
+                                                                '${i.productName} × ${i.quantity}'),
+                                                            subtitle: i
+                                                                    .preparationNote
+                                                                    .isEmpty
+                                                                ? null
+                                                                : Text(i
+                                                                    .preparationNote)),
+                                                      if (printer)
+                                                        _PrintActions(
+                                                            source: 'online',
+                                                            orderId: o.id,
+                                                            job: jobs.data![
+                                                                'online-${o.id}']),
+                                                      if (o.status ==
+                                                          OrderStatus.paid)
+                                                        FilledButton(
+                                                            onPressed: () => performShopOperation(
+                                                                context,
+                                                                () => OrderService
+                                                                    .updateStatus(
+                                                                        o.id,
+                                                                        OrderStatus
+                                                                            .accepted)),
+                                                            child: const Text(
+                                                                'เริ่มเตรียม')),
+                                                      if (o.status ==
+                                                          OrderStatus.accepted)
+                                                        FilledButton(
+                                                            onPressed: () => performShopOperation(
+                                                                context,
+                                                                () => OrderService
+                                                                    .updateStatus(
+                                                                        o.id,
+                                                                        OrderStatus
+                                                                            .ready)),
+                                                            child: const Text(
+                                                                'พร้อมรับ / เสิร์ฟแล้ว')),
+                                                    ]))),
+                                      for (final o in ts) ...[
+                                        if (o.status == TableOrderStatus.closed)
+                                          const Text(
+                                              'ปิดบิลแล้ว • ตรวจว่าครัวได้รับใบงานเดิมหรือยังก่อนพิมพ์'),
+                                        SizedBox(
+                                            height: 360,
+                                            child: _TicketCard(order: o)),
+                                        if (printer)
+                                          _PrintActions(
+                                              source: 'table',
+                                              orderId: o.id,
+                                              job: jobs.data!['table-${o.id}']),
+                                        const SizedBox(height: 12),
+                                      ],
+                                    ]);
+                              })))),
+            ]);
+          }));
+}
+
+class _PrintActions extends StatefulWidget {
+  const _PrintActions({required this.source, required this.orderId, this.job});
+  final String source, orderId;
+  final Map? job;
+  @override
+  State<_PrintActions> createState() => _PrintActionsState();
+}
+
+class _PrintActionsState extends State<_PrintActions> {
+  bool busy = false;
+  Future<void> print({bool reprint = false}) async {
+    if (reprint || widget.job?['status'] == 'needsReview') {
+      final yes = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+                  title: const Text('ตรวจครัวก่อนพิมพ์ซ้ำ'),
+                  content: const Text(
+                      'อาจมีใบงานเดิมออกแล้ว แจ้งครัวว่าเป็นสำเนาเพื่อไม่ให้ทำอาหารซ้ำ'),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('กลับ')),
+                    FilledButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('พิมพ์สำเนา'))
+                  ]));
+      if (yes != true) return;
+    }
+    if (!mounted) return;
+    setState(() => busy = true);
+    try {
+      await KitchenPrintService.printOrder(context,
+          source: widget.source, orderId: widget.orderId, reprint: reprint);
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('ครัว'), centerTitle: true),
-      body: StreamBuilder<List<TableOrder>>(
-        stream: orders ?? TableService.watchOpenOrders(),
-        builder: (context, snap) {
-          if (snap.hasError) {
-            return const Center(
-                child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Text(
-                        'โหลดออเดอร์ครัวไม่สำเร็จ กรุณาตรวจการเชื่อมต่อแล้วเปิดหน้านี้ใหม่')));
-          }
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          // Keep only orders with at least one item the kitchen owns.
-          final orders = (snap.data ?? const <TableOrder>[])
-              .where((o) => o.items.any((i) =>
-                  i.kitchenStatus == KitchenStatus.sent ||
-                  i.kitchenStatus == KitchenStatus.ready))
-              .toList();
-
-          if (orders.isEmpty) return const _EmptyKitchen();
-
-          return GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 360,
-              childAspectRatio: 0.95,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-            ),
-            itemCount: orders.length,
-            itemBuilder: (_, i) => _TicketCard(order: orders[i]),
-          );
-        },
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Wrap(
+          spacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(switch (widget.job?['status']) {
+              'printed' => 'ยืนยันใบงานแล้ว',
+              'printing' => 'กำลังพิมพ์ / รอยืนยัน',
+              'needsReview' => 'ตรวจเครื่องพิมพ์ก่อนลองใหม่',
+              _ => 'รอพิมพ์'
+            }),
+            FilledButton.icon(
+                onPressed: busy ? null : () => print(),
+                icon: const Icon(Icons.print),
+                label: const Text('พิมพ์รายการใหม่')),
+            TextButton(
+                onPressed: busy ? null : () => print(reprint: true),
+                child: const Text('พิมพ์ซ้ำ / กู้คืนงาน')),
+          ]);
 }
 
 class _TicketCard extends StatelessWidget {
@@ -134,6 +364,7 @@ class _TicketCard extends StatelessWidget {
                   return _ItemRow(
                     orderId: order.id,
                     item: entry.value,
+                    editable: order.status == TableOrderStatus.open,
                   );
                 },
               ),
@@ -157,10 +388,12 @@ class _ItemRow extends StatelessWidget {
   const _ItemRow({
     required this.orderId,
     required this.item,
+    required this.editable,
   });
 
   final String orderId;
   final TableOrderItem item;
+  final bool editable;
 
   @override
   Widget build(BuildContext context) {
@@ -171,7 +404,7 @@ class _ItemRow extends StatelessWidget {
         : item.modifiers.map((m) => m.optionName).join(' · ');
 
     return InkWell(
-      onTap: ready
+      onTap: ready || !editable
           ? null
           : () => performShopOperation(
               context, () => TableService.markItemReady(orderId, item.id),
@@ -257,7 +490,7 @@ class _EmptyKitchen extends StatelessWidget {
                 style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             Text(
-              'รอจนกว่าหน้าโต๊ะจะกด "ส่งครัว"',
+              'รับงานจากโต๊ะที่ส่งครัว และออเดอร์ออนไลน์ที่ร้านยืนยันรับเงินแล้ว',
               style: TextStyle(
                   fontSize: 13, color: cs.onSurface.withValues(alpha: 0.6)),
             ),

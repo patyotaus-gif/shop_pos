@@ -58,6 +58,54 @@ void main() {
   });
   tearDown(() => ShopDatabase.overrideShop = null);
 
+  test('recipe checkout consumes ingredients once and protects online holds',
+      () async {
+    await shop.collection('products').doc('tea').set({
+      'name': 'ชา',
+      'stock': 0,
+      'stockMode': 'recipe',
+      'recipe': [
+        {'ingredientId': 'milk', 'qty': 1}
+      ]
+    });
+    await shop.collection('ingredients').doc('milk').set({'stock': 5});
+    await shop.collection('inventoryControl').doc('online').set({
+      'ingredients': {'milk': 4}
+    });
+    await expectLater(
+        SaleService.commitSale(shop, sale(quantity: 2)), throwsStateError);
+    await SaleService.commitSale(shop, sale());
+    await SaleService.commitSale(shop, sale());
+    expect(
+        (await shop.collection('ingredients').doc('milk').get())
+            .data()!['stock'],
+        4);
+    final recorded =
+        (await shop.collection('sales').doc('sale-1').get()).data()!;
+    expect(recorded['ingredientsDeducted'], true);
+    expect(recorded['ingredientUsage'], {'milk': 1.0});
+    await expectLater(
+        SaleService.commitSale(shop, sale(id: 'second')), throwsStateError);
+  });
+
+  test('counter checkout preserves stock held by online customers', () async {
+    await shop.collection('inventoryControl').doc('online').set({
+      'products': {'tea': 5}
+    });
+    await expectLater(SaleService.commitSale(shop, sale()), throwsStateError);
+    expect((await shop.collection('sales').get()).docs, isEmpty);
+    expect(
+        (await shop.collection('products').doc('tea').get()).data()!['stock'],
+        5);
+    await shop.collection('inventoryControl').doc('online').set({
+      'products': {'tea': 4}
+    });
+    await SaleService.commitSale(shop, sale());
+    expect(
+        (await shop.collection('products').doc('tea').get()).data()!['stock'],
+        4);
+  });
+
   test('daily report includes the final fractional second, excludes next day',
       () async {
     final end = DateTime(2026, 10, 4, 23, 59, 59);
