@@ -1,3 +1,7 @@
+import 'dart:async';
+import '../models/order_queue.dart';
+import 'order_sale_screen.dart';
+import '../services/shop_database.dart';
 import 'order_ticket_screen.dart';
 import 'kitchen_screen.dart';
 import 'package:flutter/material.dart';
@@ -8,34 +12,6 @@ import '../models/order.dart';
 import '../services/order_service.dart';
 import '../widgets/shop_operation.dart';
 
-/// Top-of-screen filter — replaces the old "รอดำเนินการ / ทั้งหมด" tabs.
-/// `action` is the default because that's what the shop owner opens this
-/// screen for: "what do I need to deal with?".
-enum _OrderFilter { action, pendingPayment, all }
-
-extension _OrderFilterX on _OrderFilter {
-  String get label => switch (this) {
-        _OrderFilter.action => 'ต้องทำต่อ',
-        _OrderFilter.pendingPayment => 'รอชำระ',
-        _OrderFilter.all => 'ทั้งหมด',
-      };
-
-  /// Server-side stream selection — we use the existing watchActive query
-  /// when possible (smaller payload) and fall back to watchAll when the
-  /// chip needs orders outside the active window.
-  bool matches(ShopOrder order) => switch (this) {
-        _OrderFilter.action => const {
-            OrderStatus.pendingPayment,
-            OrderStatus.paid,
-            OrderStatus.accepted,
-            OrderStatus.ready,
-          }.contains(order.status),
-        _OrderFilter.pendingPayment =>
-          order.status == OrderStatus.pendingPayment,
-        _OrderFilter.all => true,
-      };
-}
-
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
 
@@ -44,51 +20,92 @@ class OrdersScreen extends StatefulWidget {
 }
 
 class _OrdersScreenState extends State<OrdersScreen> {
-  _OrderFilter _filter = _OrderFilter.action;
+  OrderQueue _filter = OrderQueue.action;
+  late Stream<List<ShopOrder>> _orders = OrderService.watchAll();
+  Timer? _clock;
+  @override
+  void initState() {
+    super.initState();
+    _clock = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _clock?.cancel();
+    super.dispose();
+  }
+
+  void _retry() => setState(() => _orders = OrderService.watchAll());
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Orders'), centerTitle: true),
-      body: Column(
-        children: [
-          // Filter chips — replaces the old TabBar. One row of pills along
-          // the top so it stays out of the way of the order cards.
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (final f in _OrderFilter.values) ...[
-                    StreamBuilder<List<ShopOrder>>(
-                      stream: OrderService.watchAll(),
-                      builder: (context, snap) {
-                        final count =
-                            (snap.data ?? const []).where(f.matches).length;
-                        return _FilterChip(
-                          label: f.label,
-                          count: count,
-                          selected: _filter == f,
-                          onTap: () => setState(() => _filter = f),
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 6),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          Divider(height: 1, color: cs.outlineVariant),
-          Expanded(
-            child: _OrderList(
-              stream: OrderService.watchAll(),
-              filter: _filter,
-            ),
-          ),
-        ],
+      appBar: AppBar(title: const Text('ออเดอร์'), centerTitle: true),
+      body: StreamBuilder<List<ShopOrder>>(
+        stream: _orders,
+        builder: (context, snap) {
+          if (snap.hasError) {
+            return Center(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Text('โหลดออเดอร์ไม่สำเร็จ กรุณาตรวจการเชื่อมต่อ'),
+              TextButton.icon(
+                  onPressed: _retry,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('ลองใหม่')),
+            ]));
+          }
+          if (!snap.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final now = DateTime.now();
+          final all = snap.data!;
+          final orders = all
+              .where((o) => matchesQueue(o, _filter, now))
+              .toList()
+            ..sort((a, b) => _filter == OrderQueue.all
+                ? b.createdAt.compareTo(a.createdAt)
+                : orderDueAt(a).compareTo(orderDueAt(b)));
+          return Column(children: [
+            SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.all(8),
+                child: Row(children: [
+                  for (final f in OrderQueue.values)
+                    Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: _FilterChip(
+                            label: f.label,
+                            count: all
+                                .where((o) => matchesQueue(o, f, now))
+                                .length,
+                            selected: _filter == f,
+                            onTap: () => setState(() => _filter = f))),
+                ])),
+            Divider(height: 1, color: cs.outlineVariant),
+            Expanded(
+                child: orders.isEmpty
+                    ? Center(child: Text('ไม่มีออเดอร์ในหมวด ${_filter.label}'))
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: orders.length,
+                        itemBuilder: (_, i) => Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  if (pickupUrgency(orders[i], now)
+                                      case final String urgency)
+                                    Padding(
+                                        padding: const EdgeInsets.all(8),
+                                        child: Text(urgency,
+                                            style: TextStyle(
+                                                color: cs.error,
+                                                fontWeight: FontWeight.bold))),
+                                  _OrderCard(order: orders[i]),
+                                ]))),
+          ]);
+        },
       ),
     );
   }
@@ -154,52 +171,6 @@ class _FilterChip extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _OrderList extends StatelessWidget {
-  final Stream<List<ShopOrder>> stream;
-  final _OrderFilter filter;
-  const _OrderList({required this.stream, required this.filter});
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<List<ShopOrder>>(
-      stream: stream,
-      builder: (ctx, snap) {
-        if (snap.hasError) {
-          return const Center(child: Text('โหลดข้อมูลไม่สำเร็จ'));
-        }
-        if (!snap.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final orders = snap.data!.where(filter.matches).toList();
-        if (orders.isEmpty) {
-          // Tailor the empty copy to the chip so the user knows whether
-          // there's nothing to do vs. nothing at all.
-          final msg = switch (filter) {
-            _OrderFilter.action => 'ไม่มี order ที่ต้องทำต่อ',
-            _OrderFilter.pendingPayment => 'ไม่มี order รอชำระ',
-            _OrderFilter.all => 'ยังไม่มี order',
-          };
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.inbox_outlined, size: 64, color: Colors.grey),
-                const SizedBox(height: 8),
-                Text(msg, style: const TextStyle(color: Colors.grey)),
-              ],
-            ),
-          );
-        }
-        return ListView.builder(
-          padding: const EdgeInsets.all(12),
-          itemCount: orders.length,
-          itemBuilder: (ctx, i) => _OrderCard(order: orders[i]),
-        );
-      },
     );
   }
 }
@@ -594,18 +565,10 @@ class _ActionButtons extends StatelessWidget {
       children: [
         // Cancel
         OutlinedButton(
-          onPressed: () => showDialog<void>(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                    title: const Text('ออเดอร์นี้รับชำระแล้ว'),
-                    content: const Text(
-                        'คืนเงินได้ที่ รายงาน → รายการขาย → เลือกบิล → คืนเงิน เพื่อให้ยอดขาย สต็อก และเงินในรอบตรงกัน'),
-                    actions: [
-                      TextButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          child: const Text('ตกลง'))
-                    ],
-                  )),
+          onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => OrderSaleScreen(orderId: order.id))),
           style: OutlinedButton.styleFrom(
               foregroundColor: Colors.red,
               side: const BorderSide(color: Colors.red),
@@ -634,9 +597,50 @@ class _ActionButtons extends StatelessWidget {
       };
 
   String get _nextLabel => switch (order.status) {
-        OrderStatus.paid => 'ยืนยัน order',
+        OrderStatus.paid => 'รับออเดอร์',
         OrderStatus.accepted => 'พร้อมรับแล้ว',
         OrderStatus.ready => 'รับของแล้ว',
         _ => 'เสร็จสิ้น',
       };
+}
+
+/// A focused order view used by daily-close blockers.
+class OrderDetailScreen extends StatefulWidget {
+  const OrderDetailScreen({super.key, required this.orderId});
+  final String orderId;
+  @override
+  State<OrderDetailScreen> createState() => _OrderDetailScreenState();
+}
+
+class _OrderDetailScreenState extends State<OrderDetailScreen> {
+  late var _stream =
+      ShopDatabase.shop.collection('orders').doc(widget.orderId).snapshots();
+  @override
+  Widget build(BuildContext context) => Scaffold(
+      appBar: AppBar(title: const Text('รายละเอียดออเดอร์')),
+      body: StreamBuilder(
+          stream: _stream,
+          builder: (context, snap) {
+            if (snap.hasError) {
+              return Center(
+                  child: TextButton(
+                      onPressed: () => setState(() => _stream = ShopDatabase
+                          .shop
+                          .collection('orders')
+                          .doc(widget.orderId)
+                          .snapshots()),
+                      child: const Text('โหลดไม่ได้ · ลองใหม่')));
+            }
+            if (!snap.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (!snap.data!.exists) {
+              return const Center(child: Text('ไม่พบออเดอร์นี้'));
+            }
+            return ListView(padding: const EdgeInsets.all(12), children: [
+              _OrderCard(
+                  order: ShopOrder.fromFirestore(
+                      snap.data!.data()!, snap.data!.id)),
+            ]);
+          }));
 }

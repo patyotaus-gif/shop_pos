@@ -31,10 +31,11 @@ import '../widgets/shop_operation.dart';
 import '../utils/operation_error.dart';
 import '../widgets/product_image.dart';
 import '../widgets/sale_product_grid.dart';
-import '../widgets/compact_catalog_button.dart';
+import '../widgets/mobile_sales_workspace.dart';
 
 class PosScreen extends StatefulWidget {
-  const PosScreen({super.key});
+  const PosScreen({super.key, this.initialChannel = SalesChannel.storefront});
+  final SalesChannel initialChannel;
 
   @override
   State<PosScreen> createState() => _PosScreenState();
@@ -231,13 +232,14 @@ class _PosScreenState extends State<PosScreen> {
       String? customerName;
       double paid = 0;
       var method = _paymentMethod;
-      var channel = SalesChannel.storefront;
+      var channel = widget.initialChannel;
       if (!retry) {
         if (isDebt) {
           customerName = await _askCustomerName();
           if (customerName == null || !mounted) return;
         } else {
-          final result = await showPaymentSheet(context, total: _total);
+          final result = await showPaymentSheet(context,
+              total: _total, initialChannel: widget.initialChannel);
           if (result == null || !mounted) return;
           method = result.method;
           channel = result.salesChannel;
@@ -400,7 +402,9 @@ class _PosScreenState extends State<PosScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ขายหน้าร้าน'),
+        title: Text(widget.initialChannel == SalesChannel.takeaway
+            ? 'ขายกลับบ้าน'
+            : 'ขายหน้าร้าน'),
         centerTitle: true,
         actions: [
           if (_staffEnabled)
@@ -610,6 +614,7 @@ class _PosScreenState extends State<PosScreen> {
                       ),
                     // Summary & checkout
                     PosCheckoutPanel(
+                      preferenceKey: 'checkout-shortcut:${AuthService.shopId}',
                       compact: !wide,
                       canDiscount: !AuthService.isStaff,
                       canDebt: !AuthService.isStaff,
@@ -635,20 +640,16 @@ class _PosScreenState extends State<PosScreen> {
                           child: Material(color: cs.surface, child: basket)),
                     ]);
                   }
-                  final narrow = Column(children: [
-                    ...controls,
-                    if (constraints.maxHeight < 580)
-                      CompactCatalogButton(catalog: (_) => _productCatalog())
-                    else
-                      SizedBox(
-                          height: constraints.maxHeight >= 700 ? 240 : 170,
-                          child: _productCatalog()),
-                    Expanded(child: basket),
-                  ]);
-                  return constraints.maxHeight < 520
-                      ? SingleChildScrollView(
-                          child: SizedBox(height: 520, child: narrow))
-                      : narrow;
+                  return MobileSalesWorkspace(
+                    itemCount:
+                        _cart.fold<int>(0, (sum, item) => sum + item.quantity),
+                    total: _total,
+                    catalog: CustomScrollView(slivers: [
+                      SliverToBoxAdapter(child: Column(children: controls)),
+                      SliverFillRemaining(child: _productCatalog()),
+                    ]),
+                    basket: basket,
+                  );
                 }))),
       ]),
     );

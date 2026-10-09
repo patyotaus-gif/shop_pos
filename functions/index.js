@@ -43,6 +43,10 @@ const stripeSecretKey = defineSecret("STRIPE_SECRET_KEY");
 const stripeWebhookSecret = defineSecret("STRIPE_WEBHOOK_SECRET");
 const lineChannelAccessToken = defineSecret("LINE_CHANNEL_ACCESS_TOKEN");
 const lineChannelSecret = defineSecret("LINE_CHANNEL_SECRET");
+const lineLink = require('./line_link').handlers({ db: admin.firestore(), HttpsError });
+exports.startLineLink = onCall(lineLink.start);
+exports.getLineLinkStatus = onCall(lineLink.status);
+exports.cancelLineLink = onCall(lineLink.cancel);
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
 
 // ────────────────────────────────────────────────
@@ -854,7 +858,8 @@ exports.lineWebhook = onRequest(
           type: "text",
           text:
             "ยินดีต้อนรับสู่ Pokpok 🎉\n\n" +
-            "• ร้านค้า/ซัพพลายเออร์ที่ต้องการรับแจ้งเตือนออเดอร์ผ่าน LINE — พิมพ์ \"ID\" เพื่อรับ LINE User ID ของคุณ\n" +
+            "• ร้านค้า: กดเชื่อม LINE ในแอป Pokpok แล้วส่งข้อความที่เตรียมไว้เพื่อยืนยันร้าน\n" +
+            "• ซัพพลายเออร์หรือเชื่อมด้วยรหัสเอง: พิมพ์ \"ID\" เพื่อรับรหัสเชื่อมต่อ\n" +
             "• มีคำถามอื่น ๆ ทักได้เลย ทีมงานจะตอบกลับโดยเร็ว"
         }]);
         continue;
@@ -863,6 +868,13 @@ exports.lineWebhook = onRequest(
       // เมื่อ user ส่งข้อความ → ตอบ userId ให้ copy ไปใส่ settings
       if (event.type === "message" && event.message?.type === "text") {
         const text = event.message.text.trim().toLowerCase();
+        if (text.startsWith('connect:')) {
+          const connected = await lineLink.consume({ text: event.message.text.trim(), userId, sourceType: event.source?.type });
+          await _lineReply(token, event.replyToken, [{ type: 'text', text: connected
+            ? 'เชื่อม LINE กับร้านสำเร็จแล้ว กลับแอป Pokpok เพื่อใช้งานต่อได้'
+            : 'เชื่อมไม่สำเร็จ รหัสหมดอายุหรือถูกใช้แล้ว กรุณากดเชื่อม LINE ใหม่ในแอป Pokpok' }]);
+          continue;
+        }
 
         // NOTE: เคยมีคำสั่ง "link:SHOP_ID" ที่เขียน lineUserId ลงร้านโดยตรง
         // แต่ถอดออกเพราะไม่ได้ยืนยันความเป็นเจ้าของ — ใครรู้ shopId (หลุดจาก

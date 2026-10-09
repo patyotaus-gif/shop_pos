@@ -26,7 +26,7 @@ import 'screens/user_switch_screen.dart';
 import 'screens/staff_mode_screen.dart';
 import 'screens/offline_cash_screen.dart';
 import 'services/offline_service.dart';
-import 'screens/tables_screen.dart';
+import 'screens/restaurant_sales_screen.dart';
 import 'services/entitlements.dart';
 import 'services/order_service.dart';
 import 'services/shop_service.dart';
@@ -465,7 +465,9 @@ class _MainShellState extends State<MainShell> {
             // Daily actions first, followed by the remaining pages in the sidebar.
             final primaryTabs = <AppNavigationItem>[
               AppNavigationItem(
-                screen: hasTables ? const TablesScreen() : const PosScreen(),
+                screen: hasTables
+                    ? const RestaurantSalesScreen()
+                    : const PosScreen(),
                 icon: hasTables
                     ? Icons.table_restaurant_outlined
                     : Icons.point_of_sale_outlined,

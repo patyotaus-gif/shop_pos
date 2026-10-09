@@ -4,14 +4,24 @@ import 'package:file_saver/file_saver.dart';
 import '../models/sale.dart';
 import '../services/shop_database.dart';
 import '../utils/receipt_generator.dart';
+import '../services/auth_service.dart';
+import '../services/sale_service.dart';
+import '../widgets/refund_reason_dialog.dart';
+import '../widgets/shop_operation.dart';
 
 /// A completed payment stays visible even if the table stream closes its tab.
 class SaleReceiptScreen extends StatefulWidget {
-  const SaleReceiptScreen({super.key, this.sale, this.saleId, this.loadSale})
+  const SaleReceiptScreen(
+      {super.key,
+      this.sale,
+      this.saleId,
+      this.loadSale,
+      this.allowRefund = false})
       : assert(sale != null || saleId != null || loadSale != null);
   final Future<Sale> Function()? loadSale;
   final Sale? sale;
   final String? saleId;
+  final bool allowRefund;
   @override
   State<SaleReceiptScreen> createState() => _SaleReceiptScreenState();
 }
@@ -55,14 +65,19 @@ class _SaleReceiptScreenState extends State<SaleReceiptScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: const Text('บันทึกการขายสำเร็จ')),
+      appBar: AppBar(
+          title: Text(widget.allowRefund
+              ? 'บิลที่เชื่อมกับออเดอร์'
+              : 'บันทึกการขายสำเร็จ')),
       body: FutureBuilder<Sale>(
           future: _sale,
           builder: (context, snapshot) {
             if (snapshot.hasError) {
               return Center(
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Text('บันทึกการขายแล้ว แต่โหลดใบเสร็จไม่สำเร็จ'),
+                Text(widget.allowRefund
+                    ? 'โหลดบิลที่เชื่อมกับออเดอร์ไม่สำเร็จ'
+                    : 'บันทึกการขายแล้ว แต่โหลดใบเสร็จไม่สำเร็จ'),
                 const Text('ไม่ต้องรับเงินซ้ำ เปิดดูย้อนหลังในรายงานได้'),
                 TextButton(
                     onPressed: () => setState(() {
@@ -78,6 +93,35 @@ class _SaleReceiptScreenState extends State<SaleReceiptScreen> {
             }
             final sale = snapshot.data!;
             return Column(children: [
+              if (widget.allowRefund && !AuthService.isStaff)
+                sale.isRefunded
+                    ? const Text('คืนเงินบิลนี้แล้ว')
+                    : TextButton.icon(
+                        icon: const Icon(Icons.undo),
+                        label: const Text('คืนเงินบิลนี้'),
+                        onPressed: () async {
+                          final reason = await showDialog<RefundDecision>(
+                              context: context,
+                              builder: (_) => RefundReasonDialog(
+                                  amount: sale.total.toStringAsFixed(2),
+                                  online: sale.paymentMethod ==
+                                      PaymentMethod.online,
+                                  debt: sale.isDebt));
+                          if (reason == null || !context.mounted) return;
+                          final ok = await performShopOperation(
+                              context,
+                              () => SaleService.refundSale(sale,
+                                  reason: reason.reason,
+                                  returnToStock: reason.returnToStock,
+                                  refundMethod: reason.method),
+                              success: 'บันทึกคืนเงินแล้ว');
+                          if (ok && mounted) {
+                            setState(() {
+                              _sale = _load();
+                              _sale.ignore();
+                            });
+                          }
+                        }),
               TextButton.icon(
                   onPressed: _saving ? null : () => _saveFile(sale),
                   icon: const Icon(Icons.download),
@@ -103,7 +147,8 @@ class _SaleReceiptScreenState extends State<SaleReceiptScreen> {
                       padding: const EdgeInsets.all(12),
                       child: FilledButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text('ขายต่อ')))),
+                          child: Text(
+                              widget.allowRefund ? 'กลับออเดอร์' : 'ขายต่อ')))),
             ]);
           }));
 }

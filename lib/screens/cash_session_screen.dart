@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'cash_close_issue_screen.dart';
 import 'package:intl/intl.dart';
 
 import '../models/cash_session.dart';
@@ -237,16 +238,27 @@ Future<void> _closeDialog(BuildContext context, CashSession session) async {
   }
   if (!context.mounted) return;
   if (!check.canClose) {
+    CashCloseIssue? selectedIssue;
     final destination = await showDialog<CashCloseDestination>(
         context: context,
-        builder: (_) => CashCloseBlockersDialog(check: check));
-    if (destination == null || !context.mounted) return;
-    final Widget screen = switch (destination) {
-      CashCloseDestination.orders => const OrdersScreen(),
-      CashCloseDestination.tables => const TablesScreen(),
-      CashCloseDestination.money => const MoneyMovementsScreen(),
-    };
+        builder: (ctx) => CashCloseBlockersDialog(
+            check: check,
+            onIssue: (issue) {
+              selectedIssue = issue;
+              Navigator.pop(ctx);
+            }));
+    if (!context.mounted || (destination == null && selectedIssue == null)) {
+      return;
+    }
+    final Widget screen = selectedIssue != null
+        ? CashCloseIssueScreen(issue: selectedIssue!)
+        : switch (destination!) {
+            CashCloseDestination.orders => const OrdersScreen(),
+            CashCloseDestination.tables => const TablesScreen(),
+            CashCloseDestination.money => const MoneyMovementsScreen(),
+          };
     await Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+    if (context.mounted) await _closeDialog(context, session);
     return;
   }
   final ctrl = TextEditingController();

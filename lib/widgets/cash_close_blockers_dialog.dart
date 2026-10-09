@@ -4,8 +4,9 @@ import '../models/cash_close_check.dart';
 enum CashCloseDestination { orders, tables, money }
 
 class CashCloseBlockersDialog extends StatelessWidget {
-  const CashCloseBlockersDialog({super.key, required this.check});
+  const CashCloseBlockersDialog({super.key, required this.check, this.onIssue});
   final CashCloseCheck check;
+  final ValueChanged<CashCloseIssue>? onIssue;
 
   @override
   Widget build(BuildContext context) => AlertDialog(
@@ -27,6 +28,12 @@ class CashCloseBlockersDialog extends StatelessWidget {
                 ],
                 for (final issue in check.issues)
                   ListTile(
+                    onTap: onIssue == null || issue.id.isEmpty
+                        ? null
+                        : () => onIssue!(issue),
+                    trailing: onIssue != null && issue.id.isNotEmpty
+                        ? const Icon(Icons.chevron_right)
+                        : null,
                     contentPadding: EdgeInsets.zero,
                     title: Text(issue.message),
                     subtitle: Text([

@@ -8,17 +8,37 @@ import 'table_form_screen.dart';
 /// Grid of restaurant tables — color tells status (cream = available,
 /// burgundy-tinted = occupied). Tap to open the order screen for that
 /// table; long-press to edit/delete.
-class TablesScreen extends StatelessWidget {
-  const TablesScreen({super.key});
+class TablesScreen extends StatefulWidget {
+  const TablesScreen({super.key, this.loadTables});
+  final Stream<List<RestaurantTable>> Function()? loadTables;
+  @override
+  State<TablesScreen> createState() => _TablesScreenState();
+}
+
+class _TablesScreenState extends State<TablesScreen> {
+  late Stream<List<RestaurantTable>> _tables = _load();
+  Stream<List<RestaurantTable>> _load() =>
+      (widget.loadTables ?? TableService.watchTables)();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('โต๊ะ'), centerTitle: true),
       body: StreamBuilder<List<RestaurantTable>>(
-        stream: TableService.watchTables(),
+        stream: _tables,
         builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
+          if (snap.hasError) {
+            return Center(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Text('โหลดโต๊ะไม่สำเร็จ กรุณาตรวจการเชื่อมต่อ'),
+              TextButton.icon(
+                  onPressed: () => setState(() => _tables = _load()),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('ลองใหม่')),
+            ]));
+          }
+          if (snap.connectionState == ConnectionState.waiting &&
+              !snap.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
           final tables = snap.data ?? const [];

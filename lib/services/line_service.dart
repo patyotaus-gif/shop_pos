@@ -3,6 +3,16 @@ import 'auth_service.dart';
 
 class LineService {
   static const officialAccountUrl = 'https://lin.ee/V8eWC8Tl';
+  static Future<Map<String, dynamic>> startLink() async =>
+      Map<String, dynamic>.from(
+          (await _fn('startLineLink').call({'shopId': AuthService.shopId})).data
+              as Map);
+  static Future<String> linkStatus() async =>
+      (await _fn('getLineLinkStatus').call({'shopId': AuthService.shopId}))
+          .data['status'] as String;
+  static Future<void> cancelLink() async {
+    await _fn('cancelLineLink').call({'shopId': AuthService.shopId});
+  }
 
   static bool isValidUserId(String value) =>
       RegExp(r'^U[0-9a-fA-F]{32}$').hasMatch(value.trim());
