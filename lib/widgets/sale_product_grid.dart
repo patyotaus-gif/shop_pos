@@ -9,11 +9,13 @@ class SaleProductGrid extends StatelessWidget {
       {super.key,
       required this.itemCount,
       required this.itemBuilder,
-      this.controller});
+      this.controller,
+      this.footerExtent = 0});
 
   final int itemCount;
   final IndexedWidgetBuilder itemBuilder;
   final ScrollController? controller;
+  final double footerExtent;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(builder: (context, size) {
@@ -31,9 +33,9 @@ class SaleProductGrid extends StatelessWidget {
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: columns,
             mainAxisExtent: math.min(
-                width * 0.78 + textScale.scale(66) + 28,
-                math.max(
-                    textScale.scale(66) + 44, size.maxHeight - padding * 2)),
+                width * 0.78 + textScale.scale(66) + 28 + footerExtent,
+                math.max(textScale.scale(66) + 44 + footerExtent,
+                    size.maxHeight - padding * 2)),
             crossAxisSpacing: gap,
             mainAxisSpacing: gap,
           ),
@@ -49,13 +51,15 @@ class SaleProductCard extends StatelessWidget {
       required this.product,
       required this.onTap,
       this.showPromotion = true,
-      this.unavailableLabel});
+      this.unavailableLabel,
+      this.footer});
 
   final Product product;
   final VoidCallback? onTap;
   // Offline sales use the prepared base price, not live promotions.
   final bool showPromotion;
   final String? unavailableLabel;
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -145,6 +149,7 @@ class SaleProductCard extends StatelessWidget {
                         ]),
                       ],
                     )),
+                if (footer != null) footer!,
               ],
             ),
           ),
