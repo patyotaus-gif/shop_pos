@@ -17,8 +17,7 @@ class AppNavigationItem {
   final int badgeCount;
 }
 
-/// Keeps every page mounted while placing all destinations on the left.
-/// Narrow screens use stacked icon/labels; wide screens use full menu rows.
+/// Keeps pages mounted across phone bottom-navigation and tablet sidebars.
 class SideNavigationShell extends StatefulWidget {
   const SideNavigationShell({
     super.key,
@@ -80,50 +79,69 @@ class _SideNavigationShellState extends State<SideNavigationShell> {
               final count = widget.items.length > 4 ? 4 : widget.items.length;
               return Column(children: [
                 Expanded(
-                    child: IndexedStack(index: widget.selectedIndex, children: [
-                  for (final item in widget.items)
-                    KeyedSubtree(
-                        key: _pageKeys.putIfAbsent(item.label, GlobalKey.new),
-                        child: item.screen),
-                ])),
-                if (widget.statusBanner != null) widget.statusBanner!,
-                NavigationBar(
-                  selectedIndex: widget.selectedIndex < count
-                      ? widget.selectedIndex
-                      : count,
-                  onDestinationSelected: (index) async {
-                    if (index < count) {
-                      widget.onSelected(index);
-                      return;
-                    }
-                    final chosen = await showModalBottomSheet<int>(
+                    child: MediaQuery.removePadding(
                         context: context,
-                        builder: (context) => SafeArea(
-                                child: ListView(shrinkWrap: true, children: [
-                              for (var i = count; i < widget.items.length; i++)
-                                ListTile(
-                                    leading: Icon(widget.items[i].icon),
-                                    title: Text(widget.items[i].label),
-                                    selected: widget.selectedIndex == i,
-                                    onTap: () => Navigator.pop(context, i)),
-                            ])));
-                    if (chosen != null && mounted) widget.onSelected(chosen);
-                  },
-                  destinations: [
-                    for (var i = 0; i < count; i++)
-                      NavigationDestination(
-                          icon: Badge(
-                              isLabelVisible: widget.items[i].badgeCount > 0,
-                              label: Text(widget.items[i].badgeCount > 99
-                                  ? '99+'
-                                  : '${widget.items[i].badgeCount}'),
-                              child: Icon(widget.items[i].icon)),
-                          selectedIcon: Icon(widget.items[i].selectedIcon),
-                          label: widget.items[i].label),
-                    if (widget.items.length > count)
-                      const NavigationDestination(
-                          icon: Icon(Icons.more_horiz), label: 'เพิ่มเติม'),
-                  ],
+                        removeBottom: true,
+                        // NavigationBar owns the home-indicator inset. Pages
+                        // above it must not reserve that same space again.
+                        child: IndexedStack(
+                            index: widget.selectedIndex,
+                            children: [
+                              for (final item in widget.items)
+                                KeyedSubtree(
+                                    key: _pageKeys.putIfAbsent(
+                                        item.label, GlobalKey.new),
+                                    child: item.screen),
+                            ]))),
+                if (widget.statusBanner != null)
+                  MediaQuery.removePadding(
+                      context: context,
+                      removeBottom: true,
+                      child: widget.statusBanner!),
+                MediaQuery.removePadding(
+                  context: context,
+                  removeTop: true,
+                  child: NavigationBar(
+                    height: 64,
+                    selectedIndex: widget.selectedIndex < count
+                        ? widget.selectedIndex
+                        : count,
+                    onDestinationSelected: (index) async {
+                      if (index < count) {
+                        widget.onSelected(index);
+                        return;
+                      }
+                      final chosen = await showModalBottomSheet<int>(
+                          context: context,
+                          builder: (context) => SafeArea(
+                                  child: ListView(shrinkWrap: true, children: [
+                                for (var i = count;
+                                    i < widget.items.length;
+                                    i++)
+                                  ListTile(
+                                      leading: Icon(widget.items[i].icon),
+                                      title: Text(widget.items[i].label),
+                                      selected: widget.selectedIndex == i,
+                                      onTap: () => Navigator.pop(context, i)),
+                              ])));
+                      if (chosen != null && mounted) widget.onSelected(chosen);
+                    },
+                    destinations: [
+                      for (var i = 0; i < count; i++)
+                        NavigationDestination(
+                            icon: Badge(
+                                isLabelVisible: widget.items[i].badgeCount > 0,
+                                label: Text(widget.items[i].badgeCount > 99
+                                    ? '99+'
+                                    : '${widget.items[i].badgeCount}'),
+                                child: Icon(widget.items[i].icon)),
+                            selectedIcon: Icon(widget.items[i].selectedIcon),
+                            label: widget.items[i].label),
+                      if (widget.items.length > count)
+                        const NavigationDestination(
+                            icon: Icon(Icons.more_horiz), label: 'เพิ่มเติม'),
+                    ],
+                  ),
                 ),
               ]);
             }

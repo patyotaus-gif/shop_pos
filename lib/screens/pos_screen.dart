@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import '../widgets/compact_action.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:intl/intl.dart';
+import '../widgets/pos_checkout_panel.dart';
 import '../models/product.dart';
 import '../models/cart_item.dart';
 import '../models/customer.dart';
@@ -609,7 +609,10 @@ class _PosScreenState extends State<PosScreen> {
                         ),
                       ),
                     // Summary & checkout
-                    _CheckoutPanel(
+                    PosCheckoutPanel(
+                      compact: !wide,
+                      canDiscount: !AuthService.isStaff,
+                      canDebt: !AuthService.isStaff,
                       subtotal: _subtotal,
                       discount: _discount,
                       total: _total,
@@ -759,102 +762,6 @@ class _ProductSearchState extends State<_ProductSearch> {
           ),
       ],
     );
-  }
-}
-
-class _CheckoutPanel extends StatelessWidget {
-  final double subtotal, discount, total;
-  final VoidCallback onDiscount, onCheckout, onDebt;
-  final bool hasItems;
-
-  const _CheckoutPanel({
-    required this.subtotal,
-    required this.discount,
-    required this.total,
-    required this.onDiscount,
-    required this.onCheckout,
-    required this.onDebt,
-    required this.hasItems,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final baht = NumberFormat('#,##0.00', 'th_TH');
-    final cs = Theme.of(context).colorScheme;
-
-    return SafeArea(
-        top: false,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          decoration: BoxDecoration(
-            color: cs.surface,
-            border: Border(top: BorderSide(color: cs.outlineVariant)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Expanded(child: Text('รวม')),
-                  Flexible(
-                      child: Text('฿${baht.format(subtotal)}',
-                          textAlign: TextAlign.end)),
-                ],
-              ),
-              if (discount > 0)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Expanded(
-                        child: Text('ส่วนลด',
-                            style: TextStyle(color: Colors.green))),
-                    Flexible(
-                        child: Text('-฿${baht.format(discount)}',
-                            textAlign: TextAlign.end,
-                            style: const TextStyle(color: Colors.green))),
-                  ],
-                ),
-              const Divider(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Expanded(
-                      child: Text('ยอดสุทธิ',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold))),
-                  Flexible(
-                      child: Text('฿${baht.format(total)}',
-                          textAlign: TextAlign.end,
-                          style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: cs.primary))),
-                ],
-              ),
-              const SizedBox(height: 12),
-              ActionButtons(
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: AuthService.isStaff ? null : onDiscount,
-                    icon: const Icon(Icons.discount_outlined, size: 18),
-                    label: const Text('ส่วนลด'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: !AuthService.isStaff && hasItems ? onDebt : null,
-                    icon: const Icon(Icons.person_outline, size: 18),
-                    label: const Text('เชื่อ'),
-                  ),
-                  FilledButton.icon(
-                    onPressed: hasItems ? onCheckout : null,
-                    icon: const Icon(Icons.payments_outlined, size: 18),
-                    label: const Text('ชำระเงิน'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ));
   }
 }
 
