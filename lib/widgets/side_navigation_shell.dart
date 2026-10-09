@@ -138,7 +138,7 @@ class _SideNavigationShellState extends State<SideNavigationShell> {
                 SizedBox(
                   width: width,
                   child: Material(
-                    color: colors.surfaceContainerLow,
+                    color: colors.surface,
                     child: SafeArea(
                       left: false,
                       right: false,
@@ -180,7 +180,7 @@ class _SideNavigationShellState extends State<SideNavigationShell> {
                                 final item = widget.items[index];
                                 final selected = widget.selectedIndex == index;
                                 final foreground = selected
-                                    ? colors.onPrimary
+                                    ? colors.onPrimaryContainer
                                     : colors.onSurfaceVariant;
                                 final icon = Badge(
                                   isLabelVisible: item.badgeCount > 0,
@@ -220,7 +220,7 @@ class _SideNavigationShellState extends State<SideNavigationShell> {
                                         message: item.label,
                                         child: Material(
                                           color: selected
-                                              ? colors.primary
+                                              ? colors.primaryContainer
                                               : Colors.transparent,
                                           borderRadius:
                                               BorderRadius.circular(8),

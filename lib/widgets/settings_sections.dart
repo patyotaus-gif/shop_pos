@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'compact_action.dart';
 
 class SettingsSection {
   const SettingsSection(
@@ -44,7 +45,14 @@ class _SettingsSectionsState extends State<SettingsSections> {
                         keyboardDismissBehavior:
                             ScrollViewKeyboardDismissBehavior.onDrag,
                         padding: const EdgeInsets.all(20),
-                        children: widget.sections[_selected].children))));
+                        children: [
+                          for (final child
+                              in widget.sections[_selected].children)
+                            if (child is ButtonStyleButton)
+                              CompactAction(child: child)
+                            else
+                              child,
+                        ]))));
         return SafeArea(
             child: wide
                 ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [

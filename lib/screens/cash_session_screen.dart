@@ -2,11 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../models/cash_session.dart';
+import '../models/cash_close_check.dart';
 import '../services/cash_session_service.dart';
 import '../services/staff_service.dart';
 import '../utils/zreport_generator.dart';
 import '../widgets/shop_operation.dart';
+import '../widgets/cash_close_blockers_dialog.dart';
+import '../utils/operation_error.dart';
 import 'money_movements_screen.dart';
+import 'orders_screen.dart';
+import 'tables_screen.dart';
 
 /// ปิดยอดสิ้นวัน — open a cash session (with the drawer's starting float),
 /// then close it: count the drawer, see over/short, print the Z-report.
@@ -218,17 +223,47 @@ class _OpenSessionCard extends StatelessWidget {
 }
 
 Future<void> _closeDialog(BuildContext context, CashSession session) async {
+  late final CashCloseCheck check;
+  try {
+    check = await runShopOperation(
+        context, () => CashSessionService.checkClose(session),
+        message: 'กำลังตรวจออเดอร์ บิลโต๊ะ และยอดเงินก่อนปิดรอบ');
+  } catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(operationError(error))));
+    }
+    return;
+  }
+  if (!context.mounted) return;
+  if (!check.canClose) {
+    final destination = await showDialog<CashCloseDestination>(
+        context: context,
+        builder: (_) => CashCloseBlockersDialog(check: check));
+    if (destination == null || !context.mounted) return;
+    final Widget screen = switch (destination) {
+      CashCloseDestination.orders => const OrdersScreen(),
+      CashCloseDestination.tables => const TablesScreen(),
+      CashCloseDestination.money => const MoneyMovementsScreen(),
+    };
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+    return;
+  }
   final ctrl = TextEditingController();
   final counted = await showDialog<double>(
     context: context,
     builder: (ctx) => AlertDialog(
       title: const Text('ปิดรอบ — นับเงินในลิ้นชัก'),
+      scrollable: true,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Text('นับเงินสดจริงในลิ้นชักตอนนี้ แล้วกรอกจำนวน',
               style: TextStyle(fontSize: 13)),
           const Text('ซิงก์บิลออฟไลน์จากทุกเครื่องให้ครบก่อนปิดรอบ'),
+          if (check.futureOrderCount > 0)
+            Text(
+                'นัดรับวันถัดไป ${check.futureOrderCount} ออเดอร์ เก็บไว้ทำต่อได้ เงินที่รับในรอบนี้ยังนับในยอดปิดรอบตามปกติ'),
           if (session.accountingVersion != 1)
             const Text(
                 'การยืนยันจะเก็บรอบเก่าเป็น “รอตรวจสอบ” ไม่คำนวณยอดเกิน/ขาดจากข้อมูลที่ไม่ครบ'),
@@ -289,12 +324,16 @@ Future<void> _closeDialog(BuildContext context, CashSession session) async {
     context: context,
     builder: (ctx) => AlertDialog(
       title: const Text('ปิดรอบแล้ว'),
+      scrollable: true,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _sumRow('ยอดขายสุทธิในรอบ', '฿${_baht.format(summary.grossTotal)}'),
           _sumRow('รับชำระหนี้', '฿${_baht.format(summary.debtCollections)}'),
+          if (summary.futureOrderCount > 0)
+            Text(
+                'นัดรับวันถัดไป ${summary.futureOrderCount} ออเดอร์ เก็บไว้ทำต่อ เงินที่รับแล้วรวมตามรอบที่รับเงิน'),
           if (summary.pendingOrderCount > 0 || summary.openTableCount > 0)
             Text(
                 'ยังไม่รวมออเดอร์รอชำระ ${summary.pendingOrderCount} รายการ และบิลโต๊ะที่ยังเปิด ${summary.openTableCount} บิล'),

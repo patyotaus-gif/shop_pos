@@ -1,3 +1,4 @@
+import '../widgets/compact_action.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -174,8 +175,7 @@ class _RenewOnWebCard extends StatelessWidget {
                   color: cs.primary, size: 24),
               const SizedBox(width: 10),
               const Text('ต่ออายุ & เลือกแผน',
-                  style:
-                      TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
             ],
           ),
           const SizedBox(height: 10),
@@ -189,14 +189,14 @@ class _RenewOnWebCard extends StatelessWidget {
                 color: cs.onSurface.withValues(alpha: 0.75)),
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
+          CompactAction(
             child: FilledButton.icon(
               onPressed: _open,
               icon: const Icon(Icons.open_in_new, size: 18),
               label: const Text('เปิดหน้าต่ออายุ (pok-pok.app)'),
               style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               ),
             ),
           ),
@@ -205,8 +205,7 @@ class _RenewOnWebCard extends StatelessWidget {
             child: Text(
               'เข้าสู่ระบบด้วยบัญชีร้านเดียวกับในแอป',
               style: TextStyle(
-                  fontSize: 11.5,
-                  color: cs.onSurface.withValues(alpha: 0.5)),
+                  fontSize: 11.5, color: cs.onSurface.withValues(alpha: 0.5)),
             ),
           ),
         ],
@@ -234,8 +233,7 @@ class _MarketplaceFootnote extends StatelessWidget {
             child: Text(
               'Marketplace ใช้ได้ในทุกแผน · คิด take rate 2.5% เฉพาะตอนสั่งของจาก supplier',
               style: TextStyle(
-                  fontSize: 11,
-                  color: cs.onSurface.withValues(alpha: 0.65)),
+                  fontSize: 11, color: cs.onSurface.withValues(alpha: 0.65)),
             ),
           ),
         ],

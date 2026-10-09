@@ -1,3 +1,4 @@
+import '../widgets/compact_action.dart';
 import '../widgets/settings_sections.dart';
 import 'dart:io';
 import 'package:url_launcher/url_launcher.dart';
@@ -602,8 +603,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         subtitle: const Text('ผู้ดูแลระบบ'),
                       ),
                       const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
+                      CompactAction(
                         child: OutlinedButton.icon(
                           onPressed: _linkingAccount ? null : _signOut,
                           icon: const Icon(Icons.logout, color: Colors.red),
@@ -668,8 +668,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   color: cs.primary,
                                   fontWeight: FontWeight.bold)),
                       const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
+                      CompactAction(
                         child: FilledButton.icon(
                           onPressed: () => Navigator.push(
                             context,
@@ -1030,8 +1029,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
+                      CompactAction(
                         child: FilledButton.icon(
                           onPressed: _savingPromptpay ? null : _savePromptPay,
                           icon: _savingPromptpay
@@ -1097,8 +1095,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     TextStyle(fontSize: 12, color: Colors.grey),
                               ),
                               const SizedBox(height: 10),
-                              SizedBox(
-                                width: double.infinity,
+                              CompactAction(
                                 child: FilledButton.icon(
                                   onPressed: _toggleBankListener,
                                   style: FilledButton.styleFrom(
@@ -1217,24 +1214,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Row(
+                      ActionButtons(
                         children: [
-                          Expanded(
-                            child: FilledButton.icon(
-                              onPressed: _savingLine ? null : _saveLineSettings,
-                              style: FilledButton.styleFrom(
-                                  backgroundColor: const Color(0xFF06C755)),
-                              icon: _savingLine
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2, color: Colors.white))
-                                  : const Icon(Icons.save_outlined),
-                              label: const Text('บันทึก'),
-                            ),
+                          FilledButton.icon(
+                            onPressed: _savingLine ? null : _saveLineSettings,
+                            style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFF06C755)),
+                            icon: _savingLine
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2, color: Colors.white))
+                                : const Icon(Icons.save_outlined),
+                            label: const Text('บันทึก'),
                           ),
-                          const SizedBox(width: 8),
                           OutlinedButton.icon(
                             onPressed: _savingLine ? null : _testLineNotify,
                             icon: const Icon(Icons.send_outlined,

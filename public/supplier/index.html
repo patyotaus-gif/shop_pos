@@ -306,14 +306,14 @@
               ${thumb}
               <div>
                 <div class="p-name">${esc(p.name)}</div>
-                <div class="p-meta">฿${baht(p.price)}/${esc(p.unit || "ชิ้น")} · ขั้นต่ำ ${p.moq || 1}</div>
+                <div class="p-meta">฿${baht(p.price)}/${esc(p.unit || "ชิ้น")} · ขั้นต่ำ ${esc(p.moq || 1)}</div>
                 <div class="toggle" style="margin-top:6px"><span class="dot ${avail ? "on" : "off"}"></span>${avail ? "มีของ" : "หมด"}</div>
               </div>
             </div>
             <div class="p-actions">
-              <button class="icon-btn" data-edit="${d.id}">แก้ไข</button>
-              <button class="icon-btn" data-toggle="${d.id}">${avail ? "ปิดขาย" : "เปิดขาย"}</button>
-              <button class="icon-btn danger" data-del="${d.id}">ลบ</button>
+              <button class="icon-btn" data-edit>แก้ไข</button>
+              <button class="icon-btn" data-toggle>${avail ? "ปิดขาย" : "เปิดขาย"}</button>
+              <button class="icon-btn danger" data-del>ลบ</button>
             </div>
           </div>`;
         card.querySelector("[data-edit]").onclick = () => productModal(d.id, p);
@@ -345,8 +345,8 @@
       <h3>${id ? "แก้ไขสินค้า" : "เพิ่มสินค้า"}</h3>
       <div class="field"><label>ชื่อสินค้า</label><input id="m_name" value="${esc(p?.name || "")}"></div>
       <div class="field"><label>หน่วย (กก., ลัง…)</label><input id="m_unit" value="${esc(p?.unit || "ชิ้น")}"></div>
-      <div class="field"><label>ราคา (บาท)</label><input id="m_price" type="number" value="${p?.price ?? ""}"></div>
-      <div class="field"><label>สั่งขั้นต่ำ</label><input id="m_moq" type="number" min="0.001" step="0.001" value="${p?.moq ?? 1}"></div>
+      <div class="field"><label>ราคา (บาท)</label><input id="m_price" type="number" value="${esc(p?.price ?? "")}"></div>
+      <div class="field"><label>สั่งขั้นต่ำ</label><input id="m_moq" type="number" min="0.001" step="0.001" value="${esc(p?.moq ?? 1)}"></div>
       <div class="field"><label>รายละเอียดสินค้า (ไม่บังคับ)</label><textarea id="m_desc" placeholder="เช่น เกรด ขนาดบรรจุ แหล่งที่มา…">${esc(p?.description || "")}</textarea></div>
       <div class="field">
         <label>รูปสินค้า (ไม่บังคับ)</label>
@@ -454,7 +454,7 @@
       <div class="field"><label>หมวด</label><input id="m_cat" value="${esc(s.category || "")}"></div>
       <div class="field"><label>พื้นที่จัดส่ง</label><input id="m_area" value="${esc(s.area || "")}"></div>
       <div class="field"><label>วันที่ส่ง</label><input id="m_days" value="${esc(s.deliveryDays || "")}"></div>
-      <div class="field"><label>ยอดสั่งขั้นต่ำ (บาท)</label><input id="m_min" type="number" value="${s.minOrder ?? 0}"></div>
+      <div class="field"><label>ยอดสั่งขั้นต่ำ (บาท)</label><input id="m_min" type="number" value="${esc(s.minOrder ?? 0)}"></div>
       <div class="switch-row"><span>เปิดรับออเดอร์</span>
         <input type="checkbox" id="m_active" ${s.active !== false ? "checked" : ""}></div>
       <div class="field" style="margin-top:6px">
@@ -516,7 +516,7 @@
 
   function orderCard(id, o) {
     const st = STATUS[o.status] || STATUS.placed;
-    const items = (o.items || []);
+    const items = (Array.isArray(o.items) ? o.items : []).filter(i => i && typeof i === 'object');
     const total = items.reduce((s, i) => s + (i.price || 0) * (i.quantity || 0), 0);
     const when = o.createdAt?.toDate ? o.createdAt.toDate() : null;
     const dateStr = when ? when.toLocaleDateString("th-TH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
@@ -530,12 +530,12 @@
         <span class="badge ${st[1]}">${st[0]}</span>
       </div>
       <div class="o-items">
-        ${items.map((i) => `<div><span>${esc(i.name)} × ${i.quantity} ${esc(i.unit || "")}</span><span>฿${baht((i.price || 0) * (i.quantity || 0))}</span></div>`).join("")}
+        ${items.map((i) => `<div><span>${esc(i.name)} × ${esc(i.quantity)} ${esc(i.unit || "")}</span><span>฿${baht((i.price || 0) * (i.quantity || 0))}</span></div>`).join("")}
         <div class="o-total"><span>รวม</span><span>฿${baht(total)}</span></div>
       </div>
-      <div class="o-actions" id="act-${id}"></div>`;
+      <div class="o-actions"></div>`;
 
-    const act = card.querySelector(`#act-${id}`);
+    const act = card.querySelector('.o-actions');
     const setStatus = async (status, btn) => {
       btn.disabled = true; btn.textContent = "…";
       try {
@@ -545,14 +545,19 @@
         btn.disabled = false;
       }
     };
+    function addAction(label, status, className) {
+      const button = document.createElement('button');
+      button.className = className;
+      button.textContent = label;
+      button.onclick = () => setStatus(status, button);
+      act.appendChild(button);
+    }
     if (o.status === "placed") {
-      act.innerHTML = `<button class="btn-sm btn-go" id="acc-${id}">รับออเดอร์</button><button class="btn-sm btn-cancel" id="can-${id}">ปฏิเสธ</button>`;
-      act.querySelector(`#acc-${id}`).onclick = (e) => setStatus("accepted", e.target);
-      act.querySelector(`#can-${id}`).onclick = (e) => setStatus("cancelled", e.target);
+      addAction('รับออเดอร์', 'accepted', 'btn-sm btn-go');
+      addAction('ปฏิเสธ', 'cancelled', 'btn-sm btn-cancel');
     } else if (o.status === "accepted") {
-      act.innerHTML = `<button class="btn-sm btn-go" id="shp-${id}">จัดส่งแล้ว</button><button class="btn-sm btn-cancel" id="can-${id}">ยกเลิก</button>`;
-      act.querySelector(`#shp-${id}`).onclick = (e) => setStatus("shipped", e.target);
-      act.querySelector(`#can-${id}`).onclick = (e) => setStatus("cancelled", e.target);
+      addAction('จัดส่งแล้ว', 'shipped', 'btn-sm btn-go');
+      addAction('ยกเลิก', 'cancelled', 'btn-sm btn-cancel');
     } else if (o.status === "shipped") {
       act.innerHTML = `<div class="p-meta">รอร้านค้ายืนยันรับของ</div>`;
     }

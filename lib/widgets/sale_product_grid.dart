@@ -30,7 +30,10 @@ class SaleProductGrid extends StatelessWidget {
           padding: const EdgeInsets.all(padding),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: columns,
-            mainAxisExtent: width * 0.62 + textScale.scale(54) + 24,
+            mainAxisExtent: math.min(
+                width * 0.78 + textScale.scale(66) + 28,
+                math.max(
+                    textScale.scale(66) + 44, size.maxHeight - padding * 2)),
             crossAxisSpacing: gap,
             mainAxisSpacing: gap,
           ),
@@ -62,6 +65,7 @@ class SaleProductCard extends StatelessWidget {
     return Tooltip(
       message: product.name,
       child: Card(
+        color: cs.surface,
         margin: EdgeInsets.zero,
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -85,7 +89,9 @@ class SaleProductCard extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 3),
                             decoration: BoxDecoration(
-                                color: cs.primary,
+                                color: unavailableLabel != null
+                                    ? cs.surfaceContainerHighest
+                                    : cs.primary,
                                 borderRadius: BorderRadius.circular(8)),
                             child: Text(
                                 unavailableLabel ??
@@ -93,23 +99,26 @@ class SaleProductCard extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                    fontSize: 11, color: cs.onPrimary)),
+                                    fontSize: 11,
+                                    color: unavailableLabel != null
+                                        ? cs.onSurface
+                                        : cs.onPrimary)),
                           ),
                         )),
                 ])),
                 Padding(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(10),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         SizedBox(
-                            height: MediaQuery.textScalerOf(context).scale(34),
+                            height: MediaQuery.textScalerOf(context).scale(40),
                             child: Text(product.name,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                    fontSize: 13,
-                                    height: 1.25,
+                                    fontSize: 14,
+                                    height: 1.4,
                                     fontWeight: FontWeight.w600))),
                         const SizedBox(height: 4),
                         Row(children: [
@@ -118,7 +127,7 @@ class SaleProductCard extends StatelessWidget {
                                   fit: BoxFit.scaleDown,
                                   child: Text('฿${price.toStringAsFixed(2)}',
                                       style: TextStyle(
-                                          fontSize: 14,
+                                          fontSize: 16,
                                           fontWeight: FontWeight.w700,
                                           color: cs.primary)))),
                           if (promotion) ...[

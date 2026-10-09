@@ -152,8 +152,7 @@ class DashboardScreen extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    subtitle: const Text(
-                        'เปิด/ปิดรับออเดอร์จากหน้าเว็บลูกค้า (/order)'),
+                    subtitle: const Text('รับออเดอร์จากลิงก์และ QR ของร้าน'),
                     value: !closed,
                     activeThumbColor: Colors.green,
                     onChanged: (open) =>
@@ -351,7 +350,7 @@ class _MarketplaceCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('สั่งของจาก supplier',
+                    const Text('สั่งของจากร้านส่ง',
                         style: TextStyle(
                             fontWeight: FontWeight.w700, fontSize: 15)),
                     const SizedBox(height: 2),
@@ -384,33 +383,28 @@ class _BigCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          color: cs.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
+          border: Border.all(color: cs.outlineVariant),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(value,
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: color,
-                          fontSize: 14),
-                      overflow: TextOverflow.ellipsis),
-                  Text(label,
-                      style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                ],
-              ),
-            ),
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 10),
+            Text(value,
+                style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: cs.onSurface,
+                    fontSize: 22)),
+            const SizedBox(height: 4),
+            Text(label,
+                style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
           ],
         ),
       ),

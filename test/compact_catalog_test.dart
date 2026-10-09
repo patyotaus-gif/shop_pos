@@ -1,3 +1,4 @@
+import 'package:shop_pos/theme/pokpok_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shop_pos/widgets/compact_catalog_button.dart';
@@ -15,6 +16,7 @@ void main() {
       var selected = 0;
       tester.view.physicalSize = size;
       await tester.pumpWidget(MaterialApp(
+          theme: PokpokTheme.light(),
           home: Scaffold(
               body: CompactCatalogButton(
                   catalog: (_) => SaleProductGrid(

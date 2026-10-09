@@ -1,15 +1,22 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/marketplace_order.dart';
 import '../models/supplier.dart';
 import 'auth_service.dart';
-import 'shop_service.dart';
 
 /// B2B marketplace: shops browse suppliers, order stock, track delivery.
 /// Available in every tier (per the GTM "marketplace อยู่ในทุก tier"
 /// principle); the platform earns a 2.5% take rate at delivery.
 class MarketplaceService {
-  static const double takeRate = 0.025; // 2.5%
+  static final Map<String, Future<String>> _placing = {};
+  static Future<dynamic> _call(String name, Map<String, dynamic> data) =>
+      FirebaseFunctions.instanceFor(region: 'asia-southeast1')
+          .httpsCallable(name)
+          .call(data)
+          .then((result) => result.data);
 
   static CollectionReference<Map<String, dynamic>> _suppliersCol() =>
       FirebaseFirestore.instance.collection('suppliers');
@@ -111,9 +118,7 @@ class MarketplaceService {
 
   // ─────────────────────── Order placement ───────────────────────
 
-  /// Place an order with [supplier]. Writes the same order doc to both the
-  /// shop's and the supplier's subcollections (shared id) so each side
-  /// queries its own. Returns the order id.
+  /// Place through the server, which validates prices and owns both copies.
   static Future<String> placeOrder({
     required Supplier supplier,
     required List<MarketplaceOrderItem> items,
@@ -134,28 +139,45 @@ class MarketplaceService {
         supplier.minOrder) {
       throw StateError('ยอดสั่งซื้อน้อยกว่าขั้นต่ำของซัพพลายเออร์');
     }
-    final shop = await ShopService.getCurrentShop();
-    final shopId = AuthService.shopId!;
+    if (AuthService.isStaff || AuthService.shopId == null) {
+      throw StateError('เฉพาะเจ้าของร้าน');
+    }
+    final lines = items
+        .map((i) => {'productId': i.productId, 'quantity': i.quantity})
+        .toList()
+      ..sort((a, b) =>
+          (a['productId'] as String).compareTo(b['productId'] as String));
+    final payload = <String, dynamic>{
+      'shopId': AuthService.shopId,
+      'supplierId': supplier.id,
+      'items': lines,
+      'expectedTotal': items.fold<double>(
+          0, (amount, i) => amount + (i.subtotal * 100).round() / 100),
+    };
+    final identity = jsonEncode(payload);
+    return _placing.putIfAbsent(
+        identity,
+        () => _submitOrder(identity, payload)
+            .whenComplete(() => _placing.remove(identity)));
+  }
 
-    final orderRef = _shopOrdersCol().doc();
-    final supplierOrderRef =
-        _suppliersCol().doc(supplier.id).collection('orders').doc(orderRef.id);
-
-    final order = MarketplaceOrder(
-      id: orderRef.id,
-      shopId: shopId,
-      shopName: shop?.name ?? 'ร้านค้า',
-      supplierId: supplier.id,
-      supplierName: supplier.name,
-      items: items,
-      createdAt: DateTime.now(),
-    );
-
-    final batch = FirebaseFirestore.instance.batch();
-    batch.set(orderRef, order.toFirestore());
-    batch.set(supplierOrderRef, order.toFirestore());
-    await batch.commit();
-    return orderRef.id;
+  static Future<String> _submitOrder(
+      String identity, Map<String, dynamic> payload) async {
+    // Keep the same id across a lost reply or process restart. No customer secrets.
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'marketplaceRequest:${base64Url.encode(utf8.encode(identity))}';
+    final requestId = prefs.getString(key) ?? _shopOrdersCol().doc().id;
+    if (!await prefs.setString(key, requestId)) {
+      throw StateError('บันทึกคำขอในเครื่องไม่ได้ กรุณาลองใหม่');
+    }
+    final result = await _call(
+        'marketplacePlaceOrder', {...payload, 'requestId': requestId});
+    final orderId = result['orderId'] as String;
+    // A cleanup failure must not turn a confirmed order into a failed checkout.
+    try {
+      await prefs.remove(key);
+    } catch (_) {}
+    return orderId;
   }
 
   /// The shop's marketplace order history, newest first.
@@ -173,39 +195,13 @@ class MarketplaceService {
         order.status == MarketplaceOrderStatus.delivered) {
       throw StateError('ยกเลิกไม่ได้ — ของกำลังส่ง/ส่งแล้ว');
     }
-    final batch = FirebaseFirestore.instance.batch();
-    batch.update(_shopOrdersCol().doc(order.id),
-        {'status': MarketplaceOrderStatus.cancelled.name});
-    batch.update(
-        _suppliersCol()
-            .doc(order.supplierId)
-            .collection('orders')
-            .doc(order.id),
-        {'status': MarketplaceOrderStatus.cancelled.name});
-    await batch.commit();
+    await _call('marketplaceShopOrderStatus',
+        {'orderId': order.id, 'status': 'cancelled'});
   }
 
-  /// Confirm receipt of a delivered order (shop side). Stamps the take
-  /// rate (2.5% of subtotal) onto both copies — this is the billing
-  /// trigger the platform reconciles monthly. Marking delivered is the
-  /// shop's action here; in production a supplier-driven flow + Cloud
-  /// Function would own the money movement, but recording it on the doc
-  /// keeps the data correct in the meantime.
+  /// The server validates shipped state and computes the fee from saved prices.
   static Future<void> confirmDelivered(MarketplaceOrder order) async {
-    final fee = double.parse((order.subtotal * takeRate).toStringAsFixed(2));
-    final patch = {
-      'status': MarketplaceOrderStatus.delivered.name,
-      'takeRate': fee,
-      'deliveredAt': Timestamp.now(),
-    };
-    final batch = FirebaseFirestore.instance.batch();
-    batch.update(_shopOrdersCol().doc(order.id), patch);
-    batch.update(
-        _suppliersCol()
-            .doc(order.supplierId)
-            .collection('orders')
-            .doc(order.id),
-        patch);
-    await batch.commit();
+    await _call('marketplaceShopOrderStatus',
+        {'orderId': order.id, 'status': 'delivered'});
   }
 }

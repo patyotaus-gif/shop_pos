@@ -16,6 +16,8 @@ class CartItemTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final baht = NumberFormat('#,##0.00', 'th_TH');
+    final cs = Theme.of(context).colorScheme;
+    final detailStyle = TextStyle(fontSize: 13, color: cs.onSurfaceVariant);
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: Padding(
@@ -37,18 +39,25 @@ class CartItemTile extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                     Text(item.product.name,
-                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                        style: const TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 4),
-                    Text('ราคาต่อหน่วย ฿${baht.format(item.unitPrice)}'),
+                    Text('ราคาต่อหน่วย ฿${baht.format(item.unitPrice)}',
+                        style: detailStyle),
                     if (item.modifiers.isNotEmpty)
-                      Text(item.modifiers.map((m) => m.optionName).join(', ')),
-                    if (item.notes?.isNotEmpty ?? false) Text(item.notes!),
+                      Text(item.modifiers.map((m) => m.optionName).join(', '),
+                          style: detailStyle),
+                    if (item.notes?.isNotEmpty ?? false)
+                      Text('หมายเหตุ: ${item.notes!}', style: detailStyle),
                   ])),
             ]),
             const SizedBox(height: 8),
             Text('รวม ฿${baht.format(item.subtotal)}',
                 textAlign: TextAlign.end,
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: cs.primary)),
             const SizedBox(height: 4),
             Wrap(
                 alignment: WrapAlignment.end,

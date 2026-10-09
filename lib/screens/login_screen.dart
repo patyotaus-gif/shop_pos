@@ -1,3 +1,4 @@
+import '../widgets/compact_action.dart';
 import 'package:flutter/material.dart';
 import 'offline_cash_screen.dart';
 import '../widgets/social_auth_buttons.dart';
@@ -231,8 +232,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                     const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
+                    CompactAction(
+                      primary: true,
                       child: FilledButton(
                         onPressed: _loading ? null : _signIn,
                         child: _loading

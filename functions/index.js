@@ -36,6 +36,7 @@ exports.transitionOrder = onCall(orderAccounting.transition);
 const cashAccounting=require('./cash_accounting').handlers({db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError});
 exports.openCashSession=onCall(cashAccounting.open);
 exports.closeCashSession=onCall(cashAccounting.close);
+exports.getCashCloseReadiness=onCall(cashAccounting.readiness);
 exports.collectDebtPayment=onCall(cashAccounting.collectDebt);
 exports.getAccountingReview=onCall(require('./accounting_review').handler({db:admin.firestore(),HttpsError}));
 const stripeSecretKey = defineSecret("STRIPE_SECRET_KEY");
@@ -1014,71 +1015,12 @@ async function _lineAiReply(apiKey, userId, userText) {
 // ────────────────────────────────────────────────
 // Runs as admin so it can extend BOTH shops' trials (a client can only
 // write its own shop doc). Idempotent: a shop that already has
-// `referredBy` set can't claim a second reward.
-const REFERRAL_BONUS_DAYS = 30;
+// server-owned referralClaims record prevents a second reward.
 
-exports.applyReferral = onCall(async (request) => {
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "Login required");
-  }
-  const shopId = request.auth.uid;
-  const code = String(request.data?.code || "").trim().toUpperCase();
-  if (!code) {
-    throw new HttpsError("invalid-argument", "code is required");
-  }
 
-  const db = admin.firestore();
-  const selfRef = db.collection("shops").doc(shopId);
-  const selfSnap = await selfRef.get();
-  if (!selfSnap.exists) {
-    throw new HttpsError("not-found", "Shop not found");
-  }
-  // Already claimed a referral — no double-dipping.
-  if (selfSnap.data().referredBy) {
-    return { applied: false, reason: "already-referred" };
-  }
-  // Can't refer yourself.
-  if (selfSnap.data().referralCode === code) {
-    return { applied: false, reason: "self" };
-  }
-
-  // Find the referrer by code.
-  const referrerQuery = await db
-    .collection("shops")
-    .where("referralCode", "==", code)
-    .limit(1)
-    .get();
-  if (referrerQuery.empty) {
-    return { applied: false, reason: "code-not-found" };
-  }
-  const referrerRef = referrerQuery.docs[0].ref;
-
-  // Extend both trials by REFERRAL_BONUS_DAYS from their current end (or
-  // from now if already lapsed). Only meaningful while a shop is still on
-  // trial; for an active paid shop we extend the trial end harmlessly but
-  // it won't affect their paid subscriptionEndsAt.
-  const bonusMs = REFERRAL_BONUS_DAYS * 24 * 60 * 60 * 1000;
-  function extend(snap) {
-    const cur = snap.data().trialEndsAt?.toDate();
-    const base = cur && cur > new Date() ? cur : new Date();
-    return admin.firestore.Timestamp.fromDate(
-      new Date(base.getTime() + bonusMs)
-    );
-  }
-
-  const referrerSnap = referrerQuery.docs[0];
-  const batch = db.batch();
-  batch.update(selfRef, {
-    referredBy: code,
-    trialEndsAt: extend(selfSnap),
-  });
-  batch.update(referrerRef, {
-    trialEndsAt: extend(referrerSnap),
-  });
-  await batch.commit();
-
-  return { applied: true, bonusDays: REFERRAL_BONUS_DAYS };
-});
+exports.applyReferral = onCall(require('./referral').handler({
+  db:admin.firestore(),Timestamp:admin.firestore.Timestamp,FieldValue:admin.firestore.FieldValue,HttpsError,
+}));
 
 // ────────────────────────────────────────────────
 // Ops dashboard — founder-only business metrics
@@ -1518,53 +1460,10 @@ exports.adminCreateSupplierAccount = onCall(async (request) => {
 // Supplier updates one of their incoming orders (accept / ship / cancel)
 // from the web portal. Mirrors the new status to the shop's copy so both
 // sides stay in sync. Caller must own the order (auth.uid == supplierId).
-exports.supplierSetOrderStatus = onCall(async (request) => {
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "Login required");
-  }
-  const uid = request.auth.uid;
-  const orderId = String(request.data?.orderId || "");
-  const status = String(request.data?.status || "");
-  const ALLOWED = ["accepted", "shipped", "cancelled"];
-  if (!orderId || !ALLOWED.includes(status)) {
-    throw new HttpsError(
-      "invalid-argument",
-      "orderId + valid status required"
-    );
-  }
-
-  const db = admin.firestore();
-  const supRef = db
-    .collection("suppliers")
-    .doc(uid)
-    .collection("orders")
-    .doc(orderId);
-  const supSnap = await supRef.get();
-  if (!supSnap.exists) {
-    throw new HttpsError("not-found", "Order not found");
-  }
-  const order = supSnap.data();
-  if (order.status === "delivered" || order.status === "cancelled") {
-    throw new HttpsError("failed-precondition", "ออเดอร์ปิดแล้ว");
-  }
-
-  const patch = { status };
-  const batch = db.batch();
-  batch.set(supRef, patch, { merge: true });
-  if (order.shopId) {
-    batch.set(
-      db
-        .collection("shops")
-        .doc(order.shopId)
-        .collection("marketplaceOrders")
-        .doc(orderId),
-      patch,
-      { merge: true }
-    );
-  }
-  await batch.commit();
-  return { ok: true };
-});
+const marketplace = require('./marketplace').handlers({db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError});
+exports.marketplacePlaceOrder = onCall(marketplace.place);
+exports.marketplaceShopOrderStatus = onCall(marketplace.shopTransition);
+exports.supplierSetOrderStatus = onCall(marketplace.supplierTransition);
 
 // ────────────────────────────────────────────────
 // Notify a supplier on LINE when a shop places a new order. Fires on the

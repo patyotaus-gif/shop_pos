@@ -1,3 +1,4 @@
+import '../widgets/compact_action.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -58,12 +59,11 @@ class _SuppliersTab extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.storefront_outlined,
-                      size: 72,
-                      color: cs.onSurface.withValues(alpha: 0.3)),
+                      size: 72, color: cs.onSurface.withValues(alpha: 0.3)),
                   const SizedBox(height: 16),
                   const Text('ยังไม่มีร้านส่งในพื้นที่',
-                      style: TextStyle(
-                          fontSize: 17, fontWeight: FontWeight.w700)),
+                      style:
+                          TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 6),
                   Text(
                     'เรากำลังเชิญ supplier เข้ามาเพิ่ม — เร็วๆ นี้คุณจะสั่งของได้ในแอป',
@@ -122,8 +122,8 @@ class _SupplierCard extends StatelessWidget {
                 child: supplier.imageUrl != null
                     ? Image.network(supplier.imageUrl!,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Icon(
-                            Icons.storefront, color: cs.primary))
+                        errorBuilder: (_, __, ___) =>
+                            Icon(Icons.storefront, color: cs.primary))
                     : Icon(Icons.storefront, color: cs.primary),
               ),
               const SizedBox(width: 12),
@@ -139,8 +139,7 @@ class _SupplierCard extends StatelessWidget {
                       Text(supplier.category,
                           style: TextStyle(
                               fontSize: 12,
-                              color:
-                                  cs.onSurface.withValues(alpha: 0.6))),
+                              color: cs.onSurface.withValues(alpha: 0.6))),
                     ],
                     const SizedBox(height: 4),
                     Row(
@@ -148,27 +147,24 @@ class _SupplierCard extends StatelessWidget {
                         if (supplier.deliveryDays != null) ...[
                           Icon(Icons.local_shipping_outlined,
                               size: 12,
-                              color:
-                                  cs.onSurface.withValues(alpha: 0.5)),
+                              color: cs.onSurface.withValues(alpha: 0.5)),
                           const SizedBox(width: 3),
                           Text(supplier.deliveryDays!,
                               style: TextStyle(
                                   fontSize: 11,
-                                  color: cs.onSurface
-                                      .withValues(alpha: 0.6))),
+                                  color: cs.onSurface.withValues(alpha: 0.6))),
                           const SizedBox(width: 10),
                         ],
                         if (supplier.minOrder > 0) ...[
                           Icon(Icons.shopping_basket_outlined,
                               size: 12,
-                              color:
-                                  cs.onSurface.withValues(alpha: 0.5)),
+                              color: cs.onSurface.withValues(alpha: 0.5)),
                           const SizedBox(width: 3),
-                          Text('ขั้นต่ำ ฿${supplier.minOrder.toStringAsFixed(0)}',
+                          Text(
+                              'ขั้นต่ำ ฿${supplier.minOrder.toStringAsFixed(0)}',
                               style: TextStyle(
                                   fontSize: 11,
-                                  color: cs.onSurface
-                                      .withValues(alpha: 0.6))),
+                                  color: cs.onSurface.withValues(alpha: 0.6))),
                         ],
                       ],
                     ),
@@ -203,8 +199,7 @@ class _MyOrdersTab extends StatelessWidget {
         if (orders.isEmpty) {
           return Center(
             child: Text('ยังไม่มีออเดอร์สั่งของ',
-                style: TextStyle(
-                    color: cs.onSurface.withValues(alpha: 0.5))),
+                style: TextStyle(color: cs.onSurface.withValues(alpha: 0.5))),
           );
         }
         return ListView.separated(
@@ -326,8 +321,8 @@ class _MyOrderCard extends StatelessWidget {
                         fontWeight: FontWeight.w700, fontSize: 15)),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
@@ -386,20 +381,17 @@ class _MyOrderCard extends StatelessWidget {
                     side: const BorderSide(color: Colors.red),
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                   ),
-                  child:
-                      const Text('ยกเลิก', style: TextStyle(fontSize: 13)),
+                  child: const Text('ยกเลิก', style: TextStyle(fontSize: 13)),
                 ),
             ],
           ),
           if (canConfirm) ...[
             const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
+            CompactAction(
               child: FilledButton.icon(
                 onPressed: () => _confirmDelivered(context),
                 icon: const Icon(Icons.check, size: 18),
-                label: const Text('รับของแล้ว',
-                    style: TextStyle(fontSize: 13)),
+                label: const Text('รับของแล้ว', style: TextStyle(fontSize: 13)),
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.green,
                 ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/compact_action.dart';
 import '../widgets/shop_operation.dart';
 import '../utils/operation_error.dart';
 
@@ -576,75 +577,68 @@ class _OpenOrderViewState extends State<TableOrderView> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    Row(
+                    ActionButtons(
                       children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: _busy ? null : _addItem,
-                            icon: const Icon(Icons.add),
-                            label: const Text('เพิ่มสินค้า'),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
+                        OutlinedButton.icon(
+                          onPressed: _busy ? null : _addItem,
+                          icon: const Icon(Icons.add),
+                          label: const Text('เพิ่มสินค้า'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 14),
                           ),
                         ),
-                        const SizedBox(width: 12),
                         if (_hasPendingItems)
-                          Expanded(
-                            child: FilledButton.tonalIcon(
-                              onPressed: _busy ? null : _sendToKitchen,
-                              icon: const Icon(Icons.soup_kitchen_outlined),
-                              label: Text(
-                                  'ส่งครัว (${widget.order.items.where((i) => i.kitchenStatus == KitchenStatus.pending).fold<int>(0, (sum, i) => sum + i.quantity)})'),
-                              style: FilledButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
-                              ),
+                          FilledButton.tonalIcon(
+                            onPressed: _busy ? null : _sendToKitchen,
+                            icon: const Icon(Icons.soup_kitchen_outlined),
+                            label: Text(
+                                'ส่งครัว (${widget.order.items.where((i) => i.kitchenStatus == KitchenStatus.pending).fold<int>(0, (sum, i) => sum + i.quantity)})'),
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 14),
                             ),
                           ),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Row(
+                    ActionButtons(
                       children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: _busy || empty ? null : _split,
-                            icon: const Icon(Icons.call_split),
-                            label: const Text('แยกบิล'),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
+                        OutlinedButton.icon(
+                          onPressed: _busy || empty ? null : _split,
+                          icon: const Icon(Icons.call_split),
+                          label: const Text('แยกบิล'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 14),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          flex: 2,
-                          child: FilledButton.icon(
-                            onPressed: _busy || empty ? null : () => _close(),
-                            icon: _closing
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2, color: Colors.white))
-                                : const Icon(Icons.point_of_sale_outlined),
-                            label: const Text('ปิดบิล'),
-                            style: FilledButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
+                        FilledButton.icon(
+                          onPressed: _busy || empty ? null : () => _close(),
+                          icon: _closing
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white))
+                              : const Icon(Icons.point_of_sale_outlined),
+                          label: const Text('ปิดบิล'),
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 14),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    TextButton.icon(
+                    CompactAction(
+                        child: TextButton.icon(
                       onPressed: _busy ? null : _cancel,
                       icon: const Icon(Icons.cancel_outlined,
                           size: 16, color: Colors.red),
                       label: const Text('ยกเลิกออเดอร์',
                           style: TextStyle(color: Colors.red, fontSize: 12)),
-                    ),
+                    )),
                   ],
                 ),
               ),

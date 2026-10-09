@@ -1,3 +1,4 @@
+import 'package:shop_pos/theme/pokpok_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shop_pos/models/cart_item.dart';
@@ -17,6 +18,7 @@ void main() {
     testWidgets('cart name retains usable width at $width with large text',
         (tester) async {
       await tester.pumpWidget(MaterialApp(
+          theme: PokpokTheme.light(),
           home: Scaffold(
               body: MediaQuery(
                   data:
@@ -41,6 +43,7 @@ void main() {
     int? quantity;
     var removed = false;
     await tester.pumpWidget(MaterialApp(
+        theme: PokpokTheme.light(),
         home: Scaffold(
             body: CartItemTile(
                 item: const CartItem(product: product, quantity: 2),

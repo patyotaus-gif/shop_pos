@@ -1,11 +1,13 @@
 'use strict';
 const {minor,saleMovement}=require('./money_ledger');
+const {inspectOpenWork}=require('./cash_close_work');
 const LIMIT=10000;
 
 // All reads run inside the same transaction as close. Payment writers also
 // update cashControl/current, so a payment racing close forces a fresh check.
-async function inspectClose(tx,shop,sessionId,session,rows) {
-  const issues=[];
+async function inspectClose(tx,shop,sessionId,session,rows,work) {
+  work=work||await inspectOpenWork(tx,shop);
+  const issues=[...work.issues];
   const problem=(type,id)=>issues.push({type,id});
   const query=async q=>{
     const s=await tx.get(q.limit(LIMIT+1));
@@ -42,12 +44,6 @@ async function inspectClose(tx,shop,sessionId,session,rows) {
     else if(linked.size!==1)problem('duplicateSale',order.id);
     else if(linked.docs[0].data().isRefunded)problem('refundedActiveOrder',order.id);
   }
-  const pendingOrders=await query(shop.collection('orders').where('status','==','pendingPayment'));
-  for(const d of pendingOrders){
-    if(d.data().slipReviewStatus==='awaitingOwner'||d.data().slipUrl||d.data().bankMatchStatus==='awaitingOwner')
-      problem('unreviewedPayment',d.id);
-  }
-  const openTables=await query(shop.collection('tableOrders').where('status','==','open'));
   const expected=new Map();
   const addExpected=(id,data)=>expected.set(id,data);
   if(session.openedAt){
@@ -102,9 +98,10 @@ async function inspectClose(tx,shop,sessionId,session,rows) {
       if((r.refundMinor||0)!==(expectedValues.refundMinor||0))problem('amountMismatch',row.id);
     }catch(_){problem('invalidSource',row.id);}
   }
-  return {issues,checkedMovementCount:rows.length,pendingOrderCount:pendingOrders.length,openTableCount:openTables.length};
+  return {...work,issues,checkedMovementCount:rows.length};
 }
-const labels={unassignedMovement:'เงินยังไม่ผูกกับรอบ',missingSale:'ออเดอร์รับเงินแล้วไม่มีบิลขาย',
+const labels={pendingOrder:'ออเดอร์ยังรอชำระ',openTable:'บิลโต๊ะยังไม่ปิด',unfinishedOrder:'ออเดอร์จ่ายแล้วแต่ยังไม่เสร็จสิ้น',
+  unassignedMovement:'เงินยังไม่ผูกกับรอบ',missingSale:'ออเดอร์รับเงินแล้วไม่มีบิลขาย',
   duplicateSale:'บิลขายซ้ำ',refundedActiveOrder:'คืนเงินแล้วแต่สถานะออเดอร์ไม่ตรง',
   missingMovement:'รายการขายหรือรับเงินยังลงประวัติเงินไม่ครบ',invalidMovement:'ข้อมูลเงินไม่ถูกต้อง',
   missingSource:'ไม่พบเอกสารต้นทาง',duplicateMovement:'ประวัติเงินซ้ำ',invalidRefund:'ข้อมูลคืนเงินไม่ตรง',
@@ -113,6 +110,6 @@ const labels={unassignedMovement:'เงินยังไม่ผูกกั�
   unreviewedPayment:'มีสลิปหรือยอดโอนที่ร้านยังไม่ได้ตรวจยืนยัน',missingTableSale:'ปิดบิลโต๊ะแล้วแต่ไม่มีรายการขาย'};
 function closeError(issues){
   return 'ยังปิดรอบไม่ได้: '+issues.slice(0,3).map(x=>(labels[x.type]||x.type)+(x.id?' ('+x.id+')':'')).join(' · ')+
-    (issues.length>3?' และอีก '+(issues.length-3)+' รายการ':'')+' กรุณาตรวจรายการเงินก่อนปิดรอบ';
+    (issues.length>3?' และอีก '+(issues.length-3)+' รายการ':'')+' กรุณาจัดการออเดอร์ บิลโต๊ะ และรายการเงินก่อนปิดรอบ';
 }
-module.exports={inspectClose,closeError};
+module.exports={inspectClose,closeError,labels};

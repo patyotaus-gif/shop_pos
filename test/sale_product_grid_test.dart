@@ -1,3 +1,4 @@
+import 'package:shop_pos/theme/pokpok_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shop_pos/models/product.dart';
@@ -23,15 +24,16 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       tester.view.physicalSize = Size(width, 800);
       await tester.pumpWidget(MaterialApp(
+          theme: PokpokTheme.light(),
           home: MediaQuery(
-        data: MediaQueryData(
-            size: Size(width, 800), textScaler: const TextScaler.linear(2)),
-        child: Scaffold(
-            body: SaleProductGrid(
-                itemCount: 30,
-                itemBuilder: (_, i) => SaleProductCard(
-                    product: product, onTap: () => selected++))),
-      )));
+            data: MediaQueryData(
+                size: Size(width, 800), textScaler: const TextScaler.linear(2)),
+            child: Scaffold(
+                body: SaleProductGrid(
+                    itemCount: 30,
+                    itemBuilder: (_, i) => SaleProductCard(
+                        product: product, onTap: () => selected++))),
+          )));
       await tester.pump();
       expect(tester.takeException(), isNull);
       final cards = find.byType(SaleProductCard);
@@ -51,14 +53,15 @@ void main() {
       (tester) async {
     var selected = 0;
     await tester.pumpWidget(MaterialApp(
+        theme: PokpokTheme.light(),
         home: Scaffold(
             body: SaleProductGrid(
-      itemCount: 2,
-      itemBuilder: (_, i) => SaleProductCard(
-          product: product,
-          showPromotion: false,
-          onTap: i == 0 ? () => selected++ : null),
-    ))));
+          itemCount: 2,
+          itemBuilder: (_, i) => SaleProductCard(
+              product: product,
+              showPromotion: false,
+              onTap: i == 0 ? () => selected++ : null),
+        ))));
     expect(find.text('฿70.00'), findsNWidgets(2));
     expect(find.text('฿55.00'), findsNothing);
     await tester.tap(find.byType(SaleProductCard).at(1));

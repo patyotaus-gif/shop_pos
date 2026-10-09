@@ -30,9 +30,9 @@ class ProductImage extends StatelessWidget {
     return Container(
       width: width,
       height: height,
-      color: cs.surfaceContainerHighest,
+      color: cs.surfaceContainerLow,
       child: Icon(Icons.inventory_2_outlined,
-          size: 24, color: cs.onSurface.withValues(alpha: 0.3)),
+          size: 28, color: cs.onSurfaceVariant),
     );
   }
 

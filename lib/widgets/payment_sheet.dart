@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'compact_action.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -223,7 +224,7 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                 Text('ยอดสุทธิ',
                     style: TextStyle(
                       fontSize: 13,
-                      color: cs.onSurface.withValues(alpha: 0.6),
+                      color: cs.onSurfaceVariant,
                     ),
                     textAlign: TextAlign.center),
                 const SizedBox(height: 4),
@@ -261,6 +262,8 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                 _buildMethodBody(cs),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<SalesChannel>(
+                    isExpanded: true,
+                    itemHeight: null,
                     initialValue: _channel,
                     decoration: const InputDecoration(labelText: 'ช่องทางขาย'),
                     items: [
@@ -272,24 +275,28 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                       if (value != null) setState(() => _channel = value);
                     }),
                 const SizedBox(height: 20),
-                FilledButton(
-                  onPressed: _canConfirm ? _confirm : null,
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    backgroundColor: _canConfirm ? Colors.green : null,
-                  ),
-                  child: Text(
-                      _method == PaymentMethod.cash
-                          ? 'ยืนยันการชำระเงิน'
-                          : 'ได้รับเงินแล้ว ยืนยัน',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                ),
+                CompactAction(
+                    primary: true,
+                    child: FilledButton(
+                      onPressed: _canConfirm ? _confirm : null,
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 14),
+                      ),
+                      child: Text(
+                          _method == PaymentMethod.cash
+                              ? 'ยืนยันการชำระเงิน'
+                              : 'ได้รับเงินแล้ว ยืนยัน',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w700)),
+                    )),
                 const SizedBox(height: 6),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('ยกเลิก'),
-                ),
+                CompactAction(
+                    primary: true,
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('ยกเลิก'),
+                    )),
               ],
             ),
           ),
@@ -340,19 +347,26 @@ class _PaymentSheetState extends State<_PaymentSheet> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('เงินทอน',
-                    style:
-                        TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                Text(
+                const Expanded(
+                    child: Text('เงินทอน',
+                        style: TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w500))),
+                Flexible(
+                    child: Text(
                   _change >= 0
                       ? '฿${_baht.format(_change)}'
                       : '(ขาด ฿${_baht.format(-_change)})',
+                  textAlign: TextAlign.end,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: _change >= 0 ? Colors.green : Colors.red,
+                    color: _change >= 0
+                        ? (cs.brightness == Brightness.dark
+                            ? const Color(0xFF8ADBAB)
+                            : const Color(0xFF216E47))
+                        : cs.error,
                   ),
-                ),
+                )),
               ],
             ),
           ],
@@ -479,7 +493,7 @@ class _MethodButton extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
         decoration: BoxDecoration(
-          color: selected ? cs.primaryContainer : cs.surfaceContainerHigh,
+          color: selected ? cs.primaryContainer : cs.surface,
           border: Border.all(
             color: selected ? cs.primary : cs.outlineVariant,
             width: selected ? 2 : 1,
@@ -489,7 +503,7 @@ class _MethodButton extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(_icon,
+            Icon(selected ? Icons.check_circle_outline : _icon,
                 size: 26,
                 color: selected
                     ? cs.primary
@@ -520,6 +534,8 @@ Future<PaymentResult?> showPaymentSheet(
   return showModalBottomSheet<PaymentResult>(
     context: context,
     isScrollControlled: true,
+    useSafeArea: true,
+    constraints: const BoxConstraints(maxWidth: 560),
     isDismissible: false,
     enableDrag: true,
     showDragHandle: false,

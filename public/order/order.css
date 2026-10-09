@@ -2,12 +2,12 @@
 :root {
   --burgundy: #7A1F2B;
   --burgundy-hover: #5C1820;
-  --burgundy-dim: #F0E2E4;
-  --cream: #F5F1EC;
+  --burgundy-dim: #F5E8EA;
+  --cream: #F7F5F1;
   --surface: #FFFFFF;
-  --text-dark: #1F1A1B;
-  --text-mid: #6B5E60;
-  --border-color: #E5DDD3;
+  --text-dark: #302526;
+  --text-mid: #685E59;
+  --border-color: #E0D9D1;
 
   --primary: var(--burgundy);
   --primary-hover: var(--burgundy-hover);
@@ -35,7 +35,7 @@ body {
 
 /* ── GLASSMORPHISM HEADER ── */
 header {
-  background: rgba(245, 241, 236, 0.75);
+  background: rgba(247, 245, 241, 0.95);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   color: var(--text-dark);

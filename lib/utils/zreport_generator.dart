@@ -55,6 +55,12 @@ class ZReportGenerator {
                 _baht.format(summary.grossTotal),
                 bold: true),
             _row('รับชำระหนี้', _baht.format(summary.debtCollections)),
+            if (summary.futureOrderCount > 0) ...[
+              _row('นัดรับวันถัดไป', '${summary.futureOrderCount} ออเดอร์'),
+              pw.Text(
+                  'เงินที่รับแล้วรวมตามรอบที่รับเงิน ออเดอร์ยังเก็บไว้ทำต่อ',
+                  style: const pw.TextStyle(fontSize: 9)),
+            ],
             if (summary.pendingOrderCount > 0 ||
                 summary.openTableCount > 0) ...[
               pw.Text('ยังไม่รวมในยอดขายรอบนี้',

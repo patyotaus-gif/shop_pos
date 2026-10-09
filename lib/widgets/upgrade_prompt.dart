@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'compact_action.dart';
 
 import '../models/shop.dart';
 import '../screens/subscription_screen.dart';
@@ -54,37 +55,40 @@ class _UpgradePromptSheet extends StatelessWidget {
             Text(
               feature.label,
               textAlign: TextAlign.center,
-              style:
-                  const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 6),
             Text(
               'ฟีเจอร์นี้อยู่ในแผน ${minTier.label} ขึ้นไป',
               textAlign: TextAlign.center,
               style: TextStyle(
-                  fontSize: 13,
-                  color: cs.onSurface.withValues(alpha: 0.7)),
+                  fontSize: 13, color: cs.onSurface.withValues(alpha: 0.7)),
             ),
             const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (_) => const SubscriptionScreen()),
-                );
-              },
-              icon: const Icon(Icons.arrow_upward, size: 18),
-              label: Text('อัพเกรดเป็น ${minTier.label}'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-            ),
+            CompactAction(
+                primary: true,
+                child: FilledButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const SubscriptionScreen()),
+                    );
+                  },
+                  icon: const Icon(Icons.arrow_upward, size: 18),
+                  label: Text('อัพเกรดเป็น ${minTier.label}'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 14),
+                  ),
+                )),
             const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('ยังก่อน'),
-            ),
+            CompactAction(
+                primary: true,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('ยังก่อน'),
+                )),
           ],
         ),
       ),

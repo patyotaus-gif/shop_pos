@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/compact_action.dart';
 
 import '../models/shop.dart';
 import '../models/staff_member.dart';
@@ -271,10 +272,10 @@ class _StaffFormState extends State<_StaffForm> {
             ),
           ),
           const SizedBox(height: 16),
-          FilledButton(
+          CompactAction(
+              child: FilledButton(
             onPressed: _saving ? null : _save,
-            style:
-                FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+            style: FilledButton.styleFrom(minimumSize: const Size(64, 50)),
             child: _saving
                 ? const SizedBox(
                     height: 18,
@@ -282,7 +283,7 @@ class _StaffFormState extends State<_StaffForm> {
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Colors.white))
                 : Text(_isEdit ? 'บันทึก' : 'เพิ่มพนักงาน'),
-          ),
+          )),
         ],
       ),
     );

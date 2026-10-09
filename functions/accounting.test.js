@@ -114,6 +114,8 @@ test('mixed sale, debt, collection and refund close conserves every satang',asyn
     f.docs.set('shops/shop/moneyMovements/sale-'+id,{sessionId:'s',kind:'sale',saleId:id,amountMinor:debt?0:total,salesMinor:total,debtMinor:debt?total:0,method:debt?'credit':'cash'});
   f.docs.set('shops/shop/orders/o',{status:'pendingPayment',total:75,finalAmount:75.91,items:[{productId:'tea',price:75,quantity:1}]});
   await confirmOrder({...f,shopId:'shop',orderId:'o',actor:'shop'});
+  for(const status of ['accepted','ready','completed'])
+    await orders({...f,HttpsError}).transition(owner({orderId:'o',status}));
   await api.collectDebt(owner({debtId:'d',requestId:'collect',amount:20.01,method:'cash',expectedPaidAmount:0}));
   await refundSale({...f,shopId:'shop',saleId:'cash',reason:'test'});
   const summary=await api.close(owner({sessionId:'s',countedCash:520.01}));
@@ -128,14 +130,18 @@ test('a closed session cannot be reopened by retrying an old open request',async
   await api.close(owner({sessionId:'s',countedCash:0}));
   await assert.rejects(api.open(owner({requestId:'s',openingFloat:0})),/ปิดไปแล้ว/);
 });
-test('uploaded slip awaiting bank review blocks close; unpaid orders remain explicit',async()=>{
+test('uploaded slip, unpaid orders and open tables block close without changing records',async()=>{
   const f=fixture(),api=cash({...f,HttpsError});await api.open(owner({requestId:'s',openingFloat:0}));
   f.docs.set('shops/shop/orders/unpaid',{status:'pendingPayment',slipReviewStatus:'awaitingOwner'});
   await assert.rejects(api.close(owner({sessionId:'s',countedCash:0})),e=>e.details.issues.some(i=>i.type==='unreviewedPayment'));
   f.docs.set('shops/shop/orders/unpaid',{status:'pendingPayment'});
   f.docs.set('shops/shop/tableOrders/open',{status:'open'});
-  const summary=await api.close(owner({sessionId:'s',countedCash:0}));
-  assert.equal(summary.pendingOrderCount,1);assert.equal(summary.openTableCount,1);assert.equal(summary.grossTotal,0);
+  const before=structuredClone([...f.docs]);
+  const check=await api.readiness(owner({sessionId:'s'}));
+  assert.equal(check.canClose,false);assert.equal(check.pendingOrderCount,1);assert.equal(check.openTableCount,1);
+  await assert.rejects(api.close(owner({sessionId:'s',countedCash:0})),e=>
+    ['pendingOrder','openTable'].every(type=>e.details.issues.some(i=>i.type===type)));
+  assert.deepEqual([...f.docs],before);
   assert.equal(f.docs.get('shops/shop/orders/unpaid').status,'pendingPayment');
 });
 test('closed table without a linked sale prevents a misleading clean close',async()=>{
@@ -151,7 +157,7 @@ test('inconsistent legacy debt cannot receive or refund an invented amount',asyn
 });
 test('employee cannot collect debts or open/close owner cash sessions',async()=>{
   const f=fixture(),api=cash({...f,HttpsError});
-  for(const fn of [api.open,api.close,api.collectDebt])await assert.rejects(fn({auth:{uid:'staff',token:{staffRole:'cashier'}},data:{shopId:'shop'}}),e=>e.code==='permission-denied');
+  for(const fn of [api.open,api.close,api.collectDebt,api.readiness])await assert.rejects(fn({auth:{uid:'staff',token:{staffRole:'cashier'}},data:{shopId:'shop'}}),e=>e.code==='permission-denied');
 });
 test('ingredient refund works in both trigger orders and never resurrects deleted inventory',async()=>{
   const {deduct,restore}=require('./ingredient_accounting');
@@ -199,13 +205,13 @@ test('loyalty is reversed once together with its linked sale refund',async()=>{
 });
 
 test('activation requires device acknowledgement and preserves historical boundary',async()=>{
- const f=fixture({'shops/shop/orders/legacy':{status:'paid',paidAt:900,createdAt:900}}),api=cash({...f,HttpsError});
+ const f=fixture({'shops/shop/orders/legacy':{status:'completed',paidAt:900,createdAt:900}}),api=cash({...f,HttpsError});
  await assert.rejects(api.open(owner({requestId:'s',openingFloat:0,acknowledgeDeviceUpdate:false})),/ซิงก์/);
  assert.equal(f.docs.has('shops/shop/accountingSettings/current'),false);
  await api.open(owner({requestId:'s',openingFloat:0}));
  assert.equal(f.docs.get('shops/shop/accountingSettings/current').enabled,true);
  await api.close(owner({sessionId:'s',countedCash:0}));
- assert.equal(f.docs.get('shops/shop/orders/legacy').status,'paid');
+ assert.equal(f.docs.get('shops/shop/orders/legacy').status,'completed');
  await api.open(owner({requestId:'next',openingFloat:0,acknowledgeDeviceUpdate:false}));
  assert.equal(f.docs.get('shops/shop/cashSessions/next').accountingStartAt,1000);
 });

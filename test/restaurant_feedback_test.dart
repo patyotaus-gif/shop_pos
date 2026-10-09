@@ -1,3 +1,4 @@
+import 'package:shop_pos/theme/pokpok_theme.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,28 +13,29 @@ void main() {
       (tester) async {
     final saving = Completer<void>();
     await tester.pumpWidget(MaterialApp(
+        theme: PokpokTheme.light(),
         home: Scaffold(
             body: TableOrderView(
-      order: TableOrder(
-          id: 'o',
-          tableId: 't',
-          tableName: 'F1',
-          openedAt: DateTime.now(),
-          items: const [
-            TableOrderItem(
-                id: 'rice',
-                productId: 'rice',
-                productName: 'ข้าว',
-                price: 50,
-                quantity: 1),
-          ]),
-      loadServiceCharge: () async => 0,
-      changeQuantity: (orderId, itemId, target, expected) {
-        expect(target, 2);
-        expect(expected, 1);
-        return saving.future;
-      },
-    ))));
+          order: TableOrder(
+              id: 'o',
+              tableId: 't',
+              tableName: 'F1',
+              openedAt: DateTime.now(),
+              items: const [
+                TableOrderItem(
+                    id: 'rice',
+                    productId: 'rice',
+                    productName: 'ข้าว',
+                    price: 50,
+                    quantity: 1),
+              ]),
+          loadServiceCharge: () async => 0,
+          changeQuantity: (orderId, itemId, target, expected) {
+            expect(target, 2);
+            expect(expected, 1);
+            return saving.future;
+          },
+        ))));
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.add_circle_outline));
     await tester.pump();
@@ -57,6 +59,7 @@ void main() {
   testWidgets('kitchen read errors are not presented as an empty kitchen',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
+        theme: PokpokTheme.light(),
         home: KitchenScreen(
             orders: Stream.error(StateError('permission-denied')))));
     await tester.pumpAndSettle();
@@ -66,29 +69,30 @@ void main() {
   testWidgets('kitchen shows sent dishes and hides unsent dishes',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
+        theme: PokpokTheme.light(),
         home: KitchenScreen(
             orders: Stream.value([
-      TableOrder(
-          id: 'order',
-          tableId: 't',
-          tableName: 'F1',
-          openedAt: DateTime.now(),
-          items: const [
-            TableOrderItem(
-                id: 'a',
-                productId: 'a',
-                productName: 'ข้าวส่งครัวแล้ว',
-                price: 50,
-                quantity: 1,
-                kitchenStatus: KitchenStatus.sent),
-            TableOrderItem(
-                id: 'b',
-                productId: 'b',
-                productName: 'ยังไม่ได้ส่ง',
-                price: 50,
-                quantity: 1),
-          ])
-    ]))));
+          TableOrder(
+              id: 'order',
+              tableId: 't',
+              tableName: 'F1',
+              openedAt: DateTime.now(),
+              items: const [
+                TableOrderItem(
+                    id: 'a',
+                    productId: 'a',
+                    productName: 'ข้าวส่งครัวแล้ว',
+                    price: 50,
+                    quantity: 1,
+                    kitchenStatus: KitchenStatus.sent),
+                TableOrderItem(
+                    id: 'b',
+                    productId: 'b',
+                    productName: 'ยังไม่ได้ส่ง',
+                    price: 50,
+                    quantity: 1),
+              ])
+        ]))));
     await tester.pumpAndSettle();
     expect(find.text('ข้าวส่งครัวแล้ว'), findsOneWidget);
     expect(find.text('ยังไม่ได้ส่ง'), findsNothing);
@@ -97,11 +101,12 @@ void main() {
       'receipt loading failure keeps payment success and retries only receipt',
       (tester) async {
     var attempts = 0;
-    await tester
-        .pumpWidget(MaterialApp(home: SaleReceiptScreen(loadSale: () async {
-      attempts++;
-      throw StateError('offline');
-    })));
+    await tester.pumpWidget(MaterialApp(
+        theme: PokpokTheme.light(),
+        home: SaleReceiptScreen(loadSale: () async {
+          attempts++;
+          throw StateError('offline');
+        })));
     await tester.pumpAndSettle();
     expect(find.text('บันทึกการขายสำเร็จ'), findsOneWidget);
     expect(find.textContaining('ไม่ต้องรับเงินซ้ำ'), findsOneWidget);

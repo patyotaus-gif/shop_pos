@@ -1,3 +1,4 @@
+import '../widgets/compact_action.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -460,8 +461,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ],
 
                       const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
+                      CompactAction(
+                        primary: true,
                         child: FilledButton(
                           onPressed: _loading ? null : _register,
                           child: _loading

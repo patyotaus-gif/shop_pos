@@ -1,10 +1,36 @@
 'use strict';
 const {owner, validId}=require('./order_accounting');
 const {minor,ledgerContext,writeMovement,summarizeMovements}=require('./money_ledger');
-const {inspectClose,closeError}=require('./cash_integrity');
-function handlers({db,FieldValue,HttpsError}) {
+const {inspectClose,closeError,labels}=require('./cash_integrity');
+const {inspectOpenWork}=require('./cash_close_work');
+function handlers({db,FieldValue,HttpsError,now=Date.now}) {
   const fail=message=>{throw new HttpsError('failed-precondition',message);};
+  async function readCheck(tx,shop,sessionId,session) {
+    const work=await inspectOpenWork(tx,shop,{now:now()});
+    if(session.accountingVersion!==1)return work;
+    const rows=await tx.get(shop.collection('moneyMovements').where('sessionId','==',sessionId).limit(10001));
+    if(rows.size>10000)fail('รอบนี้มีรายการจำนวนมาก กรุณาติดต่อผู้ดูแลเพื่อปิดรอบ');
+    return {...await inspectClose(tx,shop,sessionId,session,rows.docs,work),rows:rows.docs};
+  }
   return {
+    readiness:async request=>{
+      const shop=db.collection('shops').doc(owner(request,HttpsError));
+      const {sessionId}=request.data;
+      if(!validId(sessionId))fail('ข้อมูลรอบไม่ถูกต้อง');
+      return db.runTransaction(async tx=>{
+        const snap=await tx.get(shop.collection('cashSessions').doc(sessionId));
+        if(!snap.exists)fail('ไม่พบรอบขาย');
+        if(snap.data().status==='closed')return {closed:true,canClose:false,issues:[]};
+        if(snap.data().accountingVersion===1 && (await ledgerContext(tx,shop)).sessionId!==sessionId)
+          fail('รอบขายเปลี่ยนแล้ว กรุณาเปิดหน้านี้ใหม่');
+        const check=await readCheck(tx,shop,sessionId,snap.data());
+        return {canClose:check.issues.length===0,closed:false,
+          issues:check.issues.slice(0,20).map(i=>({...i,message:labels[i.type]||i.type})),
+          issueCount:check.issues.length,pendingOrderCount:check.pendingOrderCount,
+          unfinishedOrderCount:check.unfinishedOrderCount,openTableCount:check.openTableCount,
+          futureOrderCount:check.futureOrderCount};
+      });
+    },
     open:async request=>{
       const shop=db.collection('shops').doc(owner(request,HttpsError));
       const openingFloat=request.data.openingFloat;
@@ -43,6 +69,8 @@ function handlers({db,FieldValue,HttpsError}) {
         if(!snap.exists)fail('ไม่พบรอบขาย');
         const session=snap.data();
         if(session.status==='closed')return session.summary || {legacy:true};
+        const check=await readCheck(tx,shop,sessionId,session);
+        if(check.issues.length)throw new HttpsError('failed-precondition',closeError(check.issues),{issues:check.issues.slice(0,20)});
         if(session.accountingVersion!==1){
           if(request.data.acknowledgeLegacy!==true)fail('รอบเก่าไม่มีประวัติเงินครบ ต้องยืนยันแยกปิดรอบเก่าเพื่อตรวจสอบ');
           // Archive evidence; do not invent an expected-cash figure for old untracked collections.
@@ -52,15 +80,12 @@ function handlers({db,FieldValue,HttpsError}) {
           return {legacy:true};
         }
         if(context.sessionId!==sessionId)fail('รอบขายเปลี่ยนแล้ว กรุณาเปิดหน้านี้ใหม่');
-        const rows=await tx.get(shop.collection('moneyMovements').where('sessionId','==',sessionId).limit(10001));
-        if(rows.size>10000)fail('รอบนี้มีรายการจำนวนมาก กรุณาติดต่อผู้ดูแลเพื่อปิดรอบ');
-        const check=await inspectClose(tx,shop,sessionId,session,rows.docs);
-        if(check.issues.length)throw new HttpsError('failed-precondition',closeError(check.issues),{issues:check.issues.slice(0,20)});
-        const summary=summarizeMovements(rows.docs.map(d=>d.data()),session.openingFloat);
+        const summary=summarizeMovements(check.rows.map(d=>d.data()),session.openingFloat);
         summary.pendingOrderCount=check.pendingOrderCount;
         summary.openTableCount=check.openTableCount;
+        summary.futureOrderCount=check.futureOrderCount;
         tx.update(ref,{status:'closed',closedAt:FieldValue.serverTimestamp(),closedBy:request.auth.uid,countedCash,summary,
-          integrityVersion:1,checkedMovementCount:check.checkedMovementCount});
+          integrityVersion:2,checkedMovementCount:check.checkedMovementCount});
         tx.set(context.ref,{sessionId:null,openedAt:null,revision:FieldValue.increment(1)},{merge:true});
         return summary;
       });

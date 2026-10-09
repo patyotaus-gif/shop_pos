@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
+import '../widgets/compact_action.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:intl/intl.dart';
@@ -432,10 +433,11 @@ class _PosScreenState extends State<PosScreen> {
                   children: [
                     Text(
                         'มีบิลรอยืนยัน ฿${_pendingSale!.total.toStringAsFixed(2)} อย่ารับเงินซ้ำ ตรวจรายการเดิมก่อนเริ่มบิลใหม่'),
-                    FilledButton.icon(
-                        onPressed: _checkoutBusy ? null : () => _checkout(),
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('ตรวจและยืนยันรายการเดิม')),
+                    CompactAction(
+                        child: FilledButton.icon(
+                            onPressed: _checkoutBusy ? null : () => _checkout(),
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('ตรวจและยืนยันรายการเดิม'))),
                   ])),
         Expanded(
             child: AbsorbPointer(
@@ -459,7 +461,8 @@ class _PosScreenState extends State<PosScreen> {
                       builder: (ctx, snap) {
                         final cats = ['ทั้งหมด', ...ProductService.categories];
                         return SizedBox(
-                          height: 48,
+                          height: max(48,
+                              MediaQuery.textScalerOf(context).scale(18) + 24),
                           child: ListView(
                             scrollDirection: Axis.horizontal,
                             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -494,7 +497,8 @@ class _PosScreenState extends State<PosScreen> {
                             .toList();
                         if (pinned.isEmpty) return const SizedBox.shrink();
                         return SizedBox(
-                          height: 44,
+                          height: max(48,
+                              MediaQuery.textScalerOf(context).scale(18) + 24),
                           child: ListView.builder(
                             scrollDirection: Axis.horizontal,
                             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -519,10 +523,13 @@ class _PosScreenState extends State<PosScreen> {
                         child: Row(children: [
                           const Icon(Icons.shopping_cart_outlined, size: 20),
                           const SizedBox(width: 8),
-                          Text('รายการขาย',
-                              style: Theme.of(context).textTheme.titleMedium),
-                          const Spacer(),
-                          Text('${_cart.length} รายการ')
+                          Expanded(
+                              child: Text('รายการขาย',
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium)),
+                          Flexible(
+                              child: Text('${_cart.length} รายการ',
+                                  textAlign: TextAlign.end))
                         ])),
                     // Cart
                     Expanded(
@@ -532,14 +539,11 @@ class _PosScreenState extends State<PosScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(Icons.shopping_cart_outlined,
-                                      size: 64,
-                                      color:
-                                          cs.onSurface.withValues(alpha: 0.3)),
+                                      size: 64, color: cs.onSurfaceVariant),
                                   const SizedBox(height: 8),
                                   Text('ยังไม่มีสินค้าในตะกร้า',
                                       style: TextStyle(
-                                          color: cs.onSurface
-                                              .withValues(alpha: 0.4))),
+                                          color: cs.onSurfaceVariant)),
                                 ],
                               ),
                             )
@@ -623,7 +627,9 @@ class _PosScreenState extends State<PosScreen> {
                         Expanded(child: _productCatalog())
                       ])),
                       const VerticalDivider(width: 1),
-                      SizedBox(width: 380, child: basket),
+                      SizedBox(
+                          width: 380,
+                          child: Material(color: cs.surface, child: basket)),
                     ]);
                   }
                   final narrow = Column(children: [
@@ -781,8 +787,8 @@ class _CheckoutPanel extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
           decoration: BoxDecoration(
-            color: cs.surfaceContainerHighest,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            color: cs.surface,
+            border: Border(top: BorderSide(color: cs.outlineVariant)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -790,75 +796,59 @@ class _CheckoutPanel extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('รวม'),
-                  Text('฿${baht.format(subtotal)}'),
+                  const Expanded(child: Text('รวม')),
+                  Flexible(
+                      child: Text('฿${baht.format(subtotal)}',
+                          textAlign: TextAlign.end)),
                 ],
               ),
               if (discount > 0)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('ส่วนลด', style: TextStyle(color: Colors.green)),
-                    Text('-฿${baht.format(discount)}',
-                        style: const TextStyle(color: Colors.green)),
+                    const Expanded(
+                        child: Text('ส่วนลด',
+                            style: TextStyle(color: Colors.green))),
+                    Flexible(
+                        child: Text('-฿${baht.format(discount)}',
+                            textAlign: TextAlign.end,
+                            style: const TextStyle(color: Colors.green))),
                   ],
                 ),
               const Divider(),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('ยอดสุทธิ',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  Text('฿${baht.format(total)}',
-                      style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: cs.primary)),
+                  const Expanded(
+                      child: Text('ยอดสุทธิ',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold))),
+                  Flexible(
+                      child: Text('฿${baht.format(total)}',
+                          textAlign: TextAlign.end,
+                          style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: cs.primary))),
                 ],
               ),
               const SizedBox(height: 12),
-              Row(
+              ActionButtons(
                 children: [
-                  // All three buttons share the row evenly (1:1:2) so the
-                  // narrowest one ("เชื่อ") still has enough horizontal room
-                  // not to wrap on Android, where the default Thai font is
-                  // wider than iOS's Thonburi/SF.
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: AuthService.isStaff ? null : onDiscount,
-                      icon: const Icon(Icons.discount_outlined, size: 18),
-                      label: const FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text('ส่วนลด', maxLines: 1, softWrap: false),
-                      ),
-                    ),
+                  OutlinedButton.icon(
+                    onPressed: AuthService.isStaff ? null : onDiscount,
+                    icon: const Icon(Icons.discount_outlined, size: 18),
+                    label: const Text('ส่วนลด'),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed:
-                          !AuthService.isStaff && hasItems ? onDebt : null,
-                      icon: const Icon(Icons.person_outline, size: 18),
-                      label: const FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text('เชื่อ', maxLines: 1, softWrap: false),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.orange),
-                    ),
+                  OutlinedButton.icon(
+                    onPressed: !AuthService.isStaff && hasItems ? onDebt : null,
+                    icon: const Icon(Icons.person_outline, size: 18),
+                    label: const Text('เชื่อ'),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 2,
-                    child: FilledButton.icon(
-                      onPressed: hasItems ? onCheckout : null,
-                      icon: const Icon(Icons.payments_outlined, size: 18),
-                      label: const FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text('ชำระเงิน', maxLines: 1, softWrap: false),
-                      ),
-                    ),
+                  FilledButton.icon(
+                    onPressed: hasItems ? onCheckout : null,
+                    icon: const Icon(Icons.payments_outlined, size: 18),
+                    label: const Text('ชำระเงิน'),
                   ),
                 ],
               ),

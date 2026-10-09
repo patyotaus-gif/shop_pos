@@ -181,6 +181,7 @@
     @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation: none !important; transition: none !important; } }
 @media (max-width: 600px) { .pricing-cards { grid-template-columns: 1fr; } .p-card + .p-card { border-left: 0; border-top: 1px solid var(--line); } }
   </style>
+  <link rel="stylesheet" href="/brand.css">
 </head>
 <body>
 <a class="skip-link" href="#main">ข้ามไปเนื้อหา</a>
@@ -234,28 +235,38 @@
   </div>
   <figure class="hero-visual">
     <span class="margin-note">ก่อนปิดร้าน<br>แวะดูยอดวันนี้</span>
-    <img src="/screens/overview.png" width="680" height="1477" alt="หน้าภาพรวมในแอป Pokpok แสดงยอดขายและสต็อกของร้าน" loading="eager" fetchpriority="high">
-    <figcaption>หน้าจอจากแอป Pokpok · ข้อมูลในภาพเป็นตัวอย่าง</figcaption>
+    <a href="/screens/overview.png" target="_blank" rel="noopener" aria-label="ดูภาพหน้าภาพรวมขนาดเต็ม (เปิดแท็บใหม่)"><img src="/screens/overview.png" width="680" height="1477" alt="หน้าภาพรวมในแอป Pokpok แสดงยอดขายและสต็อกของร้าน" loading="eager" fetchpriority="high"></a>
+    <figcaption>หน้าจอจากแอป · ข้อมูลตัวอย่าง · แตะเพื่อขยาย</figcaption>
   </figure>
 </section>
 <div class="shop-strip"><span>งานร้านคนละแบบ ใช้ให้เหมาะกับร้านคุณ</span><span>ร้านของชำ / มินิมาร์ท</span><span>ร้านอาหาร / คาเฟ่</span></div>
 
 <section id="features" aria-labelledby="stories-heading">
   <div class="section-intro"><div><p class="eyebrow">งานที่เจอทุกวัน</p><h2 class="heading" id="stories-heading">ร้านคุณมีเรื่องแบบนี้ไหม?</h2></div><p>ไม่ว่าจะขายของทีละชิ้น หรือรับลูกค้าทีละโต๊ะ<br>เริ่มจากงานที่อยากจัดการให้เป็นระเบียบขึ้น</p></div>
+  <div class="story-picker" id="story-picker" role="group" aria-label="เลือกดูงานตามประเภทร้าน" hidden>
+    <button type="button" data-story="restaurant" aria-pressed="false" aria-controls="story-restaurant" onclick="showStory('restaurant')">ร้านอาหาร / คาเฟ่</button>
+    <button type="button" data-story="retail" aria-pressed="false" aria-controls="story-retail" onclick="showStory('retail')">ร้านค้าปลีก</button>
+  </div>
   <div class="shop-stories">
-    <article class="shop-story"><p class="small-label">01 / ร้านค้าปลีก</p><h3>ขายไปเท่าไร<br>ของเหลือแค่ไหน ใครยังค้าง</h3>
+    <article class="shop-story" id="story-retail"><p class="small-label">สำหรับร้านค้าปลีก</p><h3>ขายไปเท่าไร<br>ของเหลือแค่ไหน ใครยังค้าง</h3>
       <div class="scenario"><strong>ลูกค้ารอจ่ายเงินอยู่หน้าร้าน</strong><p>เลือกสินค้า รับเงิน และออกใบเสร็จ ยอดขายเก็บไว้ให้กลับมาดูตอนปิดร้าน</p></div>
       <div class="scenario"><strong>ของบนชั้นใกล้หมดหรือยัง?</strong><p>เช็กจำนวนคงเหลือ รับของเข้าสต็อก และดูรายการที่ใกล้หมดก่อนสั่งเพิ่ม</p></div>
       <div class="scenario"><strong>“ลงไว้ก่อน เดี๋ยวมาจ่าย”</strong><p>บันทึกยอดขายเชื่อแยกตามลูกค้า เมื่อกลับมาจ่ายก็ลงรับชำระไว้ในบัญชีเดิม</p></div>
       <p class="tier-note">ขายหน้าร้านเริ่มที่ Solo · สต็อกและลูกหนี้เริ่มที่ Lite</p>
     </article>
-    <article class="shop-story"><p class="small-label">02 / ร้านอาหาร</p><h3>โต๊ะไหนสั่งอะไร<br>ครัวทำถึงไหนแล้ว</h3>
+    <article class="shop-story" id="story-restaurant"><p class="small-label">สำหรับร้านอาหารและคาเฟ่</p><h3>โต๊ะไหนสั่งอะไร<br>ครัวทำถึงไหนแล้ว</h3>
       <div class="scenario"><strong>ลูกค้าสั่งเพิ่มที่โต๊ะเดิม</strong><p>เปิดบิลตามโต๊ะ เพิ่มรายการอาหารและหมายเหตุถึงครัวไว้ในออเดอร์นั้น</p></div>
       <div class="scenario"><strong>ส่งรายการจากหน้าร้านเข้าครัว</strong><p>กดส่งครัว ให้ทีมครัวเห็นรายการที่ต้องทำและทำเครื่องหมายเมื่อพร้อมเสิร์ฟ</p></div>
       <div class="scenario"><strong>ทานด้วยกัน แต่อยากแยกจ่าย</strong><p>ใช้การแยกบิลตอนคิดเงิน พร้อมเก็บยอดขายกลับมาดูในรายงาน</p></div>
       <p class="tier-note">เลือกร้านอาหาร · โต๊ะ หน้าจอครัว และแยกบิล เริ่มที่ Lite</p>
     </article>
   </div>
+  <ol class="workday" aria-label="ลำดับงานประจำร้าน">
+    <li><span>01 / รับรายการ</span><strong>เริ่มจากออเดอร์</strong><p>เลือกสินค้าและเก็บรายละเอียดที่ลูกค้าต้องการ</p></li>
+    <li><span>02 / จัดเตรียม</span><strong>รู้ว่าต้องทำอะไรต่อ</strong><p>ร้านอาหารส่งรายการเข้าครัว ร้านค้าจัดสินค้าให้ลูกค้า</p></li>
+    <li><span>03 / รับเงิน</span><strong>จบบิลให้ชัดเจน</strong><p>เลือกวิธีรับเงิน ยืนยันรายการ และออกใบเสร็จ</p></li>
+    <li><span>04 / ปิดร้าน</span><strong>กลับมาดูยอดของวัน</strong><p>ตรวจรายการขายและยอดรับเงินก่อนปิดยอด</p></li>
+  </ol>
 </section>
 
 <section class="online" aria-labelledby="online-heading">
@@ -442,6 +453,16 @@
 </footer>
 
 <script>
+  function showStory(type) {
+    if (!['retail', 'restaurant'].includes(type)) return;
+    document.querySelector('.shop-stories').classList.add('is-filtered');
+    for (const key of ['retail', 'restaurant']) {
+      document.getElementById('story-' + key).hidden = key !== type;
+      document.querySelector('[data-story="' + key + '"]').setAttribute('aria-pressed', String(key === type));
+    }
+  }
+  document.getElementById('story-picker').hidden = false;
+  showStory('restaurant');
   const planFeatures = {"retail":[["ขายเอง ดูยอดได้ทุกวัน","ขายสินค้าและรับเงิน","รายงานรายวัน","QR PromptPay","สั่งของจากร้านส่ง"],["ดูแลสินค้าและลูกหนี้","ทุกอย่างใน Solo","จัดการสต็อกและเตือนใกล้หมด","ลูกหนี้และการรับชำระ","พิมพ์ใบเสร็จด้วยอุปกรณ์ที่รองรับ"],["บริหารร้านด้วยข้อมูล","ทุกอย่างใน Lite","พนักงาน 3 ผู้ใช้","สมาชิกสะสมแต้ม","รายงานเชิงลึก"]],"restaurant":[["รับออเดอร์กลับบ้าน","ขายอาหารและรับเงิน","เมนูและตัวเลือกเสริม","รายงานรายวัน","QR PromptPay"],["ดูแลโต๊ะและครัว","ทุกอย่างใน Solo","โต๊ะและบิลค้าง","ส่งรายการเข้าครัว","QR สั่งอาหารที่โต๊ะ"],["รู้ต้นทุน ดูกำไร","ทุกอย่างใน Lite","สูตรอาหารและวัตถุดิบ","พนักงาน 3 ผู้ใช้ + สะสมแต้ม","รายงานเชิงลึก"]]};
   function setShopType(type) {
     for (const key of ['retail', 'restaurant']) {

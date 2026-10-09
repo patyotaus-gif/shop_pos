@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'compact_action.dart';
 
 import '../models/modifier_group.dart';
 import '../models/order_modifier.dart';
@@ -223,7 +224,7 @@ class _ModifierPickerSheetState extends State<_ModifierPickerSheet> {
                       color: cs.surface,
                       border: Border(top: BorderSide(color: cs.outlineVariant)),
                     ),
-                    child: Row(
+                    child: ActionButtons(
                       children: [
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -240,15 +241,13 @@ class _ModifierPickerSheetState extends State<_ModifierPickerSheet> {
                                     color: cs.primary)),
                           ],
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: FilledButton.icon(
-                            onPressed: canSubmit ? () => _submit(groups) : null,
-                            icon: const Icon(Icons.add),
-                            label: const Text('เพิ่มเข้าตะกร้า'),
-                            style: FilledButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
+                        FilledButton.icon(
+                          onPressed: canSubmit ? () => _submit(groups) : null,
+                          icon: const Icon(Icons.add),
+                          label: const Text('เพิ่มเข้าตะกร้า'),
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 14),
                           ),
                         ),
                       ],

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../widgets/compact_action.dart';
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -426,20 +427,18 @@ class _OfflineCashState extends State<OfflineCashScreen>
                   top: false,
                   child: Padding(
                       padding: const EdgeInsets.all(12),
-                      child: Row(children: [
+                      child: ActionButtons(children: [
                         TextButton(
                             onPressed: _busy
                                 ? null
                                 : () => setState(() => _cart.clear()),
                             child: const Text('ล้างตะกร้า')),
-                        Expanded(
-                            child: FilledButton(
-                                onPressed: _busy || expired || _cart.isEmpty
-                                    ? null
-                                    : _pay,
-                                child: Text(_busy
-                                    ? 'กำลังบันทึก…'
-                                    : 'รับเงินสด ฿${_total.toStringAsFixed(2)}')))
+                        FilledButton(
+                            onPressed:
+                                _busy || expired || _cart.isEmpty ? null : _pay,
+                            child: Text(_busy
+                                ? 'กำลังบันทึก…'
+                                : 'รับเงินสด ฿${_total.toStringAsFixed(2)}'))
                       ]))),
             ])));
   }

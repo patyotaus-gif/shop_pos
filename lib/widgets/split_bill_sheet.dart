@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'compact_action.dart';
 
 /// Bottom sheet for splitting a table bill evenly across N people.
 /// Returns the chosen split count (>= 2) or null on cancel.
@@ -46,8 +47,8 @@ class _SplitBillSheetState extends State<_SplitBillSheet> {
 
     return SafeArea(
       child: Padding(
-        padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom),
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -65,8 +66,8 @@ class _SplitBillSheetState extends State<_SplitBillSheet> {
               child: Row(
                 children: [
                   const Text('แยกบิล',
-                      style: TextStyle(
-                          fontSize: 17, fontWeight: FontWeight.w700)),
+                      style:
+                          TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.close),
@@ -138,8 +139,8 @@ class _SplitBillSheetState extends State<_SplitBillSheet> {
                     decoration: BoxDecoration(
                       color: cs.primary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                          color: cs.primary.withValues(alpha: 0.25)),
+                      border:
+                          Border.all(color: cs.primary.withValues(alpha: 0.25)),
                     ),
                     child: Row(
                       children: [
@@ -152,8 +153,8 @@ class _SplitBillSheetState extends State<_SplitBillSheet> {
                               Text('แยก $_splitCount คน',
                                   style: TextStyle(
                                       fontSize: 13,
-                                      color: cs.onSurface
-                                          .withValues(alpha: 0.7))),
+                                      color:
+                                          cs.onSurface.withValues(alpha: 0.7))),
                               Text(
                                 'คนละ ฿${perPerson.toStringAsFixed(2)}',
                                 style: TextStyle(
@@ -173,27 +174,23 @@ class _SplitBillSheetState extends State<_SplitBillSheet> {
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
+              child: ActionButtons(
                 children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      child: const Text('ยกเลิก'),
+                  OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 14),
                     ),
+                    child: const Text('ยกเลิก'),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: FilledButton.icon(
-                      onPressed: () => Navigator.pop(context, _splitCount),
-                      icon: const Icon(Icons.check),
-                      label: const Text('ไปจ่ายเงิน'),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
+                  FilledButton.icon(
+                    onPressed: () => Navigator.pop(context, _splitCount),
+                    icon: const Icon(Icons.check),
+                    label: const Text('ไปจ่ายเงิน'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 14),
                     ),
                   ),
                 ],

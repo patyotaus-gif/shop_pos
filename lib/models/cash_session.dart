@@ -64,6 +64,7 @@ class SessionSummary {
   final double debtCollections;
   final int pendingOrderCount;
   final int openTableCount;
+  final int futureOrderCount;
 
   const SessionSummary({
     required this.billCount,
@@ -77,6 +78,7 @@ class SessionSummary {
     this.debtCollections = 0,
     this.pendingOrderCount = 0,
     this.openTableCount = 0,
+    this.futureOrderCount = 0,
   });
 
   double overShort(double countedCash) => countedCash - expectedCash;
@@ -93,6 +95,7 @@ class SessionSummary {
         'debtCollections': debtCollections,
         'pendingOrderCount': pendingOrderCount,
         'openTableCount': openTableCount,
+        'futureOrderCount': futureOrderCount,
       };
 
   factory SessionSummary.fromMap(Map<String, dynamic> m) => SessionSummary(
@@ -110,6 +113,7 @@ class SessionSummary {
         debtCollections: (m['debtCollections'] ?? 0).toDouble(),
         pendingOrderCount: (m['pendingOrderCount'] as num? ?? 0).toInt(),
         openTableCount: (m['openTableCount'] as num? ?? 0).toInt(),
+        futureOrderCount: (m['futureOrderCount'] as num? ?? 0).toInt(),
       );
 }
 

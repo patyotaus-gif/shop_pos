@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Lifecycle of a marketplace (B2B) order from shop → supplier.
 /// Distinct from the customer-facing ShopOrder; this is the shop buying
-/// stock from a wholesaler.
+/// stock from a wholesaler. State changes are validated by server callables.
 enum MarketplaceOrderStatus {
   /// Shop submitted — supplier hasn't acknowledged yet.
   placed,
@@ -68,7 +68,7 @@ class MarketplaceOrderItem {
 }
 
 /// A B2B order placed by a shop with a supplier. Stored in two places by
-/// MarketplaceService so each side can query its own:
+/// server callables so each side can query its own:
 ///   - shops/{shopId}/marketplaceOrders/{orderId}  (shop's view)
 ///   - suppliers/{supplierId}/orders/{orderId}      (supplier's view)
 /// Both copies share the same id.

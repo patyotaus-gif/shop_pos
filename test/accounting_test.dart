@@ -9,14 +9,17 @@ void main() {
     final summary = SessionSummary.fromMap({
       'pendingOrderCount': 2,
       'openTableCount': 3,
+      'futureOrderCount': 4,
       'expectedCash': 500.01,
       'byMethod': {'cash': 0.01},
     });
     final restored = SessionSummary.fromMap(summary.toMap());
     expect(restored.pendingOrderCount, 2);
     expect(restored.openTableCount, 3);
+    expect(restored.futureOrderCount, 4);
     expect(restored.expectedCash, 500.01);
     expect(SessionSummary.fromMap({}).openTableCount, 0);
+    expect(SessionSummary.fromMap({}).futureOrderCount, 0);
   });
   Sale sale({bool refunded = false, bool debt = false}) => Sale(
       id: 's',

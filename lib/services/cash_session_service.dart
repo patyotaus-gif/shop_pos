@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/cash_session.dart';
+import '../models/cash_close_check.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_service.dart';
@@ -81,6 +82,29 @@ class CashSessionService {
     String? closedBy,
     bool acknowledgeLegacy = false,
   }) async {
+    await _checkLocalPending();
+    await FirebaseFunctions.instanceFor(region: 'asia-southeast1')
+        .httpsCallable('closeCashSession')
+        .call({
+      'shopId': AuthService.shopId,
+      'sessionId': session.id,
+      'countedCash': countedCash,
+      'acknowledgeLegacy': acknowledgeLegacy,
+    });
+    return get(session.id);
+  }
+
+  /// Advisory only: closeCashSession repeats this check in its transaction.
+  static Future<CashCloseCheck> checkClose(CashSession session) async {
+    await _checkLocalPending();
+    final result =
+        await FirebaseFunctions.instanceFor(region: 'asia-southeast1')
+            .httpsCallable('getCashCloseReadiness')
+            .call({'shopId': AuthService.shopId, 'sessionId': session.id});
+    return CashCloseCheck.fromMap(result.data as Map);
+  }
+
+  static Future<void> _checkLocalPending() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.reload();
     if (prefs.getKeys().any((key) =>
@@ -94,15 +118,6 @@ class CashSessionService {
         await OfflineService.pendingForShop(AuthService.shopId!) > 0) {
       throw StateError('ซิงก์บิลออฟไลน์ที่ค้างในเครื่องให้ครบก่อนปิดรอบ');
     }
-    await FirebaseFunctions.instanceFor(region: 'asia-southeast1')
-        .httpsCallable('closeCashSession')
-        .call({
-      'shopId': AuthService.shopId,
-      'sessionId': session.id,
-      'countedCash': countedCash,
-      'acknowledgeLegacy': acknowledgeLegacy,
-    });
-    return get(session.id);
   }
 
   static Future<CashSession> get(String id) async {
