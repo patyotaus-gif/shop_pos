@@ -89,6 +89,9 @@ class ZReportGenerator {
                     pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
             _row('  เงินทอนเริ่มต้น', _baht.format(summary.openingFloat)),
             _row('  ขายเงินสด', _baht.format(summary.cashSales)),
+            _row('  เงินสดเข้าที่บันทึกเอง', _baht.format(summary.cashIn)),
+            _row(
+                '  เงินสดออกที่บันทึกเอง', '-${_baht.format(summary.cashOut)}'),
             _row('  ควรมี', _baht.format(summary.expectedCash), bold: true),
             _row('  นับได้จริง', _baht.format(countedCash), bold: true),
             _row(

@@ -52,6 +52,9 @@ abstract final class PokpokTheme {
             base.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
         bodyLarge: base.textTheme.bodyLarge?.copyWith(height: 1.45),
         bodyMedium: base.textTheme.bodyMedium?.copyWith(height: 1.45),
+        bodySmall:
+            base.textTheme.bodySmall?.copyWith(fontSize: 13, height: 1.4),
+        labelSmall: base.textTheme.labelSmall?.copyWith(fontSize: 13),
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: dark ? const Color(0xFF191716) : paper,

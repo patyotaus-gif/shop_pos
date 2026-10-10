@@ -350,6 +350,8 @@ Future<void> _closeDialog(BuildContext context, CashSession session) async {
             Text(
                 'ยังไม่รวมออเดอร์รอชำระ ${summary.pendingOrderCount} รายการ และบิลโต๊ะที่ยังเปิด ${summary.openTableCount} บิล'),
           _sumRow('เงินสดควรมี', '฿${_baht.format(summary.expectedCash)}'),
+          _sumRow('เงินสดเข้าที่บันทึกเอง', '฿${_baht.format(summary.cashIn)}'),
+          _sumRow('เงินสดออกที่บันทึกเอง', '฿${_baht.format(summary.cashOut)}'),
           _sumRow('นับได้จริง', '฿${_baht.format(savedCounted)}'),
           const Divider(),
           _sumRow(

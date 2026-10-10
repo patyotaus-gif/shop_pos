@@ -52,9 +52,34 @@ class _SalesInsightsState extends State<SalesInsights> {
           ? b.revenue.compareTo(a.revenue)
           : b.quantity.compareTo(a.quantity));
     return ListView(padding: const EdgeInsets.all(16), children: [
-      const Text('ยอดขายตามช่องทาง',
+      const Text('ยอดขายตามวิธีชำระเงิน',
           style: TextStyle(fontWeight: FontWeight.bold)),
+      const Text('แยกตามวิธีจ่ายที่บันทึกในบิล ไม่รวมบิลยกเลิกและขายเชื่อ'),
+      for (final method in PaymentMethod.values)
+        if (active.any((s) => !s.isDebt && s.paymentMethod == method))
+          ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(method.label),
+              subtitle: Text(
+                  '${active.where((s) => !s.isDebt && s.paymentMethod == method).length} บิล'),
+              trailing: Text(
+                  '฿${active.where((s) => !s.isDebt && s.paymentMethod == method).fold(0.0, (sum, s) => sum + s.total).toStringAsFixed(2)}')),
+      if (active.any((s) => s.isDebt))
+        ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('ขายเชื่อ'),
+            subtitle: const Text(
+                'ยอดขายเชื่อเดิมในบิล ดูยอดหนี้คงเหลือที่หน้าลูกหนี้'),
+            trailing: Text(
+                '฿${active.where((s) => s.isDebt).fold(0.0, (sum, s) => sum + s.total).toStringAsFixed(2)}')),
+      const Divider(),
+      const Text('ช่องทางที่ลูกค้าสั่งซื้อ',
+          style: TextStyle(fontWeight: FontWeight.bold)),
+      const Text('เช่น หน้าร้าน ซื้อกลับ หรือเดลิเวอรี แยกจากวิธีจ่ายเงิน'),
       const Text('ยอดหลังส่วนลดและคืนเงิน ก่อนหักค่าธรรมเนียมแพลตฟอร์ม'),
+      if (active.any((s) => s.salesChannel == SalesChannel.unspecified))
+        const Text(
+            'บางบิลไม่ได้บันทึกช่องทางสั่งซื้อ วิธีจ่ายเงินยังดูได้ด้านบน'),
       for (final channel in SalesChannel.values)
         if (active.any((s) => s.salesChannel == channel))
           ListTile(

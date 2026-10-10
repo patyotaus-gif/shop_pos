@@ -67,6 +67,17 @@ async function inspectClose(tx,shop,sessionId,session,rows,work) {
   }
   for(const row of rows){
     const r=row.data();
+    // Manual drawer entries are immutable, owner-authorized server records.
+    // They change cash on hand, never sales, debt or payment-method revenue.
+    if(['cashIn','cashOut'].includes(r.kind)){
+      if(!row.id.startsWith('cash-')||r.method!=='cash'||r.actor!==shop.id||
+          !Number.isSafeInteger(r.amountMinor)||Math.abs(r.amountMinor)>1e11||
+          (r.kind==='cashIn'?r.amountMinor<=0:r.amountMinor>=0)||
+          r.salesMinor!==0||r.debtMinor!==0||(r.refundMinor||0)!==0||
+          typeof r.reason!=='string'||!r.reason.trim()||r.reason.length>300)
+        problem('invalidMovement',row.id);
+      continue;
+    }
     if(!['sale','refund','debtPayment'].includes(r.kind)||
         !['amountMinor','salesMinor','debtMinor'].every(k=>Number.isSafeInteger(r[k]))||
         (r.refundMinor!==undefined&&!Number.isSafeInteger(r.refundMinor))||

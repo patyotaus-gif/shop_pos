@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
+import '../theme/operational_colors.dart';
+import '../widgets/status_badge.dart';
 
 import '../models/restaurant_table.dart';
 import '../services/table_service.dart';
 import 'table_detail_screen.dart';
 import 'table_form_screen.dart';
 
-/// Grid of restaurant tables — color tells status (cream = available,
-/// burgundy-tinted = occupied). Tap to open the order screen for that
+/// Grid of restaurant tables with explicit labels and shared status colors.
+/// Tap to open the order screen for that
 /// table; long-press to edit/delete.
 class TablesScreen extends StatefulWidget {
   const TablesScreen({super.key, this.loadTables});
@@ -47,16 +50,19 @@ class _TablesScreenState extends State<TablesScreen> {
           }
           return LayoutBuilder(
             builder: (context, constraints) {
-              // Keep the phone's three columns. On wider layouts, add columns
-              // so cards stay at most 180 logical pixels wide after padding.
-              final columns = constraints.maxWidth < 600
-                  ? 3
-                  : ((constraints.maxWidth - 32 + 12) / (180 + 12)).ceil();
+              final scale = MediaQuery.textScalerOf(context);
+              final available = constraints.maxWidth - 32;
+              final desired = ((available + 12) / 192).ceil();
+              final readable =
+                  ((available + 12) / (scale.scale(124) + 12)).floor();
+              final columns = math.max(1, math.min(desired, readable));
               return GridView.builder(
                 padding: const EdgeInsets.all(16),
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: columns,
-                  childAspectRatio: 0.95,
+                  // Reserve two lines for the status, name and section at
+                  // the user's text scale, plus card padding and spacing.
+                  mainAxisExtent: math.max(180, scale.scale(130) + 48),
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                 ),
@@ -115,19 +121,16 @@ class _TableCard extends StatelessWidget {
     final occupied = table.status == TableStatus.occupied;
     final reserved = table.status == TableStatus.reserved;
 
-    final bg = occupied
-        ? cs.primary.withValues(alpha: 0.12)
+    final tone = occupied
+        ? OperationalTone.information
         : reserved
-            ? Colors.amber.withValues(alpha: 0.12)
-            : cs.surface;
-    final border = occupied
-        ? cs.primary
-        : reserved
-            ? Colors.amber.shade700
-            : cs.outlineVariant;
+            ? OperationalTone.warning
+            : OperationalTone.neutral;
+    final status = OperationalColors.of(context, tone);
+    final border = occupied || reserved ? status.foreground : cs.outlineVariant;
 
     return Material(
-      color: bg,
+      color: cs.surface,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,
@@ -143,60 +146,32 @@ class _TableCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Icon(
-                    Icons.table_restaurant_outlined,
-                    color: occupied
-                        ? cs.primary
-                        : cs.onSurface.withValues(alpha: 0.5),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: border.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                    child: Text(
-                      table.status.label,
-                      style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: occupied ? cs.primary : cs.onSurface),
-                    ),
-                  ),
-                ],
-              ),
+              StatusBadge(
+                  label: table.status.label,
+                  tone: tone,
+                  icon: reserved
+                      ? Icons.event_available_outlined
+                      : Icons.table_restaurant_outlined),
               const SizedBox(height: 4),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     table.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontSize: 22, fontWeight: FontWeight.w700),
+                        fontSize: 22, height: 1.3, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Icon(Icons.person_outline,
-                          size: 12, color: cs.onSurface.withValues(alpha: 0.5)),
-                      const SizedBox(width: 2),
-                      Text('${table.capacity}',
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: cs.onSurface.withValues(alpha: 0.6))),
-                      if (table.section != null) ...[
-                        const SizedBox(width: 6),
-                        Text('· ${table.section}',
-                            style: TextStyle(
-                                fontSize: 11,
-                                color: cs.onSurface.withValues(alpha: 0.6))),
-                      ],
-                    ],
-                  ),
+                  Text(
+                      '${table.capacity} ที่นั่ง${table.section == null ? '' : ' · ${table.section}'}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 13,
+                          height: 1.35,
+                          color: cs.onSurfaceVariant)),
                 ],
               ),
             ],
@@ -227,8 +202,7 @@ class _EmptyState extends StatelessWidget {
                 style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
             const SizedBox(height: 6),
             Text('เพิ่มโต๊ะแรกเพื่อเริ่มรับออเดอร์',
-                style: TextStyle(
-                    fontSize: 13, color: cs.onSurface.withValues(alpha: 0.6))),
+                style: TextStyle(fontSize: 14, color: cs.onSurfaceVariant)),
             const SizedBox(height: 24),
             FilledButton.icon(
               onPressed: onAdd,

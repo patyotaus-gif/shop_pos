@@ -8,6 +8,7 @@ import 'user_switch_screen.dart';
 
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
+import '../theme/operational_colors.dart';
 import '../widgets/social_auth_buttons.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:image_picker/image_picker.dart';
@@ -1357,11 +1358,14 @@ class _PlanTile extends StatelessWidget {
         : (s.subscriptionStatus == SubscriptionStatus.active
             ? 'จ่ายแล้ว — เหลือ ${s.subscriptionDaysLeft} วัน'
             : 'หมดอายุแล้ว');
-    final statusColor = isTrial
-        ? Colors.orange.shade700
-        : (s.subscriptionStatus == SubscriptionStatus.active
-            ? Colors.green.shade700
-            : Colors.red);
+    final statusColor = OperationalColors.of(
+            context,
+            isTrial
+                ? OperationalTone.warning
+                : s.subscriptionStatus == SubscriptionStatus.active
+                    ? OperationalTone.success
+                    : OperationalTone.danger)
+        .foreground;
 
     return InkWell(
       onTap: () => Navigator.of(context).push(
@@ -1383,13 +1387,12 @@ class _PlanTile extends StatelessWidget {
                       style: const TextStyle(
                           fontWeight: FontWeight.w700, fontSize: 15)),
                   Text(priceText,
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: cs.onSurface.withValues(alpha: 0.65))),
+                      style:
+                          TextStyle(fontSize: 14, color: cs.onSurfaceVariant)),
                   const SizedBox(height: 2),
                   Text(statusText,
                       style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 14,
                           color: statusColor,
                           fontWeight: FontWeight.w600)),
                 ],

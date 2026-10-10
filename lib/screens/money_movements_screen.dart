@@ -6,6 +6,8 @@ import '../models/debt.dart';
 import '../services/auth_service.dart';
 import '../services/debt_service.dart';
 import '../widgets/shop_operation.dart';
+import '../services/cash_movement_service.dart';
+import '../widgets/cash_movement_dialog.dart';
 
 class MoneyMovementsScreen extends StatefulWidget {
   const MoneyMovementsScreen({super.key});
@@ -89,6 +91,34 @@ class _MoneyMovementsScreenState extends State<MoneyMovementsScreen> {
             ));
   }
 
+  bool _adding = false;
+  Future<void> _addMovement() async {
+    if (_adding) return;
+    setState(() => _adding = true);
+    try {
+      final pending = await CashMovementService.pending();
+      if (!mounted) return;
+      final saved = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => CashMovementDialog(
+              pending: pending, save: CashMovementService.record));
+      if (saved == true && mounted) {
+        final now = DateTime.now();
+        setState(() => _setDay(DateTime(now.year, now.month, now.day)));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('บันทึกเงินสดเข้า–ออกแล้ว')));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('เปิดรายการเงินไม่สำเร็จ กรุณาลองใหม่')));
+      }
+    } finally {
+      if (mounted) setState(() => _adding = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('เงินเข้า–ออก'), actions: [
@@ -120,7 +150,10 @@ class _MoneyMovementsScreenState extends State<MoneyMovementsScreen> {
                   0,
                   (value, row) =>
                       value +
-                      ((row.data()['amountMinor'] as num?)?.toInt() ?? 0));
+                      (['cashIn', 'cashOut'].contains(row.data()['kind'])
+                          ? 0
+                          : ((row.data()['amountMinor'] as num?)?.toInt() ??
+                              0)));
               final cash = rows
                   .where((row) => row.data()['method'] == 'cash')
                   .fold<int>(
@@ -128,15 +161,25 @@ class _MoneyMovementsScreenState extends State<MoneyMovementsScreen> {
                       (value, row) =>
                           value + (row.data()['amountMinor'] as num).toInt());
               return ListView(padding: const EdgeInsets.all(16), children: [
+                Align(
+                    alignment: Alignment.centerLeft,
+                    child: FilledButton.icon(
+                        onPressed: _adding ? null : _addMovement,
+                        icon: const Icon(Icons.add),
+                        label: const Text('บันทึกเงินเข้า–ออก'))),
                 Text(DateFormat('dd/MM/yyyy').format(_day),
                     style: Theme.of(context).textTheme.titleLarge),
                 const Text(
                     'ตามวันที่บันทึกเงิน รวมรับชำระหนี้และคืนเงิน เริ่มเก็บตั้งแต่ระบบบัญชีรุ่นนี้ ยอดขายย้อนหลังดูในรายงานยอดขาย'),
                 ListTile(
-                    title: const Text('เงินรับสุทธิทุกช่องทาง'),
+                    title: const Text('รับชำระสุทธิทุกวิธีจ่าย'),
+                    subtitle: const Text(
+                        'รวมชำระหนี้ หักคืนเงิน ไม่รวมเงินเข้า–ออกที่บันทึกเอง'),
                     trailing: Text('฿${_money.format(received / 100)}')),
                 ListTile(
                     title: const Text('เงินสดเพิ่ม / ลด'),
+                    subtitle: const Text(
+                        'รวมเงินเข้า–ออกที่บันทึกเอง ไม่รวมเงินทอนเริ่มต้น'),
                     trailing: Text('฿${_money.format(cash / 100)}')),
                 StreamBuilder<List<Debt>>(
                     stream: DebtService.watchUnpaid(),
@@ -165,6 +208,8 @@ class _MoneyMovementsScreenState extends State<MoneyMovementsScreen> {
       'sale' => 'ขายสินค้า',
       'debtPayment' => 'รับชำระหนี้',
       'refund' => 'คืนเงิน',
+      'cashIn' => 'เงินสดเข้า',
+      'cashOut' => 'เงินสดออก',
       _ => 'รายการเงิน'
     };
     final method = switch (row['method']) {
@@ -177,8 +222,9 @@ class _MoneyMovementsScreenState extends State<MoneyMovementsScreen> {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       title: Text('$title · $method'),
-      subtitle: Text(
-          '${row['saleId'] ?? ''}${row['needsReconciliation'] == true ? '\nยังไม่ผูกกับรอบขาย ต้องตรวจสอบ' : ''}'),
+      subtitle: Text('${row['reason'] ?? row['saleId'] ?? ''}'
+          '${row['recordedAt'] is Timestamp ? '\n${DateFormat('dd/MM/yyyy HH:mm').format((row['recordedAt'] as Timestamp).toDate())}' : ''}'
+          '${row['needsReconciliation'] == true ? '\nยังไม่ผูกกับรอบขาย ต้องตรวจสอบ' : ''}'),
       trailing:
           Text('฿${_money.format((row['amountMinor'] as num? ?? 0) / 100)}'),
     );

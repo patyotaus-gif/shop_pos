@@ -1,12 +1,14 @@
 name: shop_pos
 description: Mobile POS for convenience stores
-version: 1.2.43+60
+version: 1.2.44+61
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
   flutter:
+    sdk: flutter
+  flutter_localizations:
     sdk: flutter
 
   # Firebase
@@ -51,7 +53,7 @@ dependencies:
   audioplayers: ^6.0.0
 
   # Utils
-  intl: ^0.19.0
+  intl: ^0.20.2
   http: ^1.2.2
   uuid: ^4.5.1
   flutter_local_notifications: ^17.2.4

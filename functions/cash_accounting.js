@@ -13,6 +13,33 @@ function handlers({db,FieldValue,HttpsError,now=Date.now}) {
     return {...await inspectClose(tx,shop,sessionId,session,rows.docs,work),rows:rows.docs};
   }
   return {
+    recordCashMovement:async request=>{
+      const shop=db.collection('shops').doc(owner(request,HttpsError));
+      const {requestId,sessionId,kind,amount,reason}=request.data;
+      if(!validId(requestId)||!validId(sessionId)||!['cashIn','cashOut'].includes(kind)||
+          typeof amount!=='number'||!Number.isFinite(amount)||amount<=0||amount>1e9||Math.round(amount*100)<=0||
+          Math.abs(amount*100-Math.round(amount*100))>0.00001||
+          typeof reason!=='string'||!reason.trim()||reason.trim().length>300)
+        throw new HttpsError('invalid-argument','ระบุเงินเข้า/ออก จำนวนเงินไม่เกิน 2 ตำแหน่ง และเหตุผลไม่เกิน 300 ตัวอักษร');
+      const amountMinor=minor(amount)*(kind==='cashOut'?-1:1);
+      const ref=shop.collection('moneyMovements').doc('cash-'+requestId);
+      return db.runTransaction(async tx=>{
+        const prior=await tx.get(ref);
+        if(prior.exists){
+          const p=prior.data();
+          if(p.kind!==kind||p.amountMinor!==amountMinor||p.reason!==reason.trim()||p.sessionId!==sessionId)
+            fail('รหัสรายการซ้ำกับข้อมูลอื่น กรุณาตรวจประวัติเงิน');
+          return {id:ref.id};
+        }
+        const context=await ledgerContext(tx,shop);
+        const session=await tx.get(shop.collection('cashSessions').doc(sessionId));
+        if(context.sessionId!==sessionId||session.data()?.status!=='open'||session.data()?.accountingVersion!==1)
+          fail('เปิดรอบขายก่อนบันทึกเงินเข้า–ออก และตรวจว่ารอบเดิมยังไม่ปิด');
+        writeMovement(tx,shop,context,ref.id,{kind,amountMinor,salesMinor:0,debtMinor:0,
+          method:'cash',reason:reason.trim(),occurredAt:FieldValue.serverTimestamp(),actor:request.auth.uid},FieldValue);
+        return {id:ref.id};
+      });
+    },
     readiness:async request=>{
       const shop=db.collection('shops').doc(owner(request,HttpsError));
       const {sessionId}=request.data;

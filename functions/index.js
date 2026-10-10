@@ -35,6 +35,7 @@ exports.confirmOrderPayment = onCall(orderAccounting.confirm);
 exports.transitionOrder = onCall(orderAccounting.transition);
 const cashAccounting=require('./cash_accounting').handlers({db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError});
 exports.openCashSession=onCall(cashAccounting.open);
+exports.recordCashMovement=onCall(cashAccounting.recordCashMovement);
 exports.closeCashSession=onCall(cashAccounting.close);
 exports.getCashCloseReadiness=onCall(cashAccounting.readiness);
 exports.collectDebtPayment=onCall(cashAccounting.collectDebt);

@@ -1,3 +1,4 @@
+import '../utils/money_format.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -283,11 +284,11 @@ class _ProductListRow extends StatelessWidget {
                         runSpacing: 4,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Text('฿${product.effectivePrice.toStringAsFixed(2)}',
+                          Text(formatBaht(product.effectivePrice),
                               style:
                                   const TextStyle(fontWeight: FontWeight.bold)),
                           if (product.isOnSale)
-                            Text('฿${product.price.toStringAsFixed(2)}',
+                            Text(formatBaht(product.price),
                                 style: TextStyle(
                                     fontSize: 12,
                                     color: cs.onSurfaceVariant,

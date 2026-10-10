@@ -42,6 +42,7 @@ class _PosCheckoutPanelState extends State<PosCheckoutPanel> {
   VoidCallback get onDiscount => widget.onDiscount;
   VoidCallback get onDebt => widget.onDebt;
   VoidCallback get onCheckout => widget.onCheckout;
+
   @override
   void initState() {
     super.initState();
@@ -93,14 +94,6 @@ class _PosCheckoutPanelState extends State<PosCheckoutPanel> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (pinned)
-            OutlinedButton(
-                onPressed: _pin == 'discount'
-                    ? onDiscount
-                    : hasItems
-                        ? onDebt
-                        : null,
-                child: Text(_pin == 'discount' ? 'ส่วนลด' : 'ขายเชื่อ')),
           Text('ยอดสุทธิ',
               style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
           Text('฿${baht.format(total)}',
@@ -111,8 +104,22 @@ class _PosCheckoutPanelState extends State<PosCheckoutPanel> {
         ]);
     final actions = Wrap(
         alignment: WrapAlignment.end,
+        spacing: 4,
+        runSpacing: 4,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
+          if (pinned)
+            OutlinedButton(
+                key: const ValueKey('checkout-pinned'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                ),
+                onPressed: _pin == 'discount'
+                    ? onDiscount
+                    : hasItems
+                        ? onDebt
+                        : null,
+                child: Text(_pin == 'discount' ? 'ส่วนลด' : 'ขายเชื่อ')),
           if (canDiscount || canDebt)
             PopupMenuButton<String>(
               key: const ValueKey('checkout-more'),
@@ -164,37 +171,25 @@ class _PosCheckoutPanelState extends State<PosCheckoutPanel> {
               color: cs.surface,
               border: Border(top: BorderSide(color: cs.outlineVariant))),
           child: compact
-              ? LayoutBuilder(builder: (context, constraints) {
-                  // Retain readable text instead of squeezing large accessibility text
-                  // or unusually large totals beside the payment controls.
-                  final twoRows = pinned ||
-                      constraints.maxWidth < 320 ||
-                      MediaQuery.textScalerOf(context).scale(14) > 18 ||
-                      total.abs() >= 1000000;
-                  return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (twoRows) ...[
-                          totalLabel,
-                          const SizedBox(height: 4),
-                          Align(
-                              alignment: Alignment.centerRight, child: actions),
-                        ] else
-                          Row(children: [
-                            Expanded(child: totalLabel),
-                            const SizedBox(width: 8),
-                            actions
-                          ]),
-                        if (discount > 0) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                              'รวม ฿${baht.format(subtotal)} · ส่วนลด ฿${baht.format(discount)}',
-                              style: TextStyle(
-                                  fontSize: 12, color: cs.onSurfaceVariant)),
-                        ],
-                      ]);
-                })
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                      OverflowBar(
+                        spacing: 8,
+                        overflowSpacing: 4,
+                        alignment: MainAxisAlignment.spaceBetween,
+                        overflowAlignment: OverflowBarAlignment.end,
+                        children: [totalLabel, actions],
+                      ),
+                      if (discount > 0) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                            'รวม ฿${baht.format(subtotal)} · ส่วนลด ฿${baht.format(discount)}',
+                            style: TextStyle(
+                                fontSize: 12, color: cs.onSurfaceVariant)),
+                      ],
+                    ])
               : Column(mainAxisSize: MainAxisSize.min, children: [
                   _amount('รวม', '฿${baht.format(subtotal)}'),
                   if (discount > 0)

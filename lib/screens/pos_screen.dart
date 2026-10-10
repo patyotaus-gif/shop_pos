@@ -1,3 +1,4 @@
+import '../utils/money_format.dart';
 import '../widgets/cart_item_tile.dart';
 import 'dart:async';
 import 'dart:io';
@@ -436,7 +437,7 @@ class _PosScreenState extends State<PosScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                        'มีบิลรอยืนยัน ฿${_pendingSale!.total.toStringAsFixed(2)} อย่ารับเงินซ้ำ ตรวจรายการเดิมก่อนเริ่มบิลใหม่'),
+                        'มีบิลรอยืนยัน ${formatBaht(_pendingSale!.total)} อย่ารับเงินซ้ำ ตรวจรายการเดิมก่อนเริ่มบิลใหม่'),
                     CompactAction(
                         child: FilledButton.icon(
                             onPressed: _checkoutBusy ? null : () => _checkout(),
@@ -747,8 +748,8 @@ class _ProductSearchState extends State<_ProductSearch> {
                             : null,
                         title: Text(p.name),
                         subtitle: Text(p.isOnSale
-                            ? '฿${p.effectivePrice.toStringAsFixed(2)} (ปกติ ฿${p.price.toStringAsFixed(2)}) · สต็อก ${p.stock}'
-                            : '฿${p.price.toStringAsFixed(2)} · สต็อก ${p.stock}'),
+                            ? '${formatBaht(p.effectivePrice)} (ปกติ ${formatBaht(p.price)}) · สต็อก ${p.stock}'
+                            : '${formatBaht(p.price)} · สต็อก ${p.stock}'),
                         trailing: Text(p.barcode,
                             style: const TextStyle(
                                 fontSize: 11, color: Colors.grey)),

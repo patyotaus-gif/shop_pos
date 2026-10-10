@@ -72,6 +72,10 @@ class _PaymentSheetState extends State<_PaymentSheet> {
   bool _ppLoading = false;
   String? _ppError;
 
+  // Match the amount shown to the cashier and the ledger's satang precision.
+  // A sum such as 35.10 + 75.20 must accept exact cash of 110.30.
+  double get _total => (widget.total * 100).round() / 100;
+
   @override
   void initState() {
     super.initState();
@@ -125,7 +129,7 @@ class _PaymentSheetState extends State<_PaymentSheet> {
         }
         return;
       }
-      final payload = PromptPayQR.generate(id, amount: widget.total);
+      final payload = PromptPayQR.generate(id, amount: _total);
       if (!mounted) return;
       setState(() {
         _ppLoading = false;
@@ -150,18 +154,21 @@ class _PaymentSheetState extends State<_PaymentSheet> {
     }
   }
 
-  double? get _cashReceived => double.tryParse(_cashCtrl.text.trim());
+  double? get _cashReceived {
+    final value = double.tryParse(_cashCtrl.text.trim());
+    return value != null && value.isFinite ? value : null;
+  }
 
   double get _change {
     final received = _cashReceived ?? 0;
-    return received - widget.total;
+    return ((received - _total) * 100).round() / 100;
   }
 
   bool get _canConfirm {
     switch (_method) {
       case PaymentMethod.cash:
         final r = _cashReceived;
-        return r != null && r >= widget.total;
+        return r != null && r >= _total;
       case PaymentMethod.qr:
         return _ppPayload != null;
       case PaymentMethod.transfer:
@@ -172,9 +179,8 @@ class _PaymentSheetState extends State<_PaymentSheet> {
   }
 
   void _confirm() {
-    final paid = _method == PaymentMethod.cash
-        ? (_cashReceived ?? widget.total)
-        : widget.total;
+    final paid =
+        _method == PaymentMethod.cash ? (_cashReceived ?? _total) : _total;
     Navigator.pop(
       context,
       PaymentResult(
@@ -228,7 +234,7 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                     ),
                     textAlign: TextAlign.center),
                 const SizedBox(height: 4),
-                Text('฿${_baht.format(widget.total)}',
+                Text('฿${_baht.format(_total)}',
                     style: TextStyle(
                       fontSize: 38,
                       fontWeight: FontWeight.bold,
@@ -452,7 +458,7 @@ class _PaymentSheetState extends State<_PaymentSheet> {
 
   /// Generate a few quick-pick amounts: exact, next 10, 20, 50, 100 multiples.
   List<double> _suggestions() {
-    final t = widget.total;
+    final t = _total;
     final set = <double>{t};
     for (final step in [10.0, 20.0, 50.0, 100.0, 500.0, 1000.0]) {
       if (step <= t) continue;

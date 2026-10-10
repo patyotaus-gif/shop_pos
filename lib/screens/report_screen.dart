@@ -31,6 +31,8 @@ class _ReportScreenState extends State<ReportScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tab;
   DateTimeRange? _customRange;
+  bool _pickingRange = false;
+  int _lastTab = 0;
 
   final _baht = NumberFormat('#,##0.00', 'th_TH');
   final _dateFmt = DateFormat('dd/MM/yyyy HH:mm', 'th_TH');
@@ -41,7 +43,9 @@ class _ReportScreenState extends State<ReportScreen>
     super.initState();
     _tab = TabController(length: 4, vsync: this);
     _tab.addListener(() {
-      if (_tab.index == 3 && !_tab.indexIsChanging) _pickCustomRange();
+      if (_tab.indexIsChanging || _tab.index == _lastTab) return;
+      _lastTab = _tab.index;
+      if (_tab.index == 3) _pickCustomRange();
     });
   }
 
@@ -76,19 +80,25 @@ class _ReportScreenState extends State<ReportScreen>
       };
 
   Future<void> _pickCustomRange() async {
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      initialDateRange: _customRange,
-      locale: const Locale('th'),
-    );
-    if (picked != null && mounted) {
-      setState(() => _customRange = DateTimeRange(
-            start: picked.start,
-            end: DateTime(
-                picked.end.year, picked.end.month, picked.end.day, 23, 59, 59),
-          ));
+    if (_pickingRange) return;
+    _pickingRange = true;
+    try {
+      final picked = await showDateRangePicker(
+        context: context,
+        firstDate: DateTime(2020),
+        lastDate: DateTime.now(),
+        initialDateRange: _customRange,
+        locale: const Locale('th'),
+      );
+      if (picked != null && mounted) {
+        setState(() => _customRange = DateTimeRange(
+              start: picked.start,
+              end: DateTime(picked.end.year, picked.end.month, picked.end.day,
+                  23, 59, 59),
+            ));
+      }
+    } finally {
+      _pickingRange = false;
     }
   }
 
@@ -721,6 +731,9 @@ class _ReportScreenState extends State<ReportScreen>
             ],
             bottom: TabBar(
               controller: _tab,
+              onTap: (index) {
+                if (index == 3 && _lastTab == 3) _pickCustomRange();
+              },
               isScrollable: true,
               tabAlignment: TabAlignment.start,
               tabs: const [
@@ -1227,15 +1240,19 @@ class _PLItem extends StatelessWidget {
       this.bold = false});
 
   @override
-  Widget build(BuildContext context) => Column(
+  Widget build(BuildContext context) => Expanded(
+          child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(value,
+              textAlign: TextAlign.center,
               style: TextStyle(
                   fontWeight: bold ? FontWeight.bold : FontWeight.w600,
                   color: color,
                   fontSize: bold ? 14 : 12)),
-          Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+          Text(label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 10, color: Colors.grey)),
         ],
-      );
+      ));
 }

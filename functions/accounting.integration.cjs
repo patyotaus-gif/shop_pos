@@ -57,6 +57,22 @@ const {refundSale}=require('./refund');
   const race=(await shop.collection('moneyMovements').doc('sale-order-race').get()).data();
   const raceClose=(await shop.collection('cashSessions').doc('race-round').get()).data();
   assert.equal(race.sessionId,'race-round');assert.equal(raceClose.summary.grossTotal,50);
+  // A drawer write racing close must be included, or rejected as a closed round.
+  await api.open(request({requestId:'drawer-round',openingFloat:500}));
+  const drawer=request({requestId:'ice',sessionId:'drawer-round',kind:'cashOut',amount:44,reason:'ice'});
+  await Promise.all([api.recordCashMovement(drawer),api.recordCashMovement(drawer)]);
+  const extra=request({requestId:'change',sessionId:'drawer-round',kind:'cashIn',amount:20,reason:'change'});
+  const drawerRace=await Promise.allSettled([
+    api.recordCashMovement(extra),api.close(request({sessionId:'drawer-round',countedCash:456}))]);
+  assert.equal(drawerRace[1].status,'fulfilled',String(drawerRace[1].reason));
+  const added=drawerRace[0].status==='fulfilled';
+  assert.equal(drawerRace[1].value.expectedCash,added?476:456);
+  assert.equal(drawerRace[1].value.cashOut,44);
+  assert.equal(drawerRace[1].value.grossTotal,0);
+  assert.deepEqual(drawerRace[1].value.byMethod,{});
+  if(!added)assert.equal(drawerRace[0].reason.code,'failed-precondition');
+  await api.recordCashMovement(drawer); // Lost response retried after close.
+  assert.equal((await shop.collection('moneyMovements').doc('cash-ice').get()).data().amountMinor,-4400);
   const env=await initializeTestEnvironment({projectId:'demo-pokpok-admin'});
   try {
     const legacy=env.authenticatedContext('legacy-accounting').firestore();
@@ -66,6 +82,9 @@ const {refundSale}=require('./refund');
  await assertFails(setDoc(doc(legacy,legacyPath+'/accountingSettings/current'),{enabled:false}));
  await assertFails(setDoc(doc(legacy,legacyPath+'/sales/forged'),{accountingVersion:1,total:50}));
  const client=env.authenticatedContext(shopId).firestore();
+ await assertFails(setDoc(doc(client,`shops/${shopId}/moneyMovements/cash-forged`),{
+   kind:'cashOut',amountMinor:-4400,salesMinor:0,debtMinor:0,method:'cash',actor:shopId,reason:'ice',sessionId:'drawer-round'}));
+ await assertFails(updateDoc(doc(client,`shops/${shopId}/moneyMovements/cash-ice`),{amountMinor:-1}));
  await assertFails(setDoc(doc(client,'shops/'+shopId+'/sales/legacy-write'),{total:50}));
  await assertFails(updateDoc(doc(client,'shops/'+shopId+'/accountingSettings/current'),{enabled:false}));
     await assertFails(updateDoc(doc(client,`shops/${shopId}/sales/order-o`),{isRefunded:true}));

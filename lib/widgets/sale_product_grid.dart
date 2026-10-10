@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/product.dart';
 import 'product_image.dart';
+import '../utils/money_format.dart';
 
 /// Use the catalog's available width, including split-screen and sidebars.
 class SaleProductGrid extends StatelessWidget {
@@ -103,7 +104,7 @@ class SaleProductCard extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                    fontSize: 11,
+                                    fontSize: 13,
                                     color: unavailableLabel != null
                                         ? cs.onSurface
                                         : cs.onPrimary)),
@@ -129,7 +130,7 @@ class SaleProductCard extends StatelessWidget {
                           Flexible(
                               child: FittedBox(
                                   fit: BoxFit.scaleDown,
-                                  child: Text('฿${price.toStringAsFixed(2)}',
+                                  child: Text(formatBaht(price),
                                       style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w700,
@@ -137,12 +138,11 @@ class SaleProductCard extends StatelessWidget {
                           if (promotion) ...[
                             const SizedBox(width: 4),
                             Flexible(
-                                child: Text(
-                                    '฿${product.price.toStringAsFixed(2)}',
+                                child: Text(formatBaht(product.price),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
-                                        fontSize: 10,
+                                        fontSize: 12,
                                         decoration: TextDecoration.lineThrough,
                                         color: cs.onSurfaceVariant))),
                           ],

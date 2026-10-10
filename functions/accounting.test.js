@@ -8,6 +8,50 @@ const {refundSale}=require('./refund');
 const {HttpsError}=require('firebase-functions/v2/https');
 const owner=data=>({auth:{uid:'shop',token:{}},data:{shopId:'shop',acknowledgeDeviceUpdate:true,...data}});
 const sale={total:100,items:[{productId:'tea',price:50,quantity:2}],paymentMethod:'cash',stockDeducted:{tea:2}};
+
+test('manual cash in/out affects drawer, not revenue; retries remain safe after close',async()=>{
+  const f=fixture(),api=cash({...f,HttpsError});
+  await api.open(owner({requestId:'s',openingFloat:500}));
+  f.docs.set('shops/shop/sales/sale',{...sale,createdAt:1000});
+  f.docs.set('shops/shop/moneyMovements/sale-sale',{sessionId:'s',saleId:'sale',kind:'sale',
+    amountMinor:10000,salesMinor:10000,debtMinor:0,method:'cash'});
+  const out=owner({requestId:'ice',sessionId:'s',kind:'cashOut',amount:44,reason:'ซื้อน้ำแข็ง'});
+  await Promise.all([api.recordCashMovement(out),api.recordCashMovement(out)]);
+  await api.recordCashMovement(owner({requestId:'change',sessionId:'s',kind:'cashIn',amount:20.25,reason:'เติมเงินทอน'}));
+  const summary=await api.close(owner({sessionId:'s',countedCash:576.25}));
+  assert.equal(summary.expectedCash,576.25);
+  assert.equal(summary.cashOut,44);assert.equal(summary.cashIn,20.25);
+  assert.equal(summary.grossTotal,100);assert.equal(summary.byMethod.cash,100);
+  assert.equal(summary.billCount,1);assert.equal(summary.debtTotal,0);
+  await api.recordCashMovement(out);
+  assert.equal([...f.docs.keys()].filter(k=>k.includes('/moneyMovements/cash-')).length,2);
+  assert.deepEqual(await api.close(owner({sessionId:'s',countedCash:0})),summary);
+  await assert.rejects(api.recordCashMovement(owner({...out.data,requestId:'new'})),/เปิดรอบ/);
+  await assert.rejects(api.recordCashMovement(owner({...out.data,amount:45})),/ซ้ำ/);
+});
+
+test('manual cash requires owner, active session, valid amount and reason',async()=>{
+  const f=fixture(),api=cash({...f,HttpsError});
+  const data={requestId:'ice',sessionId:'s',kind:'cashOut',amount:44,reason:'ice'};
+  await assert.rejects(api.recordCashMovement(owner(data)),/เปิดรอบ/);
+  await api.open(owner({requestId:'s',openingFloat:0}));
+  for(const auth of [undefined,{uid:'other',token:{}},{uid:'shop',token:{staffRole:'cashier'}}])
+    await assert.rejects(api.recordCashMovement({auth,data:{shopId:'shop',...data}}),e=>e.code==='permission-denied');
+  for(const invalid of [{amount:0},{amount:-44},{amount:0.001},{amount:0.00000001},{amount:Infinity},{amount:NaN},
+    {amount:1e9+1},{amount:'44'},{reason:'  '},{reason:'x'.repeat(301)},{kind:'sale'},
+    {requestId:'bad/id'},{sessionId:'missing'}])
+    await assert.rejects(api.recordCashMovement(owner({...data,...invalid})));
+  assert.equal([...f.docs.keys()].filter(k=>k.includes('/moneyMovements/')).length,0);
+});
+
+test('cash close rejects malformed manual entries',async()=>{
+  const f=fixture(),api=cash({...f,HttpsError});
+  await api.open(owner({requestId:'s',openingFloat:500}));
+  await api.recordCashMovement(owner({requestId:'ice',sessionId:'s',kind:'cashOut',amount:44,reason:'ice'}));
+  const entry=f.docs.get('shops/shop/moneyMovements/cash-ice');
+  f.docs.set('shops/shop/moneyMovements/cash-ice',{...entry,salesMinor:-4400});
+  await assert.rejects(api.close(owner({sessionId:'s',countedCash:456})),e=>e.details.issues.some(i=>i.type==='invalidMovement'));
+});
 test('cash refund nets once; debt collection is cash but not a second sale',()=>{
   const summary=summarizeMovements([
     {kind:'sale',salesMinor:10000,amountMinor:10000,method:'cash'},

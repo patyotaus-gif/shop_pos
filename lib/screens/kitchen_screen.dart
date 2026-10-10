@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../theme/operational_colors.dart';
+import '../widgets/status_badge.dart';
 import '../widgets/shop_operation.dart';
 
 import '../models/table_order.dart';
@@ -306,15 +308,16 @@ class _TicketCard extends StatelessWidget {
 
     final allReady =
         kitchenItems.every((e) => e.value.kitchenStatus == KitchenStatus.ready);
+    final success = OperationalColors.of(context, OperationalTone.success);
 
     return Material(
-      color: allReady ? Colors.green.withValues(alpha: 0.08) : cs.surface,
+      color: allReady ? success.background : cs.surface,
       borderRadius: BorderRadius.circular(14),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: allReady ? Colors.green : cs.outlineVariant,
+            color: allReady ? success.foreground : cs.outlineVariant,
             width: allReady ? 2 : 1,
           ),
         ),
@@ -332,27 +335,17 @@ class _TicketCard extends StatelessWidget {
                       style: const TextStyle(
                           fontSize: 17, fontWeight: FontWeight.w800)),
                 ),
-                if (allReady)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                    child: const Text('พร้อมเสิร์ฟทั้งหมด',
-                        style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.green,
-                            fontWeight: FontWeight.w700)),
-                  ),
               ],
             ),
             const SizedBox(height: 4),
+            if (allReady)
+              const StatusBadge(
+                  label: 'พร้อมเสิร์ฟทั้งหมด',
+                  tone: OperationalTone.success,
+                  icon: Icons.check_circle_outline),
             Text(
               _elapsed(order.openedAt),
-              style: TextStyle(
-                  fontSize: 11, color: cs.onSurface.withValues(alpha: 0.6)),
+              style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
             ),
             const Divider(height: 16),
             Expanded(
@@ -399,6 +392,8 @@ class _ItemRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final ready = item.kitchenStatus == KitchenStatus.ready;
+    final status = OperationalColors.of(
+        context, ready ? OperationalTone.success : OperationalTone.warning);
     final modifierLine = item.modifiers.isEmpty
         ? null
         : item.modifiers.map((m) => m.optionName).join(' · ');
@@ -413,20 +408,16 @@ class _ItemRow extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
-          color: ready
-              ? Colors.green.withValues(alpha: 0.1)
-              : Colors.amber.withValues(alpha: 0.08),
+          color: status.background,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: ready
-                ? Colors.green.withValues(alpha: 0.5)
-                : Colors.amber.withValues(alpha: 0.5),
+            color: status.foreground.withValues(alpha: 0.5),
           ),
         ),
         child: Row(
           children: [
             Container(
-              width: 28,
+              constraints: const BoxConstraints(minWidth: 32),
               alignment: Alignment.center,
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
@@ -434,10 +425,10 @@ class _ItemRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text('×${item.quantity}',
-                  style: const TextStyle(
-                      color: Colors.white,
+                  style: TextStyle(
+                      color: cs.onPrimary,
                       fontWeight: FontWeight.w800,
-                      fontSize: 12)),
+                      fontSize: 14)),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -450,18 +441,17 @@ class _ItemRow extends StatelessWidget {
                   if (modifierLine != null)
                     Text('• $modifierLine',
                         style: TextStyle(
-                            fontSize: 11,
-                            color: cs.onSurface.withValues(alpha: 0.7))),
+                            fontSize: 14, color: cs.onSurfaceVariant)),
                   if (item.notes != null && item.notes!.isNotEmpty)
                     Text('โน้ต: ${item.notes}',
-                        style: const TextStyle(
-                            fontSize: 11, color: Colors.deepOrange)),
+                        style:
+                            TextStyle(fontSize: 14, color: status.foreground)),
                 ],
               ),
             ),
             Icon(
               ready ? Icons.check_circle : Icons.local_fire_department,
-              color: ready ? Colors.green : Colors.amber.shade700,
+              color: status.foreground,
               size: 22,
             ),
           ],

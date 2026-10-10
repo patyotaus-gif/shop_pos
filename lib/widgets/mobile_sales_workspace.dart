@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/money_format.dart';
 
 /// One persistent product browser and cart; no extra modal for short phones.
 class MobileSalesWorkspace extends StatefulWidget {
@@ -17,6 +18,28 @@ class MobileSalesWorkspace extends StatefulWidget {
 
 class _MobileSalesWorkspaceState extends State<MobileSalesWorkspace> {
   bool _cart = false;
+  final _basketScroll = ScrollController();
+
+  @override
+  void dispose() {
+    _basketScroll.dispose();
+    super.dispose();
+  }
+
+  bool _scrollPastBasket(OverscrollNotification notification) {
+    // The cart's ListView otherwise consumes the drag at its end, leaving
+    // checkout below the viewport on short/landscape phones.
+    if (notification.depth > 0 &&
+        notification.metrics.axis == Axis.vertical &&
+        notification.dragDetails != null &&
+        _basketScroll.hasClients) {
+      final position = _basketScroll.position;
+      _basketScroll.jumpTo((position.pixels + notification.overscroll)
+          .clamp(position.minScrollExtent, position.maxScrollExtent));
+    }
+    return false;
+  }
+
   @override
   void didUpdateWidget(covariant MobileSalesWorkspace oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -38,9 +61,20 @@ class _MobileSalesWorkspaceState extends State<MobileSalesWorkspace> {
                     IndexedStack(index: _cart ? 1 : 0, children: [
                       widget.catalog,
                       constraints.maxHeight < 340
-                          ? SingleChildScrollView(
-                              child:
-                                  SizedBox(height: 480, child: widget.basket))
+                          ? NotificationListener<OverscrollNotification>(
+                              onNotification: _scrollPastBasket,
+                              child: SingleChildScrollView(
+                                controller: _basketScroll,
+                                child: ScrollConfiguration(
+                                  behavior: ScrollConfiguration.of(context)
+                                      .copyWith(
+                                          physics: const ClampingScrollPhysics(
+                                              parent:
+                                                  AlwaysScrollableScrollPhysics())),
+                                  child: SizedBox(
+                                      height: 480, child: widget.basket),
+                                ),
+                              ))
                           : widget.basket,
                     ]))),
         if (!_cart)
@@ -54,6 +88,6 @@ class _MobileSalesWorkspaceState extends State<MobileSalesWorkspace> {
                           onPressed: () => setState(() => _cart = true),
                           icon: const Icon(Icons.shopping_cart_outlined),
                           label: Text(
-                              'ตะกร้า ${widget.itemCount} ชิ้น · ฿${widget.total.toStringAsFixed(2)}'))))),
+                              'ตะกร้า ${widget.itemCount} ชิ้น · ${formatBaht(widget.total)}'))))),
       ]);
 }

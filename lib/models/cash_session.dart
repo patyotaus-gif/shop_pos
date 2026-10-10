@@ -59,9 +59,12 @@ class SessionSummary {
   final double debtTotal;
   final double refundTotal;
   final double cashSales;
-  final double expectedCash; // openingFloat + cashSales − cashRefunds
+  final double
+      expectedCash; // Opening float + all cash movements, including manual entries.
   final double openingFloat;
   final double debtCollections;
+  final double cashIn;
+  final double cashOut;
   final int pendingOrderCount;
   final int openTableCount;
   final int futureOrderCount;
@@ -76,6 +79,8 @@ class SessionSummary {
     required this.expectedCash,
     required this.openingFloat,
     this.debtCollections = 0,
+    this.cashIn = 0,
+    this.cashOut = 0,
     this.pendingOrderCount = 0,
     this.openTableCount = 0,
     this.futureOrderCount = 0,
@@ -93,6 +98,8 @@ class SessionSummary {
         'expectedCash': expectedCash,
         'openingFloat': openingFloat,
         'debtCollections': debtCollections,
+        'cashIn': cashIn,
+        'cashOut': cashOut,
         'pendingOrderCount': pendingOrderCount,
         'openTableCount': openTableCount,
         'futureOrderCount': futureOrderCount,
@@ -111,6 +118,8 @@ class SessionSummary {
         expectedCash: (m['expectedCash'] ?? 0).toDouble(),
         openingFloat: (m['openingFloat'] ?? 0).toDouble(),
         debtCollections: (m['debtCollections'] ?? 0).toDouble(),
+        cashIn: (m['cashIn'] ?? 0).toDouble(),
+        cashOut: (m['cashOut'] ?? 0).toDouble(),
         pendingOrderCount: (m['pendingOrderCount'] as num? ?? 0).toInt(),
         openTableCount: (m['openTableCount'] as num? ?? 0).toInt(),
         futureOrderCount: (m['futureOrderCount'] as num? ?? 0).toInt(),

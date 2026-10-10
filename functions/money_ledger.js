@@ -24,7 +24,7 @@ function saleMovement(sale, actor) {
     occurredAt: sale.createdAt, actor: actor || null };
 }
 function summarizeMovements(rows, openingFloat) {
-  let gross=0, debt=0, refund=0, cash=0, cashSales=0, bills=0, collections=0;
+  let gross=0, debt=0, refund=0, cash=0, cashSales=0, bills=0, collections=0, cashIn=0, cashOut=0;
   const byMethod={};
   for (const r of rows) {
     const amount=r.amountMinor || 0;
@@ -32,10 +32,13 @@ function summarizeMovements(rows, openingFloat) {
     if (r.kind==='sale') { bills++; if(r.method==='cash')cashSales+=amount; }
     if (r.kind==='debtPayment') collections+=amount;
     if (r.method==='cash') cash+=amount;
+    if (r.kind==='cashIn') {cashIn+=amount;continue;}
+    if (r.kind==='cashOut') {cashOut-=amount;continue;}
     if (r.method && r.method!=='credit') byMethod[r.method]=(byMethod[r.method]||0)+amount;
   }
   return {billCount:bills,grossTotal:gross/100,debtTotal:debt/100,refundTotal:refund/100,
     cashSales:cashSales/100,expectedCash:(minor(openingFloat)+cash)/100,openingFloat,
-    debtCollections:collections/100,byMethod:Object.fromEntries(Object.entries(byMethod).map(([k,v])=>[k,v/100]))};
+    debtCollections:collections/100,cashIn:cashIn/100,cashOut:cashOut/100,
+    byMethod:Object.fromEntries(Object.entries(byMethod).map(([k,v])=>[k,v/100]))};
 }
 module.exports={minor,ledgerContext,writeMovement,saleMovement,summarizeMovements};

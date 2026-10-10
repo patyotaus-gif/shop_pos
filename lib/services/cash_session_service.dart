@@ -107,6 +107,11 @@ class CashSessionService {
   static Future<void> _checkLocalPending() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.reload();
+    if (prefs.getString('pending-cash-movement-${AuthService.shopId}') !=
+        null) {
+      throw StateError(
+          'มีเงินเข้า–ออกรอยืนยัน ไปที่หน้าเงินเข้า–ออก แล้วกดบันทึกเพื่อยืนยันรายการเดิมก่อนปิดรอบ');
+    }
     if (prefs.getKeys().any((key) =>
         key.startsWith('pending-checkout-${AuthService.shopId}') &&
         prefs.getString(key) != null)) {

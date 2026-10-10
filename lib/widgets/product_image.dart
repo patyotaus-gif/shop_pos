@@ -27,13 +27,44 @@ class ProductImage extends StatelessWidget {
 
   Widget _fallbackIcon(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Container(
-      width: width,
-      height: height,
-      color: cs.surfaceContainerLow,
-      child: Icon(Icons.inventory_2_outlined,
-          size: 28, color: cs.onSurfaceVariant),
-    );
+    return Semantics(
+        label: 'ไม่มีรูป ${product.name}',
+        child: Container(
+          width: width,
+          height: height,
+          color: cs.surfaceContainerLow,
+          child: LayoutBuilder(builder: (context, constraints) {
+            final spacious = constraints.maxWidth >= 88 &&
+                constraints.maxHeight >=
+                    MediaQuery.textScalerOf(context).scale(26) + 48;
+            final icon = switch (product.category) {
+              'เครื่องดื่ม' => Icons.local_drink_outlined,
+              'ขนม' => Icons.cookie_outlined,
+              'อาหารสด' => Icons.restaurant_outlined,
+              'ของใช้' => Icons.shopping_basket_outlined,
+              'ยา' => Icons.medication_outlined,
+              _ => Icons.inventory_2_outlined,
+            };
+            return Center(
+                child: ExcludeSemantics(
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Icon(icon, size: spacious ? 32 : 24, color: cs.onSurfaceVariant),
+              if (spacious) ...[
+                const SizedBox(height: 8),
+                Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(
+                        product.name.trim().characters.take(3).toString(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: cs.onSurface))),
+              ],
+            ])));
+          }),
+        ));
   }
 
   Widget _network(BuildContext context) {
