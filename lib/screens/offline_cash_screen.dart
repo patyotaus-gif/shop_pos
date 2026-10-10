@@ -301,9 +301,10 @@ class _OfflineCashState extends State<OfflineCashScreen>
         change: ((bill['paid'] as num) - (bill['total'] as num)).toDouble(),
         staffName: bill['staffName'] as String?,
         receiptProfile: profile);
-    final bytes = await ReceiptGenerator.buildDocument(sale,
-        profile: profile, paperWidthMm: 80);
-    await Printing.layoutPdf(onLayout: (_) async => bytes);
+    await Printing.layoutPdf(
+        format: ReceiptGenerator.slip80,
+        onLayout: (format) => ReceiptGenerator.buildDocument(sale,
+            profile: profile, format: format));
   }
 
   Future<void> _receipt(Map<String, dynamic> bill) => showDialog<void>(

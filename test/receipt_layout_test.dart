@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pdf/pdf.dart';
 import 'package:shop_pos/models/receipt_profile.dart';
 import 'package:shop_pos/models/sale.dart';
+import 'package:shop_pos/models/order_modifier.dart';
 import 'package:shop_pos/utils/receipt_generator.dart';
 
 final settings = <String, dynamic>{
@@ -41,6 +43,14 @@ Sale sample(
               price: 25,
               quantity: 1,
               subtotal: 25,
+              modifiers: [
+                OrderModifier(
+                    groupId: 'packing',
+                    groupName: 'ตัวเลือก',
+                    optionId: 'separate',
+                    optionName:
+                        'แยกน้ำจิ้ม ใส่ถุง เพิ่มช้อนและส้อม ไม่ใส่น้ำแข็ง'),
+              ],
               notes: 'แยกถุงกลับบ้าน')
         ],
         total: 107,
@@ -137,5 +147,46 @@ void main() {
     await File('${directory.path}/vat80.pdf').writeAsBytes(
         await ReceiptGenerator.buildDocument(sample(profile: tax),
             profile: tax, paperWidthMm: 80));
+  });
+
+  test('receipt lays out Thai text on the requested paper and paginates A4',
+      () async {
+    final directory = Directory('.remember/tmp/receipt-paper-fix')
+      ..createSync(recursive: true);
+    final profile = ReceiptProfile.fromSettings({
+      ...settings,
+      'name': 'ร้านกุ้ง น้ำจิ้ม ปูผัดผงกะหรี่',
+      'address':
+          'หมู่บ้านรุ่งเรือง เลขที่ ๑๒๓ ชั้นที่ ๒ ซอยน้ำผึ้ง กรุงเทพมหานคร',
+    });
+    for (final entry in {
+      'thai58': ReceiptGenerator.slip58,
+      'thai80': ReceiptGenerator.slip80,
+      'thaiA4': PdfPageFormat.a4,
+    }.entries) {
+      final bytes = await ReceiptGenerator.buildDocument(sample(longName: true),
+          profile: profile, format: entry.value);
+      expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
+      await File('${directory.path}/${entry.key}.pdf').writeAsBytes(bytes);
+    }
+    final many = Sale(
+        id: 'many',
+        receiptNo: 'LONG-001',
+        createdAt: DateTime(2026, 10, 11),
+        items: List.generate(
+            80,
+            (i) => SaleItem(
+                productId: '$i',
+                productName: 'กุ้งผัดน้ำพริกเผา เพิ่มไข่ รายการที่ ${i + 1}',
+                price: 100,
+                quantity: 1,
+                subtotal: 100)),
+        total: 8000,
+        discount: 0,
+        paid: 8000,
+        change: 0);
+    final bytes = await ReceiptGenerator.buildDocument(many,
+        profile: profile, format: PdfPageFormat.a4);
+    await File('${directory.path}/multipage.pdf').writeAsBytes(bytes);
   });
 }

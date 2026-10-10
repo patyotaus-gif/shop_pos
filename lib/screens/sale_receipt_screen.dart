@@ -28,11 +28,13 @@ class SaleReceiptScreen extends StatefulWidget {
 
 class _SaleReceiptScreenState extends State<SaleReceiptScreen> {
   bool _saving = false;
+  String _paper = ReceiptGenerator.paperFormats.keys.first;
   Future<void> _saveFile(Sale sale) async {
     if (_saving) return;
     setState(() => _saving = true);
     try {
-      final bytes = await ReceiptGenerator.buildReceipt(sale);
+      final bytes = await ReceiptGenerator.buildReceipt(sale,
+          format: ReceiptGenerator.paperFormats[_paper]);
       final path = await FileSaver.instance.saveAs(
           name: 'receipt_${sale.receiptNo ?? sale.id}',
           bytes: bytes,
@@ -122,6 +124,23 @@ class _SaleReceiptScreenState extends State<SaleReceiptScreen> {
                             });
                           }
                         }),
+              Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _paper,
+                    isExpanded: true,
+                    decoration:
+                        const InputDecoration(labelText: 'ขนาดกระดาษใบเสร็จ'),
+                    items: ReceiptGenerator.paperFormats.keys
+                        .map((name) =>
+                            DropdownMenuItem(value: name, child: Text(name)))
+                        .toList(),
+                    onChanged: _saving
+                        ? null
+                        : (value) {
+                            if (value != null) setState(() => _paper = value);
+                          },
+                  )),
               TextButton.icon(
                   onPressed: _saving ? null : () => _saveFile(sale),
                   icon: const Icon(Icons.download),
@@ -135,7 +154,11 @@ class _SaleReceiptScreenState extends State<SaleReceiptScreen> {
                       textAlign: TextAlign.center)),
               Expanded(
                   child: PdfPreview(
-                      build: (_) => ReceiptGenerator.buildReceipt(sale),
+                      key: ValueKey(_paper),
+                      initialPageFormat: ReceiptGenerator.paperFormats[_paper],
+                      pageFormats: ReceiptGenerator.paperFormats,
+                      build: (format) =>
+                          ReceiptGenerator.buildReceipt(sale, format: format),
                       pdfFileName: 'receipt_${sale.receiptNo ?? sale.id}.pdf',
                       canChangeOrientation: false,
                       canChangePageFormat: false,
