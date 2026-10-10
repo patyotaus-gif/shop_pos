@@ -230,6 +230,7 @@ class Sale {
         'change': change,
         'createdAt': Timestamp.fromDate(createdAt),
         'isDebt': isDebt,
+        'isRefunded': isRefunded,
         'customerName': customerName,
         'paymentMethod': paymentMethod.name,
         if (salesChannel != SalesChannel.unspecified)

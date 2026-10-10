@@ -76,7 +76,10 @@ service cloud.firestore {
         allow update, delete: if isOwner() && legacyAccounting() && resource.data.get('accountingVersion', 0) != 1;
         allow create: if isOwner()
           && request.resource.data.accountingVersion == 1
-          && request.resource.data.isRefunded == false
+          // Older mobile clients omit this flag on a new sale. Missing means
+          // not refunded, matching Sale.fromFirestore; true/invalid values
+          // remain forbidden and existing sales remain immutable.
+          && request.resource.data.get('isRefunded', false) == false
           && getAfter(/databases/$(database)/documents/shops/$(shopId)/moneyMovements/$('sale-' + saleId)).data.saleId == saleId;
         // Money and refund history are immutable to devices; server callables adjust them.
         allow update, delete: if false;

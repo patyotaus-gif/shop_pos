@@ -135,7 +135,7 @@ class OfflineService {
         key.startsWith('pending-checkout-${p['shopId']}') &&
         prefs.getString(key) != null)) {
       throw StateError(
-          'มีบิลออนไลน์รอยืนยัน กรุณาตรวจบิลเดิมก่อนรับเงินบิลใหม่');
+          'มีบิลขายในเครื่องรอยืนยัน ไปที่หน้าขายแล้วตรวจบิลเดิมก่อนรับเงินบิลใหม่');
     }
     final raw = await _secrets.read(key: 'offline-${p['id']}');
     if (raw == null) throw StateError('ไม่พบสิทธิ์ออฟไลน์');

@@ -115,7 +115,8 @@ class CashSessionService {
     if (prefs.getKeys().any((key) =>
         key.startsWith('pending-checkout-${AuthService.shopId}') &&
         prefs.getString(key) != null)) {
-      throw StateError('มีบิลออนไลน์รอยืนยัน กรุณาตรวจบิลเดิมก่อนปิดรอบ');
+      throw StateError(
+          'มีบิลขายในเครื่องรอยืนยัน ไปที่หน้าขายแล้วกดตรวจและยืนยันรายการเดิมก่อนปิดรอบ');
     }
     if (!kIsWeb &&
         [TargetPlatform.android, TargetPlatform.iOS]

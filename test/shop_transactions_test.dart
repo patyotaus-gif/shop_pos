@@ -58,6 +58,38 @@ void main() {
   });
   tearDown(() => ShopDatabase.overrideShop = null);
 
+  test('new sale serializer includes explicit non-refunded state', () {
+    expect(sale().toFirestore()['isRefunded'], isFalse);
+    final legacy = sale().toFirestore()..remove('isRefunded');
+    expect(
+        Sale.fromFirestore(legacy, 'old').toFirestore()['isRefunded'], isFalse);
+  });
+
+  test(
+      'uncommitted legacy pending bill recovers with original id and one stock deduction',
+      () async {
+    final draft = sale();
+    final prefs = await SharedPreferences.getInstance();
+    final stored = {
+      ...draft.toFirestore(),
+      'id': draft.id,
+      'createdAt': draft.createdAt.millisecondsSinceEpoch,
+    }..remove('isRefunded');
+    await prefs.setString('pending-checkout-test-shop', jsonEncode(stored));
+    final result = await SaleService.resumeCheckout();
+    expect(result.id, draft.id);
+    expect(await SaleService.pendingCheckout(), isNull);
+    final saved = await shop.collection('sales').doc(draft.id).get();
+    expect(saved.data()!['isRefunded'], isFalse);
+    expect(saved.data()!['total'], 20);
+    await SaleService.commitSale(shop, draft);
+    expect(
+        (await shop.collection('products').doc('tea').get()).data()!['stock'],
+        4);
+    expect((await shop.collection('sales').get()).docs.length, 1);
+    expect((await shop.collection('moneyMovements').get()).docs.length, 1);
+  });
+
   test('recipe checkout consumes ingredients once and protects online holds',
       () async {
     await shop.collection('products').doc('tea').set({

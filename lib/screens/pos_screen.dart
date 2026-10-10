@@ -437,7 +437,7 @@ class _PosScreenState extends State<PosScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                        'มีบิลรอยืนยัน ${formatBaht(_pendingSale!.total)} อย่ารับเงินซ้ำ ตรวจรายการเดิมก่อนเริ่มบิลใหม่'),
+                        'มีบิลขายในเครื่องรอยืนยัน ${formatBaht(_pendingSale!.total)} ไม่ใช่ออเดอร์ออนไลน์ อย่ารับเงินซ้ำ กดยืนยันบิลเดิมก่อนเริ่มบิลใหม่'),
                     CompactAction(
                         child: FilledButton.icon(
                             onPressed: _checkoutBusy ? null : () => _checkout(),
