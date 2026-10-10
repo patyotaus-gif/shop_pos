@@ -65,8 +65,24 @@ async function inspectClose(tx,shop,sessionId,session,rows,work) {
   for(const id of expected.keys()){
     if(!present.has(id))problem('missingMovement',id);
   }
+  issues.push(...await inspectMovementRows(tx,shop,rows));
+  return {...work,issues,checkedMovementCount:rows.length};
+}
+// Shared by close and the owner-reviewed assignment path. No writes.
+async function inspectMovementRows(tx,shop,rows) {
+  const issues=[];
+  const problem=(type,id)=>issues.push({type,id});
+  const read=(collection,id)=>typeof id==='string'&&id&&!id.includes('/')
+    ?tx.get(shop.collection(collection).doc(id)):Promise.resolve(null);
   for(const row of rows){
     const r=row.data();
+    if(r.reconciliation){
+      const a=r.reconciliation;
+      if(a.actor!==shop.id||!a.at||typeof a.reason!=='string'||!a.reason.trim()||a.previousSessionId!==null||
+          a.previousNeedsReconciliation!==true||r.needsReconciliation!==false||!r.sessionId||
+          !(r.method==='cash'?['addToDrawer','includedInOpeningFloat']:['nonCash']).includes(a.cashTreatment))
+        problem('invalidMovement',row.id);
+    }
     // Manual drawer entries are immutable, owner-authorized server records.
     // They change cash on hand, never sales, debt or payment-method revenue.
     if(['cashIn','cashOut'].includes(r.kind)){
@@ -109,7 +125,7 @@ async function inspectClose(tx,shop,sessionId,session,rows,work) {
       if((r.refundMinor||0)!==(expectedValues.refundMinor||0))problem('amountMismatch',row.id);
     }catch(_){problem('invalidSource',row.id);}
   }
-  return {...work,issues,checkedMovementCount:rows.length};
+  return issues;
 }
 const labels={pendingOrder:'ออเดอร์ยังรอชำระ',openTable:'บิลโต๊ะยังไม่ปิด',unfinishedOrder:'ออเดอร์จ่ายแล้วแต่ยังไม่เสร็จสิ้น',
   unassignedMovement:'เงินยังไม่ผูกกับรอบ',missingSale:'ออเดอร์รับเงินแล้วไม่มีบิลขาย',
@@ -123,4 +139,4 @@ function closeError(issues){
   return 'ยังปิดรอบไม่ได้: '+issues.slice(0,3).map(x=>(labels[x.type]||x.type)+(x.id?' ('+x.id+')':'')).join(' · ')+
     (issues.length>3?' และอีก '+(issues.length-3)+' รายการ':'')+' กรุณาจัดการออเดอร์ บิลโต๊ะ และรายการเงินก่อนปิดรอบ';
 }
-module.exports={inspectClose,closeError,labels};
+module.exports={inspectClose,inspectMovementRows,closeError,labels};

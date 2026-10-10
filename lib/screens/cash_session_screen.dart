@@ -352,6 +352,12 @@ Future<void> _closeDialog(BuildContext context, CashSession session) async {
           _sumRow('เงินสดควรมี', '฿${_baht.format(summary.expectedCash)}'),
           _sumRow('เงินสดเข้าที่บันทึกเอง', '฿${_baht.format(summary.cashIn)}'),
           _sumRow('เงินสดออกที่บันทึกเอง', '฿${_baht.format(summary.cashOut)}'),
+          if (summary.reconciledCount > 0)
+            _sumRow(
+                'รายการตรวจแล้วนำเข้ารอบ', '${summary.reconciledCount} รายการ'),
+          if (summary.openingCashIncluded != 0)
+            _sumRow('เงินสดที่รวมในเงินตั้งต้นแล้ว (ไม่นับซ้ำ)',
+                '฿${_baht.format(summary.openingCashIncluded)}'),
           _sumRow('นับได้จริง', '฿${_baht.format(savedCounted)}'),
           const Divider(),
           _sumRow(
@@ -387,7 +393,8 @@ Widget _sumRow(String label, String value, {Color? color}) => Padding(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label),
+          Expanded(child: Text(label)),
+          const SizedBox(width: 8),
           Text(value,
               style: TextStyle(fontWeight: FontWeight.w700, color: color)),
         ],

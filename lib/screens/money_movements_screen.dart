@@ -8,9 +8,12 @@ import '../services/debt_service.dart';
 import '../widgets/shop_operation.dart';
 import '../services/cash_movement_service.dart';
 import '../widgets/cash_movement_dialog.dart';
+import '../widgets/cash_reconciliation_dialog.dart';
+import '../utils/operation_error.dart';
 
 class MoneyMovementsScreen extends StatefulWidget {
-  const MoneyMovementsScreen({super.key});
+  const MoneyMovementsScreen({super.key, this.initialMovementId});
+  final String? initialMovementId;
   @override
   State<MoneyMovementsScreen> createState() => _MoneyMovementsScreenState();
 }
@@ -24,6 +27,82 @@ class _MoneyMovementsScreenState extends State<MoneyMovementsScreen> {
     super.initState();
     final now = DateTime.now();
     _setDay(DateTime(now.year, now.month, now.day));
+    if (widget.initialMovementId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _resolve(widget.initialMovementId!);
+      });
+    }
+  }
+
+  bool _resolving = false;
+  Future<void> _resolve(String id) async {
+    if (_resolving) return;
+    _resolving = true;
+    try {
+      final shopId = AuthService.shopId;
+      final shop = FirebaseFirestore.instance.collection('shops').doc(shopId);
+      Map<String, dynamic>? movement, session;
+      String? sessionId;
+      final loaded = await performShopOperation(context, () async {
+        movement = (await shop
+                .collection('moneyMovements')
+                .doc(id)
+                .get(const GetOptions(source: Source.server)))
+            .data();
+        final control = await shop
+            .collection('cashControl')
+            .doc('current')
+            .get(const GetOptions(source: Source.server));
+        sessionId = control.data()?['sessionId'] as String?;
+        if (sessionId != null) {
+          session = (await shop
+                  .collection('cashSessions')
+                  .doc(sessionId)
+                  .get(const GetOptions(source: Source.server)))
+              .data();
+        }
+        if (movement?['needsReconciliation'] != true) {
+          throw StateError(
+              'รายการนี้ไม่ค้างแล้ว กรุณากลับไปตรวจปิดยอดอีกครั้ง');
+        }
+        if (session?['status'] != 'open' ||
+            session?['accountingVersion'] != 1) {
+          throw StateError('เปิดรอบขายก่อนจัดรายการเงินเข้ารอบ');
+        }
+      }, success: 'โหลดรายการรอตรวจสอบแล้ว');
+      if (!loaded || !mounted) return;
+      final amount = (movement!['amountMinor'] as num).toInt();
+      await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => CashReconciliationDialog(
+              movementId: id,
+              amountMinor: amount,
+              method: movement!['method'] as String,
+              kind: movement!['kind'] as String,
+              recordedAt: (movement!['recordedAt'] as Timestamp?)?.toDate(),
+              openedAt: (session!['openedAt'] as Timestamp).toDate(),
+              openingFloat: (session!['openingFloat'] as num).toDouble(),
+              save: (reason, cashTreatment) async {
+                await FirebaseFunctions.instanceFor(region: 'asia-southeast1')
+                    .httpsCallable('reconcileCashMovement')
+                    .call({
+                  'shopId': shopId,
+                  'movementId': id,
+                  'sessionId': sessionId,
+                  'expectedAmountMinor': amount,
+                  'reason': reason,
+                  'cashTreatment': cashTreatment,
+                });
+              }));
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(operationError(error))));
+      }
+    } finally {
+      _resolving = false;
+    }
   }
 
   void _setDay(DateTime day) {
@@ -57,7 +136,7 @@ class _MoneyMovementsScreenState extends State<MoneyMovementsScreen> {
       'unassignedMovement': 'เงินที่ยังไม่ผูกกับรอบขาย',
       'legacySession': 'รอบเก่าที่ต้องตรวจยอด'
     };
-    await showDialog<void>(
+    final selected = await showDialog<String>(
         context: context,
         builder: (ctx) => AlertDialog(
               title: const Text('รายการรอตรวจสอบ'),
@@ -76,10 +155,14 @@ class _MoneyMovementsScreenState extends State<MoneyMovementsScreen> {
                         const Text('ไม่พบรายการผิดปกติในขอบเขตที่ตรวจ'),
                       for (final row in rows)
                         ListTile(
+                            onTap: row['type'] == 'unassignedMovement'
+                                ? () => Navigator.pop(ctx, row['id'].toString())
+                                : null,
                             contentPadding: EdgeInsets.zero,
                             title: Text(
                                 labels[row['type']] ?? row['type'].toString()),
-                            subtitle: SelectableText(row['id'].toString()),
+                            subtitle: Text(
+                                '${row['id']}${row['type'] == 'unassignedMovement' ? '\nแตะเพื่อตรวจและจัดเข้ารอบ' : ''}'),
                             trailing: Text('฿${_money.format(row['amount'])}')),
                     ],
                   ))),
@@ -89,6 +172,7 @@ class _MoneyMovementsScreenState extends State<MoneyMovementsScreen> {
                     child: const Text('ปิด'))
               ],
             ));
+    if (selected != null && mounted) await _resolve(selected);
   }
 
   bool _adding = false;
@@ -198,12 +282,12 @@ class _MoneyMovementsScreenState extends State<MoneyMovementsScreen> {
                 const Divider(),
                 if (rows.isEmpty)
                   const Text('ไม่มีรายการเงินที่บันทึกในวันนี้'),
-                for (final row in rows) _movement(row.data()),
+                for (final row in rows) _movement(row.id, row.data()),
               ]);
             }),
       );
 
-  Widget _movement(Map<String, dynamic> row) {
+  Widget _movement(String id, Map<String, dynamic> row) {
     final title = switch (row['kind']) {
       'sale' => 'ขายสินค้า',
       'debtPayment' => 'รับชำระหนี้',
@@ -220,11 +304,13 @@ class _MoneyMovementsScreenState extends State<MoneyMovementsScreen> {
       _ => 'ออนไลน์'
     };
     return ListTile(
+      onTap: row['needsReconciliation'] == true ? () => _resolve(id) : null,
       contentPadding: EdgeInsets.zero,
       title: Text('$title · $method'),
       subtitle: Text('${row['reason'] ?? row['saleId'] ?? ''}'
           '${row['recordedAt'] is Timestamp ? '\n${DateFormat('dd/MM/yyyy HH:mm').format((row['recordedAt'] as Timestamp).toDate())}' : ''}'
-          '${row['needsReconciliation'] == true ? '\nยังไม่ผูกกับรอบขาย ต้องตรวจสอบ' : ''}'),
+          '${row['needsReconciliation'] == true ? '\nยังไม่ผูกกับรอบขาย · แตะเพื่อตรวจและจัดเข้ารอบ' : ''}'
+          '${row['reconciliation'] is Map ? '\nตรวจและจัดเข้ารอบแล้ว: ${row['reconciliation']['reason']}' : ''}'),
       trailing:
           Text('฿${_money.format((row['amountMinor'] as num? ?? 0) / 100)}'),
     );

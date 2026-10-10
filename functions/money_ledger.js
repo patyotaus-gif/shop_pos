@@ -24,10 +24,12 @@ function saleMovement(sale, actor) {
     occurredAt: sale.createdAt, actor: actor || null };
 }
 function summarizeMovements(rows, openingFloat) {
-  let gross=0, debt=0, refund=0, cash=0, cashSales=0, bills=0, collections=0, cashIn=0, cashOut=0;
+  let gross=0, debt=0, refund=0, cash=0, cashSales=0, bills=0, collections=0, cashIn=0, cashOut=0, openingCashIncluded=0, reconciledCount=0;
   const byMethod={};
   for (const r of rows) {
     const amount=r.amountMinor || 0;
+    if(r.reconciliation)reconciledCount++;
+    if(r.method==='cash'&&r.reconciliation?.cashTreatment==='includedInOpeningFloat')openingCashIncluded+=amount;
     gross += r.salesMinor || 0; debt += r.debtMinor || 0; refund += r.refundMinor || 0;
     if (r.kind==='sale') { bills++; if(r.method==='cash')cashSales+=amount; }
     if (r.kind==='debtPayment') collections+=amount;
@@ -37,7 +39,8 @@ function summarizeMovements(rows, openingFloat) {
     if (r.method && r.method!=='credit') byMethod[r.method]=(byMethod[r.method]||0)+amount;
   }
   return {billCount:bills,grossTotal:gross/100,debtTotal:debt/100,refundTotal:refund/100,
-    cashSales:cashSales/100,expectedCash:(minor(openingFloat)+cash)/100,openingFloat,
+    cashSales:cashSales/100,expectedCash:(minor(openingFloat)+cash-openingCashIncluded)/100,openingFloat,
+    openingCashIncluded:openingCashIncluded/100,reconciledCount,
     debtCollections:collections/100,cashIn:cashIn/100,cashOut:cashOut/100,
     byMethod:Object.fromEntries(Object.entries(byMethod).map(([k,v])=>[k,v/100]))};
 }

@@ -99,6 +99,7 @@ service cloud.firestore {
       match /moneyMovements/{movementId} {
         allow read: if isOwner();
         allow create: if isOwner() && request.resource.data.kind == 'sale'
+          && !request.resource.data.keys().hasAny(['reconciliation'])
           && movementId == 'sale-' + request.resource.data.saleId
           && request.resource.data.recordedAt == request.time
           && getAfter(/databases/$(database)/documents/shops/$(shopId)/sales/$(request.resource.data.saleId)).data.accountingVersion == 1

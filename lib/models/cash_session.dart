@@ -65,6 +65,8 @@ class SessionSummary {
   final double debtCollections;
   final double cashIn;
   final double cashOut;
+  final double openingCashIncluded;
+  final int reconciledCount;
   final int pendingOrderCount;
   final int openTableCount;
   final int futureOrderCount;
@@ -81,6 +83,8 @@ class SessionSummary {
     this.debtCollections = 0,
     this.cashIn = 0,
     this.cashOut = 0,
+    this.openingCashIncluded = 0,
+    this.reconciledCount = 0,
     this.pendingOrderCount = 0,
     this.openTableCount = 0,
     this.futureOrderCount = 0,
@@ -100,6 +104,8 @@ class SessionSummary {
         'debtCollections': debtCollections,
         'cashIn': cashIn,
         'cashOut': cashOut,
+        'openingCashIncluded': openingCashIncluded,
+        'reconciledCount': reconciledCount,
         'pendingOrderCount': pendingOrderCount,
         'openTableCount': openTableCount,
         'futureOrderCount': futureOrderCount,
@@ -120,6 +126,8 @@ class SessionSummary {
         debtCollections: (m['debtCollections'] ?? 0).toDouble(),
         cashIn: (m['cashIn'] ?? 0).toDouble(),
         cashOut: (m['cashOut'] ?? 0).toDouble(),
+        openingCashIncluded: (m['openingCashIncluded'] ?? 0).toDouble(),
+        reconciledCount: (m['reconciledCount'] as num? ?? 0).toInt(),
         pendingOrderCount: (m['pendingOrderCount'] as num? ?? 0).toInt(),
         openTableCount: (m['openTableCount'] as num? ?? 0).toInt(),
         futureOrderCount: (m['futureOrderCount'] as num? ?? 0).toInt(),

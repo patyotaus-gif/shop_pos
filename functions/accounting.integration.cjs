@@ -73,6 +73,24 @@ const {refundSale}=require('./refund');
   if(!added)assert.equal(drawerRace[0].reason.code,'failed-precondition');
   await api.recordCashMovement(drawer); // Lost response retried after close.
   assert.equal((await shop.collection('moneyMovements').doc('cash-ice').get()).data().amountMinor,-4400);
+  // A reviewed late receipt racing close must be included exactly once, or
+  // leave the round open for another check. Closed snapshots never change.
+  const reconcile=require('./cash_reconciliation').handler({db,FieldValue,HttpsError});
+  await api.open(request({requestId:'reconcile-round',openingFloat:500}));
+  await shop.collection('sales').doc('late-sale').set({total:70,paymentMethod:'cash',createdAt:admin.firestore.Timestamp.fromMillis(1)});
+  await shop.collection('moneyMovements').doc('sale-late-sale').set({kind:'sale',saleId:'late-sale',method:'cash',
+    amountMinor:7000,salesMinor:7000,debtMinor:0,occurredAt:admin.firestore.Timestamp.fromMillis(1),
+    recordedAt:FieldValue.serverTimestamp(),sessionId:null,needsReconciliation:true});
+  const assign=request({sessionId:'reconcile-round',movementId:'sale-late-sale',expectedAmountMinor:7000,
+    reason:'Reviewed receipt already in opening cash',cashTreatment:'includedInOpeningFloat'});
+  const results=await Promise.allSettled([reconcile(assign),reconcile(assign),api.close(request({sessionId:'reconcile-round',countedCash:500}))]);
+  assert.equal(results[0].status,'fulfilled');assert.equal(results[1].status,'fulfilled');
+  if(results[2].status==='rejected')assert.equal(results[2].reason.code,'failed-precondition');
+  const reconciledSummary=await api.close(request({sessionId:'reconcile-round',countedCash:500}));
+  assert.equal(reconciledSummary.expectedCash,500);assert.equal(reconciledSummary.grossTotal,70);
+  assert.equal(reconciledSummary.openingCashIncluded,70);assert.equal(reconciledSummary.reconciledCount,1);
+  await reconcile(assign); // Retry after a lost response and close.
+  assert.deepEqual((await shop.collection('cashSessions').doc('reconcile-round').get()).data().summary,reconciledSummary);
   const env=await initializeTestEnvironment({projectId:'demo-pokpok-admin'});
   try {
     const legacy=env.authenticatedContext('legacy-accounting').firestore();
@@ -99,13 +117,14 @@ const {refundSale}=require('./refund');
     await assertSucceeds(batch.commit());
     // A device cannot omit the serialization write, change totals or attach
     // money to a closed session while manufacturing a matching sale.
-    for(const scenario of ['missing-lock','wrong-amount','closed-session']){
+    for(const scenario of ['missing-lock','wrong-amount','closed-session','forged-reconciliation']){
       const invalid=writeBatch(client),bad='invalid-'+scenario;
       invalid.set(doc(client,`shops/${shopId}/sales/${bad}`),{accountingVersion:1,isRefunded:false,isDebt:false,total:50,paymentMethod:'cash'});
       invalid.set(doc(client,`shops/${shopId}/moneyMovements/sale-${bad}`),{kind:'sale',saleId:bad,
         amountMinor:scenario==='wrong-amount'?1:5000,salesMinor:5000,debtMinor:0,
         recordedAt:serverTimestamp(),occurredAt:serverTimestamp(),schemaVersion:1,
-        sessionId:scenario==='closed-session'?'race-round':null,needsReconciliation:scenario!=='closed-session',method:'cash'});
+        sessionId:scenario==='closed-session'?'race-round':null,needsReconciliation:scenario!=='closed-session',method:'cash',
+        ...(scenario==='forged-reconciliation'?{reconciliation:{actor:shopId,cashTreatment:'includedInOpeningFloat'}}:{})});
       if(scenario!=='missing-lock')invalid.update(doc(client,`shops/${shopId}/cashControl/current`),{revision:increment(1)});
       await assertFails(invalid.commit());
     }

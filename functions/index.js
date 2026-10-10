@@ -40,6 +40,7 @@ exports.closeCashSession=onCall(cashAccounting.close);
 exports.getCashCloseReadiness=onCall(cashAccounting.readiness);
 exports.collectDebtPayment=onCall(cashAccounting.collectDebt);
 exports.getAccountingReview=onCall(require('./accounting_review').handler({db:admin.firestore(),HttpsError}));
+exports.reconcileCashMovement=onCall(require('./cash_reconciliation').handler({db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError}));
 const stripeSecretKey = defineSecret("STRIPE_SECRET_KEY");
 const stripeWebhookSecret = defineSecret("STRIPE_WEBHOOK_SECRET");
 const lineChannelAccessToken = defineSecret("LINE_CHANNEL_ACCESS_TOKEN");

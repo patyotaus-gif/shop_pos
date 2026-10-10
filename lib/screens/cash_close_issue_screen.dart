@@ -21,7 +21,12 @@ class _CashCloseIssueScreenState extends State<CashCloseIssueScreen> {
         .contains(widget.issue.type)) {
       return OrderDetailScreen(orderId: widget.issue.id);
     }
-    if (widget.issue.type != 'openTable') return const MoneyMovementsScreen();
+    if (widget.issue.type != 'openTable') {
+      return MoneyMovementsScreen(
+          initialMovementId: widget.issue.type == 'unassignedMovement'
+              ? widget.issue.id
+              : null);
+    }
     return Scaffold(
         appBar: AppBar(title: Text(widget.issue.label)),
         body: StreamBuilder(

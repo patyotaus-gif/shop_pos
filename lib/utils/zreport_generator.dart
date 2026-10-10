@@ -93,6 +93,11 @@ class ZReportGenerator {
             _row(
                 '  เงินสดออกที่บันทึกเอง', '-${_baht.format(summary.cashOut)}'),
             _row('  ควรมี', _baht.format(summary.expectedCash), bold: true),
+            if (summary.reconciledCount > 0)
+              _row('  ตรวจแล้วนำเข้ารอบ', '${summary.reconciledCount} รายการ'),
+            if (summary.openingCashIncluded != 0)
+              _row('  รวมในเงินตั้งต้นแล้ว',
+                  _baht.format(summary.openingCashIncluded)),
             _row('  นับได้จริง', _baht.format(countedCash), bold: true),
             _row(
               overShort >= 0 ? '  เกิน' : '  ขาด',
@@ -115,11 +120,13 @@ class ZReportGenerator {
   static pw.Row _row(String label, String value, {bool bold = false}) => pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
-          pw.Text(label,
-              style: pw.TextStyle(
-                  fontSize: 10,
-                  fontWeight:
-                      bold ? pw.FontWeight.bold : pw.FontWeight.normal)),
+          pw.Expanded(
+              child: pw.Text(label,
+                  style: pw.TextStyle(
+                      fontSize: 10,
+                      fontWeight:
+                          bold ? pw.FontWeight.bold : pw.FontWeight.normal))),
+          pw.SizedBox(width: 4),
           pw.Text(value,
               style: pw.TextStyle(
                   fontSize: 10,
