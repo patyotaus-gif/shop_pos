@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../widgets/compact_action.dart';
-import 'package:flutter/services.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
+import '../models/sale.dart';
+import '../models/receipt_profile.dart';
+import '../utils/receipt_generator.dart';
 import 'package:printing/printing.dart';
 import '../models/cart_item.dart';
 import '../models/product.dart';
@@ -274,26 +274,36 @@ class _OfflineCashState extends State<OfflineCashScreen>
   }
 
   Future<void> _print(Map<String, dynamic> bill) async {
-    final regular = pw.Font.ttf(
-        await rootBundle.load('assets/fonts/IBMPlexSansThai-Regular.ttf'));
-    final doc = pw.Document(theme: pw.ThemeData.withFont(base: regular));
-    doc.addPage(pw.Page(
-        pageFormat: PdfPageFormat.roll80,
-        build: (_) => pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Text(widget.permit['shopName'] as String),
-                  pw.Text('ใบเสร็จเงินสด · บันทึกออฟไลน์'),
-                  pw.Text('O-${bill['id']}',
-                      style: const pw.TextStyle(fontSize: 8)),
-                  pw.Text(bill['createdAt'] as String),
-                  ...(bill['displayItems'] as List).map((i) => pw.Text(
-                      '${i['name']} ${i['options']} x${i['quantity']}  ${i['subtotal']}')),
-                  pw.Text('รวม ${bill['total']} บาท'),
-                  pw.Text(
-                      'รับ ${bill['paid']} ทอน ${((bill['paid'] as num) - (bill['total'] as num)).toStringAsFixed(2)}'),
-                ])));
-    await Printing.layoutPdf(onLayout: (_) => doc.save());
+    final profile = bill['receiptProfile'] is Map
+        ? ReceiptProfile.fromMap(
+            Map<String, dynamic>.from(bill['receiptProfile']))
+        : ReceiptProfile.fromSettings(
+            Map<String, dynamic>.from(widget.permit['settings'] as Map? ?? {}),
+            allowVat: false);
+    final sale = Sale(
+        id: bill['id'],
+        receiptNo: 'O-${bill['id']}',
+        createdAt: DateTime.parse(bill['createdAt']).toLocal(),
+        items: (bill['displayItems'] as List)
+            .map((i) => SaleItem(
+                  productId: '',
+                  productName: i['name'],
+                  quantity: i['quantity'],
+                  price: (i['subtotal'] as num).toDouble() /
+                      (i['quantity'] as int),
+                  subtotal: (i['subtotal'] as num).toDouble(),
+                  notes: i['options'] as String?,
+                ))
+            .toList(),
+        total: (bill['total'] as num).toDouble(),
+        discount: 0,
+        paid: (bill['paid'] as num).toDouble(),
+        change: ((bill['paid'] as num) - (bill['total'] as num)).toDouble(),
+        staffName: bill['staffName'] as String?,
+        receiptProfile: profile);
+    final bytes = await ReceiptGenerator.buildDocument(sale,
+        profile: profile, paperWidthMm: 80);
+    await Printing.layoutPdf(onLayout: (_) async => bytes);
   }
 
   Future<void> _receipt(Map<String, dynamic> bill) => showDialog<void>(

@@ -43,6 +43,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _shopNameCtrl = TextEditingController();
   final _taxIdCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
+  final _branchCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _websiteCtrl = TextEditingController();
+  final _vatRateCtrl = TextEditingController(text: '7');
+  bool _receiptVatEnabled = false;
   final _lineUserIdCtrl = TextEditingController();
   final _promptpayIdCtrl = TextEditingController();
   final _promptpayNameCtrl = TextEditingController();
@@ -75,6 +80,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _shopNameCtrl.dispose();
     _taxIdCtrl.dispose();
     _addressCtrl.dispose();
+    _branchCtrl.dispose();
+    _phoneCtrl.dispose();
+    _websiteCtrl.dispose();
+    _vatRateCtrl.dispose();
     _lineUserIdCtrl.dispose();
     _promptpayIdCtrl.dispose();
     _promptpayNameCtrl.dispose();
@@ -127,6 +136,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _shopNameCtrl.text = (data['name'] as String?) ?? '';
           _taxIdCtrl.text = (data['taxId'] as String?) ?? '';
           _addressCtrl.text = (data['address'] as String?) ?? '';
+          _branchCtrl.text = (data['branch'] as String?) ?? '';
+          _phoneCtrl.text = (data['phone'] as String?) ?? '';
+          _websiteCtrl.text = (data['website'] as String?) ?? '';
+          _receiptVatEnabled = data['receiptVatEnabled'] == true;
+          _vatRateCtrl.text = '${data['receiptVatRate'] ?? 7}';
           _lineUserIdCtrl.text = (data['lineUserId'] as String?) ?? '';
           _lineNotifyEnabled = (data['lineNotifyEnabled'] as bool?) ?? false;
           _promptpayIdCtrl.text = (data['promptpayId'] as String?) ?? '';
@@ -333,19 +347,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _save() async {
+    if (_saving) return;
     final name = _shopNameCtrl.text.trim();
     if (name.isEmpty) return;
+    final rate = double.tryParse(_vatRateCtrl.text.trim());
+    if (_receiptVatEnabled &&
+        (!RegExp(r'^\d{13}$').hasMatch(_taxIdCtrl.text.trim()) ||
+            _addressCtrl.text.trim().isEmpty ||
+            rate == null ||
+            !rate.isFinite ||
+            rate <= 0 ||
+            rate > 100 ||
+            (rate * 100 - (rate * 100).round()).abs() > 0.000001)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'กรุณาระบุเลขผู้เสียภาษี 13 หลัก ที่อยู่ และอัตรา VAT มากกว่า 0 ถึง 100% (ทศนิยมไม่เกิน 2 ตำแหน่ง)')));
+      return;
+    }
     setState(() => _saving = true);
-    await SettingsService.saveSettings({
-      'name': name,
-      'taxId': _taxIdCtrl.text.trim(),
-      'address': _addressCtrl.text.trim(),
-    });
-    if (mounted) {
-      setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('บันทึกการตั้งค่าแล้ว')),
-      );
+    try {
+      await SettingsService.saveSettings({
+        'name': name,
+        'taxId': _taxIdCtrl.text.trim(),
+        'address': _addressCtrl.text.trim(),
+        'branch': _branchCtrl.text.trim(),
+        'phone': _phoneCtrl.text.trim(),
+        'website': _websiteCtrl.text.trim(),
+        'receiptVatEnabled': _receiptVatEnabled,
+        'receiptVatRate': _receiptVatEnabled ? rate : 7,
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('บันทึกการตั้งค่าแล้ว')));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('บันทึกไม่สำเร็จ กรุณาลองใหม่')));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -424,6 +465,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 16),
                       // Shop logo → head-band banner on the customer /order page.
+                      TextField(
+                          controller: _branchCtrl,
+                          decoration: const InputDecoration(
+                              labelText: 'สำนักงานใหญ่ / สาขา (ไม่บังคับ)',
+                              hintText: 'สำนักงานใหญ่ หรือ สาขา 00001')),
+                      const SizedBox(height: 12),
+                      TextField(
+                          controller: _phoneCtrl,
+                          keyboardType: TextInputType.phone,
+                          decoration: const InputDecoration(
+                              labelText: 'โทรศัพท์บนใบเสร็จ (ไม่บังคับ)')),
+                      const SizedBox(height: 12),
+                      TextField(
+                          controller: _websiteCtrl,
+                          keyboardType: TextInputType.url,
+                          decoration: const InputDecoration(
+                              labelText: 'เว็บไซต์บนใบเสร็จ (ไม่บังคับ)')),
+                      const SizedBox(height: 12),
+                      SwitchListTile.adaptive(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('ออกใบกำกับภาษีอย่างย่อ'),
+                        subtitle: const Text(
+                            'สำหรับร้านจด VAT ที่สินค้าทุกรายการและค่าบริการรวม VAT อัตราเดียวกันแล้ว'),
+                        value: _receiptVatEnabled,
+                        onChanged: (value) =>
+                            setState(() => _receiptVatEnabled = value),
+                      ),
+                      if (_receiptVatEnabled) ...[
+                        TextField(
+                            controller: _vatRateCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                            decoration: const InputDecoration(
+                                labelText: 'อัตรา VAT ที่รวมในราคา (%)',
+                                helperText:
+                                    'แยกภาษีจากยอดสุทธิ ไม่บวกเพิ่มยอดที่ลูกค้าจ่าย')),
+                        const SizedBox(height: 8),
+                        const Text(
+                            'ใช้กับบิลใหม่หลังบันทึก ไม่เพิ่ม VAT ให้บิลเก่า\nหากมีสินค้ายกเว้นภาษีหรือหลายอัตรา ให้ใช้ใบเสร็จทั่วไป',
+                            style: TextStyle(fontSize: 12)),
+                      ],
+                      const SizedBox(height: 16),
                       Row(
                         children: [
                           Container(

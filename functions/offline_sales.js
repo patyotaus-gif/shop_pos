@@ -33,11 +33,13 @@ function createOfflineSales({db, Timestamp, FieldValue, now = () => new Date()})
     const id = crypto.randomUUID(), secret = crypto.randomBytes(32).toString('hex');
     const permit = {uid:ctx.uid, shopId:ctx.shop.id, staffId:ctx.token.staffId || null, staffVersion:ctx.token.staffVersion ?? null,
       name:member?.name || 'เจ้าของร้าน', issuedAt:Timestamp.fromDate(issued), expiresAt:Timestamp.fromDate(expires), products, groups,
+      receiptProfile:require('./receipt_profile').receiptProfile(settings.data()),
       secretHash:crypto.createHash('sha256').update(secret).digest('hex')};
     if (Buffer.byteLength(JSON.stringify(permit)) > 800000) fail('resource-exhausted', 'ข้อมูลสินค้าสำหรับออฟไลน์เกินขนาดที่รองรับ');
     await ctx.shop.collection('offlinePermits').doc(id).create(permit);
     const cfg=settings.data() || {};
     return {id,secret,uid:ctx.uid,shopId:ctx.shop.id,name:permit.name,shopName:shop.name || '',issuedAt:issued.toISOString(),expiresAt:expires.toISOString(),
+      receiptProfile:permit.receiptProfile,
       products:products.map(({costPrice,...p})=>p), groups:groups.map(g=>({id:g.id,name:g.name,required:g.required===true,multiSelect:g.multiSelect===true,
         options:(g.options||[]).map(o=>({id:o.id,name:o.name,priceAdjust:Number(o.priceAdjust||0)}))})),
       settings:{name:cfg.name || shop.name || '',address:cfg.address || '',taxId:cfg.taxId || ''}};
@@ -86,7 +88,8 @@ function createOfflineSales({db, Timestamp, FieldValue, now = () => new Date()})
       const sale={items,total,paid:data.paid,change:Math.round((data.paid-total)*100)/100,discount:0,paymentMethod:'cash',isDebt:false,isRefunded:false,
         createdAt:Timestamp.fromDate(sold),syncedAt:Timestamp.fromDate(now()),receiptNo,staffName:p.name,staffId:p.staffId,staffUid:p.uid,
         offline:true,offlinePermitId:data.permitId,offlineDigest:digest,offlineReview:review,needsReview:review.length>0,
-        accountingVersion:1,stockDeducted:Object.fromEntries(updates.map(u=>[u.ref.id,u.qty]))};
+        accountingVersion:1,stockDeducted:Object.fromEntries(updates.map(u=>[u.ref.id,u.qty])),
+        ...(p.receiptProfile?{receiptProfile:p.receiptProfile}:{})};
       tx.create(saleRef,sale);
       writeMovement(tx,ctx.shop,context,'sale-'+saleRef.id,{...saleMovement(sale,ctx.uid),saleId:saleRef.id},FieldValue);
       for(const u of updates)tx.update(u.ref,{stock:FieldValue.increment(-u.qty)});

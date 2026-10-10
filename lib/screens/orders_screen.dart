@@ -45,14 +45,40 @@ class _OrdersScreenState extends State<OrdersScreen> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('ออเดอร์'), centerTitle: true),
+      appBar: AppBar(
+        title: const Text('ออเดอร์ออนไลน์'),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            tooltip: 'หน้านี้แสดงรายการอะไร',
+            icon: const Icon(Icons.help_outline),
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('ออเดอร์ออนไลน์'),
+                content: const Text(
+                    'รายการที่ลูกค้าสั่งผ่านลิงก์หรือ QR ของร้าน\n\n'
+                    'งานค้าง: งานที่ยังไม่เสร็จ รวมรายการรอตรวจเงิน\n'
+                    'นัดล่วงหน้า: นัดรับตั้งแต่วันถัดไป หากมีหลักฐานรอตรวจจะอยู่ในงานค้าง\n'
+                    'ประวัติ: ออเดอร์ที่เสร็จแล้วหรือยกเลิก\n\n'
+                    'บิลขายที่เคาน์เตอร์และบิลโต๊ะ ดูได้ที่ รายงาน → รายงานยอดขาย → ประวัติการขาย'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('เข้าใจแล้ว')),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
       body: StreamBuilder<List<ShopOrder>>(
         stream: _orders,
         builder: (context, snap) {
           if (snap.hasError) {
             return Center(
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Text('โหลดออเดอร์ไม่สำเร็จ กรุณาตรวจการเชื่อมต่อ'),
+              const Text('โหลดออเดอร์ออนไลน์ไม่สำเร็จ กรุณาตรวจการเชื่อมต่อ'),
               TextButton.icon(
                   onPressed: _retry,
                   icon: const Icon(Icons.refresh),
@@ -67,7 +93,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           final orders = all
               .where((o) => matchesQueue(o, _filter, now))
               .toList()
-            ..sort((a, b) => _filter == OrderQueue.all
+            ..sort((a, b) => _filter == OrderQueue.history
                 ? b.createdAt.compareTo(a.createdAt)
                 : orderDueAt(a).compareTo(orderDueAt(b)));
           return Column(children: [
@@ -89,7 +115,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
             Divider(height: 1, color: cs.outlineVariant),
             Expanded(
                 child: orders.isEmpty
-                    ? Center(child: Text('ไม่มีออเดอร์ในหมวด ${_filter.label}'))
+                    ? Center(
+                        child:
+                            Text('ไม่มีออเดอร์ออนไลน์ในหมวด ${_filter.label}'))
                     : ListView.builder(
                         padding: const EdgeInsets.all(12),
                         itemCount: orders.length,
@@ -396,7 +424,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       ShopDatabase.shop.collection('orders').doc(widget.orderId).snapshots();
   @override
   Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: const Text('รายละเอียดออเดอร์')),
+      appBar: AppBar(title: const Text('รายละเอียดออเดอร์ออนไลน์')),
       body: StreamBuilder(
           stream: _stream,
           builder: (context, snap) {

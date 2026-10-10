@@ -15,7 +15,8 @@ import 'package:shop_pos/screens/restaurant_sales_screen.dart';
 import 'package:shop_pos/screens/pos_screen.dart';
 import 'package:shop_pos/models/sale.dart';
 
-ShopOrder order(OrderStatus status, {DateTime? pickup, bool slip = false}) =>
+ShopOrder order(OrderStatus status,
+        {DateTime? pickup, bool slip = false, bool bankMatchPending = false}) =>
     ShopOrder(
         id: 'order',
         customerName: 'ลูกค้า',
@@ -25,6 +26,7 @@ ShopOrder order(OrderStatus status, {DateTime? pickup, bool slip = false}) =>
         status: status,
         createdAt: DateTime.utc(2026, 10, 9, 10),
         pickupStartAt: pickup,
+        bankMatchPending: bankMatchPending,
         slipUrl: slip ? 'https://example.test/slip' : null);
 
 void main() {
@@ -56,7 +58,6 @@ void main() {
     final tomorrow = DateTime.utc(2026, 10, 9, 17, 10);
     final future = order(OrderStatus.paid, pickup: tomorrow);
     expect(matchesQueue(future, OrderQueue.future, now), isTrue);
-    expect(matchesQueue(future, OrderQueue.preparation, now), isFalse);
     expect(matchesQueue(future, OrderQueue.action, now), isFalse);
     expect(
         matchesQueue(
@@ -70,7 +71,7 @@ void main() {
         isFalse);
     expect(
         matchesQueue(
-            future, OrderQueue.preparation, DateTime.utc(2026, 10, 9, 17, 1)),
+            future, OrderQueue.action, DateTime.utc(2026, 10, 9, 17, 1)),
         isTrue);
     expect(
         pickupUrgency(
@@ -83,6 +84,43 @@ void main() {
     final sorted = [future, order(OrderStatus.accepted, pickup: now)]
       ..sort((a, b) => orderDueAt(a).compareTo(orderDueAt(b)));
     expect(sorted.first.status, OrderStatus.accepted);
+  });
+
+  test(
+      'three order groups retain every status exactly once, including overdue work',
+      () {
+    final now = DateTime.utc(2026, 10, 9, 16, 50);
+    final tomorrow = DateTime.utc(2026, 10, 9, 17, 10);
+    for (final status in OrderStatus.values) {
+      for (final pickup in [
+        null,
+        now.subtract(const Duration(days: 1)),
+        now,
+        tomorrow
+      ]) {
+        for (final slip in [false, true]) {
+          for (final bank in [false, true]) {
+            final item = order(status,
+                pickup: pickup, slip: slip, bankMatchPending: bank);
+            final groups = OrderQueue.values
+                .where((q) => matchesQueue(item, q, now))
+                .toList();
+            expect(groups, hasLength(1),
+                reason: '$status / $pickup / $slip / $bank');
+            if (status == OrderStatus.completed ||
+                status == OrderStatus.cancelled) {
+              expect(groups.single, OrderQueue.history);
+            } else if (pickup == tomorrow &&
+                !bank &&
+                !(slip && status == OrderStatus.pendingPayment)) {
+              expect(groups.single, OrderQueue.future);
+            } else {
+              expect(groups.single, OrderQueue.action);
+            }
+          }
+        }
+      }
+    }
   });
 
   testWidgets(

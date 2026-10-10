@@ -482,12 +482,12 @@ class _MainShellState extends State<MainShell> {
               AppNavigationItem(
                 screen: showDebts
                     ? WorkspaceSections(
-                        labels: const ['ออเดอร์', 'ลูกหนี้ / ค้างชำระ'],
+                        labels: const ['ออเดอร์ออนไลน์', 'ลูกหนี้ / ค้างชำระ'],
                         pages: [const OrdersScreen(), const DebtScreen()])
                     : const OrdersScreen(),
                 icon: Icons.shopping_bag_outlined,
                 selectedIcon: Icons.shopping_bag,
-                label: 'ออเดอร์',
+                label: 'สั่งออนไลน์',
                 badgeCount: newCount,
               ),
               const AppNavigationItem(

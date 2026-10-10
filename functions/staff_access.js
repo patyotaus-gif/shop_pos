@@ -168,6 +168,8 @@ function createStaffAccess({db, auth, FieldValue, Timestamp, now=()=>new Date()}
         paymentMethod,...(salesChannel?{salesChannel}:{}),isDebt:false,isRefunded:false,createdAt:Timestamp.fromDate(now()),staffName:member.data().name,staffId:ctx.user.token.staffId,
         staffUid:ctx.user.uid,requestDigest:digest,receiptNo:`S-${day}-${String(seq).padStart(3,'0')}`};
       const context=await ledgerContext(tx,ctx.ref);
+      const receiptSettings=await tx.get(ctx.ref.collection('settings').doc('shop'));
+      sale.receiptProfile=require('./receipt_profile').receiptProfile(receiptSettings.data());
       sale.accountingVersion=1;
       sale.ingredientsDeducted=true;
       sale.ingredientUsage=Object.fromEntries(ingredientUpdates.map(u=>[u.ref.id,u.qty]));

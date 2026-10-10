@@ -171,6 +171,8 @@ class OfflineService {
       'paid': paid,
       'discount': 0,
       'paymentMethod': 'cash',
+      if (p['receiptProfile'] is Map) 'receiptProfile': p['receiptProfile'],
+      'staffName': p['name'],
       'items': cart
           .map((i) => {
                 'productId': i.product.id,

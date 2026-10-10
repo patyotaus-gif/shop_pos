@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'ingredient_checkout.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/receipt_profile.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/order_modifier.dart';
@@ -286,6 +287,8 @@ class TableService {
         throw StateError('โต๊ะเปลี่ยนบิลแล้ว กรุณาเปิดหน้าโต๊ะใหม่');
       }
       final counterSnap = await tx.get(counterRef);
+      final receiptSettings =
+          await tx.get(_shopDoc().collection('settings').doc('shop'));
       final itemsSubtotal =
           order.items.fold<double>(0, (s, i) => s + i.subtotal);
       final serviceCharge = serviceChargePercent <= 0
@@ -364,6 +367,8 @@ class TableService {
 
       tx.set(saleRef, {
         ...sale.toFirestore(),
+        'receiptProfile':
+            ReceiptProfile.fromSettings(receiptSettings.data() ?? {}).toMap(),
         'receiptNo': formatReceiptNo(next.day, next.seq),
         'accountingVersion': 1,
         'stockDeducted': counted,

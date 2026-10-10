@@ -47,10 +47,12 @@ async function confirmOrder({db,FieldValue,shopId,orderId,actor,paymentRef,strip
     }
     const release=await require('./order_inventory').prepareRelease(tx,shop,order);
     const context=await ledgerContext(tx,shop);
+    const receiptSettings=await tx.get(shop.collection('settings').doc('shop'));
     const now=FieldValue.serverTimestamp();
     const sale={items:order.items.map(i=>({...i,subtotal:minor(i.price*i.quantity)/100})),total:amount/100,
       discount:0,paid:amount/100,change:0,paymentMethod:stripeSession?'online':'qr',salesChannel:order.orderType==='dineInPrepaid'?'dineIn':'takeaway',
       isDebt:false,isRefunded:false,customerName:order.customerName||'',createdAt:now,orderId,
+      receiptProfile:require('./receipt_profile').receiptProfile(receiptSettings.data()),
       receiptNo:'WEB-'+orderId,accountingVersion:1,needsReview:review.length>0,offlineReview:review,
       stockDeducted:Object.fromEntries(updates.map(u=>[u.ref.id,u.quantity])),
       ...(order.inventoryReservation?{ingredientsDeducted:true,ingredientUsage:Object.fromEntries(ingredientUpdates.map(u=>[u.ref.id,u.qty]))}:{}),

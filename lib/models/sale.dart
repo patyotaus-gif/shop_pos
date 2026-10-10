@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'order_modifier.dart';
+import 'receipt_profile.dart';
 
 enum PaymentMethod { cash, transfer, qr, online }
 
@@ -140,6 +141,7 @@ class Sale {
 
   /// Restaurant table this bill closed from (null for retail/takeaway).
   final String? tableName;
+  final ReceiptProfile? receiptProfile;
 
   const Sale({
     required this.id,
@@ -163,6 +165,7 @@ class Sale {
     this.receiptNo,
     this.offlineReview = const [],
     this.tableName,
+    this.receiptProfile,
   });
 
   /// Sum of line item subtotals — total minus service charge plus discount.
@@ -220,6 +223,10 @@ class Sale {
         offlineReview:
             List<String>.from(data['offlineReview'] as List? ?? const []),
         tableName: data['tableName'] as String?,
+        receiptProfile: data['receiptProfile'] is Map
+            ? ReceiptProfile.fromMap(
+                Map<String, dynamic>.from(data['receiptProfile']))
+            : null,
       );
 
   Map<String, dynamic> toFirestore() => {
@@ -240,5 +247,6 @@ class Sale {
         if (staffName != null) 'staffName': staffName,
         if (receiptNo != null) 'receiptNo': receiptNo,
         if (tableName != null) 'tableName': tableName,
+        if (receiptProfile != null) 'receiptProfile': receiptProfile!.toMap(),
       };
 }

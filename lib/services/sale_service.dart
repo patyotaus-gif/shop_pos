@@ -17,6 +17,7 @@ import 'shop_database.dart';
 import 'auth_service.dart';
 import 'staff_access_service.dart';
 import 'money_ledger.dart';
+import '../models/receipt_profile.dart';
 
 class SaleService {
   static DocumentReference<Map<String, dynamic>> _shopDoc() =>
@@ -201,6 +202,8 @@ class SaleService {
         return Sale.fromFirestore(existing.data()!, existing.id);
       }
       final counter = await tx.get(counterRef);
+      final receiptSettings =
+          await tx.get(shop.collection('settings').doc('shop'));
       final quantities = <String, int>{};
       for (final item in draft.items) {
         quantities.update(item.productId, (q) => q + item.quantity,
@@ -239,6 +242,8 @@ class SaleService {
           (counter.data()?['seq'] as num? ?? 0).toInt());
       final payload = {
         ...draft.toFirestore(),
+        'receiptProfile':
+            ReceiptProfile.fromSettings(receiptSettings.data() ?? {}).toMap(),
         'receiptNo': formatReceiptNo(next.day, next.seq),
         'accountingVersion': 1,
         'stockDeducted': counted,
