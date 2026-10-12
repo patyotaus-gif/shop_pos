@@ -1,10 +1,11 @@
 import 'order.dart';
 
-enum OrderQueue { action, future, history }
+enum OrderQueue { confirmation, preparing, future, history }
 
 extension OrderQueueLabel on OrderQueue {
   String get label => switch (this) {
-        OrderQueue.action => 'งานค้าง',
+        OrderQueue.confirmation => 'รอยืนยัน',
+        OrderQueue.preparing => 'กำลังเตรียม',
         OrderQueue.future => 'นัดล่วงหน้า',
         OrderQueue.history => 'ประวัติ',
       };
@@ -27,8 +28,13 @@ bool matchesQueue(ShopOrder order, OrderQueue queue, DateTime now) {
   // Evidence requiring review stays actionable even for a future pickup.
   final needsReview = order.bankMatchPending ||
       order.slipUrl != null && order.status == OrderStatus.pendingPayment;
+  final needsConfirmation = needsReview ||
+      order.status == OrderStatus.pendingPayment ||
+      order.status == OrderStatus.paid;
+  final current = active && (!future || needsReview);
   return switch (queue) {
-    OrderQueue.action => active && (!future || needsReview),
+    OrderQueue.confirmation => current && needsConfirmation,
+    OrderQueue.preparing => current && !needsConfirmation,
     OrderQueue.future => active && future && !needsReview,
     OrderQueue.history => !active,
   };

@@ -22,7 +22,7 @@ class OrdersScreen extends StatefulWidget {
 }
 
 class _OrdersScreenState extends State<OrdersScreen> {
-  OrderQueue _filter = OrderQueue.action;
+  OrderQueue _filter = OrderQueue.confirmation;
   late Stream<List<ShopOrder>> _orders = OrderService.watchAll();
   Timer? _clock;
   @override
@@ -46,7 +46,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ออเดอร์ออนไลน์'),
+        title: const Text('ออเดอร์'),
         centerTitle: true,
         actions: [
           IconButton(
@@ -55,11 +55,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
             onPressed: () => showDialog<void>(
               context: context,
               builder: (ctx) => AlertDialog(
-                title: const Text('ออเดอร์ออนไลน์'),
+                title: const Text('ออเดอร์'),
                 content: const Text(
                     'รายการที่ลูกค้าสั่งผ่านลิงก์หรือ QR ของร้าน\n\n'
-                    'งานค้าง: งานที่ยังไม่เสร็จ รวมรายการรอตรวจเงิน\n'
-                    'นัดล่วงหน้า: นัดรับตั้งแต่วันถัดไป หากมีหลักฐานรอตรวจจะอยู่ในงานค้าง\n'
+                    'รอยืนยัน: รอชำระ รอตรวจเงิน หรือชำระแล้วรอร้านรับออเดอร์\n'
+                    'กำลังเตรียม: ร้านรับออเดอร์แล้ว รวมรายการพร้อมรับที่ยังไม่ส่งมอบ\n'
+                    'นัดล่วงหน้า: นัดรับตั้งแต่วันถัดไป หากมีหลักฐานรอตรวจจะอยู่ในรอยืนยัน\n'
                     'ประวัติ: ออเดอร์ที่เสร็จแล้วหรือยกเลิก\n\n'
                     'บิลขายที่เคาน์เตอร์และบิลโต๊ะ ดูได้ที่ รายงาน → รายงานยอดขาย → ประวัติการขาย'),
                 actions: [
@@ -78,7 +79,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           if (snap.hasError) {
             return Center(
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Text('โหลดออเดอร์ออนไลน์ไม่สำเร็จ กรุณาตรวจการเชื่อมต่อ'),
+              const Text('โหลดออเดอร์ไม่สำเร็จ กรุณาตรวจการเชื่อมต่อ'),
               TextButton.icon(
                   onPressed: _retry,
                   icon: const Icon(Icons.refresh),
@@ -117,7 +118,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 child: orders.isEmpty
                     ? Center(
                         child:
-                            Text('ไม่มีออเดอร์ออนไลน์ในหมวด ${_filter.label}'))
+                            Text('ไม่มีออเดอร์ในหมวด ${_filter.label}'))
                     : ListView.builder(
                         padding: const EdgeInsets.all(12),
                         itemCount: orders.length,
@@ -424,7 +425,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       ShopDatabase.shop.collection('orders').doc(widget.orderId).snapshots();
   @override
   Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: const Text('รายละเอียดออเดอร์ออนไลน์')),
+      appBar: AppBar(title: const Text('รายละเอียดออเดอร์')),
       body: StreamBuilder(
           stream: _stream,
           builder: (context, snap) {

@@ -23,6 +23,7 @@ class ReceiptGenerator {
   };
 
   static final _baht = NumberFormat('#,##0.00', 'th_TH');
+  static final _percent = NumberFormat('0.##', 'th_TH');
   static String saleDate(DateTime date) {
     String two(int n) => n.toString().padLeft(2, '0');
     return '${two(date.day)}/${two(date.month)}/${date.year + 543} '
@@ -143,7 +144,7 @@ class ReceiptGenerator {
         ),
       if (profile.taxId.isNotEmpty)
         pw.Center(
-          child: await text('เลขประจำตัวผู้เสียภาษี\n${profile.taxId}',
+          child: await text('เลขประจำตัวผู้เสียภาษีอากร\n${profile.taxId}',
               textAlign: pw.TextAlign.center,
               style: pw.TextStyle(fontSize: 8 * fontScale)),
         ),
@@ -188,8 +189,6 @@ class ReceiptGenerator {
               style: pw.TextStyle(fontSize: 9 * fontScale)),
         ),
       pw.Divider(),
-      await row('รายการ / จำนวน × ราคาต่อหน่วย', 'รวมเงิน', fontSize: 7),
-      pw.SizedBox(height: 4),
       for (final item in sale.items)
         pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -241,7 +240,7 @@ class ReceiptGenerator {
         pw.Divider(),
         await row('มูลค่าก่อนภาษี', _baht.format(vat.netMinor / 100),
             fontSize: 9),
-        await row('ภาษีมูลค่าเพิ่ม ${_baht.format(profile.vatRate)}%',
+        await row('ภาษีมูลค่าเพิ่ม ${_percent.format(profile.vatRate)}%',
             _baht.format(vat.vatMinor / 100),
             fontSize: 9),
         await text('ราคานี้รวมภาษีมูลค่าเพิ่มแล้ว',
@@ -254,7 +253,7 @@ class ReceiptGenerator {
           '${_baht.format(sale.total / sale.splitCount)} / คน',
         ),
       if (!sale.isDebt) ...[
-        await row(sale.paymentMethod.label, _baht.format(sale.paid)),
+        await row('ชำระโดย ${sale.paymentMethod.label}', _baht.format(sale.paid)),
         if (sale.paymentMethod == PaymentMethod.cash)
           await row('เงินทอน', _baht.format(sale.change)),
       ],

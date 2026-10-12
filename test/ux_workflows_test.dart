@@ -58,11 +58,11 @@ void main() {
     final tomorrow = DateTime.utc(2026, 10, 9, 17, 10);
     final future = order(OrderStatus.paid, pickup: tomorrow);
     expect(matchesQueue(future, OrderQueue.future, now), isTrue);
-    expect(matchesQueue(future, OrderQueue.action, now), isFalse);
+    expect(matchesQueue(future, OrderQueue.confirmation, now), isFalse);
     expect(
         matchesQueue(
             order(OrderStatus.pendingPayment, pickup: tomorrow, slip: true),
-            OrderQueue.action,
+            OrderQueue.confirmation,
             now),
         isTrue);
     expect(
@@ -71,7 +71,7 @@ void main() {
         isFalse);
     expect(
         matchesQueue(
-            future, OrderQueue.action, DateTime.utc(2026, 10, 9, 17, 1)),
+            future, OrderQueue.confirmation, DateTime.utc(2026, 10, 9, 17, 1)),
         isTrue);
     expect(
         pickupUrgency(
@@ -87,7 +87,7 @@ void main() {
   });
 
   test(
-      'three order groups retain every status exactly once, including overdue work',
+      'four order groups retain every status exactly once, including overdue work',
       () {
     final now = DateTime.utc(2026, 10, 9, 16, 50);
     final tomorrow = DateTime.utc(2026, 10, 9, 17, 10);
@@ -114,8 +114,12 @@ void main() {
                 !bank &&
                 !(slip && status == OrderStatus.pendingPayment)) {
               expect(groups.single, OrderQueue.future);
+            } else if (bank ||
+                status == OrderStatus.pendingPayment ||
+                status == OrderStatus.paid) {
+              expect(groups.single, OrderQueue.confirmation);
             } else {
-              expect(groups.single, OrderQueue.action);
+              expect(groups.single, OrderQueue.preparing);
             }
           }
         }

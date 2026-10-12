@@ -30,7 +30,7 @@ function handler({db, FieldValue, verifyAppCheck}) {
         const settings=(await tx.get(shop.collection('settings').doc('shop'))).data() || {};
         let status=o.status;
         if(action==='cancel' && status!=='cancelled') {
-          if(status!=='pendingPayment' || o.paidAt || o.saleId || o.slipUrl || o.slipSubmittedAt || o.bankMatchStatus || o.bankMatchAt || o.autoConfirmed || o.paymentRef || o.stripeSessionId)
+          if(status!=='pendingPayment' || o.paidAt || o.saleId || o.slipUrl || o.slipSubmittedAt || o.bankMatchStatus || o.bankMatchAt || o.autoConfirmed || o.paymentRef || require('./online_payment_evidence').requiresGatewayVerification(o))
             throw Object.assign(Error('ออเดอร์มีข้อมูลการชำระแล้ว กรุณาติดต่อร้านเพื่อตรวจสอบ โดยไม่ต้องโอนซ้ำ'),{status:409});
           status='cancelled';
           const release=await require('./order_inventory').prepareRelease(tx,shop,o);

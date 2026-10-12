@@ -1,5 +1,6 @@
 'use strict';
 const {minor,ledgerContext,writeMovement,saleMovement}=require('./money_ledger');
+const {requiresGatewayVerification,verifyOmisePayment}=require('./online_payment_evidence');
 const validId=x=>typeof x==='string' && x.length>0 && x.length<=200 && !x.includes('/');
 function owner(request,HttpsError) {
   const {shopId}=request.data||{};
@@ -7,7 +8,7 @@ function owner(request,HttpsError) {
   if(!validId(shopId)) throw new HttpsError('invalid-argument','Invalid shop');
   return shopId;
 }
-async function confirmOrder({db,FieldValue,shopId,orderId,actor,paymentRef,stripeSession}) {
+async function confirmOrder({db,FieldValue,shopId,orderId,actor,paymentRef,stripeSession,omisePayment}) {
   if(!validId(shopId)||!validId(orderId)) throw new Error('Invalid order');
   const shop=db.collection('shops').doc(shopId), orderRef=shop.collection('orders').doc(orderId);
   const saleRef=shop.collection('sales').doc('order-'+orderId);
@@ -17,13 +18,17 @@ async function confirmOrder({db,FieldValue,shopId,orderId,actor,paymentRef,strip
     const orderSnap=await tx.get(orderRef), prior=await tx.get(saleRef);
     if(!orderSnap.exists) throw new Error('Order not found');
     const order=orderSnap.data();
+    if (stripeSession && omisePayment) throw new Error('Conflicting payment providers');
+    if (stripeSession && (order.paymentMethod==='omise' || order.omise)) throw new Error('Wrong payment provider');
+    const omise = omisePayment ? verifyOmisePayment({order,shopId,orderId,payment:omisePayment}) : null;
+    if (!omise && (order.paymentMethod==='omise' || order.omise)) throw new Error('Await verified Omise payment');
     if(prior.exists) return {saleId:saleRef.id,alreadyRecorded:true};
     if(legacy.docs.length) return {saleId:legacy.docs[0].id,alreadyRecorded:true,legacy:true};
     if(order.status==='cancelled') throw new Error('Cancelled order requires payment reconciliation');
     if(order.status!=='pendingPayment') throw new Error('Historical paid order requires reconciliation');
     const amount=minor(stripeSession ? order.total : (order.finalAmount??order.total));
     if(stripeSession && (stripeSession.payment_status!=='paid' || stripeSession.currency!=='thb' || stripeSession.amount_total!==amount)) throw new Error('Payment amount or status mismatch');
-    if(!stripeSession && (order.paymentMethod==='stripe' || order.stripeSessionId)) throw new Error('Await verified online payment');
+    if(!stripeSession && !omise && requiresGatewayVerification(order)) throw new Error('Await verified online payment');
     if(!Array.isArray(order.items)||!order.items.length) throw new Error('Empty order');
     const quantities=new Map();
     for(const i of order.items) {
@@ -50,19 +55,20 @@ async function confirmOrder({db,FieldValue,shopId,orderId,actor,paymentRef,strip
     const receiptSettings=await tx.get(shop.collection('settings').doc('shop'));
     const now=FieldValue.serverTimestamp();
     const sale={items:order.items.map(i=>({...i,subtotal:minor(i.price*i.quantity)/100})),total:amount/100,
-      discount:0,paid:amount/100,change:0,paymentMethod:stripeSession?'online':'qr',salesChannel:order.orderType==='dineInPrepaid'?'dineIn':'takeaway',
+      discount:0,paid:amount/100,change:0,paymentMethod:stripeSession||omise?'online':'qr',salesChannel:order.orderType==='dineInPrepaid'?'dineIn':'takeaway',
       isDebt:false,isRefunded:false,customerName:order.customerName||'',createdAt:now,orderId,
       receiptProfile:require('./receipt_profile').receiptProfile(receiptSettings.data()),
       receiptNo:'WEB-'+orderId,accountingVersion:1,needsReview:review.length>0,offlineReview:review,
       stockDeducted:Object.fromEntries(updates.map(u=>[u.ref.id,u.quantity])),
       ...(order.inventoryReservation?{ingredientsDeducted:true,ingredientUsage:Object.fromEntries(ingredientUpdates.map(u=>[u.ref.id,u.qty]))}:{}),
-      ...(stripeSession?{stripePaymentIntentId:stripeSession.payment_intent||null}:{})};
+      ...(stripeSession?{stripePaymentIntentId:stripeSession.payment_intent||null}:{}),
+      ...(omise?{paymentProvider:'omise',omiseChargeId:omise.chargeId,omiseMerchantId:omise.merchantId}:{})};
     tx.create(saleRef,sale);
     release();
     for(const u of updates)tx.update(u.ref,{stock:FieldValue.increment(-u.quantity)});
     for(const u of ingredientUpdates)tx.update(u.ref,{stock:FieldValue.increment(-u.qty)});
-    tx.update(orderRef,{status:'paid',paidAt:now,saleId:saleRef.id,paymentRef:paymentRef||null,
-      confirmedBy:actor,...(stripeSession?{stripeSessionId:stripeSession.id}:{autoConfirmed:false})});
+    tx.update(orderRef,{status:'paid',paidAt:now,saleId:saleRef.id,paymentRef:omise?.chargeId||paymentRef||null,
+      confirmedBy:actor,...(stripeSession?{stripeSessionId:stripeSession.id}:{autoConfirmed:!!omise})});
     writeMovement(tx,shop,context,'sale-'+saleRef.id,{...saleMovement(sale,actor),saleId:saleRef.id,orderId},FieldValue);
     return {saleId:saleRef.id,alreadyRecorded:false};
   });
@@ -85,7 +91,7 @@ function handlers({db,FieldValue,HttpsError}) {
         const next={paid:'accepted',accepted:'ready',ready:'completed'};
         if(status==='cancelled'){
           if(old.status!=='pendingPayment'||old.paidAt||old.saleId)throw new HttpsError('failed-precondition','บิลชำระแล้ว กรุณาคืนเงินจากรายการขาย');
-          if(old.paymentMethod==='stripe'||old.stripeSessionId)throw new HttpsError('failed-precondition','ต้องตรวจสอบสถานะชำระเงินออนไลน์ก่อนยกเลิก');
+          if(requiresGatewayVerification(old))throw new HttpsError('failed-precondition','ต้องตรวจสอบสถานะชำระเงินออนไลน์ก่อนยกเลิก');
           if(typeof reason!=='string'||!reason.trim())throw new HttpsError('invalid-argument','กรุณาระบุเหตุผลยกเลิก');
         } else if(next[old.status]!==status)throw new HttpsError('failed-precondition','สถานะออเดอร์เปลี่ยนแล้ว');
         if(status==='cancelled'){

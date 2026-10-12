@@ -1,6 +1,7 @@
 import '../widgets/line_link_card.dart';
 import '../widgets/compact_action.dart';
 import '../widgets/settings_sections.dart';
+import '../widgets/online_payment_readiness.dart';
 import 'dart:io';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -8,6 +9,7 @@ import 'user_switch_screen.dart';
 
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../theme/operational_colors.dart';
 import '../widgets/social_auth_buttons.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
@@ -140,7 +142,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _phoneCtrl.text = (data['phone'] as String?) ?? '';
           _websiteCtrl.text = (data['website'] as String?) ?? '';
           _receiptVatEnabled = data['receiptVatEnabled'] == true;
-          _vatRateCtrl.text = '${data['receiptVatRate'] ?? 7}';
+          final storedRate = data['receiptVatRate'] ?? 7;
+          _vatRateCtrl.text = storedRate is num
+              ? NumberFormat('0.##', 'th_TH').format(storedRate)
+              : '$storedRate';
           _lineUserIdCtrl.text = (data['lineUserId'] as String?) ?? '';
           _lineNotifyEnabled = (data['lineNotifyEnabled'] as bool?) ?? false;
           _promptpayIdCtrl.text = (data['promptpayId'] as String?) ?? '';
@@ -446,7 +451,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         keyboardType: TextInputType.number,
                         maxLength: 13,
                         decoration: const InputDecoration(
-                          labelText: 'เลขประจำตัวผู้เสียภาษี (ไม่บังคับ)',
+                          labelText: 'เลขประจำตัวผู้เสียภาษีอากร (ไม่บังคับ)',
                           hintText: '0000000000000',
                           border: OutlineInputBorder(),
                           counterText: '',
@@ -1064,6 +1069,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: 32),
                       const Divider(),
                       const SizedBox(height: 16),
+
+                      const OnlinePaymentReadiness(),
+                      const SizedBox(height: 24),
 
                       // PromptPay payment section
                       Text('รับเงินออนไลน์ (PromptPay)',

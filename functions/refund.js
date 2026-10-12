@@ -7,6 +7,9 @@ async function refundSale({db,stripe,shopId,saleId,reason,returnToStock=false,re
   if(!snapshot.exists)throw new Error('ไม่พบบิล');
   const sale=snapshot.data();
   if(sale.isRefunded)return {success:true,stripeRefundId:sale.stripeRefundId||null};
+  // Live Omise checkout remains disabled until its provider refund lifecycle is
+  // implemented. Never record a local refund as if external money was returned.
+  if(sale.paymentProvider==='omise'||sale.omiseChargeId)throw new Error('ต้องตรวจและคืนเงินผ่าน Omise ก่อนบันทึกคืนเงินในระบบ');
   if(returnToStock&&!sale.stockDeducted)throw new Error('บิลเก่าไม่มีประวัติตัดสต็อก กรุณาตรวจสต็อกแยก');
   let stripeRefundId=null, stripeRefundStatus=null;
   if(sale.stripePaymentIntentId){

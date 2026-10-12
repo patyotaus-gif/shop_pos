@@ -52,6 +52,8 @@ function createSlipUpload({db, getBucket, FieldValue, verifyAppCheck, logger=con
       if(order.data().customerTokenHash && !require('./customer_order').authorized(order.data(),customerToken))
         throw new SlipError(403,'invalid_access','เปิดออเดอร์จากเบราว์เซอร์ที่ใช้สั่ง หรือสอบถามร้านพร้อมเลขออเดอร์');
       if (order.data().status !== 'pendingPayment') throw new SlipError(409,'order_processed','ออเดอร์นี้ดำเนินการแล้ว กรุณาตรวจสอบกับร้านก่อนส่งสลิปซ้ำ');
+      if (require('./online_payment_evidence').requiresGatewayVerification(order.data()))
+        throw new SlipError(409,'gateway_payment','รายการนี้ต้องตรวจผลจากผู้ให้บริการชำระเงิน ไม่ต้องส่งสลิปหรือโอนซ้ำ');
       stage='decodeImage';
       const bytes=await decodeSlip(slipBase64);
       stage='saveImage';
@@ -67,7 +69,8 @@ function createSlipUpload({db, getBucket, FieldValue, verifyAppCheck, logger=con
       stage='attachOrder';
       attached=await db.runTransaction(async tx=>{
         const latest=await tx.get(ref);
-        if (!latest.exists || latest.data().status !== 'pendingPayment') return false;
+        if (!latest.exists || latest.data().status !== 'pendingPayment' ||
+            require('./online_payment_evidence').requiresGatewayVerification(latest.data())) return false;
         tx.update(ref,{slipUrl,slipReviewStatus:'awaitingOwner',slipSubmittedAt:FieldValue.serverTimestamp()});
         return true;
       });

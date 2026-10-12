@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>ทดสอบการชำระเงิน · Pokpok</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#faf7f2;color:#292323;font:16px/1.65 system-ui,sans-serif}
+    main{max-width:540px;margin:32px auto;padding:24px}h1{font-size:25px;margin:8px 0}.brand{color:#801d30;font-weight:700}
+    .notice{background:#fff0c2;border:1px solid #d9bb66;padding:14px;border-radius:12px}.panel{background:white;border:1px solid #e4d9d3;border-radius:16px;padding:20px;margin-top:18px}
+    label{display:block;margin:12px 0 4px}input,select,button{font:inherit;max-width:100%;border-radius:9px;padding:10px 14px}
+    input,select{width:100%;border:1px solid #b4a39d}button{cursor:pointer;border:1px solid #801d30;color:#801d30;background:white;margin:8px 6px 0 0;min-height:44px}
+    button.primary{background:#801d30;color:white}button:disabled{opacity:.5;cursor:wait}a{color:#801d30}.muted{color:#655b56;font-size:14px}
+    #status{white-space:pre-wrap;overflow-wrap:anywhere}#authorize{display:inline-block;padding:10px 0}[hidden]{display:none!important}
+    @media(max-width:400px){main{margin:12px auto;padding:16px}.panel{padding:16px}}
+  </style>
+  <script src="https://cdn.omise.co/omise.js" defer></script>
+  <script type="module" src="./sandbox.js?v=20261012"></script>
+</head>
+<body><main>
+  <div class="brand">pokpok</div><h1>ทดสอบการชำระเงิน</h1>
+  <p class="notice">สำหรับผู้ดูแลระบบ · เงินจำลองเท่านั้น<br>ไม่สร้างออเดอร์ ยอดขาย สต็อก หรือยอดปิดรอบของร้านจริง</p>
+  <section class="panel" id="loginPanel">
+    <h2>เข้าสู่ระบบผู้ดูแล</h2>
+    <form id="loginForm"><label for="email">อีเมล</label><input id="email" type="email" autocomplete="username" required>
+      <label for="password">รหัสผ่าน</label><input id="password" type="password" autocomplete="current-password" required>
+      <button class="primary" type="submit">เข้าสู่ระบบ</button></form>
+    <button id="googleLogin" type="button">เข้าสู่ระบบด้วย Google</button>
+  </section>
+  <section class="panel" id="paymentPanel" hidden>
+    <p id="account" class="muted"></p><button id="logout" type="button">ออกจากระบบ</button>
+    <div id="newPayment">
+      <h2>ยอดทดลอง ฿100.00</h2>
+      <label for="method">ช่องทางชำระ</label><select id="method"><option value="card">บัตรเครดิต / เดบิต</option><option value="truemoney">TrueMoney Wallet</option></select>
+      <div id="phoneRow" hidden><label for="phone">เบอร์โทรสำหรับทดสอบ TrueMoney</label><input id="phone" type="tel" inputmode="numeric" maxlength="10" placeholder="0812345678"></div>
+      <p class="muted">ใช้ข้อมูลทดสอบจาก <a href="https://docs.omise.co/api-testing" target="_blank" rel="noopener noreferrer">คู่มือ Omise</a> เท่านั้น</p>
+      <button id="pay" class="primary" type="button">เริ่มทดสอบ ฿100.00</button>
+    </div>
+    <div id="existingPayment" hidden>
+      <p>มีรายการทดลองที่บันทึกไว้ ตรวจผลรายการเดิมก่อนเริ่มใหม่</p>
+      <button id="refresh" type="button">ตรวจสถานะล่าสุด</button>
+      <a id="authorize" hidden>ไปยืนยันรายการทดลอง</a>
+      <details id="recovery"><summary>กู้ผลเมื่อการเชื่อมต่อขาดหาย</summary>
+        <p class="muted">นำ Charge ID ของรายการนี้จาก Omise Test Dashboard มากรอก ระบบจะตรวจว่าตรงกับคำขอเดิม</p>
+        <label for="chargeId">Charge ID</label><input id="chargeId" placeholder="chrg_test_..." autocomplete="off">
+      </details>
+      <button id="startNew" type="button" hidden>เริ่มรายการทดลองใหม่</button>
+    </div>
+  </section>
+  <p id="status" role="status" aria-live="polite">กำลังตรวจบัญชี…</p>
+</main></body></html>
