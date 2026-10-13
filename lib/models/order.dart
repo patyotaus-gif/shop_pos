@@ -90,6 +90,7 @@ class ShopOrder {
   final OrderStatus status;
   final DateTime createdAt;
   final DateTime? paidAt;
+  final DateTime? statusUpdatedAt;
 
   /// QR-link context tags (display-only): 'takeaway' | 'dineInPrepaid'.
   final String? orderType;
@@ -124,6 +125,7 @@ class ShopOrder {
     required this.status,
     required this.createdAt,
     this.paidAt,
+    this.statusUpdatedAt,
     this.orderType,
     this.tableName,
     this.pickupMode,
@@ -160,6 +162,7 @@ class ShopOrder {
         createdAt:
             (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         paidAt: (data['paidAt'] as Timestamp?)?.toDate(),
+        statusUpdatedAt: (data['statusUpdatedAt'] as Timestamp?)?.toDate(),
         orderType: data['orderType'] as String?,
         tableName: data['tableName'] as String?,
         pickupMode: data['pickupMode'] as String?,

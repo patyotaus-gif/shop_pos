@@ -45,6 +45,15 @@ class CashSessionService {
           .map((d) => CashSession.fromFirestore(d.data(), d.id))
           .toList());
 
+  /// Closing, rather than midnight or opening a new round, archives kitchen history.
+  static Stream<DateTime?> watchLastClosedAt() => _col()
+      .orderBy('closedAt', descending: true)
+      .limit(1)
+      .snapshots()
+      .map((s) => s.docs.isEmpty
+          ? null
+          : (s.docs.first.data()['closedAt'] as Timestamp?)?.toDate());
+
   static Future<void> open({
     required double openingFloat,
     String? openedBy,

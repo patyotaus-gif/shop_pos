@@ -10,6 +10,7 @@ import '../models/order.dart';
 import '../services/order_service.dart';
 import '../services/settings_service.dart';
 import '../services/kitchen_print_service.dart';
+import '../services/cash_session_service.dart';
 import '../utils/operation_error.dart';
 import 'table_detail_screen.dart';
 
@@ -20,11 +21,13 @@ class KitchenScreen extends StatefulWidget {
       this.onlineOrders,
       this.settings,
       this.printJobs,
+      this.lastClosedAt,
       this.saveOutput});
   final Stream<List<TableOrder>>? orders;
   final Stream<List<ShopOrder>>? onlineOrders;
   final Stream<Map<String, dynamic>>? settings;
   final Stream<Map<String, Map<String, dynamic>>>? printJobs;
+  final Stream<DateTime?>? lastClosedAt;
   final Future<void> Function(String)? saveOutput;
   @override
   State<KitchenScreen> createState() => _KitchenScreenState();
@@ -33,6 +36,7 @@ class KitchenScreen extends StatefulWidget {
 class _KitchenScreenState extends State<KitchenScreen> {
   bool _savingOutput = false;
   bool _showHistory = false;
+  DateTime? _previousRoundsForClose;
   Future<void> _changeOutput(Set<String> selection) async {
     if (_savingOutput) return;
     setState(() => _savingOutput = true);
@@ -62,6 +66,10 @@ class _KitchenScreenState extends State<KitchenScreen> {
       (widget.orders != null
           ? Stream.value(<String, Map<String, dynamic>>{})
           : KitchenPrintService.watchJobs());
+  late final closeStream = widget.lastClosedAt ??
+      (widget.orders != null
+          ? Stream<DateTime?>.value(null)
+          : CashSessionService.watchLastClosedAt());
   bool needsPrint(Map? job, int count) =>
       job == null ||
       job['status'] != 'printed' ||
@@ -100,212 +108,279 @@ class _KitchenScreenState extends State<KitchenScreen> {
                     child: Text(
                         'เลือกเครื่องพิมพ์ครัวที่ระบบรองรับ แล้วตรวจรับกระดาษ • พิมพ์เฉพาะรายการใหม่ได้')),
               Expanded(
-                  child: StreamBuilder<List<TableOrder>>(
-                      stream: tableStream,
-                      builder: (context, tables) => StreamBuilder<
-                              List<ShopOrder>>(
-                          stream: onlineStream,
-                          builder: (context, online) => StreamBuilder<
-                                  Map<String, Map<String, dynamic>>>(
-                              stream: printStream,
-                              builder: (context, jobs) {
-                                if (tables.hasError ||
-                                    online.hasError ||
-                                    jobs.hasError) {
-                                  return const Center(
-                                      child: Text(
-                                          'โหลดออเดอร์ครัวไม่สำเร็จ กรุณาตรวจการเชื่อมต่อแล้วเปิดหน้านี้ใหม่'));
-                                }
-                                if (!tables.hasData ||
-                                    !online.hasData ||
-                                    !jobs.hasData) {
-                                  return const Center(
-                                      child: CircularProgressIndicator());
-                                }
-                                final ts = tables.data!
-                                    .where((o) =>
-                                        o.status !=
-                                            TableOrderStatus.cancelled &&
-                                        o.items.any((i) =>
-                                            i.kitchenStatus !=
-                                            KitchenStatus.pending) &&
-                                        (o.status == TableOrderStatus.open ||
-                                            (printer &&
-                                                needsPrint(
-                                                    jobs.data!['table-${o.id}'],
-                                                    o.items
-                                                        .where((i) =>
-                                                            i.kitchenStatus !=
-                                                            KitchenStatus
-                                                                .pending)
-                                                        .length))))
-                                    .toList();
-                                final os = online.data!
-                                    .where((o) =>
-                                        [
-                                          OrderStatus.paid,
-                                          OrderStatus.accepted,
-                                          OrderStatus.ready
-                                        ].contains(o.status) ||
-                                        (printer &&
-                                            o.status == OrderStatus.completed &&
-                                            needsPrint(
-                                                jobs.data!['online-${o.id}'],
-                                                o.items.length)))
-                                    .toList()
-                                  ..sort((a, b) =>
-                                      (a.pickupStartAt ?? a.createdAt)
-                                          .compareTo(
-                                              b.pickupStartAt ?? b.createdAt));
-                                final historyCount = ts
-                                        .where((o) =>
-                                            o.status == TableOrderStatus.closed)
-                                        .length +
-                                    os
-                                        .where((o) =>
-                                            o.status == OrderStatus.completed)
-                                        .length;
-                                if (ts.isEmpty && os.isEmpty) {
-                                  return const _EmptyKitchen();
-                                }
-                                return ListView(
-                                    padding: const EdgeInsets.all(12),
-                                    children: [
-                                      if (historyCount > 0)
-                                        SwitchListTile(
-                                          title: Text(
-                                              'ใบงานที่ปิดบิลหรือเสร็จแล้ว ($historyCount)'),
-                                          subtitle: const Text(
-                                              'ยังไม่ยืนยันพิมพ์ ไม่ใช่บิลค้างชำระ'),
-                                          value: _showHistory,
-                                          onChanged: (value) => setState(
-                                              () => _showHistory = value),
-                                        ),
-                                      if (!_showHistory &&
-                                          ts.every((o) =>
-                                              o.status !=
-                                              TableOrderStatus.open) &&
-                                          os.every((o) =>
-                                              o.status ==
-                                              OrderStatus.completed))
-                                        const Padding(
-                                            padding: EdgeInsets.all(20),
-                                            child: Text(
-                                                'ไม่มีงานครัวที่กำลังดำเนินการ')),
-                                      for (final o in os)
-                                        if (_showHistory ||
-                                            o.status != OrderStatus.completed)
-                                          Card(
-                                              child: Padding(
-                                                  padding:
-                                                      const EdgeInsets.all(12),
-                                                  child: Column(
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
-                                                      children: [
-                                                        Text(
-                                                            o.tableName == null
-                                                                ? 'ออนไลน์ • รับกลับบ้าน'
-                                                                : 'ออนไลน์ • โต๊ะ ${o.tableName}',
-                                                            style: const TextStyle(
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold)),
-                                                        Text(
-                                                            '${o.customerName} • ${o.status.label}'),
-                                                        Text(
-                                                            'รับออเดอร์ ${DateFormat('dd/MM/yyyy HH:mm').format(o.createdAt.toLocal())} น.'),
-                                                        if (o.pickupDescription !=
-                                                            null)
-                                                          Text(o
-                                                              .pickupDescription!),
-                                                        for (final i in o.items)
-                                                          ListTile(
-                                                              dense: true,
-                                                              title: Text(
-                                                                  '${i.productName} × ${i.quantity}'),
-                                                              subtitle: i
-                                                                      .preparationNote
-                                                                      .isEmpty
-                                                                  ? null
-                                                                  : Text(i
-                                                                      .preparationNote)),
-                                                        if (printer)
-                                                          _PrintActions(
-                                                              source: 'online',
-                                                              orderId: o.id,
-                                                              job: jobs.data![
-                                                                  'online-${o.id}']),
-                                                        if (o.status ==
-                                                            OrderStatus.paid)
-                                                          FilledButton(
-                                                              onPressed: () => performShopOperation(
-                                                                  context,
-                                                                  () => OrderService
-                                                                      .updateStatus(
-                                                                          o.id,
-                                                                          OrderStatus
-                                                                              .accepted),
-                                                                  timeout: const Duration(
-                                                                      seconds:
-                                                                          25)),
-                                                              child: const Text(
-                                                                  'เริ่มเตรียม')),
-                                                        if (o.status ==
-                                                            OrderStatus
-                                                                .accepted)
-                                                          FilledButton(
-                                                              onPressed: () => performShopOperation(
-                                                                  context,
-                                                                  () => OrderService
-                                                                      .updateStatus(
-                                                                          o.id,
-                                                                          OrderStatus
-                                                                              .ready),
-                                                                  timeout: const Duration(
-                                                                      seconds:
-                                                                          25)),
-                                                              child: const Text(
-                                                                  'พร้อมรับ / เสิร์ฟแล้ว')),
-                                                        if (o.status ==
-                                                            OrderStatus.ready)
-                                                          FilledButton(
-                                                              onPressed: () => performShopOperation(
-                                                                  context,
-                                                                  () => OrderService
-                                                                      .updateStatus(
-                                                                          o.id,
-                                                                          OrderStatus
-                                                                              .completed),
-                                                                  timeout:
-                                                                      const Duration(
-                                                                          seconds:
-                                                                              25),
-                                                                  success:
-                                                                      'ส่งมอบออเดอร์แล้ว'),
-                                                              child: const Text(
-                                                                  'ส่งมอบแล้ว / เสร็จสิ้น')),
-                                                      ]))),
-                                      for (final o in ts.where((o) =>
-                                          _showHistory ||
-                                          o.status ==
-                                              TableOrderStatus.open)) ...[
-                                        if (o.status == TableOrderStatus.closed)
-                                          const Text(
-                                              'ปิดบิลแล้ว • ตรวจว่าครัวได้รับใบงานเดิมหรือยังก่อนพิมพ์'),
-                                        SizedBox(
-                                            height: 360,
-                                            child: _TicketCard(order: o)),
-                                        if (printer)
-                                          _PrintActions(
-                                              source: 'table',
-                                              orderId: o.id,
-                                              job: jobs.data!['table-${o.id}']),
-                                        const SizedBox(height: 12),
-                                      ],
-                                    ]);
-                              })))),
+                  child: StreamBuilder<DateTime?>(
+                      stream: closeStream,
+                      builder: (context, closing) {
+                        if (closing.hasError) {
+                          return const Center(
+                              child: Text(
+                                  'โหลดรอบปิดยอดไม่สำเร็จ กรุณาเปิดหน้านี้ใหม่ก่อนตรวจคิวพิมพ์'));
+                        }
+                        if (closing.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        }
+                        final cutoff = closing.data;
+                        final showPrevious =
+                            cutoff != null && _previousRoundsForClose == cutoff;
+                        bool beforeClose(DateTime at) =>
+                            cutoff != null && !at.isAfter(cutoff);
+                        bool oldTable(TableOrder o) =>
+                            o.status == TableOrderStatus.closed &&
+                            beforeClose(o.closedAt ?? o.openedAt);
+                        bool oldOnline(ShopOrder o) =>
+                            o.status == OrderStatus.completed &&
+                            beforeClose(o.statusUpdatedAt ??
+                                o.pickupEndAt ??
+                                o.paidAt ??
+                                o.createdAt);
+                        return StreamBuilder<List<TableOrder>>(
+                            stream: tableStream,
+                            builder: (context, tables) =>
+                                StreamBuilder<List<ShopOrder>>(
+                                    stream: onlineStream,
+                                    builder: (context, online) => StreamBuilder<
+                                            Map<String, Map<String, dynamic>>>(
+                                        stream: printStream,
+                                        builder: (context, jobs) {
+                                          if (tables.hasError ||
+                                              online.hasError ||
+                                              jobs.hasError) {
+                                            return const Center(
+                                                child: Text(
+                                                    'โหลดออเดอร์ครัวไม่สำเร็จ กรุณาตรวจการเชื่อมต่อแล้วเปิดหน้านี้ใหม่'));
+                                          }
+                                          if (!tables.hasData ||
+                                              !online.hasData ||
+                                              !jobs.hasData) {
+                                            return const Center(
+                                                child:
+                                                    CircularProgressIndicator());
+                                          }
+                                          final eligibleTables = tables.data!
+                                              .where((o) =>
+                                                  o.status !=
+                                                      TableOrderStatus
+                                                          .cancelled &&
+                                                  o.items.any((i) =>
+                                                      i.kitchenStatus !=
+                                                      KitchenStatus.pending) &&
+                                                  (o.status ==
+                                                          TableOrderStatus
+                                                              .open ||
+                                                      (printer &&
+                                                          needsPrint(
+                                                              jobs.data![
+                                                                  'table-${o.id}'],
+                                                              o.items
+                                                                  .where((i) =>
+                                                                      i.kitchenStatus !=
+                                                                      KitchenStatus
+                                                                          .pending)
+                                                                  .length))))
+                                              .toList();
+                                          final eligibleOnline = online.data!
+                                              .where((o) =>
+                                                  [
+                                                    OrderStatus.paid,
+                                                    OrderStatus.accepted,
+                                                    OrderStatus.ready
+                                                  ].contains(o.status) ||
+                                                  (printer &&
+                                                      o.status ==
+                                                          OrderStatus
+                                                              .completed &&
+                                                      needsPrint(
+                                                          jobs.data![
+                                                              'online-${o.id}'],
+                                                          o.items.length)))
+                                              .toList()
+                                            ..sort((a, b) => (a.pickupStartAt ??
+                                                    a.createdAt)
+                                                .compareTo(b.pickupStartAt ??
+                                                    b.createdAt));
+                                          final previousCount = eligibleTables
+                                                  .where(oldTable)
+                                                  .length +
+                                              eligibleOnline
+                                                  .where(oldOnline)
+                                                  .length;
+                                          final ts = eligibleTables
+                                              .where((o) =>
+                                                  showPrevious || !oldTable(o))
+                                              .toList();
+                                          final os = eligibleOnline
+                                              .where((o) =>
+                                                  showPrevious || !oldOnline(o))
+                                              .toList();
+                                          final historyCount = ts
+                                                  .where((o) =>
+                                                      o.status ==
+                                                      TableOrderStatus.closed)
+                                                  .length +
+                                              os
+                                                  .where((o) =>
+                                                      o.status ==
+                                                      OrderStatus.completed)
+                                                  .length;
+                                          if (ts.isEmpty &&
+                                              os.isEmpty &&
+                                              previousCount == 0) {
+                                            return const _EmptyKitchen();
+                                          }
+                                          return ListView(
+                                              padding: const EdgeInsets.all(12),
+                                              children: [
+                                                if (previousCount > 0)
+                                                  SwitchListTile(
+                                                      title: Text(
+                                                          'ดูใบงานรอบก่อน ($previousCount)'),
+                                                      subtitle: Text(
+                                                          'ปิดยอดล่าสุด ${DateFormat('dd/MM/yyyy HH:mm').format(cutoff!.toLocal())} น. • ตรวจใบเดิมก่อนพิมพ์ซ้ำ'),
+                                                      value: showPrevious,
+                                                      onChanged: (value) =>
+                                                          setState(() =>
+                                                              _previousRoundsForClose =
+                                                                  value
+                                                                      ? cutoff
+                                                                      : null)),
+                                                if (historyCount > 0 &&
+                                                    !showPrevious)
+                                                  SwitchListTile(
+                                                    title: Text(
+                                                        'ใบงานที่ปิดบิลหรือเสร็จแล้ว ($historyCount)'),
+                                                    subtitle: const Text(
+                                                        'ยังไม่ยืนยันพิมพ์ ไม่ใช่บิลค้างชำระ'),
+                                                    value: _showHistory,
+                                                    onChanged: (value) =>
+                                                        setState(() =>
+                                                            _showHistory =
+                                                                value),
+                                                  ),
+                                                if (!showPrevious &&
+                                                    (!_showHistory ||
+                                                        (ts.isEmpty &&
+                                                            os.isEmpty)) &&
+                                                    ts.every((o) =>
+                                                        o.status !=
+                                                        TableOrderStatus
+                                                            .open) &&
+                                                    os.every((o) =>
+                                                        o.status ==
+                                                        OrderStatus.completed))
+                                                  const Padding(
+                                                      padding:
+                                                          EdgeInsets.all(20),
+                                                      child: Text(
+                                                          'ไม่มีงานครัวที่กำลังดำเนินการ')),
+                                                for (final o in os)
+                                                  if (_showHistory ||
+                                                      showPrevious ||
+                                                      o.status !=
+                                                          OrderStatus.completed)
+                                                    Card(
+                                                        child: Padding(
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .all(12),
+                                                            child: Column(
+                                                                crossAxisAlignment:
+                                                                    CrossAxisAlignment
+                                                                        .start,
+                                                                children: [
+                                                                  Text(
+                                                                      o.tableName ==
+                                                                              null
+                                                                          ? 'ออนไลน์ • รับกลับบ้าน'
+                                                                          : 'ออนไลน์ • โต๊ะ ${o.tableName}',
+                                                                      style: const TextStyle(
+                                                                          fontWeight:
+                                                                              FontWeight.bold)),
+                                                                  Text(
+                                                                      '${o.customerName} • ${o.status.label}'),
+                                                                  Text(
+                                                                      'รับออเดอร์ ${DateFormat('dd/MM/yyyy HH:mm').format(o.createdAt.toLocal())} น.'),
+                                                                  if (o.pickupDescription !=
+                                                                      null)
+                                                                    Text(o
+                                                                        .pickupDescription!),
+                                                                  for (final i
+                                                                      in o
+                                                                          .items)
+                                                                    ListTile(
+                                                                        dense:
+                                                                            true,
+                                                                        title: Text(
+                                                                            '${i.productName} × ${i.quantity}'),
+                                                                        subtitle: i.preparationNote.isEmpty
+                                                                            ? null
+                                                                            : Text(i.preparationNote)),
+                                                                  if (printer)
+                                                                    _PrintActions(
+                                                                        source:
+                                                                            'online',
+                                                                        orderId: o
+                                                                            .id,
+                                                                        job: jobs
+                                                                            .data!['online-${o.id}']),
+                                                                  if (o.status ==
+                                                                      OrderStatus
+                                                                          .paid)
+                                                                    FilledButton(
+                                                                        onPressed: () => performShopOperation(
+                                                                            context,
+                                                                            () =>
+                                                                                OrderService.updateStatus(o.id, OrderStatus.accepted),
+                                                                            timeout: const Duration(seconds: 25)),
+                                                                        child: const Text('เริ่มเตรียม')),
+                                                                  if (o.status ==
+                                                                      OrderStatus
+                                                                          .accepted)
+                                                                    FilledButton(
+                                                                        onPressed: () => performShopOperation(
+                                                                            context,
+                                                                            () =>
+                                                                                OrderService.updateStatus(o.id, OrderStatus.ready),
+                                                                            timeout: const Duration(seconds: 25)),
+                                                                        child: const Text('พร้อมรับ / เสิร์ฟแล้ว')),
+                                                                  if (o.status ==
+                                                                      OrderStatus
+                                                                          .ready)
+                                                                    FilledButton(
+                                                                        onPressed: () => performShopOperation(
+                                                                            context,
+                                                                            () =>
+                                                                                OrderService.updateStatus(o.id, OrderStatus.completed),
+                                                                            timeout: const Duration(seconds: 25),
+                                                                            success: 'ส่งมอบออเดอร์แล้ว'),
+                                                                        child: const Text('ส่งมอบแล้ว / เสร็จสิ้น')),
+                                                                ]))),
+                                                for (final o in ts.where((o) =>
+                                                    _showHistory ||
+                                                    showPrevious ||
+                                                    o.status ==
+                                                        TableOrderStatus
+                                                            .open)) ...[
+                                                  if (o.status ==
+                                                      TableOrderStatus.closed)
+                                                    const Text(
+                                                        'ปิดบิลแล้ว • ตรวจว่าครัวได้รับใบงานเดิมหรือยังก่อนพิมพ์'),
+                                                  SizedBox(
+                                                      height: 360,
+                                                      child: _TicketCard(
+                                                          order: o)),
+                                                  if (printer)
+                                                    _PrintActions(
+                                                        source: 'table',
+                                                        orderId: o.id,
+                                                        job: jobs.data![
+                                                            'table-${o.id}']),
+                                                  const SizedBox(height: 12),
+                                                ],
+                                              ]);
+                                        })));
+                      })),
             ]);
           }));
 }

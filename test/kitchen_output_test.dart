@@ -6,28 +6,36 @@ import 'package:shop_pos/models/table_order.dart';
 import 'package:shop_pos/screens/kitchen_screen.dart';
 import 'package:shop_pos/services/kitchen_print_service.dart';
 
-ShopOrder online(String id, OrderStatus status) => ShopOrder(
-    id: id,
-    customerName: 'ลูกค้า',
-    customerPhone: '0812345678',
-    items: [
-      OrderItem(
-          productId: id,
-          productName: 'อาหาร$id',
-          price: 50,
-          quantity: 2,
-          preparationNote: 'ไม่เผ็ด • เพิ่มไข่')
-    ],
-    total: 100,
-    finalAmount: 100.05,
-    status: status,
-    createdAt: DateTime(2026),
-    pickupLabel: '09/10/2026 12:00–12:15 น.');
-TableOrder table(String id) => TableOrder(
+ShopOrder online(String id, OrderStatus status,
+        {DateTime? statusUpdatedAt, DateTime? pickupStartAt}) =>
+    ShopOrder(
+        id: id,
+        customerName: 'ลูกค้า',
+        customerPhone: '0812345678',
+        items: [
+          OrderItem(
+              productId: id,
+              productName: 'อาหาร$id',
+              price: 50,
+              quantity: 2,
+              preparationNote: 'ไม่เผ็ด • เพิ่มไข่')
+        ],
+        total: 100,
+        finalAmount: 100.05,
+        status: status,
+        createdAt: DateTime(2026),
+        statusUpdatedAt: statusUpdatedAt,
+        pickupStartAt: pickupStartAt,
+        pickupLabel: '09/10/2026 12:00–12:15 น.');
+TableOrder table(String id,
+        {DateTime? closedAt,
+        TableOrderStatus status = TableOrderStatus.closed}) =>
+    TableOrder(
         id: id,
         tableId: id,
         tableName: id,
-        status: TableOrderStatus.closed,
+        status: status,
+        closedAt: closedAt,
         openedAt: DateTime(2026),
         items: [
           TableOrderItem(
@@ -39,6 +47,88 @@ TableOrder table(String id) => TableOrder(
               kitchenStatus: KitchenStatus.sent)
         ]);
 void main() {
+  testWidgets(
+      'cash close archives finished tickets and keeps open work and future pickups',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 2000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final closing = StreamController<DateTime?>();
+    addTearDown(closing.close);
+    final cutoff = DateTime(2026, 10, 13, 9);
+    await tester.pumpWidget(MaterialApp(
+        home: KitchenScreen(
+      orders: Stream.value([
+        table('previous', closedAt: cutoff),
+        table('current', closedAt: cutoff.add(const Duration(minutes: 30))),
+        table('active', status: TableOrderStatus.open),
+      ]),
+      onlineOrders: Stream.value([
+        online('previous-online', OrderStatus.completed,
+            statusUpdatedAt: cutoff.subtract(const Duration(minutes: 1))),
+        online('current-online', OrderStatus.completed,
+            statusUpdatedAt: cutoff.add(const Duration(minutes: 30))),
+        online('future-pickup', OrderStatus.paid,
+            pickupStartAt: cutoff.add(const Duration(days: 1))),
+      ]),
+      settings: Stream.value({'kitchenOutput': 'printer'}),
+      lastClosedAt: closing.stream,
+    )));
+    closing.add(cutoff);
+    await tester.pumpAndSettle();
+    expect(find.text('ดูใบงานรอบก่อน (2)'), findsOneWidget);
+    expect(find.text('ใบงานที่ปิดบิลหรือเสร็จแล้ว (2)'), findsOneWidget);
+    expect(find.text('อาหารโต๊ะactive'), findsOneWidget);
+    expect(find.text('อาหารfuture-pickup × 2'), findsOneWidget);
+    expect(find.text('อาหารโต๊ะprevious'), findsNothing);
+    await tester.tap(find.text('ใบงานที่ปิดบิลหรือเสร็จแล้ว (2)'));
+    await tester.pumpAndSettle();
+    expect(find.text('อาหารโต๊ะcurrent'), findsOneWidget);
+    expect(find.text('อาหารcurrent-online × 2'), findsOneWidget);
+    expect(find.text('อาหารprevious-online × 2'), findsNothing);
+    await tester.tap(find.text('ดูใบงานรอบก่อน (2)'));
+    await tester.pumpAndSettle();
+    expect(find.text('อาหารโต๊ะprevious'), findsOneWidget);
+    expect(find.text('อาหารprevious-online × 2'), findsOneWidget);
+    closing.add(cutoff.add(const Duration(hours: 1)));
+    await tester.pumpAndSettle();
+    expect(find.text('ดูใบงานรอบก่อน (4)'), findsOneWidget);
+    expect(find.text('อาหารโต๊ะprevious'), findsNothing);
+    expect(find.text('อาหารโต๊ะcurrent'), findsNothing);
+    expect(find.text('อาหารcurrent-online × 2'), findsNothing);
+    expect(find.text('อาหารโต๊ะactive'), findsOneWidget);
+    expect(find.text('อาหารfuture-pickup × 2'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets(
+      'a closed round with only older tickets shows a clean queue and reversible history',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+        home: KitchenScreen(
+      orders: Stream.value([table('old')]),
+      settings: Stream.value({'kitchenOutput': 'printer'}),
+      lastClosedAt: Stream.value(DateTime(2026, 10, 13)),
+    )));
+    await tester.pumpAndSettle();
+    expect(find.text('ไม่มีงานครัวที่กำลังดำเนินการ'), findsOneWidget);
+    expect(find.text('อาหารโต๊ะold'), findsNothing);
+    await tester.tap(find.text('ดูใบงานรอบก่อน (1)'));
+    await tester.pumpAndSettle();
+    expect(find.text('อาหารโต๊ะold'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('cash round loading errors do not claim an empty kitchen',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+        home: KitchenScreen(
+      orders: Stream.value([table('old')]),
+      lastClosedAt: Stream.error(StateError('unavailable')),
+    )));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('โหลดรอบปิดยอดไม่สำเร็จ'), findsOneWidget);
+    expect(find.text('ยังไม่มีออเดอร์เข้าครัว'), findsNothing);
+  });
   testWidgets(
       'open table has a bill action and ready online order can be completed',
       (tester) async {
