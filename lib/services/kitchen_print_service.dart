@@ -18,8 +18,12 @@ class KitchenPrintService {
           .map((s) => {for (final d in s.docs) d.id: d.data()});
   static Future<dynamic> _call(String name, Map<String, dynamic> data) =>
       FirebaseFunctions.instanceFor(region: 'asia-southeast1')
-          .httpsCallable(name)
-          .call({'shopId': AuthService.shopId, ...data}).then((r) => r.data);
+          .httpsCallable(name,
+              options:
+                  HttpsCallableOptions(timeout: const Duration(seconds: 20)))
+          .call({'shopId': AuthService.shopId, ...data})
+          .then((r) => r.data)
+          .timeout(const Duration(seconds: 25));
 
   static Future<Uint8List> buildTicket(Map job) async {
     final font = pw.Font.ttf(

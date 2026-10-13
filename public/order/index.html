@@ -12,7 +12,7 @@
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/order/order.css?v=20261009" />
+  <link rel="stylesheet" href="/order/order.css?v=20261013stock" />
   <!-- Self-hosted qrcodejs (davidshimjs) — avoids CDN/CORB blocks -->
   <script src="qrcode.min.js"></script>
 </head>
@@ -47,6 +47,7 @@
   <input id="productSearch" type="search" placeholder="พิมพ์ชื่อสินค้า เมนู หรือหมวดหมู่" autocomplete="off" />
 </div>
 <div id="catBar" class="cat-bar" hidden></div>
+<section id="bundleChoices" hidden aria-label="ชุดสินค้าราคาพิเศษ"></section>
 <div id="products" style="display:none"></div>
 
 <footer style="text-align:center;padding:28px 16px;color:#6B5E60;font-size:.78rem;line-height:1.8">
@@ -134,8 +135,19 @@
       <a href="/terms" target="_blank" rel="noopener" style="color:#7A1F2B">เงื่อนไขการใช้บริการ</a>
     </p>
     <div class="modal-total">
-      <span>ยอดชำระ</span>
+      <span>ยอดหลังส่วนลด</span>
       <span id="modalTotal">฿0.00</span>
+    </div>
+    <div class="field">
+      <div id="giftStatus" role="status" aria-live="polite" style="white-space:pre-line"></div>
+      <button id="giftRefresh" type="button">ตรวจชุดสินค้าและของแถมอีกครั้ง</button>
+      <p class="coupon-help">เลือกครบชุดรับส่วนลดอัตโนมัติ ของแถมร้านเพิ่มให้โดยไม่ต้องใส่ตะกร้า คูปองคิดจากยอดหลังลดราคาชุด</p>
+      <label for="couponCode">โค้ดส่วนลด (ถ้ามี)</label>
+      <input id="couponCode" maxlength="24" autocomplete="off" autocapitalize="characters" placeholder="เช่น WELCOME10" />
+      <button id="couponApply" type="button">ตรวจโค้ดส่วนลด</button>
+      <button id="couponClear" type="button">ไม่ใช้โค้ด</button>
+      <p id="couponStatus" role="status" aria-live="polite"></p>
+      <p>ใช้ได้ 1 โค้ดต่อออเดอร์ คิดจากราคาสินค้าปัจจุบัน รวมราคาโปรโมชั่น ยอดหลังลดขั้นต่ำ 20 บาท</p>
     </div>
     <button id="payBtn" type="button">ชำระเงิน</button>
     <button id="cancelBtn" type="button">ยกเลิก</button>
@@ -157,6 +169,8 @@
 
     <div class="pp-amount" id="payAmount">฿0.00</div>
     <div class="pp-cents-note" id="payCentsNote"></div>
+    <div class="pp-cents-note" id="payCouponNote"></div>
+    <div class="pp-cents-note" id="payGifts" style="white-space:pre-line"></div>
 
     <div class="pp-receiver">
       <strong id="payReceiver">—</strong>
@@ -189,7 +203,7 @@
 <!-- Page entry. Module scripts execute in document order, so main.js runs
      first (defines window.__startOrderPage), then the App Check module below
      starts the page once a token getter is ready. -->
-<script type="module" src="/order/js/main.js?v=20261009"></script>
+<script type="module" src="/order/js/main.js?v=20261013stock"></script>
 
 <!-- App Check (reCAPTCHA v3). This page talks to HTTP functions with plain
      fetch(), so we run the SDK in a module and expose a best-effort token

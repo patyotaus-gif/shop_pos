@@ -40,7 +40,7 @@ void main() {
   }
   testWidgets('quantity controls, validation and delete still work',
       (tester) async {
-    int? quantity;
+    num? quantity;
     var removed = false;
     await tester.pumpWidget(MaterialApp(
         theme: PokpokTheme.light(),
@@ -58,7 +58,7 @@ void main() {
     await tester.enterText(find.byType(TextField), '0');
     await tester.tap(find.text('ตกลง'));
     await tester.pumpAndSettle();
-    expect(find.text('กรอกจำนวนเต็มตั้งแต่ 1 ขึ้นไป'), findsOneWidget);
+    expect(find.text('ระบุจำนวนเต็ม 1–99'), findsOneWidget);
     await tester.enterText(find.byType(TextField), '8');
     await tester.tap(find.text('ตกลง'));
     await tester.pumpAndSettle();

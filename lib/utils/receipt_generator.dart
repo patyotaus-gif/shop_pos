@@ -201,7 +201,7 @@ class ReceiptGenerator {
               children: [
                 pw.Expanded(
                   child: await text(
-                      '${item.quantity} × ${_baht.format(item.quantity > 0 ? item.subtotal / item.quantity : item.price)}',
+                      '${item.quantity} ${item.unit} × ${_baht.format(item.quantity > 0 ? item.subtotal / item.quantity : item.price)}',
                       maxWidth: contentWidth * .60 - 4,
                       style: pw.TextStyle(fontSize: 8 * fontScale)),
                 ),
@@ -227,14 +227,22 @@ class ReceiptGenerator {
         ),
       pw.Divider(),
       await text(
-          'รายการ: ${sale.items.length}   จำนวนชิ้น: ${sale.items.fold<int>(0, (n, i) => n + i.quantity)}',
+          sale.items.any((i) => i.isWeighed)
+              ? 'รายการ: ${sale.items.length} (จำนวนและหน่วยตามรายการข้างต้น)'
+              : 'รายการ: ${sale.items.length}   จำนวนชิ้น: ${sale.items.fold<num>(0, (n, i) => n + i.quantity)}',
           style: pw.TextStyle(fontSize: 8 * fontScale)),
       pw.SizedBox(height: 4),
       await row('รวมค่าสินค้า', _baht.format(sale.itemsSubtotal)),
-      if (sale.discount > 0)
-        await row('ส่วนลด', '-${_baht.format(sale.discount)}'),
+      for (final b in sale.bundles)
+        await row('ชุด ${b['name']} × ${b['sets']}',
+            '-${_baht.format((b['discountMinor'] as num) / 100)}'),
+      if (sale.discount - sale.bundleDiscount > 0.001)
+        await row(
+            'ส่วนลด', '-${_baht.format(sale.discount - sale.bundleDiscount)}'),
       if (sale.serviceCharge > 0)
         await row('ค่าบริการ', _baht.format(sale.serviceCharge)),
+      if (sale.paymentAdjustment != 0)
+        await row('ยอดเพิ่มระบุออเดอร์', _baht.format(sale.paymentAdjustment)),
       await row('รวมทั้งสิ้น', _baht.format(sale.total), bold: true),
       if (profile.vatEnabled) ...[
         pw.Divider(),
@@ -253,7 +261,8 @@ class ReceiptGenerator {
           '${_baht.format(sale.total / sale.splitCount)} / คน',
         ),
       if (!sale.isDebt) ...[
-        await row('ชำระโดย ${sale.paymentMethod.label}', _baht.format(sale.paid)),
+        await row(
+            'ชำระโดย ${sale.paymentMethod.label}', _baht.format(sale.paid)),
         if (sale.paymentMethod == PaymentMethod.cash)
           await row('เงินทอน', _baht.format(sale.change)),
       ],

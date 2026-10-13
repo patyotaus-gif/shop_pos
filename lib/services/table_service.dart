@@ -1,6 +1,9 @@
+import '../utils/stock_quantity.dart';
+import 'inventory_service.dart';
 import 'dart:convert';
 import 'ingredient_checkout.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import '../models/receipt_profile.dart';
 import 'package:uuid/uuid.dart';
 
@@ -101,27 +104,68 @@ class TableService {
             ..sort((a, b) => a.openedAt.compareTo(b.openedAt)));
 
   /// Watch the single open order for [tableId] (or null if the table is
-  /// available). Uses limit(1) since a table only ever has one open tab.
+  /// available). Conflicting legacy tabs must not be silently hidden.
   static Stream<TableOrder?> watchOpenOrderForTable(String tableId) =>
       _tableOrdersCol()
           .where('tableId', isEqualTo: tableId)
           .where('status', isEqualTo: 'open')
-          .limit(1)
+          .limit(2)
           .snapshots()
-          .map((s) => s.docs.isEmpty
-              ? null
-              : TableOrder.fromFirestore(s.docs.first.data(), s.docs.first.id));
+          .map((s) {
+        if (s.docs.length > 1) {
+          throw StateError('พบหลายบิลเปิดในโต๊ะเดียวกัน กรุณาติดต่อทีมงาน');
+        }
+        return s.docs.isEmpty
+            ? null
+            : TableOrder.fromFirestore(s.docs.first.data(), s.docs.first.id);
+      });
+
+  static Future<String> reconcileTable(String tableId) async {
+    final result = await FirebaseFunctions.instanceFor(
+            region: 'asia-southeast1')
+        .httpsCallable('reconcileRestaurantTable',
+            options: HttpsCallableOptions(timeout: const Duration(seconds: 20)))
+        .call({'shopId': _shopDoc().id, 'tableId': tableId}).timeout(
+            const Duration(seconds: 25));
+    return result.data['status'] as String;
+  }
 
   /// Open a new tab on [table]. Marks the table occupied and writes an
   /// empty TableOrder doc. Returns the new order id.
   static Future<String> openOrder(RestaurantTable table) async {
     final tableRef = _tablesCol().doc(table.id);
     final orderRef = _tableOrdersCol().doc();
+    // Detect legacy orphan tabs; the transaction below serializes new tabs
+    // with other POS/QR writers through the table document.
+    final existing = await _tableOrdersCol()
+        .where('tableId', isEqualTo: table.id)
+        .where('status', isEqualTo: 'open')
+        .limit(2)
+        .get(const GetOptions(source: Source.server))
+        .timeout(const Duration(seconds: 15));
+    if (existing.docs.length > 1) {
+      throw StateError('พบหลายบิลเปิดในโต๊ะเดียวกัน กรุณาติดต่อทีมงาน');
+    }
     return _shopDoc().firestore.runTransaction<String>((tx) async {
       final current = await tx.get(tableRef);
       if (!current.exists) throw StateError('ไม่พบโต๊ะนี้');
       final openId = current.data()?['currentOrderId'] as String?;
-      if (openId != null) return openId;
+      if (existing.docs.isNotEmpty && existing.docs.single.id != openId) {
+        throw StateError('พบบิลเดิมที่ยังไม่ผูกกับโต๊ะ กรุณากดตรวจสถานะโต๊ะ');
+      }
+      if (openId != null) {
+        final linked = await tx.get(_tableOrdersCol().doc(openId));
+        if (!linked.exists ||
+            linked.data()?['tableId'] != table.id ||
+            linked.data()?['status'] != 'open') {
+          throw StateError(
+              'สถานะโต๊ะกับบิลไม่ตรงกัน กรุณากดตรวจสถานะโต๊ะก่อนเปิดบิล');
+        }
+        return openId;
+      }
+      if (current.data()?['status'] == 'occupied') {
+        throw StateError('โต๊ะยังไม่ว่าง กรุณากดตรวจสถานะโต๊ะก่อนเปิดบิล');
+      }
       final order = TableOrder(
           id: orderRef.id,
           tableId: table.id,
@@ -165,8 +209,8 @@ class TableService {
           id: item.id.isEmpty ? const Uuid().v4() : item.id,
           kitchenStatus: KitchenStatus.pending));
     } else {
-      next[index] =
-          next[index].copyWith(quantity: next[index].quantity + item.quantity);
+      next[index] = next[index]
+          .copyWith(quantity: stockRound(next[index].quantity + item.quantity));
     }
     return next;
   }
@@ -178,8 +222,8 @@ class TableService {
   }
 
   static Future<void> setItemQuantity(
-          String orderId, String itemId, int quantity,
-          {required int expectedQuantity}) =>
+          String orderId, String itemId, num quantity,
+          {required num expectedQuantity}) =>
       _edit(orderId, (items) {
         final index = items.indexWhere((i) => i.id == itemId);
         if (index < 0) {
@@ -306,6 +350,8 @@ class TableService {
                 costKnown: i.costKnown,
                 category: i.category,
                 quantity: i.quantity,
+                unit: i.unit,
+                isWeighed: i.isWeighed,
                 subtotal: i.subtotal,
                 modifiers: i.modifiers,
               ))
@@ -339,12 +385,14 @@ class TableService {
       final next = nextReceiptSeq(
           data?['day'] as String?, todayKey, (data?['seq'] ?? 0) as int);
 
-      final quantities = <String, int>{};
+      final quantities = <String, num>{};
       for (final item in order.items) {
-        quantities.update(item.productId, (q) => q + item.quantity,
+        quantities.update(item.productId, (q) => stockRound(q + item.quantity),
             ifAbsent: () => item.quantity);
       }
-      final counted = <String, int>{};
+      final counted = <String, num>{};
+      final stockProducts = <String, Map<String, dynamic>>{};
+      final stockAllocations = <String, StockAllocation>{};
       final reservationData = (await tx
                   .get(_shopDoc().collection('inventoryControl').doc('online')))
               .data() ??
@@ -353,9 +401,17 @@ class TableService {
       for (final entry in quantities.entries) {
         final product = await tx.get(_productsCol().doc(entry.key));
         if (!product.exists) throw StateError('ไม่พบสินค้า กรุณาตรวจสอบบิล');
-        if (product.data()?['stockMode'] == 'recipe') continue;
-        if ((product.data()?['stock'] as num? ?? 0) -
-                (reserved[entry.key] as num? ?? 0) <
+        final stockData = product.data()!;
+        if (!validStockQuantity(entry.value,
+            weight: stockData['isWeighed'] == true)) {
+          throw StateError('จำนวนสินค้าไม่ถูกต้อง');
+        }
+        if (stockData['stockMode'] == 'recipe') continue;
+        stockProducts[entry.key] = stockData;
+        stockAllocations[entry.key] = allocateStock(stockData, entry.value);
+        if (saleableStock(stockData) -
+                (reserved[entry.key] as num? ?? 0) +
+                1e-9 <
             entry.value) {
           throw StateError('สต็อกไม่พอ กรุณาตรวจสอบก่อนรับชำระ');
         }
@@ -372,13 +428,28 @@ class TableService {
         'receiptNo': formatReceiptNo(next.day, next.seq),
         'accountingVersion': 1,
         'stockDeducted': counted,
+        'stockLotsDeducted':
+            stockAllocations.map((id, a) => MapEntry(id, a.used)),
         'ingredientsDeducted': true,
         'ingredientUsage': ingredientUsage,
       });
       IngredientCheckout.write(tx, _shopDoc(), ingredientUsage);
       for (final entry in counted.entries) {
-        tx.update(_productsCol().doc(entry.key),
-            {'stock': FieldValue.increment(-entry.value)});
+        final p = stockProducts[entry.key]!;
+        tx.update(_shopDoc().collection('products').doc(entry.key), {
+          'stock': stockRound((p['stock'] as num) - entry.value),
+          'stockRevision': (p['stockRevision'] as num? ?? 0) + 1,
+          if (p['trackLots'] == true)
+            'stockLots': stockAllocations[entry.key]!.lots,
+        });
+        InventoryService.record(tx, _shopDoc(), entry.key,
+            id: 'sale-${saleRef.id}',
+            kind: 'sale',
+            delta: -entry.value,
+            before: p['stock'] as num,
+            unit: p['unit'] as String? ?? 'ชิ้น',
+            referenceId: saleRef.id,
+            extra: {'lots': stockAllocations[entry.key]!.used});
       }
       tx.update(_tableOrdersCol().doc(order.id), {
         'status': TableOrderStatus.closed.name,
@@ -422,10 +493,11 @@ class TableService {
               .where((i) => i.kitchenStatus != KitchenStatus.pending)
               .toList()
           : <TableOrderItem>[];
-      final productUsage = <String, int>{};
+      final productUsage = <String, num>{};
+      final stockProducts = <String, Map<String, dynamic>>{};
       final ingredientUsage = <String, double>{};
       final missing = <String>[];
-      void addIngredient(Map<String, dynamic> row, int quantity) {
+      void addIngredient(Map<String, dynamic> row, num quantity) {
         final id = row['ingredientId'] as String?;
         final amount = (row['qty'] as num? ?? 0).toDouble() * quantity;
         if (id != null && amount > 0) {
@@ -445,7 +517,9 @@ class TableService {
             addIngredient(Map<String, dynamic>.from(line), item.quantity);
           }
         } else {
-          productUsage.update(item.productId, (v) => v + item.quantity,
+          stockProducts[item.productId] = data;
+          productUsage.update(
+              item.productId, (v) => stockRound(v + item.quantity),
               ifAbsent: () => item.quantity);
         }
         for (final modifier in item.modifiers) {
@@ -472,8 +546,22 @@ class TableService {
         }
       }
       for (final entry in productUsage.entries) {
-        tx.update(_productsCol().doc(entry.key),
-            {'stock': FieldValue.increment(-entry.value)});
+        final p = stockProducts[entry.key]!;
+        final allocation = allocateStock(p, stockRound(entry.value));
+        tx.update(_productsCol().doc(entry.key), {
+          'stock': stockRound((p['stock'] as num? ?? 0) - entry.value),
+          'stockRevision': (p['stockRevision'] as num? ?? 0) + 1,
+          if (p['trackLots'] == true) 'stockLots': allocation.lots,
+        });
+        InventoryService.record(tx, _shopDoc(), entry.key,
+            id: 'waste-${order.id}',
+            kind: 'waste',
+            delta: -entry.value,
+            before: p['stock'] as num? ?? 0,
+            unit: p['unit'] as String? ?? 'ชิ้น',
+            reason: reason,
+            referenceId: order.id,
+            extra: {'lots': allocation.used});
       }
       for (final entry in liveUsage.entries) {
         tx.update(_shopDoc().collection('ingredients').doc(entry.key),
@@ -510,7 +598,7 @@ class TableService {
   /// in, this normalizes them onto the lighter line-item shape.
   static TableOrderItem itemFromProduct(
     Product product, {
-    int quantity = 1,
+    num quantity = 1,
     List<OrderModifier> modifiers = const [],
     String? notes,
   }) {
@@ -523,6 +611,8 @@ class TableService {
       costKnown: product.costPrice > 0,
       category: product.category,
       quantity: quantity,
+      unit: product.unit,
+      isWeighed: product.isWeighed,
       modifiers: modifiers,
       notes: notes,
     );

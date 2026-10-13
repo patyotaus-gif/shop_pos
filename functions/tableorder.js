@@ -29,7 +29,7 @@ function sanitizeTableOrderItems(raw) {
     const productId = typeof it?.productId === "string" ? it.productId.trim() : "";
     if (!productId) throw new Error("ข้อมูลสินค้าไม่ถูกต้อง");
     const q = it?.quantity;
-    if (!Number.isInteger(q) || q < 1) throw new Error("จำนวนไม่ถูกต้อง");
+    if (!require('./stock_quantity').valid(q, true)) throw new Error("จำนวนไม่ถูกต้อง");
     const quantity = Math.min(q, 99);
     const notes = typeof it?.notes === "string" ? it.notes.trim().slice(0, 200) : "";
     const optionIds = Array.isArray(it?.optionIds)
@@ -53,6 +53,7 @@ function sanitizeTableOrderItems(raw) {
 // Throws (Thai message) on an unknown option, a radio group with >1 pick,
 // or a required group left empty.
 function priceLine(item, product, groups, now) {
+  if (!require('./stock_quantity').valid(item.quantity, product.isWeighed === true)) throw Error('จำนวนสินค้าไม่ถูกต้อง');
   const base = effectivePriceOf(product, now);
 
   // option id → { option, group }
@@ -97,6 +98,7 @@ function priceLine(item, product, groups, now) {
     unitPrice,
     modifiers,
     quantity: item.quantity,
+    unit: product.unit || 'ชิ้น', isWeighed: product.isWeighed === true,
     ...(item.notes ? { notes: item.notes } : {}),
   };
 }

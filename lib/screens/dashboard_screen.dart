@@ -307,7 +307,7 @@ class DashboardScreen extends StatelessWidget {
 
 class _TopItem {
   final String name;
-  final int qty;
+  final num qty;
   final double revenue;
   const _TopItem(
       {required this.name, required this.qty, required this.revenue});

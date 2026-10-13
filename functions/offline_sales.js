@@ -24,7 +24,7 @@ function createOfflineSales({db, Timestamp, FieldValue, now = () => new Date()})
       if (!member || member.active === false || Number(member.sessionVersion || 0) !== ctx.token.staffVersion || !staffCap(shop)) fail('permission-denied', 'สิทธิ์พนักงานถูกยกเลิก');
     }
     const [ps, gs, settings] = await Promise.all([ctx.shop.collection('products').get(), ctx.shop.collection('modifierGroups').get(), ctx.shop.collection('settings').doc('shop').get()]);
-    const products = ps.docs.map(d => {
+    const products = ps.docs.filter(d=>!d.data().isWeighed && !d.data().trackLots).map(d => {
       const p = d.data();
       return {id:d.id, name:p.name || '', barcode:p.barcode || '', price:effectivePriceOf(p,issued), stock:Number(p.stock || 0), stockMode:p.stockMode || 'count', category:p.category || 'ทั่วไป', modifierGroupIds:p.modifierGroupIds || [], costPrice:Number(p.costPrice || 0)};
     });
@@ -77,9 +77,10 @@ function createOfflineSales({db, Timestamp, FieldValue, now = () => new Date()})
         if((current.stockMode||'count')!==snapshot.stockMode){review.push('วิธีนับสต็อกเปลี่ยน: '+snapshot.name);continue;}
         if(Math.abs(effectivePriceOf(current,now())-snapshot.price)>0.009)review.push('ราคาเปลี่ยน: '+snapshot.name);
         if(snapshot.stockMode==='recipe')review.push('ตรวจวัตถุดิบตามสูตรขณะซิงก์: '+snapshot.name);
+        if(current.isWeighed || current.trackLots){review.push('สินค้าปรับเป็นชั่ง/ล็อต ต้องตรวจสต๊อกแยก: '+snapshot.name);continue;}
         if(snapshot.stockMode!=='recipe') {
           if(Number(current.stock||0)<qty)review.push('สต็อกติดลบ: '+snapshot.name);
-          updates.push({ref,qty});
+          updates.push({ref,qty,current});
         }
       }
       const receiptNo='O-'+data.id;
@@ -92,7 +93,7 @@ function createOfflineSales({db, Timestamp, FieldValue, now = () => new Date()})
         ...(p.receiptProfile?{receiptProfile:p.receiptProfile}:{})};
       tx.create(saleRef,sale);
       writeMovement(tx,ctx.shop,context,'sale-'+saleRef.id,{...saleMovement(sale,ctx.uid),saleId:saleRef.id},FieldValue);
-      for(const u of updates)tx.update(u.ref,{stock:FieldValue.increment(-u.qty)});
+      for(const u of updates)require('./stock_quantity').write(tx,u.ref,u.current,{stock:require('./stock_quantity').round(Number(u.current.stock||0)-u.qty)},{id:'sale-'+saleRef.id,referenceId:saleRef.id,actor:ctx.uid},FieldValue);
       return {id:data.id,receiptNo,review};
     });
   }

@@ -4,7 +4,7 @@ import '../models/sale.dart';
 class ProductSalesTotal {
   ProductSalesTotal(this.name);
   final String name;
-  int quantity = 0;
+  num quantity = 0;
   double revenue = 0;
 }
 

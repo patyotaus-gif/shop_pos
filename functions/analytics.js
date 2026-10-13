@@ -67,7 +67,7 @@ function summarize(records, fromDay, toDay, zone) {
     const day = key(at, zone); if (day < fromDay || day >= toDay) continue;
     const lines = s.items || [], total = money(s.total), cut = money(s.discount || 0), fee = money(s.serviceCharge || 0);
     if (![total, cut, fee].every(Number.isSafeInteger) || total < 0 || cut < 0 || fee < 0 ||
-      !lines.length || lines.some(i => !Number.isInteger(i.quantity) || i.quantity <= 0 ||
+      !lines.length || lines.some(i => !require('./stock_quantity').valid(i.quantity,true) || i.quantity <= 0 ||
         !Number.isFinite(Number(i.subtotal)) || Number(i.subtotal) < 0)) { invalid++; continue; }
     const weights = lines.map(i => money(i.subtotal)), subtotal = weights.reduce((a, b) => a + b, 0);
     if (cut > subtotal) { invalid++; continue; }
@@ -81,7 +81,9 @@ function summarize(records, fromDay, toDay, zone) {
     if (s.estimatedPaidAt) estimatedPaidAt++;
     if (s.isRefunded) continue;
     count++; net += total; service += fee; adjustment += total - (subtotal - cut + fee);
-    const cuts = allocate(cut, weights);
+    const bundleCuts = require('./bundle_allocation').cutsForBundles(lines,s.bundles,allocate);
+    const remainingCut = cut-bundleCuts.reduce((a,b)=>a+b,0);
+    const cuts = allocate(remainingCut,weights.map((w,n)=>w-bundleCuts[n])).map((v,n)=>v+bundleCuts[n]);
     daily.set(day, (daily.get(day) || 0) + total);
     const hour = parts(at, zone).hour;
     hours.set(hour, (hours.get(hour) || 0) + total);

@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../utils/operation_error.dart';
 
 /// Blocks navigation and repeated taps only while a confirmed write is running.
+/// [timeout] only releases the UI; it cannot cancel a remote write. Use it for
+/// idempotent actions whose uncertain result can be checked before retrying.
 Future<T> runShopOperation<T>(BuildContext context, Future<T> Function() action,
-    {String message = 'กำลังบันทึก กรุณารอสักครู่'}) async {
+    {String message = 'กำลังบันทึก กรุณารอสักครู่', Duration? timeout}) async {
   final navigator = Navigator.of(context, rootNavigator: true);
   final route = DialogRoute<void>(
     context: context,
@@ -22,7 +24,8 @@ Future<T> runShopOperation<T>(BuildContext context, Future<T> Function() action,
   );
   unawaited(navigator.push(route));
   try {
-    return await action();
+    final pending = action();
+    return await (timeout == null ? pending : pending.timeout(timeout));
   } finally {
     if (route.isActive) navigator.removeRoute(route);
   }
@@ -31,9 +34,10 @@ Future<T> runShopOperation<T>(BuildContext context, Future<T> Function() action,
 Future<bool> performShopOperation(
     BuildContext context, Future<void> Function() action,
     {String success = 'บันทึกแล้ว',
-    String message = 'กำลังบันทึก กรุณารอสักครู่'}) async {
+    String message = 'กำลังบันทึก กรุณารอสักครู่',
+    Duration? timeout}) async {
   try {
-    await runShopOperation(context, action, message: message);
+    await runShopOperation(context, action, message: message, timeout: timeout);
     if (context.mounted) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(success)));

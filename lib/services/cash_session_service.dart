@@ -90,6 +90,7 @@ class CashSessionService {
       'sessionId': session.id,
       'countedCash': countedCash,
       'acknowledgeLegacy': acknowledgeLegacy,
+      'autoOpenNext': session.accountingVersion == 1,
     });
     return get(session.id);
   }

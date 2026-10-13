@@ -211,7 +211,7 @@ class _ProductCatalogState extends State<ProductCatalog> {
                                             if (widget.showInventory &&
                                                 widget.onReceiveStock != null)
                                               IconButton(
-                                                  tooltip: 'รับสินค้าเข้า',
+                                                  tooltip: 'จัดการสต๊อก',
                                                   icon: const Icon(
                                                       Icons.add_box_outlined),
                                                   onPressed: () =>
@@ -304,7 +304,7 @@ class _ProductListRow extends StatelessWidget {
               if (onReceiveStock != null)
                 IconButton(
                     onPressed: onReceiveStock,
-                    tooltip: 'รับสินค้าเข้า',
+                    tooltip: 'จัดการสต๊อก',
                     icon: const Icon(Icons.add_box_outlined)),
             ]),
           )),

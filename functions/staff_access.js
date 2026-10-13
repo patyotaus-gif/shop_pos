@@ -1,3 +1,4 @@
+const stock = require('./stock_quantity');
 const crypto = require('node:crypto');
 const {ledgerContext,writeMovement,saleMovement}=require('./money_ledger');
 const { HttpsError } = require('firebase-functions/v2/https');
@@ -30,7 +31,7 @@ function publicSale(sale) {
 function priceCart(lines, products, groups, now) {
   if (!Array.isArray(lines) || !lines.length || lines.length > 50) fail('invalid-argument', 'รายการขายต้องมี 1–50 รายการ');
   return lines.map(line => {
-    if (!idOk(line.productId) || !Number.isInteger(line.quantity) || line.quantity < 1 || line.quantity > 99 ||
+    if (!idOk(line.productId) || !stock.valid(line.quantity,true) || line.quantity > 99 ||
         !Array.isArray(line.optionIds) || new Set(line.optionIds).size !== line.optionIds.length || line.optionIds.length > 50) fail('invalid-argument', 'รายการสินค้าไม่ถูกต้อง');
     const product = products.get(line.productId);
     if (!product) fail('not-found', 'ไม่พบสินค้า กรุณาโหลดรายการใหม่');
@@ -41,7 +42,7 @@ function priceCart(lines, products, groups, now) {
     if (!Number.isFinite(priced.unitPrice) || priced.unitPrice < 0) fail('failed-precondition','ราคาสินค้าไม่ถูกต้อง');
     return { productId:line.productId, productName:priced.productName, price:priced.basePrice,
       costPrice:Number(product.costPrice || 0), costKnown:Number(product.costPrice)>0, category:product.category || 'ทั่วไป',
-      quantity:line.quantity, subtotal:Math.round(priced.unitPrice*line.quantity*100)/100,
+      quantity:line.quantity, unit:product.unit||'ชิ้น', isWeighed:product.isWeighed===true, subtotal:Math.round(priced.unitPrice*line.quantity*100)/100,
       modifiers:priced.modifiers, ...(priced.notes ? {notes:priced.notes} : {}) };
   });
 }
@@ -119,10 +120,23 @@ function createStaffAccess({db, auth, FieldValue, Timestamp, now=()=>new Date()}
       subscriptionStatus:ctx.shop.subscriptionStatus,trialEndsAt:ctx.shop.trialEndsAt?.toDate().toISOString()||null,
       subscriptionEndsAt:ctx.shop.subscriptionEndsAt?.toDate().toISOString()||null},
       settings:Object.fromEntries(['name','taxId','address','promptpayId','promptpayName'].map(k=>[k,cfg[k]||''])),
-      products:products.docs.map(d=>{const p=d.data();return {id:d.id,name:p.name||'',barcode:p.barcode||'',price:effectivePriceOf(p,now()),stock:p.stock||0,
+      products:products.docs.map(d=>{const p=d.data();return {id:d.id,name:p.name||'',barcode:p.barcode||'',price:effectivePriceOf(p,now()),stock:p.stock||0,stockLots:p.stockLots||[],unit:p.unit||'ชิ้น',isWeighed:p.isWeighed===true,trackLots:p.trackLots===true,
         category:p.category||'ทั่วไป',imageUrl:p.imageUrl||'',stockMode:p.stockMode||'count',modifierGroupIds:p.modifierGroupIds||[]};}),
       groups:groups.docs.map(d=>{const g=d.data();return {id:d.id,name:g.name,required:g.required===true,multiSelect:g.multiSelect===true,
         options:(g.options||[]).map(o=>({id:o.id,name:o.name,priceAdjust:Number(o.priceAdjust||0)}))};})};
+  }
+  async function quoteGifts(request) {
+    const ctx=await scope(request),items=request.data?.items;
+    if(!Array.isArray(items)||!items.length||items.length>50) fail('invalid-argument','รายการสินค้าไม่ถูกต้อง');
+    try {return await db.runTransaction(async tx=>({
+      buyGet:await require('./buy_get').quote(ctx.ref,items,ref=>tx.get(ref),+now()),
+      bundles:await require('./bundles').quote(ctx.ref,items,ref=>tx.get(ref),+now()),
+    }));}
+    catch(e) {fail('failed-precondition',e.buyGetError||e.bundleError?e.message:'ตรวจโปรซื้อแถมไม่สำเร็จ');}
+  }
+  async function bundleCatalog(request) {
+    const ctx=await scope(request);
+    return {bundles:await db.runTransaction(tx=>require('./bundles').catalog(ctx.ref,r=>tx.get(r),+now()))};
   }
   async function checkout(request) {
     const ctx=await scope(request);if(!ctx.member) fail('permission-denied','ใช้สำหรับโหมดพนักงาน');
@@ -131,7 +145,9 @@ function createStaffAccess({db, auth, FieldValue, Timestamp, now=()=>new Date()}
     if(!idOk(requestId)||requestId.length<10||!['cash','transfer','qr'].includes(paymentMethod)||!Number.isFinite(paid)||paid<0||paid>1e9||!Number.isFinite(expectedTotal)||expectedTotal<0||expectedTotal>1e9) fail('invalid-argument','ข้อมูลชำระเงินไม่ถูกต้อง');
     if(request.data.discount || request.data.isDebt) fail('permission-denied','ส่วนลดและขายเชื่อให้เจ้าของร้านดำเนินการ');
     if(!Array.isArray(items)||!items.length||items.length>50||items.some(i=>!idOk(i.productId))) fail('invalid-argument','รายการสินค้าไม่ถูกต้อง');
-    const digest=crypto.createHash('sha256').update(JSON.stringify({items,paid,paymentMethod,expectedTotal,...(salesChannel?{salesChannel}:{})})).digest('hex');
+    const digest=crypto.createHash('sha256').update(JSON.stringify({items,paid,paymentMethod,expectedTotal,...(salesChannel?{salesChannel}:{}),
+      ...(request.data.buyGetQuote?{buyGetQuote:request.data.buyGetQuote}:{}),
+      ...(request.data.bundleQuote?{bundleQuote:request.data.bundleQuote}:{})})).digest('hex');
     const ref=ctx.ref.collection('sales').doc(requestId);
     return db.runTransaction(async tx=>{
       const [prior,member,shop]=await Promise.all([tx.get(ref),tx.get(ctx.ref.collection('staff').doc(ctx.user.token.staffId)),tx.get(ctx.ref)]);
@@ -144,18 +160,31 @@ function createStaffAccess({db, auth, FieldValue, Timestamp, now=()=>new Date()}
       const ids=[...new Set(items.map(i=>i.productId))],products=new Map(),groups=new Map();
       for(const id of ids) {const p=await tx.get(ctx.ref.collection('products').doc(id));if(p.exists)products.set(id,p.data());}
       for(const id of new Set([...products.values()].flatMap(p=>p.modifierGroupIds||[]))) {const g=await tx.get(ctx.ref.collection('modifierGroups').doc(id));if(g.exists)groups.set(id,g.data());}
-      const priced=priceCart(items,products,groups,now());
-      const total=Math.round(priced.reduce((s,i)=>s+i.subtotal,0)*100)/100;
+      let priced=priceCart(items,products,groups,now());
+      const bundleModule=require('./bundles');
+      const bundles=await bundleModule.quote(ctx.ref,priced,r=>tx.get(r),+now());
+      if(bundleModule.fingerprint(bundles)!==bundleModule.fingerprint(request.data.bundleQuote))fail('failed-precondition','ชุดสินค้าหรือราคาเปลี่ยน กรุณาตรวจใหม่ก่อนรับเงิน');
+      const bundleDiscount=bundleModule.discountMinor(bundles)/100;
+      let promotion;
+      try {promotion=await require('./buy_get').apply(tx,ctx.ref,{items:priced,buyGetQuote:request.data.buyGetQuote},+now());}
+      catch(e) {fail('failed-precondition',e.buyGetError||e.bundleError?e.message:'ตรวจโปรซื้อแถมไม่สำเร็จ');}
+      priced=promotion.items.map(i=>i.isGift?{...i,subtotal:0}:i);
+      for(const i of priced.filter(i=>i.isGift)) {
+        const p=await tx.get(ctx.ref.collection('products').doc(i.productId));
+        if(!p.exists)fail('failed-precondition','สินค้าแถมถูกลบ');
+        products.set(i.productId,p.data());
+      }
+      const total=(Math.round(priced.reduce((s,i)=>s+i.subtotal,0)*100)-Math.round(bundleDiscount*100))/100;
       if(Math.abs(total-expectedTotal)>0.009) fail('failed-precondition','ราคาสินค้าเปลี่ยน กรุณาติดต่อเจ้าของร้านก่อนรับเงินเพิ่ม');
       if(paymentMethod==='cash'&&paid<total) fail('invalid-argument','จำนวนเงินรับไม่พอ');
       const quantities=new Map();for(const i of priced) quantities.set(i.productId,(quantities.get(i.productId)||0)+i.quantity);
       const reserved=(await tx.get(ctx.ref.collection('inventoryControl').doc('online'))).data() || {};
-      for(const [id,q] of quantities)if(products.get(id).stockMode!=='recipe'&&Number(products.get(id).stock||0)-Number(reserved.products?.[id]||0)<q)fail('failed-precondition','สต็อกไม่พอหรือถูกจองออนไลน์ กรุณาติดต่อเจ้าของร้าน');
+      for(const [id,q] of quantities)if(products.get(id).stockMode!=='recipe'&&stock.available(products.get(id))-Number(reserved.products?.[id]||0)+1e-9<q)fail('failed-precondition','สต็อกไม่พอหรือถูกจองออนไลน์ กรุณาติดต่อเจ้าของร้าน');
       const usage=require('./inventory').computeUsage(priced,Object.fromEntries(products),Object.fromEntries(groups)),ingredientUpdates=[];
       for(const [id,qty] of Object.entries(usage)){
         const ref=ctx.ref.collection('ingredients').doc(id),ing=(await tx.get(ref)).data();
         const held=Number(reserved.ingredients?.[id]||0);
-        if(held>0 && Number(ing?.stock||0)-qty+1e-9<held)fail('failed-precondition','วัตถุดิบถูกจองออนไลน์ กรุณาติดต่อเจ้าของร้าน');
+        if((held>0 || promotion.buyGet?.length || bundles.length) && Number(ing?.stock||0)-qty+1e-9<held)fail('failed-precondition','วัตถุดิบไม่พอหรือถูกจองออนไลน์ กรุณาติดต่อเจ้าของร้าน');
         if(ing)ingredientUpdates.push({ref,qty});
       }
       // Separate prefix/counter from owner devices, whose local timezone may differ.
@@ -164,7 +193,9 @@ function createStaffAccess({db, auth, FieldValue, Timestamp, now=()=>new Date()}
       const datePart=key=>parts.find(p=>p.type===key).value;
       const day=String((Number(datePart('year'))+543)%100).padStart(2,'0')+datePart('month')+datePart('day');
       const seq=count.data()?.day===day?Number(count.data().seq||0)+1:1;
-      const sale={items:priced,total,discount:0,paid:paymentMethod==='cash'?paid:total,change:paymentMethod==='cash'?Math.round((paid-total)*100)/100:0,
+      const sale={items:priced,total,discount:bundleDiscount,
+        ...(bundles.length?{bundles,bundleDiscount}:{}),paid:paymentMethod==='cash'?paid:total,change:paymentMethod==='cash'?Math.round((paid-total)*100)/100:0,
+        ...(promotion.buyGet?{buyGet:promotion.buyGet}:{}),
         paymentMethod,...(salesChannel?{salesChannel}:{}),isDebt:false,isRefunded:false,createdAt:Timestamp.fromDate(now()),staffName:member.data().name,staffId:ctx.user.token.staffId,
         staffUid:ctx.user.uid,requestDigest:digest,receiptNo:`S-${day}-${String(seq).padStart(3,'0')}`};
       const context=await ledgerContext(tx,ctx.ref);
@@ -174,13 +205,15 @@ function createStaffAccess({db, auth, FieldValue, Timestamp, now=()=>new Date()}
       sale.ingredientsDeducted=true;
       sale.ingredientUsage=Object.fromEntries(ingredientUpdates.map(u=>[u.ref.id,u.qty]));
       sale.stockDeducted=Object.fromEntries([...quantities].filter(([id])=>products.get(id).stockMode!=='recipe'));
+      const allocations=new Map([...quantities].filter(([id])=>products.get(id).stockMode!=='recipe').map(([id,q])=>[id,stock.allocate(products.get(id),stock.round(q))]));
+      sale.stockLotsDeducted=Object.fromEntries([...allocations].map(([id,a])=>[id,a.used]));
       tx.set(ref,sale);tx.set(counter,{day,seq});
       for(const u of ingredientUpdates)tx.update(u.ref,{stock:FieldValue.increment(-u.qty)});
       writeMovement(tx,ctx.ref,context,'sale-'+ref.id,{...saleMovement(sale,ctx.user.uid),saleId:ref.id},FieldValue);
-      for(const [id,q] of quantities)if(products.get(id).stockMode!=='recipe')tx.update(ctx.ref.collection('products').doc(id),{stock:FieldValue.increment(-q)});
+      for(const [id,a] of allocations)stock.write(tx,ctx.ref.collection('products').doc(id),products.get(id),a,{id:'sale-'+ref.id,referenceId:ref.id,actor:ctx.user.uid},FieldValue);
       return publicSale({id:ref.id,...sale});
     });
   }
-  return {list,manage,switchSession,workspace,checkout};
+  return {list,manage,switchSession,workspace,checkout,quoteGifts,bundleCatalog};
 }
 module.exports={createStaffAccess,hashPin,matchesPin,staffCap,priceCart,publicSale};

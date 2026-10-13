@@ -122,6 +122,12 @@ class _OrderSummaryCardState extends State<OrderSummaryCard> {
                               style: const TextStyle(fontSize: 14)),
                       ])),
             const Divider(height: 20),
+            for (final b in order.bundles)
+              Text(
+                  '${b['name']} × ${b['sets']} ชุด ลด ${formatBaht((b['discountMinor'] as num) / 100)}'),
+            if (order.couponCode != null)
+              Text(
+                  'คูปอง ${order.couponCode} ลด ${formatBaht(order.discount - order.bundleDiscount)}'),
             Text(
                 order.status == OrderStatus.pendingPayment
                     ? 'ยอดที่ต้องชำระ'

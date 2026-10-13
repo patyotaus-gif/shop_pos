@@ -1,9 +1,10 @@
+globalThis.location = new URL('http://localhost/order/');
 // Node smoke tests for the order-page ES modules (no browser needed).
 // Run: node scripts/test_order_page.mjs
 import assert from 'node:assert/strict';
 
-const { escHtml, fmtBaht, shopId } = await import('../public/order/js/util.js?v=20261007');
-const cartMod = await import('../public/order/js/cart.js?v=20261007');
+const { escHtml, fmtBaht, shopId } = await import('../public/order/js/util.js?v=20261013stock');
+const cartMod = await import('../public/order/js/cart.js?v=20261013stock');
 
 // ── util.js ──
 assert.equal(escHtml('a<b>&"c'), 'a&lt;b&gt;&amp;&quot;c');
@@ -66,7 +67,7 @@ assert.equal(getQty('d'), 10, 'total product qty capped at stock');
 console.log('✓ util.js + cart.js tests passed');
 
 // ── catalog.js promoInfo ──
-const { promoInfo } = await import('../public/order/js/catalog.js?v=20261007');
+const { promoInfo } = await import('../public/order/js/catalog.js?v=20261013stock');
 
 assert.deepEqual(promoInfo(10, 20), { percent: 50, saving: 10 });
 assert.deepEqual(promoInfo(1.25, 3), { percent: 58, saving: 1.75 });
@@ -79,7 +80,7 @@ assert.equal(promoInfo(996, 1000), null, 'rounds to 0% → no badge');
 console.log('✓ catalog.js promoInfo tests passed');
 
 // ── payment.js — PromptPay payload (moved verbatim; verify it still works) ──
-const { crc16, buildPromptPayPayload } = await import('../public/order/js/payment.js?v=20261007');
+const { crc16, buildPromptPayPayload } = await import('../public/order/js/payment.js?v=20261013stock');
 
 // CRC-16/CCITT-FALSE known-answer test
 assert.equal(crc16('123456789'), '29B1');
@@ -104,7 +105,7 @@ assert.throws(() => buildPromptPayPayload('12345', 10));
 console.log('✓ payment.js PromptPay tests passed');
 
 // ── catalog.js filterByCategory ──
-const { filterByCategory } = await import('../public/order/js/catalog.js?v=20261007');
+const { filterByCategory } = await import('../public/order/js/catalog.js?v=20261013stock');
 const prods = [
   { id: '1', category: 'เครื่องดื่ม' },
   { id: '2', category: 'ของทานเล่น' },
@@ -115,7 +116,7 @@ assert.deepEqual(filterByCategory(prods, 'เครื่องดื่ม').ma
 assert.deepEqual(filterByCategory(prods, 'ทั่วไป').map(p => p.id), ['3'], 'empty category groups as ทั่วไป');
 
 // ── upsell.js pickUpsell ──
-const { pickUpsell } = await import('../public/order/js/upsell.js?v=20261007');
+const { pickUpsell } = await import('../public/order/js/upsell.js?v=20261013stock');
 const menu = [
   { id: 'a', stock: 5, pinned: true },
   { id: 'b', stock: 5, originalPrice: 20, price: 10 },
@@ -145,13 +146,13 @@ assert.equal(getQty('food'), 3, 'plain + configured lines share stock cap');
 clearCart();
 assert.equal(items().length, 0, 'clear includes configured lines');
 
-const { filterProducts, needsOptions } = await import('../public/order/js/catalog.js?v=20261007');
+const { filterProducts, needsOptions } = await import('../public/order/js/catalog.js?v=20261013stock');
 assert.equal(filterProducts([{ name: 'ชาเขียว', category: ' เครื่องดื่ม ' }], 'เครื่องดื่ม', 'ชา เขียว').length, 1);
 assert.equal(filterProducts([{ name: 'ชาเขียว', category: 'เครื่องดื่ม' }], 'ทั้งหมด', 'ข้าว').length, 0);
 assert.equal(needsOptions({ modifierGroups: [{ required: true }] }), true);
 assert.equal(pickUpsell([{ id: 'a', stock: 3, pinned: true, modifierGroups: [{ required: true }] }], []).length, 0);
 
-const { restoreDraft, initCartPersistence, cartStorageKey } = await import('../public/order/js/cart-store.js?v=20261007');
+const { restoreDraft, initCartPersistence, cartStorageKey } = await import('../public/order/js/cart-store.js?v=20261013stock');
 const menuNow = [{ id: 'food', name: 'new name', price: 55, stock: 2,
   modifierGroups: [{ id: 'protein', name: 'เนื้อ', required: true, multiSelect: false,
     options: [{ id: 'egg', name: 'ไข่', priceAdjust: 5 }] }] }];

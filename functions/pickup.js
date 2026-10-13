@@ -54,19 +54,43 @@ async function availability(shopRef, raw, now = Date.now()) {
   return { enabled: true, prepMinutes: c.prepMinutes, timezone: 'Asia/Bangkok',
     slots: snapshot.size > 2000 ? [] : options.filter(s => overlapping(snapshot.docs, s) < c.capacity) };
 }
-async function createWithPickup({ db, shopRef, orderRef, order, requestedSlot, pickupMode, now = () => Date.now() }) {
+async function createWithPickup({ db, shopRef, orderRef, order: originalOrder, requestedSlot, pickupMode, now = () => Date.now() }) {
   return db.runTransaction(async tx => {
+    // Firestore may retry this callback after a competing checkout commits.
+    // Always recheck the original coupon and undiscounted amount on each run.
+    let order = {...originalOrder};
     const prior = await tx.get(orderRef);
     if (prior.exists) {
       const saved = prior.data();
       if (!order.requestSignature || saved.requestSignature !== order.requestSignature || saved.status !== 'pendingPayment')
         throw Object.assign(Error('ช่วงเวลาหรือออเดอร์เปลี่ยนไป กรุณาตรวจออเดอร์เดิมกับร้าน'),{existingOrder:true});
       return { pickupLabel: saved.pickupLabel || null, total: saved.total, finalAmount: saved.finalAmount,
+        ...(saved.buyGet ? {buyGet:saved.buyGet} : {}),
+      ...(saved.bundles ? {bundles:saved.bundles,bundleDiscount:saved.bundleDiscount} : {}),
+        ...(saved.coupon ? {coupon:saved.coupon,discount:saved.discount,subtotal:saved.subtotal} : {}),
         promptpayIdSnapshot:saved.promptpayIdSnapshot, promptpayNameSnapshot:saved.promptpayNameSnapshot };
     }
     const settings = (await tx.get(shopRef.collection('settings').doc('shop'))).data() || {};
     if (settings.ordersClosed === true) throw Error('ร้านปิดรับออเดอร์ชั่วคราว');
     const c = config(settings.pickup);
+    if (order.items?.length) {
+      order = await require('./bundles').apply(tx,shopRef,order,now());
+      if (order.bundles?.length && order.total<20) throw Object.assign(Error('ชุดสินค้า: ยอดหลังลดต้องไม่น้อยกว่า 20 บาท'),{bundleError:true});
+      order = await require('./buy_get').apply(tx,shopRef,order,now());
+    }
+    const coupon = await require('./coupons').reserve(tx, shopRef, order, now());
+    if (coupon) {
+      const q = coupon.quote;
+      const cents = Math.round((order.finalAmount - order.total) * 100);
+      order = {...order,subtotal:(q.subtotalMinor+Math.round((order.bundleDiscount||0)*100))/100,discount:(q.discountMinor+Math.round((order.bundleDiscount||0)*100))/100,
+        total:q.totalMinor/100,finalAmount:(q.totalMinor+cents)/100,coupon:q};
+      delete order.couponCode;
+      delete order.couponQuote;
+    }
+    if (order.bundles?.length) {
+      try { require('./bundles').validateOrder(order); }
+      catch (_) { throw Object.assign(Error('ชุดสินค้า: ราคาเปลี่ยน กรุณาตรวจชุดสินค้าอีกครั้ง'),{bundleError:true}); }
+    }
     const inventory = order.items?.length ? await require('./order_inventory').reserve(tx, shopRef, order.items) : null;
     let pickup = {};
     if (order.tableId || order.orderType === 'dineInPrepaid') {
@@ -94,8 +118,12 @@ async function createWithPickup({ db, shopRef, orderRef, order, requestedSlot, p
       pickup = { pickupMode: 'asap' };
     }
     if (inventory) inventory.write();
+    if (coupon) coupon.write();
     tx.create(orderRef, { ...order, ...pickup, ...(inventory ? {inventoryReservation:inventory.reservation} : {}) });
     return { ...pickup, total: order.total, finalAmount: order.finalAmount,
+      ...(order.buyGet ? {buyGet:order.buyGet} : {}),
+      ...(order.bundles ? {bundles:order.bundles,bundleDiscount:order.bundleDiscount} : {}),
+      ...(order.coupon ? {coupon:order.coupon,discount:order.discount,subtotal:order.subtotal} : {}),
       promptpayIdSnapshot:order.promptpayIdSnapshot, promptpayNameSnapshot:order.promptpayNameSnapshot };
   });
 }

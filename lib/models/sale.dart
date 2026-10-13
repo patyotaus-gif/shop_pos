@@ -43,10 +43,13 @@ class SaleItem {
   final double costPrice;
   final bool? costKnown;
   final String? category;
-  final int quantity;
+  final String unit;
+  final bool isWeighed;
+  final num quantity;
   final double subtotal;
   final List<OrderModifier> modifiers;
   final String? notes;
+  final bool isGift;
 
   const SaleItem({
     required this.productId,
@@ -55,10 +58,13 @@ class SaleItem {
     this.costPrice = 0,
     this.costKnown,
     this.category,
+    this.unit = 'ชิ้น',
+    this.isWeighed = false,
     required this.quantity,
     required this.subtotal,
     this.modifiers = const [],
     this.notes,
+    this.isGift = false,
   });
 
   double get unitCost {
@@ -82,15 +88,19 @@ class SaleItem {
         costPrice: (m['costPrice'] ?? 0).toDouble(),
         costKnown: m['costKnown'] as bool?,
         category: m['category'] as String?,
+        unit: m['unit'] as String? ?? 'ชิ้น',
+        isWeighed: m['isWeighed'] == true,
         quantity: m['quantity'] ?? 1,
         subtotal: (m['subtotal'] ?? 0).toDouble(),
         notes: m['notes'] as String?,
+        isGift: m['isGift'] == true,
         modifiers: ((m['modifiers'] as List<dynamic>?) ?? const [])
             .map((e) => OrderModifier.fromMap(e as Map<String, dynamic>))
             .toList(),
       );
 
   Map<String, dynamic> toMap() => {
+        if (isGift) 'isGift': true,
         'productId': productId,
         'productName': productName,
         'price': price,
@@ -98,6 +108,8 @@ class SaleItem {
         if (costKnown != null) 'costKnown': costKnown,
         if (category != null) 'category': category,
         'quantity': quantity,
+        'unit': unit,
+        'isWeighed': isWeighed,
         'subtotal': subtotal,
         if (notes != null) 'notes': notes,
         if (modifiers.isNotEmpty)
@@ -125,6 +137,10 @@ class Sale {
   /// Service charge added on top of the items subtotal. 0 for retail and
   /// for restaurants that haven't configured a percentage.
   final double serviceCharge;
+  final double paymentAdjustment;
+  final List<Map<String, dynamic>> buyGet;
+  final List<Map<String, dynamic>> bundles;
+  final double bundleDiscount;
 
   /// 1 for normal bills; > 1 means the bill was split evenly N ways at
   /// close time. The receipt shows the per-person figure when > 1.
@@ -160,6 +176,10 @@ class Sale {
     this.refundReason,
     this.stripePaymentIntentId,
     this.serviceCharge = 0,
+    this.paymentAdjustment = 0,
+    this.buyGet = const [],
+    this.bundles = const [],
+    this.bundleDiscount = 0,
     this.splitCount = 1,
     this.staffName,
     this.receiptNo,
@@ -170,16 +190,50 @@ class Sale {
 
   /// Sum of line item subtotals — total minus service charge plus discount.
   /// Useful for receipts that want to show subtotal explicitly.
-  double get itemsSubtotal => total - serviceCharge + discount;
+  double get itemsSubtotal =>
+      total - serviceCharge - paymentAdjustment + discount;
 
   /// Allocate the bill discount in satang; rounded lines must still sum exactly.
   List<double> get itemNetRevenue {
     final weights = items.map((i) => (i.subtotal * 100).round()).toList();
+    final bundleCuts = List.filled(items.length, 0);
+    final left = items.map((i) => i.isGift ? 0 : i.quantity).toList();
+    for (final b in bundles) {
+      final partWeights = List.filled(items.length, 0);
+      for (final c in b['components'] as List) {
+        num needed = (c['quantity'] as int) * (b['sets'] as int);
+        for (var n = 0; n < items.length; n++) {
+          final i = items[n];
+          if (i.productId != c['productId'] ||
+              i.isGift ||
+              i.modifiers.isNotEmpty) {
+            continue;
+          }
+          final take = needed < left[n] ? needed : left[n];
+          needed -= take;
+          left[n] -= take;
+          partWeights[n] += (take * (c['unitPriceMinor'] as int)).round();
+        }
+      }
+      final part = _allocate((b['discountMinor'] as num).toInt(), partWeights);
+      for (var n = 0; n < items.length; n++) {
+        bundleCuts[n] += part[n];
+      }
+    }
+    final remaining =
+        List.generate(items.length, (n) => weights[n] - bundleCuts[n]);
+    final cut =
+        (discount * 100).round() - bundleCuts.fold<int>(0, (v, c) => v + c);
+    final cuts = _allocate(cut, remaining);
+    return List.generate(items.length, (n) => (remaining[n] - cuts[n]) / 100);
+  }
+
+  static List<int> _allocate(int amount, List<int> weights) {
     final sum = weights.fold<int>(0, (value, w) => value + w);
-    if (sum == 0) return List.filled(items.length, 0);
-    final cut = (discount * 100).round().clamp(0, sum);
+    if (sum == 0) return List.filled(weights.length, 0);
+    final cut = amount.clamp(0, sum);
     final cuts = weights.map((w) => cut * w ~/ sum).toList();
-    final ranks = List.generate(items.length, (i) => i)
+    final ranks = List.generate(weights.length, (i) => i)
       ..sort((a, b) {
         final compare =
             (cut * weights[b] % sum).compareTo(cut * weights[a] % sum);
@@ -189,7 +243,7 @@ class Sale {
     for (var n = 0; n < remainder; n++) {
       cuts[ranks[n]]++;
     }
-    return List.generate(items.length, (i) => (weights[i] - cuts[i]) / 100);
+    return cuts;
   }
 
   factory Sale.fromFirestore(Map<String, dynamic> data, String id) => Sale(
@@ -217,6 +271,14 @@ class Sale {
         refundReason: data['refundReason'],
         stripePaymentIntentId: data['stripePaymentIntentId'],
         serviceCharge: (data['serviceCharge'] ?? 0).toDouble(),
+        paymentAdjustment: (data['paymentAdjustment'] as num?)?.toDouble() ?? 0,
+        bundleDiscount: (data['bundleDiscount'] as num?)?.toDouble() ?? 0,
+        bundles: ((data['bundles'] as List?) ?? const [])
+            .map((b) => Map<String, dynamic>.from(b as Map))
+            .toList(),
+        buyGet: ((data['buyGet'] as List?) ?? const [])
+            .map((g) => Map<String, dynamic>.from(g as Map))
+            .toList(),
         splitCount: (data['splitCount'] ?? 1) as int,
         staffName: data['staffName'] as String?,
         receiptNo: data['receiptNo'] as String?,
@@ -243,6 +305,10 @@ class Sale {
         if (salesChannel != SalesChannel.unspecified)
           'salesChannel': salesChannel.name,
         if (serviceCharge > 0) 'serviceCharge': serviceCharge,
+        if (paymentAdjustment != 0) 'paymentAdjustment': paymentAdjustment,
+        if (buyGet.isNotEmpty) 'buyGet': buyGet,
+        if (bundles.isNotEmpty) 'bundles': bundles,
+        if (bundles.isNotEmpty) 'bundleDiscount': bundleDiscount,
         if (splitCount > 1) 'splitCount': splitCount,
         if (staffName != null) 'staffName': staffName,
         if (receiptNo != null) 'receiptNo': receiptNo,

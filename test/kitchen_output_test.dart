@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shop_pos/models/order.dart';
@@ -39,6 +40,33 @@ TableOrder table(String id) => TableOrder(
         ]);
 void main() {
   testWidgets(
+      'open table has a bill action and ready online order can be completed',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final old = table('active');
+    await tester.pumpWidget(MaterialApp(
+        home: KitchenScreen(
+            orders: Stream.value([
+              TableOrder(
+                  id: old.id,
+                  tableId: old.tableId,
+                  tableName: old.tableName,
+                  openedAt: old.openedAt,
+                  items: old.items)
+            ]),
+            onlineOrders: Stream.value([online('ready', OrderStatus.ready)]))));
+    await tester.pumpAndSettle();
+    expect(find.text('ส่งมอบแล้ว / เสร็จสิ้น'), findsOneWidget);
+    final queue = tester.state<ScrollableState>(find.byType(Scrollable).first);
+    queue.position.jumpTo(queue.position.maxScrollExtent);
+    await tester.pumpAndSettle();
+    expect(find.text('ไปที่บิลโต๊ะ / ปิดโต๊ะ'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets(
       'kitchen combines paid online queue, options and pickup but hides unpaid orders',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
@@ -56,7 +84,7 @@ void main() {
     expect(find.text('เริ่มเตรียม'), findsOneWidget);
   });
   testWidgets(
-      'printer mode retains closed unprinted tickets and hides acknowledged closed tickets',
+      'printer mode separates closed unprinted history from active work',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
         home: KitchenScreen(
@@ -69,10 +97,44 @@ void main() {
               },
             }))));
     await tester.pumpAndSettle();
+    expect(find.text('อาหารโต๊ะwaiting'), findsNothing);
+    expect(find.text('ไม่มีงานครัวที่กำลังดำเนินการ'), findsOneWidget);
+    await tester.tap(find.byType(SwitchListTile));
+    await tester.pumpAndSettle();
     expect(find.text('อาหารโต๊ะwaiting'), findsOneWidget);
     expect(find.text('อาหารโต๊ะdone'), findsNothing);
+    final queue = tester.state<ScrollableState>(find.byType(Scrollable).first);
+    queue.position.jumpTo(queue.position.maxScrollExtent);
+    await tester.pumpAndSettle();
     expect(find.text('พิมพ์รายการใหม่'), findsOneWidget);
     expect(find.text('รอพิมพ์'), findsOneWidget);
+    expect(find.textContaining('เปิดมา'), findsNothing);
+  });
+  testWidgets(
+      'unconfirmed kitchen setting times out and late completion cannot claim success',
+      (tester) async {
+    final pending = Completer<void>();
+    var calls = 0;
+    await tester.pumpWidget(MaterialApp(
+        home: KitchenScreen(
+            orders: Stream.value([]),
+            saveOutput: (_) {
+              calls++;
+              return pending.future;
+            })));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('เครื่องพิมพ์ครัว'));
+    await tester.pump();
+    expect(find.text('กำลังบันทึกวิธีรับงานครัว'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 21));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.textContaining('ยังยืนยันผลไม่ได้'), findsOneWidget);
+    expect(calls, 1);
+    pending.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('บันทึกวิธีรับงานครัวแล้ว'), findsNothing);
+    expect(find.byType(SegmentedButton<String>), findsOneWidget);
   });
   testWidgets('kitchen output choices and online ticket fit a small phone',
       (tester) async {

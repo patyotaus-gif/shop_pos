@@ -148,9 +148,18 @@ class OfflineService {
       throw StateError(
           'สิทธิ์ออฟไลน์หมดอายุหรือเวลาเครื่องเปลี่ยน กรุณาเชื่อมต่ออินเทอร์เน็ต');
     }
+    if (cart.any((i) => i.product.isWeighed || i.product.trackLots)) {
+      throw StateError(
+          'สินค้าชั่งและสินค้าตามล็อตต้องขายขณะออนไลน์ เพื่อตรวจจำนวนและวันหมดอายุล่าสุด');
+    }
     if (cart.isEmpty ||
         cart.length > 50 ||
-        cart.any((i) => i.quantity < 1 || i.quantity > 99 || i.discount != 0)) {
+        cart.any((i) =>
+            i.product.isWeighed ||
+            i.product.trackLots ||
+            i.quantity < 1 ||
+            i.quantity > 99 ||
+            i.discount != 0)) {
       throw StateError('ตรวจรายการสินค้า (สูงสุด 50 รายการ รายการละ 99 ชิ้น)');
     }
     final total = cartTotal(cart);

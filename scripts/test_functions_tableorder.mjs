@@ -49,8 +49,9 @@ assert.throws(
   () => sanitizeTableOrderItems([{ productId: '', quantity: 1 }]), /สินค้า/);
 assert.throws(
   () => sanitizeTableOrderItems([{ productId: 'a', quantity: 0 }]), /จำนวน/);
-assert.throws(
-  () => sanitizeTableOrderItems([{ productId: 'a', quantity: 1.5 }]), /จำนวน/);
+assert.equal(sanitizeTableOrderItems([{productId:'a',quantity:1.5}])[0].quantity,1.5);
+assert.throws(()=>priceLine({productId:'a',quantity:1.5},{price:10},[],new Date()),/จำนวน/);
+assert.equal(priceLine({productId:'a',quantity:0.125},{price:80,isWeighed:true,unit:'กก.'},[],new Date()).quantity,0.125);
 assert.throws(
   () => sanitizeTableOrderItems(
     Array.from({ length: 21 }, (_, i) => ({ productId: `p${i}`, quantity: 1 }))),

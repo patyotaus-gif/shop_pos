@@ -34,10 +34,15 @@ function handler({db, FieldValue, verifyAppCheck}) {
             throw Object.assign(Error('ออเดอร์มีข้อมูลการชำระแล้ว กรุณาติดต่อร้านเพื่อตรวจสอบ โดยไม่ต้องโอนซ้ำ'),{status:409});
           status='cancelled';
           const release=await require('./order_inventory').prepareRelease(tx,shop,o);
+          const releaseCoupon=await require('./coupons').prepareRelease(tx,shop,o);
           release();
+          releaseCoupon();
           tx.update(ref,{status,cancelReason:'ลูกค้ายืนยันว่ายังไม่ได้โอนและยกเลิก',statusUpdatedAt:FieldValue.serverTimestamp(),statusUpdatedBy:'customer'});
         }
         return {orderId,status,total:o.total,finalAmount:o.finalAmount ?? o.total,
+          ...(o.buyGet ? {buyGet:o.buyGet} : {}),
+          ...(o.bundles ? {bundles:o.bundles,bundleDiscount:o.bundleDiscount} : {}),
+          ...(o.coupon ? {coupon:o.coupon,discount:o.discount,subtotal:o.subtotal} : {}),
           pickupLabel:o.pickupLabel || null,awaitingReview:!!o.slipUrl || !!o.bankMatchStatus,
           promptpayId:o.promptpayIdSnapshot || settings.promptpayId,
           promptpayName:o.promptpayNameSnapshot ?? settings.promptpayName ?? ''};
@@ -46,4 +51,4 @@ function handler({db, FieldValue, verifyAppCheck}) {
     } catch(e) {return res.status(e.status || 503).json({error:e.status?e.message:'ตรวจสถานะไม่ได้ กรุณาลองใหม่ โดยไม่ต้องโอนซ้ำ'});}
   };
 }
-module.exports={tokenHash,validToken,authorized,normalizePhone,handler};
+module.exports={tokenHash,validToken,validId,authorized,normalizePhone,handler};

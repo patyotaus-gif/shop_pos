@@ -1,7 +1,7 @@
 // Product grid cards + product quantity bottom sheet.
 // DOM-free at import time (Node smoke test imports this module).
-import { escHtml, fmtBaht } from './util.js?v=20261009';
-import { addOne, getQty, addLine, onCartChange } from './cart.js?v=20261009';
+import { escHtml, fmtBaht } from './util.js?v=20261013stock';
+import { addOne, getQty, addLine, onCartChange } from './cart.js?v=20261013stock';
 
 const byId = {};      // productId -> product from shopPublic
 let sheetProduct = null; // product currently shown in the sheet
@@ -69,7 +69,7 @@ export function promoInfo(price, originalPrice) {
   return { percent, saving: orig - p };
 }
 
-const meta = (p) => ({ name: p.name, price: p.price, stock: p.stock });
+const meta = (p) => ({ name: p.name, price: p.price, stock: p.stock, unit: p.unit, isWeighed: p.isWeighed });
 
 export function initCatalog() {
   document.getElementById('productSearch').addEventListener('input', (e) => {
@@ -89,7 +89,7 @@ export function initCatalog() {
     const p = byId[card.dataset.id];
     if (!p || p.stock <= 0) return;
     if (e.target.closest('.add-btn')) {
-      if (needsOptions(p)) { openProductSheet(p.id); return; }
+      if (p.isWeighed || needsOptions(p)) { openProductSheet(p.id); return; }
       addOne(p.id, meta(p));       // Add button = instant +1
       return;
     }
@@ -101,6 +101,11 @@ export function initCatalog() {
     if (!btn) return;
     sheetQtySelected = Number(btn.dataset.q);
     renderSheetQty();
+  });
+  document.getElementById('sheetQty').addEventListener('input', e => {
+    if(e.target.id!=='weightQty')return;
+    sheetQtySelected=Number(e.target.value);
+    updateSheetButton();
   });
   // Modifier option toggles (radio/checkbox) inside the sheet.
   document.getElementById('sheetBody').addEventListener('click', (e) => {
@@ -119,14 +124,14 @@ export function initCatalog() {
     renderSheetQty();
   });
   document.getElementById('sheetPrimary').addEventListener('click', () => {
-    if (!sheetProduct || !sheetRequiredMet()) return;
+    if (!sheetProduct || !sheetRequiredMet() || !(sheetQtySelected>0) || sheetQtySelected>99 || sheetQtySelected>sheetProduct.stock-getQty(sheetProduct.id) || Math.abs(sheetQtySelected*1000-Math.round(sheetQtySelected*1000))>1e-6) return;
     const { mods, adjust } = sheetModifiers();
     const note = (document.getElementById('sheetNote')?.value || '').trim();
     addLine({
       id: sheetProduct.id,
       name: sheetProduct.name,
       price: Math.max(0, sheetProduct.price + adjust),
-      stock: sheetProduct.stock,
+      stock: sheetProduct.stock, unit: sheetProduct.unit, isWeighed: sheetProduct.isWeighed,
       optionIds: mods.map((m) => m.optionId),
       modifiers: mods,
       notes: note,
@@ -209,7 +214,7 @@ function openProductSheet(id) {
   const p = byId[id];
   if (!p) return;
   sheetProduct = p;
-  sheetQtySelected = 1;
+  sheetQtySelected = p.isWeighed ? Math.min(1, Math.max(0, p.stock-getQty(p.id))) : 1;
   sheetSel = {};
 
   const promo = promoInfo(p.price, p.originalPrice);
@@ -267,7 +272,12 @@ function closeProductSheet() {
 function renderSheetQty() {
   const p = sheetProduct;
   if (!p) return;
-  const room = Math.max(1, p.stock - (getQty(p.id)));
+  const room = Math.max(0, p.stock - getQty(p.id));
+  document.getElementById('sheetQty').classList.toggle('weight-quantity', p.isWeighed === true);
+  if (p.isWeighed) {
+    document.getElementById('sheetQty').innerHTML = '<label>จำนวน ('+escHtml(p.unit||'กก.')+') <input id="weightQty" type="number" inputmode="decimal" min="0.001" step="0.001" max="'+Math.min(99,room)+'" value="'+sheetQtySelected+'"></label><small>ราคาต่อ '+escHtml(p.unit||'กก.')+' · ทศนิยมไม่เกิน 3 ตำแหน่ง</small>';
+    updateSheetButton(); return;
+  }
   const maxQ = Math.min(room, 20); // strip range 1..min(remaining, 20)
   sheetQtySelected = Math.min(sheetQtySelected, maxQ);
 
@@ -276,11 +286,14 @@ function renderSheetQty() {
     .map((q) => `<button class="qty-opt${q === sheetQtySelected ? ' selected' : ''}" type="button" data-q="${q}">${q}</button>`)
     .join('');
   strip.querySelector('.qty-opt.selected')?.scrollIntoView({ inline: 'center', block: 'nearest' });
-
+  updateSheetButton();
+}
+function updateSheetButton() {
+  const p = sheetProduct;
   const { adjust } = sheetModifiers();
   const unit = Math.max(0, p.price + adjust);
   const btn = document.getElementById('sheetPrimary');
-  btn.disabled = !sheetRequiredMet();
+  btn.disabled = !sheetRequiredMet() || !(sheetQtySelected>0) || sheetQtySelected>99 || sheetQtySelected>p.stock-getQty(p.id)+1e-9 || Math.abs(sheetQtySelected*1000-Math.round(sheetQtySelected*1000))>1e-6;
   btn.textContent = sheetRequiredMet()
     ? `เพิ่ม ${sheetQtySelected} ลงตะกร้า · ${fmtBaht(unit * sheetQtySelected)}`
     : 'กรุณาเลือกตัวเลือกที่จำเป็น';

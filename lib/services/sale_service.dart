@@ -1,5 +1,9 @@
+import '../utils/stock_quantity.dart';
+import 'inventory_service.dart';
 import 'dart:async';
 import 'ingredient_checkout.dart';
+import 'buy_get_service.dart';
+import 'bundle_service.dart';
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -49,6 +53,8 @@ class SaleService {
     SalesChannel salesChannel = SalesChannel.storefront,
     String? staffName,
     String? loyaltyCustomerId,
+    List<Map<String, dynamic>> buyGetQuote = const [],
+    List<Map<String, dynamic>> bundleQuote = const [],
   }) async {
     if (_running) throw StateError('กำลังบันทึกรายการ กรุณารอสักครู่');
     _running = true;
@@ -68,18 +74,45 @@ class SaleService {
                 costKnown: e.product.costPrice > 0,
                 category: e.product.category,
                 quantity: e.quantity,
+                unit: e.product.unit,
+                isWeighed: e.product.isWeighed,
                 modifiers: e.modifiers,
                 notes: e.notes,
                 subtotal: e.subtotal))
             .toList();
+        for (final gift in buyGetQuote) {
+          final data = AuthService.isStaff
+              ? <String, dynamic>{}
+              : (await shop
+                          .collection('products')
+                          .doc(gift['productId'] as String)
+                          .get())
+                      .data() ??
+                  {};
+          final cost = (data['costPrice'] as num? ?? 0).toDouble();
+          items.add(SaleItem(
+              productId: gift['productId'] as String,
+              productName: 'ของแถม: ${gift['productName']}',
+              price: 0,
+              quantity: gift['quantity'] as int,
+              subtotal: 0,
+              isGift: true,
+              costPrice: cost,
+              costKnown: cost > 0,
+              category: data['category'] as String?));
+        }
+        final bundleDiscount = BundleService.discountMinor(bundleQuote) / 100;
         final total =
             items.fold<double>(0, (amount, e) => amount + e.subtotal) -
-                discount;
+                discount -
+                bundleDiscount;
         final sale = Sale(
             id: shop.collection('sales').doc().id,
             items: items,
             total: total,
-            discount: discount,
+            discount: discount + bundleDiscount,
+            bundles: bundleQuote,
+            bundleDiscount: bundleDiscount,
             paid: isDebt ? 0 : paid,
             change: isDebt || paymentMethod != PaymentMethod.cash
                 ? 0
@@ -89,6 +122,7 @@ class SaleService {
             customerName: customerName,
             paymentMethod: paymentMethod,
             salesChannel: salesChannel,
+            buyGet: buyGetQuote,
             staffName: staffName);
         validateSale(sale);
         final stored = {
@@ -123,6 +157,7 @@ class SaleService {
         final response = await StaffAccessService.call('staffCheckout', {
           'requestId': draft.id,
           'items': draft.items
+              .where((i) => !i.isGift)
               .map((i) => {
                     'productId': i.productId,
                     'quantity': i.quantity,
@@ -135,7 +170,10 @@ class SaleService {
           'paymentMethod': draft.paymentMethod.name,
           if (draft.salesChannel != SalesChannel.unspecified)
             'salesChannel': draft.salesChannel.name,
-          'discount': draft.discount,
+          'discount':
+              ((draft.discount - draft.bundleDiscount) * 100).round() / 100,
+          if (draft.bundles.isNotEmpty) 'bundleQuote': draft.bundles,
+          if (draft.buyGet.isNotEmpty) 'buyGetQuote': draft.buyGet,
           'isDebt': draft.isDebt,
         });
         result = Sale.fromFirestore(
@@ -201,15 +239,19 @@ class SaleService {
       if (existing.exists) {
         return Sale.fromFirestore(existing.data()!, existing.id);
       }
+      await BuyGetService.validate(tx, shop, draft);
+      await BundleService.validate(tx, shop, draft);
       final counter = await tx.get(counterRef);
       final receiptSettings =
           await tx.get(shop.collection('settings').doc('shop'));
-      final quantities = <String, int>{};
+      final quantities = <String, num>{};
       for (final item in draft.items) {
-        quantities.update(item.productId, (q) => q + item.quantity,
+        quantities.update(item.productId, (q) => stockRound(q + item.quantity),
             ifAbsent: () => item.quantity);
       }
-      final counted = <String, int>{};
+      final counted = <String, num>{};
+      final stockProducts = <String, Map<String, dynamic>>{};
+      final stockAllocations = <String, StockAllocation>{};
       final reservationData =
           (await tx.get(shop.collection('inventoryControl').doc('online')))
                   .data() ??
@@ -221,10 +263,18 @@ class SaleService {
         if (!product.exists) {
           throw StateError('มีสินค้าถูกลบ กรุณาตรวจสอบตะกร้า');
         }
-        if (product.data()?['stockMode'] == 'recipe') continue;
+        final stockData = product.data()!;
+        if (!validStockQuantity(entry.value,
+            weight: stockData['isWeighed'] == true)) {
+          throw StateError('จำนวนสินค้าไม่ถูกต้อง');
+        }
+        if (stockData['stockMode'] == 'recipe') continue;
+        stockProducts[entry.key] = stockData;
+        stockAllocations[entry.key] = allocateStock(stockData, entry.value);
         counted[entry.key] = entry.value;
-        if ((product.data()?['stock'] as num? ?? 0) -
-                (reserved[entry.key] as num? ?? 0) <
+        if (saleableStock(stockData) -
+                (reserved[entry.key] as num? ?? 0) +
+                1e-9 <
             entry.value) {
           throw StateError(
               'สินค้าคงเหลือไม่พอ: ${product.data()?['name'] ?? entry.key}');
@@ -236,7 +286,8 @@ class SaleService {
       final customer = customerRef == null ? null : await tx.get(customerRef);
       final control = await MoneyLedger.read(tx, shop);
       final ingredientUsage = await IngredientCheckout.read(
-          tx, shop, draft.items, reservationData['ingredients'] as Map? ?? {});
+          tx, shop, draft.items, reservationData['ingredients'] as Map? ?? {},
+          strictStock: draft.bundles.isNotEmpty);
       final day = receiptDay(draft.createdAt);
       final next = nextReceiptSeq(counter.data()?['day'] as String?, day,
           (counter.data()?['seq'] as num? ?? 0).toInt());
@@ -247,6 +298,8 @@ class SaleService {
         'receiptNo': formatReceiptNo(next.day, next.seq),
         'accountingVersion': 1,
         'stockDeducted': counted,
+        'stockLotsDeducted':
+            stockAllocations.map((id, a) => MapEntry(id, a.used)),
         'ingredientsDeducted': true,
         'ingredientUsage': ingredientUsage,
         if (customer?.exists == true) 'loyaltyCustomerId': loyaltyCustomerId,
@@ -256,8 +309,21 @@ class SaleService {
       tx.set(saleRef, payload);
       IngredientCheckout.write(tx, shop, ingredientUsage);
       for (final entry in counted.entries) {
-        tx.update(shop.collection('products').doc(entry.key),
-            {'stock': FieldValue.increment(-entry.value)});
+        final p = stockProducts[entry.key]!;
+        tx.update(shop.collection('products').doc(entry.key), {
+          'stock': stockRound((p['stock'] as num) - entry.value),
+          'stockRevision': (p['stockRevision'] as num? ?? 0) + 1,
+          if (p['trackLots'] == true)
+            'stockLots': stockAllocations[entry.key]!.lots,
+        });
+        InventoryService.record(tx, shop, entry.key,
+            id: 'sale-${saleRef.id}',
+            kind: 'sale',
+            delta: -entry.value,
+            before: p['stock'] as num,
+            unit: p['unit'] as String? ?? 'ชิ้น',
+            referenceId: saleRef.id,
+            extra: {'lots': stockAllocations[entry.key]!.used});
       }
       if (draft.isDebt) {
         tx.set(

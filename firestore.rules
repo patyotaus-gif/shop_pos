@@ -68,6 +68,26 @@ service cloud.firestore {
       match /products/{productId} {
         allow read: if isOwner();
         allow write: if isOwner();
+        match /stockMovements/{movementId} {
+          allow read, create: if isOwner();
+          allow update, delete: if false;
+        }
+      }
+      match /productSkus/{sku} {
+        allow read, write: if isOwner();
+      }
+      match /coupons/{code} {
+        allow read: if isOwner();
+        // Config and usage counts are written only by owner callables/checkout.
+        allow write: if false;
+      }
+      match /promotionSettings/{configId} {
+        allow read: if isOwner();
+        allow write: if false;
+      }
+      match /buyGetPromotions/{productId} {
+        allow read: if isOwner();
+        allow write: if false;
       }
 
       match /sales/{saleId} {
@@ -132,7 +152,21 @@ service cloud.firestore {
       // เจ้าของร้านอ่าน/อัพเดตได้ผ่าน auth
       match /orders/{orderId} {
         allow read: if isOwner();
-        allow create, update, delete: if isOwner() && legacyAccounting();
+        allow create: if isOwner() && legacyAccounting()
+          && request.resource.data.get('bundles', null) == null
+          && request.resource.data.get('buyGet', null) == null
+          && request.resource.data.get('coupon', null) == null;
+        allow update: if isOwner() && legacyAccounting()
+          && resource.data.get('bundles', null) == null
+          && resource.data.get('buyGet', null) == null
+          && request.resource.data.get('bundles', null) == null
+          && request.resource.data.get('buyGet', null) == null
+          && resource.data.get('coupon', null) == null
+          && request.resource.data.get('coupon', null) == null;
+        allow delete: if isOwner() && legacyAccounting()
+          && resource.data.get('bundles', null) == null
+          && resource.data.get('buyGet', null) == null
+          && resource.data.get('coupon', null) == null;
         allow update: if isOwner() && resource.data.status == 'pendingPayment'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'bankMatchStatus', 'bankMatchAt', 'bankMatchRef', 'paymentSender', 'autoConfirmed'

@@ -17,6 +17,7 @@ import 'screens/login_screen.dart';
 import 'screens/order_qr_screen.dart';
 import 'screens/pos_screen.dart';
 import 'screens/products_screen.dart';
+import 'screens/sales_tools_screen.dart';
 import 'screens/report_screen.dart';
 import 'screens/debt_screen.dart';
 import 'screens/product_form_screen.dart';
@@ -506,6 +507,12 @@ class _MainShellState extends State<MainShell> {
               ),
             ];
             final moreTabs = <AppNavigationItem>[
+              AppNavigationItem(
+                screen: SalesToolsScreen(shopType: shopType),
+                icon: Icons.local_offer_outlined,
+                selectedIcon: Icons.local_offer,
+                label: 'เครื่องมือส่งเสริมการขาย',
+              ),
               if (hasTables)
                 const AppNavigationItem(
                   screen: KitchenScreen(),

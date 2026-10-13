@@ -10,7 +10,7 @@ class MobileSalesWorkspace extends StatefulWidget {
       required this.itemCount,
       required this.total});
   final Widget catalog, basket;
-  final int itemCount;
+  final num itemCount;
   final double total;
   @override
   State<MobileSalesWorkspace> createState() => _MobileSalesWorkspaceState();
@@ -88,6 +88,6 @@ class _MobileSalesWorkspaceState extends State<MobileSalesWorkspace> {
                           onPressed: () => setState(() => _cart = true),
                           icon: const Icon(Icons.shopping_cart_outlined),
                           label: Text(
-                              'ตะกร้า ${widget.itemCount} ชิ้น · ${formatBaht(widget.total)}'))))),
+                              'ตะกร้า ${widget.itemCount} หน่วย · ${formatBaht(widget.total)}'))))),
       ]);
 }

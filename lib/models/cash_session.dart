@@ -17,6 +17,9 @@ class CashSession {
   final SessionSummary? summary; // snapshot written at close
   final int accountingVersion;
   final bool needsReconciliation;
+  final String? nextSessionId;
+  final String? previousSessionId;
+  final double? carriedCash;
 
   const CashSession({
     required this.id,
@@ -30,6 +33,9 @@ class CashSession {
     this.summary,
     this.accountingVersion = 0,
     this.needsReconciliation = false,
+    this.nextSessionId,
+    this.previousSessionId,
+    this.carriedCash,
   });
 
   factory CashSession.fromFirestore(Map<String, dynamic> d, String id) =>
@@ -44,6 +50,9 @@ class CashSession {
         countedCash: (d['countedCash'] as num?)?.toDouble(),
         accountingVersion: (d['accountingVersion'] as num? ?? 0).toInt(),
         needsReconciliation: d['needsReconciliation'] == true,
+        nextSessionId: d['nextSessionId'] as String?,
+        previousSessionId: d['previousSessionId'] as String?,
+        carriedCash: (d['carriedCash'] as num?)?.toDouble(),
         summary: d['summary'] is Map
             ? SessionSummary.fromMap(Map<String, dynamic>.from(d['summary']))
             : null,

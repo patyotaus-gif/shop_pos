@@ -1,3 +1,4 @@
+import '../widgets/stock_quantity_dialog.dart';
 import 'package:flutter/material.dart';
 import '../widgets/compact_action.dart';
 import '../widgets/shop_operation.dart';
@@ -30,13 +31,32 @@ class TableDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text('โต๊ะ ${table.name}'),
         centerTitle: true,
+        actions: [
+          TextButton.icon(
+            label: const Text('ตรวจสถานะโต๊ะ'),
+            icon: const Icon(Icons.sync, size: 18),
+            onPressed: () async {
+              String? status;
+              final ok = await performShopOperation(context, () async {
+                status = await TableService.reconcileTable(table.id);
+              },
+                  message: 'กำลังตรวจบิลและสถานะโต๊ะ',
+                  success: 'ตรวจสถานะโต๊ะแล้ว');
+              if (ok && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(status == 'available'
+                        ? 'โต๊ะว่างแล้ว ประวัติบิลยังอยู่ครบ'
+                        : 'โต๊ะยังมีบิลเปิดอยู่ กรุณาชำระเงินและปิดบิล หรือยกเลิกพร้อมระบุเหตุผล')));
+              }
+            },
+          ),
+        ],
       ),
       body: StreamBuilder<TableOrder?>(
         stream: TableService.watchOpenOrderForTable(table.id),
         builder: (context, snap) {
           if (snap.hasError) {
-            return const Center(
-                child: Text('โหลดออเดอร์ไม่สำเร็จ กรุณาเปิดหน้าโต๊ะใหม่'));
+            return Center(child: Text(operationError(snap.error!)));
           }
           if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -69,14 +89,13 @@ class _OpenOrderPromptState extends State<_OpenOrderPrompt> {
       await TableService.openOrder(widget.table);
     } catch (e) {
       if (mounted) {
-        setState(() => _opening = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('เปิดออเดอร์ไม่สำเร็จ: $e')),
+          SnackBar(content: Text(operationError(e))),
         );
       }
+    } finally {
+      if (mounted) setState(() => _opening = false);
     }
-    // On success, the StreamBuilder above rebuilds with the new order;
-    // this widget gets disposed so no setState needed.
   }
 
   @override
@@ -91,11 +110,11 @@ class _OpenOrderPromptState extends State<_OpenOrderPrompt> {
             Icon(Icons.restaurant_outlined,
                 size: 72, color: cs.primary.withValues(alpha: 0.6)),
             const SizedBox(height: 16),
-            const Text('โต๊ะนี้ว่าง',
+            const Text('ยังไม่พบบิลเปิดของโต๊ะนี้',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             Text(
-              'เปิดออเดอร์เพื่อเริ่มรับสินค้าจากลูกค้า',
+              'เปิดออเดอร์เพื่อเริ่มรับสินค้า หากสถานะไม่ตรงให้กดตรวจสถานะโต๊ะที่มุมบน',
               style: TextStyle(
                   fontSize: 13, color: cs.onSurface.withValues(alpha: 0.6)),
             ),
@@ -128,7 +147,7 @@ class TableOrderView extends StatefulWidget {
       this.changeQuantity,
       this.loadServiceCharge});
   final TableOrder order;
-  final Future<void> Function(String, String, int, int)? changeQuantity;
+  final Future<void> Function(String, String, num, num)? changeQuantity;
   final Future<double> Function()? loadServiceCharge;
 
   @override
@@ -138,7 +157,7 @@ class TableOrderView extends StatefulWidget {
 class _OpenOrderViewState extends State<TableOrderView> {
   bool _closing = false;
   bool _sending = false;
-  final Map<String, int> _quantityPreview = {};
+  final Map<String, num> _quantityPreview = {};
   final Map<String, QuantityEditQueue> _quantityQueues = {};
   @override
   void dispose() {
@@ -168,6 +187,10 @@ class _OpenOrderViewState extends State<TableOrderView> {
     final picked = await showProductPicker(context);
     if (picked == null || !mounted) return;
 
+    final quantity = picked.isWeighed
+        ? await showStockQuantity(context, unit: picked.unit, weighed: true)
+        : 1;
+    if (quantity == null || !mounted) return;
     // Always open the picker: it collects modifier choices (if the product
     // has groups) plus an optional kitchen note for any dish.
     final pick = await showModifierPicker(context, product: picked);
@@ -175,6 +198,7 @@ class _OpenOrderViewState extends State<TableOrderView> {
 
     final item = TableService.itemFromProduct(
       picked,
+      quantity: quantity,
       modifiers: pick.modifiers,
       notes: pick.notes,
     );
@@ -184,7 +208,7 @@ class _OpenOrderViewState extends State<TableOrderView> {
         success: 'เพิ่มรายการรอส่งครัวแล้ว');
   }
 
-  Future<void> _changeQty(int index, int delta) async {
+  Future<void> _changeQty(int index, num delta) async {
     final item = widget.order.items[index];
     if (!_closing && !_sending && item.kitchenStatus == KitchenStatus.pending) {
       final queue = _quantityQueues.putIfAbsent(item.id, () {
@@ -494,10 +518,27 @@ class _OpenOrderViewState extends State<TableOrderView> {
                                     ? null
                                     : () => _changeQty(i, -1),
                               ),
-                              Text('${item.quantity}',
-                                  style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700)),
+                              TextButton(
+                                  onPressed: _busy
+                                      ? null
+                                      : () async {
+                                          final q = await showStockQuantity(
+                                              context,
+                                              unit: item.unit,
+                                              weighed: item.isWeighed,
+                                              initial: item.quantity);
+                                          if (q != null && mounted) {
+                                            await _changeQty(
+                                                i, q - item.quantity);
+                                          }
+                                        },
+                                  child: Text(
+                                      item.isWeighed
+                                          ? '${item.quantity} ${item.unit}'
+                                          : '${item.quantity}',
+                                      style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w700))),
                               IconButton(
                                 icon: const Icon(Icons.add_circle_outline),
                                 onPressed: (_closing ||
@@ -593,7 +634,7 @@ class _OpenOrderViewState extends State<TableOrderView> {
                             onPressed: _busy ? null : _sendToKitchen,
                             icon: const Icon(Icons.soup_kitchen_outlined),
                             label: Text(
-                                'ส่งครัว (${widget.order.items.where((i) => i.kitchenStatus == KitchenStatus.pending).fold<int>(0, (sum, i) => sum + i.quantity)})'),
+                                'ส่งครัว (${widget.order.items.where((i) => i.kitchenStatus == KitchenStatus.pending).fold<num>(0, (sum, i) => sum + i.quantity)})'),
                             style: FilledButton.styleFrom(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 20, vertical: 14),

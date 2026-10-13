@@ -206,6 +206,9 @@ class _OpenSessionCard extends StatelessWidget {
             Text('เปิดเมื่อ ${_dt.format(session.openedAt)}'
                 '${session.openedBy != null ? ' โดย ${session.openedBy}' : ''}'),
             Text('เงินทอนเริ่มต้น ฿${_baht.format(session.openingFloat)}'),
+            if (session.previousSessionId != null)
+              const Text(
+                  'เปิดต่ออัตโนมัติ • เงินตั้งต้นยกมาจากยอดนับจริงรอบก่อน'),
             if (session.accountingVersion != 1)
               const Text(
                   'รอบเก่า: ประวัติรับชำระหนี้และคืนเงินไม่ครบ ปิดเก็บยอดนับจริงไว้ตรวจสอบ แล้วเปิดรอบใหม่ได้'),
@@ -273,6 +276,12 @@ Future<void> _closeDialog(BuildContext context, CashSession session) async {
           const Text('นับเงินสดจริงในลิ้นชักตอนนี้ แล้วกรอกจำนวน',
               style: TextStyle(fontSize: 13)),
           const Text('ซิงก์บิลออฟไลน์จากทุกเครื่องให้ครบก่อนปิดรอบ'),
+          if (session.accountingVersion == 1)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text(
+                  'ปิดยอดแล้วจะเปิดรอบใหม่อัตโนมัติ เงินสดที่นับได้จะเป็นเงินตั้งต้นรอบใหม่ ยอดขายเริ่มที่ 0 หากนำเงินออกจากลิ้นชักให้บันทึกเงินออกตามจริง'),
+            ),
           if (check.futureOrderCount > 0)
             Text(
                 'นัดรับวันถัดไป ${check.futureOrderCount} ออเดอร์ เก็บไว้ทำต่อได้ เงินที่รับในรอบนี้ยังนับในยอดปิดรอบตามปกติ'),
@@ -300,7 +309,9 @@ Future<void> _closeDialog(BuildContext context, CashSession session) async {
             if (v == null || !v.isFinite || v < 0) return;
             Navigator.pop(ctx, v);
           },
-          child: const Text('ปิดรอบ'),
+          child: Text(session.accountingVersion == 1
+              ? 'ปิดยอดและเปิดรอบต่อ'
+              : 'ปิดรอบ'),
         ),
       ],
     ),
@@ -316,7 +327,7 @@ Future<void> _closeDialog(BuildContext context, CashSession session) async {
         closedBy: staff?.name,
         acknowledgeLegacy: session.accountingVersion != 1);
     result = closedSession!.summary;
-  }, success: 'ปิดรอบแล้ว');
+  }, success: 'บันทึกผลปิดรอบแล้ว');
   if (!ok) return;
   if (result == null) {
     if (context.mounted) {
@@ -341,6 +352,11 @@ Future<void> _closeDialog(BuildContext context, CashSession session) async {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (closedSession!.nextSessionId != null) ...[
+            Text(
+                'เปิดรอบถัดไปให้อัตโนมัติแล้ว เงินตั้งต้น ฿${_baht.format(closedSession!.carriedCash ?? savedCounted)}'),
+            const SizedBox(height: 12),
+          ],
           _sumRow('ยอดขายสุทธิในรอบ', '฿${_baht.format(summary.grossTotal)}'),
           _sumRow('รับชำระหนี้', '฿${_baht.format(summary.debtCollections)}'),
           if (summary.futureOrderCount > 0)

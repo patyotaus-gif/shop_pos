@@ -1,4 +1,5 @@
 'use strict';
+const {createHash}=require('node:crypto');
 const {owner, validId}=require('./order_accounting');
 const {minor,ledgerContext,writeMovement,summarizeMovements}=require('./money_ledger');
 const {inspectClose,closeError,labels}=require('./cash_integrity');
@@ -91,6 +92,9 @@ function handlers({db,FieldValue,HttpsError,now=Date.now}) {
       const shop=db.collection('shops').doc(owner(request,HttpsError));
       const {sessionId,countedCash}=request.data;
       if(!validId(sessionId)||minor(countedCash)<0)fail('ข้อมูลปิดรอบไม่ถูกต้อง');
+      const autoOpenNext=request.data.autoOpenNext===true;
+      if(autoOpenNext && Math.abs(countedCash*100-minor(countedCash))>0.00001)
+        fail('เงินสดนับได้ต้องมีทศนิยมไม่เกิน 2 ตำแหน่ง');
       return db.runTransaction(async tx=>{
         const context=await ledgerContext(tx,shop), ref=shop.collection('cashSessions').doc(sessionId), snap=await tx.get(ref);
         if(!snap.exists)fail('ไม่พบรอบขาย');
@@ -99,6 +103,7 @@ function handlers({db,FieldValue,HttpsError,now=Date.now}) {
         const check=await readCheck(tx,shop,sessionId,session);
         if(check.issues.length)throw new HttpsError('failed-precondition',closeError(check.issues),{issues:check.issues.slice(0,20)});
         if(session.accountingVersion!==1){
+          if(autoOpenNext)fail('รอบเก่าต้องตรวจสอบและเริ่มระบบบัญชีก่อนเปิดรอบอัตโนมัติ');
           if(request.data.acknowledgeLegacy!==true)fail('รอบเก่าไม่มีประวัติเงินครบ ต้องยืนยันแยกปิดรอบเก่าเพื่อตรวจสอบ');
           // Archive evidence; do not invent an expected-cash figure for old untracked collections.
           tx.update(ref,{status:'closed',closedAt:FieldValue.serverTimestamp(),closedBy:request.auth.uid,
@@ -111,9 +116,24 @@ function handlers({db,FieldValue,HttpsError,now=Date.now}) {
         summary.pendingOrderCount=check.pendingOrderCount;
         summary.openTableCount=check.openTableCount;
         summary.futureOrderCount=check.futureOrderCount;
+        // Close + successor creation share the ledger lock and one commit.
+        // A lost response/repeated close returns above without opening again.
+        let nextRef=null;
+        if(autoOpenNext){
+          nextRef=shop.collection('cashSessions').doc('next-'+createHash('sha256').update(sessionId).digest('hex'));
+          const prior=await tx.get(nextRef);
+          const open=await tx.get(shop.collection('cashSessions').where('status','==','open').limit(2));
+          if(prior.exists || open.docs.some(d=>d.id!==sessionId))
+            fail('พบรอบขายอื่น กรุณาตรวจประวัติรอบก่อนปิดยอด');
+        }
+        const at=FieldValue.serverTimestamp();
         tx.update(ref,{status:'closed',closedAt:FieldValue.serverTimestamp(),closedBy:request.auth.uid,countedCash,summary,
-          integrityVersion:2,checkedMovementCount:check.checkedMovementCount});
-        tx.set(context.ref,{sessionId:null,openedAt:null,revision:FieldValue.increment(1)},{merge:true});
+          integrityVersion:2,checkedMovementCount:check.checkedMovementCount,
+          ...(nextRef?{nextSessionId:nextRef.id,carriedCash:countedCash}:{})});
+        if(nextRef)tx.create(nextRef,{status:'open',openedAt:at,openedBy:request.auth.uid,
+          openingFloat:countedCash,accountingVersion:1,accountingStartAt:session.accountingStartAt||session.openedAt,
+          previousSessionId:sessionId,openingCashSource:'previousCount'});
+        tx.set(context.ref,{sessionId:nextRef?.id||null,openedAt:nextRef?at:null,revision:FieldValue.increment(1)},{merge:true});
         return summary;
       });
     },

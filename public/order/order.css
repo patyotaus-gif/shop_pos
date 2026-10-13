@@ -319,6 +319,13 @@ header h1 {
   flex-shrink: 0;
   transition: var(--transition);
 }
+.weight-quantity { flex-direction: column; }
+.weight-quantity label { display: flex; align-items: center; gap: 12px; }
+.weight-quantity input {
+  min-width: 0; width: 130px; padding: 12px; font: inherit;
+  border: 1px solid var(--border-color); border-radius: 10px;
+}
+.weight-quantity small { color: var(--text-muted); }
 .qty-opt.selected {
   background: var(--burgundy); color: var(--cream);
   border-color: var(--burgundy);
@@ -373,6 +380,15 @@ header h1 {
 #modal .subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
 
 .field { margin-bottom: 18px; }
+#couponApply, #couponClear, #giftRefresh {
+  min-height: 44px; margin: 8px 4px 0 0; padding: 8px 12px;
+  border: 1px solid var(--burgundy); border-radius: 8px;
+  background: white; color: var(--burgundy); font: inherit; cursor: pointer;
+}
+#couponApply:disabled { opacity: .6; cursor: wait; }
+#couponStatus, #giftStatus { overflow-wrap: anywhere; font-size: 14px; }
+.coupon-help { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+#couponStatus + p { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
 .field label { font-size: 13px; font-weight: 600; color: var(--text-main); display: block; margin-bottom: 8px; }
 .field input {
   width: 100%;
@@ -657,3 +673,11 @@ header h1 {
 #payPickup { font-weight:600; color:#7A1F2B; }
 /* Component display rules must not override hidden payment/review controls. */
 [hidden] { display: none !important; }
+/* Bundle choices remain compact on phones and form columns on larger screens. */
+#bundleChoices { padding: 12px 16px; max-width: 1100px; margin: auto; }
+#bundleChoices h2 { font-size: 1.05rem; margin: 0 0 8px; }
+#bundleChoices p { line-height: 1.5; overflow-wrap: anywhere; }
+.bundle-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,240px),1fr)); gap: 12px; }
+.bundle-card { border: 1px solid #e6d9dc; border-radius: 12px; padding: 12px; background: #fff; }
+.bundle-card button { min-height: 44px; padding: 8px 14px; border: 0; border-radius: 8px; background: #7a1f2b; color: white; cursor: pointer; }
+.bundle-card button:disabled { opacity: .5; cursor: default; }

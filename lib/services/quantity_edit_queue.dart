@@ -1,27 +1,28 @@
+import '../utils/stock_quantity.dart';
 import 'dart:async';
 
 /// Coalesces rapid taps; never overlaps writes for the same order line.
 class QuantityEditQueue {
   QuantityEditQueue(
-      {required int quantity,
+      {required num quantity,
       required this.save,
       required this.onChanged,
       required this.onError,
       this.delay = const Duration(milliseconds: 300)})
       : confirmed = quantity,
         target = quantity;
-  final Future<void> Function(int expected, int target) save;
+  final Future<void> Function(num expected, num target) save;
   final void Function() onChanged;
   final void Function(Object error) onError;
   final Duration delay;
-  int confirmed;
-  int target;
+  num confirmed;
+  num target;
   Timer? _timer;
   bool _saving = false, _disposed = false;
   bool get busy => _saving || _timer != null;
-  void change(int delta) {
+  void change(num delta) {
     if (_disposed || (_saving && confirmed > 0 && target == 0)) return;
-    target = (target + delta).clamp(0, 9999);
+    target = stockRound(target + delta).clamp(0, 9999);
     _timer?.cancel();
     _timer = Timer(delay, () {
       _timer = null;
@@ -30,7 +31,7 @@ class QuantityEditQueue {
     onChanged();
   }
 
-  void reconcile(int quantity) {
+  void reconcile(num quantity) {
     if (!busy) {
       confirmed = quantity;
       target = quantity;

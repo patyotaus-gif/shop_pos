@@ -1,4 +1,5 @@
 'use strict';
+const stock = require('./stock_quantity');
 const {computeUsage} = require('./inventory');
 const idOK = id => typeof id === 'string' && id.length > 0 && id.length <= 200 && !id.includes('/');
 const available = value => Math.max(0, Number(value) || 0);
@@ -9,8 +10,8 @@ function requirements(items, products, groups) {
   const counted = {};
   for (const item of items) {
     const p = products[item.productId];
-    if (!p || !Number.isInteger(item.quantity) || item.quantity < 1) throw Error('สินค้าเปลี่ยนไป กรุณาเลือกใหม่');
-    if (p.stockMode !== 'recipe') counted[item.productId] = (counted[item.productId] || 0) + item.quantity;
+    if (!p || !stock.valid(item.quantity, p.isWeighed === true)) throw Error('สินค้าเปลี่ยนไป กรุณาเลือกใหม่');
+    if (p.stockMode !== 'recipe') counted[item.productId] = stock.round((counted[item.productId] || 0) + item.quantity);
     else if (!(p.recipe || []).some(r => r.qty > 0 && idOK(r.ingredientId))) throw Error('สินค้ายังไม่มีสูตรวัตถุดิบ กรุณาติดต่อร้าน');
   }
   const ingredients = computeUsage(items, products, groups);
@@ -28,7 +29,7 @@ function held(docs, products, groups) {
       r = requirements(live, products, groups);
     }
     for (const type of ['products','ingredients']) for (const [id, qty] of Object.entries(r[type] || {}))
-      result[type][id] = (result[type][id] || 0) + qty;
+      result[type][id] = type === 'products' ? stock.round((result[type][id] || 0) + qty) : (result[type][id] || 0) + qty;
   }
   return result;
 }
@@ -46,7 +47,10 @@ async function readState(shop, get = ref => ref.get()) {
 function menuStock(id, state) {
   const p = state.products[id];
   if (!p) return 0;
-  if (p.stockMode !== 'recipe') return Math.floor(available(p.stock) - Math.min(available(p.stock),state.held.products[id] || 0));
+  if (p.stockMode !== 'recipe') {
+    try {return stock.round(Math.max(0, stock.available(p) - (state.held.products[id] || 0)));}
+    catch (_) {return 0;} // Inconsistent lots must never be advertised as sellable.
+  }
   const usage = computeUsage([{productId:id,quantity:1}], state.products, state.groups);
   if (!Object.keys(usage).length) return 0;
   return Math.max(0, Math.min(9999, ...Object.entries(usage).map(([iid,q]) =>
@@ -60,13 +64,13 @@ async function reserve(tx, shop, items) {
   const state = await readState(shop, ref => tx.get(ref));
   const request = requirements(items, state.products, state.groups);
   for (const type of ['products','ingredients']) for (const [id, qty] of Object.entries(request[type])) {
-    if (available(state[type][id]?.stock) - (state.held[type][id] || 0) + 1e-9 < qty)
+    if ((type === 'products' ? stock.available(state.products[id]) : available(state[type][id]?.stock)) - (state.held[type][id] || 0) + 1e-9 < qty)
       throw Error('สินค้า/วัตถุดิบไม่พอ กรุณาปรับตะกร้าหรือติดต่อร้าน');
   }
   const totals={};
   for(const type of ['products','ingredients']) {
     totals[type]={...state.held[type]};
-    for(const [id,qty] of Object.entries(request[type]))totals[type][id]=(totals[type][id]||0)+qty;
+    for(const [id,qty] of Object.entries(request[type]))totals[type][id]=type==='products'?stock.round((totals[type][id]||0)+qty):(totals[type][id]||0)+qty;
   }
   return {reservation: request, write: () => tx.set(control,{revision:Number(lock.data()?.revision || 0)+1,
     products:totals.products,ingredients:totals.ingredients})};
@@ -78,7 +82,7 @@ async function prepareRelease(tx,shop,order) {
   const data={revision:Number(old.revision||0)+1};
   for(const type of ['products','ingredients']) {
     data[type]={...(old[type]||{})};
-    for(const [id,qty] of Object.entries(order.inventoryReservation[type]||{}))data[type][id]=Math.max(0,(data[type][id]||0)-qty);
+    for(const [id,qty] of Object.entries(order.inventoryReservation[type]||{}))data[type][id]=(type==='products'?stock.round: x=>x)(Math.max(0,(data[type][id]||0)-qty));
   }
   return ()=>tx.set(ref,data);
 }

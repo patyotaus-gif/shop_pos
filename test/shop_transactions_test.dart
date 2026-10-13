@@ -65,6 +65,34 @@ void main() {
         Sale.fromFirestore(legacy, 'old').toFirestore()['isRefunded'], isFalse);
   });
 
+  test('stale or orphan table links cannot open another tab', () async {
+    final id = await open();
+    final table = (await TableService.getTable('one'))!;
+    expect(await TableService.openOrder(table), id);
+    await shop
+        .collection('tables')
+        .doc('one')
+        .update({'currentOrderId': null, 'status': 'available'});
+    await expectLater(TableService.openOrder(table), throwsStateError);
+    await shop.collection('tableOrders').doc(id).update({'status': 'closed'});
+    await shop
+        .collection('tables')
+        .doc('one')
+        .update({'currentOrderId': id, 'status': 'occupied'});
+    await expectLater(TableService.openOrder(table), throwsStateError);
+    expect((await shop.collection('tableOrders').get()).size, 1);
+    expect((await shop.collection('sales').get()).size, 0);
+  });
+
+  test('duplicate open table bills are reported instead of silently hiding one',
+      () async {
+    final id = await open();
+    final data = (await shop.collection('tableOrders').doc(id).get()).data()!;
+    await shop.collection('tableOrders').doc('duplicate').set(data);
+    await expectLater(
+        TableService.watchOpenOrderForTable('one').first, throwsStateError);
+  });
+
   test(
       'uncommitted legacy pending bill recovers with original id and one stock deduction',
       () async {
@@ -308,6 +336,9 @@ void main() {
     final second = await TableService.closeOrder(
         order: order, paid: 20, discount: 0, paymentMethod: PaymentMethod.cash);
     expect(first, second);
+    final table = (await TableService.getTable('one'))!;
+    expect(table.status, TableStatus.available);
+    expect(table.currentOrderId, isNull);
     expect((await shop.collection('sales').get()).docs.length, 1);
     expect(
         (await shop.collection('products').doc('tea').get()).data()!['stock'],

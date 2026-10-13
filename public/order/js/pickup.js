@@ -1,4 +1,4 @@
-import { apiFetch, shopId, orderContext } from './util.js?v=20261009';
+import { apiFetch, shopId, orderContext } from './util.js?v=20261013stock';
 
 let options = [];
 let enabled = false;

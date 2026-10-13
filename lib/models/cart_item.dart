@@ -3,7 +3,7 @@ import 'order_modifier.dart';
 
 class CartItem {
   final Product product;
-  final int quantity;
+  final num quantity;
   final double discount;
   final List<OrderModifier> modifiers;
   final String? notes;
@@ -19,9 +19,10 @@ class CartItem {
   double get unitPrice =>
       product.effectivePrice +
       modifiers.fold<double>(0, (s, m) => s + m.priceAdjust);
-  double get subtotal => (unitPrice * quantity) - discount;
+  double get subtotal =>
+      ((unitPrice * quantity) * 100).round() / 100 - discount;
 
-  CartItem copyWith({int? quantity, double? discount}) => CartItem(
+  CartItem copyWith({num? quantity, double? discount}) => CartItem(
         product: product,
         quantity: quantity ?? this.quantity,
         discount: discount ?? this.discount,

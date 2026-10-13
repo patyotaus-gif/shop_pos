@@ -11,7 +11,7 @@ void main() {
       'rapid quantity taps coalesce and serialize changes during a write',
       (tester) async {
     final first = Completer<void>();
-    final calls = <(int, int)>[];
+    final calls = <(num, num)>[];
     final queue = QuantityEditQueue(
         quantity: 1,
         save: (expected, target) {

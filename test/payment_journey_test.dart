@@ -149,7 +149,7 @@ void main() {
     await tester.tap(submit);
     await tester.pumpAndSettle();
     expect(item.quantity, 1);
-    expect(find.text('กรอกจำนวนเต็มตั้งแต่ 1 ขึ้นไป'), findsOneWidget);
+    expect(find.text('ระบุจำนวนเต็ม 1–99'), findsOneWidget);
     await tester.enterText(find.byType(TextField), '12');
     await tester.ensureVisible(submit);
     await tester.tap(submit);
@@ -201,7 +201,7 @@ void main() {
                         onDebt: () {},
                         onDiscount: () {}),
                   ])))));
-      await tester.tap(find.textContaining('ตะกร้า 2 ชิ้น'));
+      await tester.tap(find.textContaining('ตะกร้า 2 หน่วย'));
       await tester.pumpAndSettle();
       // Exercise a real drag, not ensureVisible (which can scroll hidden parents).
       for (var i = 0; i < 3; i++) {

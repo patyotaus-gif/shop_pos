@@ -765,7 +765,7 @@ class _ReportScreenState extends State<ReportScreen>
 // ── Product stat helper ──────────────────────────────────────────
 class _ProductStat {
   final String name;
-  int qty = 0;
+  num qty = 0;
   double revenue = 0;
   double profit = 0;
   bool costKnown = true;

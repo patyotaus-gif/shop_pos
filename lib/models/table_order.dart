@@ -24,7 +24,9 @@ class TableOrderItem {
   final double costPrice;
   final bool? costKnown;
   final String? category;
-  final int quantity;
+  final String unit;
+  final bool isWeighed;
+  final num quantity;
   final String? notes;
   final List<OrderModifier> modifiers;
   final KitchenStatus kitchenStatus;
@@ -39,6 +41,8 @@ class TableOrderItem {
     this.costPrice = 0,
     this.costKnown,
     this.category,
+    this.unit = 'ชิ้น',
+    this.isWeighed = false,
     required this.quantity,
     this.notes,
     this.modifiers = const [],
@@ -51,7 +55,7 @@ class TableOrderItem {
   double get unitPrice =>
       price + modifiers.fold<double>(0, (s, m) => s + m.priceAdjust);
 
-  double get subtotal => unitPrice * quantity;
+  double get subtotal => (unitPrice * quantity * 100).round() / 100;
 
   factory TableOrderItem.fromMap(Map<String, dynamic> m) => TableOrderItem(
         id: m['id'] as String? ?? '',
@@ -61,7 +65,9 @@ class TableOrderItem {
         costPrice: (m['costPrice'] ?? 0).toDouble(),
         costKnown: m['costKnown'] as bool?,
         category: m['category'] as String?,
-        quantity: (m['quantity'] ?? 1) as int,
+        unit: m['unit'] as String? ?? 'ชิ้น',
+        isWeighed: m['isWeighed'] == true,
+        quantity: (m['quantity'] ?? 1) as num,
         notes: m['notes'] as String?,
         modifiers: ((m['modifiers'] as List<dynamic>?) ?? const [])
             .map((e) => OrderModifier.fromMap(e as Map<String, dynamic>))
@@ -83,6 +89,8 @@ class TableOrderItem {
         if (costKnown != null) 'costKnown': costKnown,
         if (category != null) 'category': category,
         'quantity': quantity,
+        'unit': unit,
+        'isWeighed': isWeighed,
         if (notes != null) 'notes': notes,
         if (modifiers.isNotEmpty)
           'modifiers': modifiers.map((m) => m.toMap()).toList(),
@@ -94,7 +102,7 @@ class TableOrderItem {
 
   TableOrderItem copyWith({
     String? id,
-    int? quantity,
+    num? quantity,
     String? notes,
     List<OrderModifier>? modifiers,
     KitchenStatus? kitchenStatus,
@@ -109,6 +117,8 @@ class TableOrderItem {
         costPrice: costPrice,
         costKnown: costKnown,
         category: category,
+        unit: unit,
+        isWeighed: isWeighed,
         quantity: quantity ?? this.quantity,
         notes: notes ?? this.notes,
         modifiers: modifiers ?? this.modifiers,
@@ -149,7 +159,7 @@ class TableOrder {
 
   double get subtotal => items.fold<double>(0, (s, i) => s + i.subtotal);
 
-  int get itemCount => items.fold<int>(0, (s, i) => s + i.quantity);
+  num get itemCount => items.fold<num>(0, (s, i) => s + i.quantity);
 
   factory TableOrder.fromFirestore(Map<String, dynamic> data, String id) =>
       TableOrder(

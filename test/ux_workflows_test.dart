@@ -185,7 +185,7 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('น้ำดื่ม'));
     await tester.pump();
-    await tester.tap(find.textContaining('ตะกร้า 2 ชิ้น'));
+    await tester.tap(find.textContaining('ตะกร้า 2 หน่วย'));
     await tester.pumpAndSettle();
     expect(find.text('จำนวน 2'), findsOneWidget);
     expect(find.text('ชำระเงิน'), findsOneWidget);
@@ -193,7 +193,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('น้ำดื่ม'));
     await tester.pump();
-    expect(find.textContaining('ตะกร้า 3 ชิ้น'), findsOneWidget);
+    expect(find.textContaining('ตะกร้า 3 หน่วย'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -302,7 +302,7 @@ void main() {
         ))));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    await tester.tap(find.textContaining('ตะกร้า 2 ชิ้น'));
+    await tester.tap(find.textContaining('ตะกร้า 2 หน่วย'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const ValueKey('checkout-pay')));
     await tester.pumpAndSettle();

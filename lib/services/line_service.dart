@@ -70,7 +70,7 @@ class LineService {
       );
 
   /// ส่งแจ้งเตือนสินค้าใกล้หมด
-  static Future<void> notifyLowStock(String productName, int stock) =>
+  static Future<void> notifyLowStock(String productName, num stock) =>
       sendMessage('⚠️ สินค้าใกล้หมด!\n$productName เหลือ $stock ชิ้น');
 
   /// ส่งสรุปยอดขายประจำวัน

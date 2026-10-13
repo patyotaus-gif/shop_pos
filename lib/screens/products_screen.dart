@@ -9,6 +9,7 @@ import '../services/shop_service.dart';
 import 'ingredients_screen.dart';
 import 'modifier_groups_screen.dart';
 import 'product_form_screen.dart';
+import 'product_inventory_screen.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -92,7 +93,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
           stream: _products,
           builder: (context, snap) => ProductCatalog(
             products: snap.data ?? const [],
-            categories: ProductService.categories,
+            categories: ProductService.categoriesFor(snap.data ?? const []),
             preferenceKey: _preferenceKey,
             loading: !snap.hasData && !snap.hasError,
             hasError: snap.hasError,
@@ -110,49 +111,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
   }
 
   void _showStockDialog(BuildContext context, Product product) {
-    final ctrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('รับสินค้าเข้า: ${product.name}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('สต็อกปัจจุบัน: ${product.stock}',
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: ctrl,
-              keyboardType: TextInputType.number,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'จำนวนที่รับเข้า',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('ยกเลิก')),
-          FilledButton(
-            onPressed: () async {
-              final qty = int.tryParse(ctrl.text) ?? 0;
-              if (qty <= 0) return;
-              await ProductService.adjustStock(product.id, qty);
-              if (ctx.mounted) {
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(ctx).showSnackBar(
-                  SnackBar(
-                      content: Text('เพิ่มสต็อก ${product.name} +$qty ชิ้น')),
-                );
-              }
-            },
-            child: const Text('บันทึก'),
-          ),
-        ],
-      ),
-    );
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) => ProductInventoryScreen(productId: product.id)));
   }
 }

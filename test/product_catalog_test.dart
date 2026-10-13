@@ -69,7 +69,7 @@ void main() {
     expect(find.text('ขนมอบกรอบ'), findsNothing);
     expect(find.text('฿25.00'), findsOneWidget);
     expect(find.text('สต็อก 3'), findsOneWidget);
-    await tester.tap(find.byTooltip('รับสินค้าเข้า'));
+    await tester.tap(find.byTooltip('จัดการสต๊อก'));
     expect(stocks, ['tea']);
     expect(edits, isEmpty);
     await tester.tap(find.text(products.first.name));
@@ -111,11 +111,11 @@ void main() {
       await tester.pumpWidget(catalog(scale: 2, inventory: false));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      expect(find.byTooltip('รับสินค้าเข้า'), findsNothing);
+      expect(find.byTooltip('จัดการสต๊อก'), findsNothing);
       await tester.tap(find.text('รูปภาพ'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      expect(find.byTooltip('รับสินค้าเข้า'), findsNothing);
+      expect(find.byTooltip('จัดการสต๊อก'), findsNothing);
       expect(tester.getSize(find.byType(SaleProductCard).first).width,
           lessThanOrEqualTo(200));
       expect(tester.getTopLeft(find.byType(SaleProductCard).at(1)).dy,

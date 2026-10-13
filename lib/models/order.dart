@@ -17,7 +17,7 @@ class OrderItem {
   final String productId;
   final String productName;
   final double price;
-  final int quantity;
+  final num quantity;
   final String preparationNote;
 
   const OrderItem({
@@ -57,8 +57,12 @@ class ShopOrder {
   final String customerPhone;
   final List<OrderItem> items;
 
-  /// Sum of [items] — what the cart says.
+  /// Merchandise total after any coupon discount, before identifying satang.
   final double total;
+  final double discount;
+  final String? couponCode;
+  final double bundleDiscount;
+  final List<Map<String, dynamic>> bundles;
 
   /// The amount the customer is actually instructed to transfer. May differ
   /// from [total] by 1–99 satang so two parallel orders never collide on the
@@ -107,6 +111,10 @@ class ShopOrder {
     required this.customerPhone,
     required this.items,
     required this.total,
+    this.discount = 0,
+    this.couponCode,
+    this.bundleDiscount = 0,
+    this.bundles = const [],
     double? finalAmount,
     this.paymentMethod = 'promptpay',
     this.paymentRef,
@@ -133,6 +141,12 @@ class ShopOrder {
             .map((e) => OrderItem.fromMap(e as Map<String, dynamic>))
             .toList(),
         total: (data['total'] ?? 0).toDouble(),
+        discount: (data['discount'] as num?)?.toDouble() ?? 0,
+        couponCode: (data['coupon'] as Map?)?['code'] as String?,
+        bundleDiscount: (data['bundleDiscount'] as num?)?.toDouble() ?? 0,
+        bundles: ((data['bundles'] as List?) ?? const [])
+            .map((b) => Map<String, dynamic>.from(b as Map))
+            .toList(),
         finalAmount: (data['finalAmount'] as num?)?.toDouble(),
         paymentMethod: data['paymentMethod'] as String? ?? 'promptpay',
         paymentRef: data['paymentRef'] as String?,

@@ -1,3 +1,5 @@
+import '../utils/stock_quantity.dart';
+import '../widgets/stock_quantity_dialog.dart';
 import '../utils/money_format.dart';
 import '../widgets/cart_item_tile.dart';
 import 'dart:async';
@@ -19,6 +21,7 @@ import '../services/customer_service.dart';
 import '../services/entitlements.dart';
 import '../services/product_service.dart';
 import '../services/sale_service.dart';
+import '../services/buy_get_service.dart';
 import '../services/shop_service.dart';
 import '../services/auth_service.dart';
 import '../services/staff_access_service.dart';
@@ -150,8 +153,100 @@ class _PosScreenState extends State<PosScreen> {
   double get _subtotal => _cart.fold(0, (s, e) => s + e.subtotal);
   double get _total => _subtotal - _discount;
 
+  Future<void> _chooseBundle() async {
+    if (_checkoutBusy || _pendingSale != null) return;
+    setState(() => _checkoutBusy = true);
+    try {
+      final result = await StaffAccessService.call('counterBundleCatalog');
+      final products = await ProductService.watchAll().first;
+      final byId = {for (final p in products) p.id: p};
+      final bundles = ((result['bundles'] as List?) ?? [])
+          .map((b) => Map<String, dynamic>.from(b as Map))
+          .toList();
+      if (!mounted) return;
+      final selected = await showDialog<Map<String, dynamic>>(
+          context: context,
+          builder: (context) => AlertDialog(
+                  title: const Text('เลือกชุดสินค้า'),
+                  content: SizedBox(
+                      width: 480,
+                      child: SingleChildScrollView(
+                          child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        const Text(
+                            'เพิ่มสินค้าในชุดให้ครบและคิดส่วนลดอัตโนมัติก่อนชำระเงิน'),
+                        if (bundles.isEmpty)
+                          const Padding(
+                              padding: EdgeInsets.all(16),
+                              child: Text(
+                                  'ยังไม่มีชุดที่เปิดใช้ ตั้งค่าได้ในเครื่องมือส่งเสริมการขาย')),
+                        for (final b in bundles)
+                          Card(
+                              child: ListTile(
+                            title: Text(
+                                '${b['name']} • ${((b['priceMinor'] as num) / 100).toStringAsFixed(2)} บาท'),
+                            subtitle: Text(
+                                '${(b['components'] as List).map((c) => '${byId[c['productId']]?.name ?? 'สินค้าถูกลบ'} × ${c['quantity']}').join(' + ')}\nสูงสุด ${b['maxSets']} ชุดต่อบิล'),
+                            trailing: const Icon(Icons.add_shopping_cart),
+                            onTap: () => Navigator.pop(context, b),
+                          )),
+                      ]))),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('กลับ'))
+                  ]));
+      if (selected == null || !mounted) return;
+      final parts = selected['components'] as List;
+      var complete = selected['maxSets'] as int;
+      for (final c in parts) {
+        final p = byId[c['productId']], qty = c['quantity'] as int;
+        final bought = _cart
+            .where((i) => i.product.id == c['productId'] && i.modifiers.isEmpty)
+            .fold<num>(0, (s, i) => s + i.quantity);
+        complete = min(complete, bought ~/ qty);
+        final allQty = _cart
+            .where((i) => i.product.id == c['productId'])
+            .fold<num>(0, (s, i) => s + i.quantity);
+        if (p == null ||
+            p.modifierGroupIds.isNotEmpty ||
+            allQty + qty > 99 ||
+            (!p.isRecipeMode && allQty + qty > p.saleable)) {
+          throw StateError(
+              'สินค้าในชุดไม่พอหรือมีการเปลี่ยนแปลง กรุณาตรวจสินค้าใหม่');
+        }
+      }
+      if (complete >= (selected['maxSets'] as int)) {
+        throw StateError('ครบจำนวนชุดที่รับสิทธิ์ต่อบิลแล้ว');
+      }
+      setState(() {
+        for (final c in parts) {
+          final p = byId[c['productId']]!, qty = c['quantity'] as int;
+          final index = _cart.indexWhere((i) =>
+              i.product.id == p.id && i.modifiers.isEmpty && i.notes == null);
+          if (index < 0) {
+            _cart.add(CartItem(product: p, quantity: qty));
+          } else {
+            _cart[index] =
+                _cart[index].copyWith(quantity: _cart[index].quantity + qty);
+          }
+        }
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(operationError(e))));
+      }
+    } finally {
+      if (mounted) setState(() => _checkoutBusy = false);
+    }
+  }
+
   Future<void> _addToCart(Product product) async {
     if (_checkoutBusy || _pendingSale != null) return;
+    final quantity = product.isWeighed
+        ? await showStockQuantity(context, unit: product.unit, weighed: true)
+        : 1;
+    if (quantity == null || !mounted || _checkoutBusy) return;
     ModifierPick? pick;
     if (product.modifierGroupIds.isNotEmpty) {
       pick = await showModifierPicker(context, product: product);
@@ -165,21 +260,26 @@ class _PosScreenState extends State<PosScreen> {
           modifiersEqual(e.modifiers, modifiers) &&
           e.notes == notes);
       if (idx >= 0) {
-        _cart[idx] = _cart[idx].copyWith(quantity: _cart[idx].quantity + 1);
+        _cart[idx] = _cart[idx]
+            .copyWith(quantity: stockRound(_cart[idx].quantity + quantity));
       } else {
-        _cart.add(
-            CartItem(product: product, modifiers: modifiers, notes: notes));
+        _cart.add(CartItem(
+            product: product,
+            quantity: quantity,
+            modifiers: modifiers,
+            notes: notes));
       }
     });
   }
 
   void _removeFromCart(int idx) => setState(() => _cart.removeAt(idx));
 
-  void _updateQty(int idx, int qty) {
+  void _updateQty(int idx, num qty) {
     if (qty <= 0) {
       _removeFromCart(idx);
     } else {
-      setState(() => _cart[idx] = _cart[idx].copyWith(quantity: qty));
+      setState(
+          () => _cart[idx] = _cart[idx].copyWith(quantity: stockRound(qty)));
     }
   }
 
@@ -234,13 +334,72 @@ class _PosScreenState extends State<PosScreen> {
       double paid = 0;
       var method = _paymentMethod;
       var channel = widget.initialChannel;
+      List<Map<String, dynamic>> gifts = const [];
+      List<Map<String, dynamic>> bundles = const [];
+      double bundleDiscount = 0;
       if (!retry) {
+        final promotions = await BuyGetService.preview(_cart);
+        gifts = List<Map<String, dynamic>>.from(promotions['buyGet'] as List);
+        bundles =
+            List<Map<String, dynamic>>.from(promotions['bundles'] as List);
+        for (final b in bundles) {
+          for (final c in b['components'] as List) {
+            if (_cart
+                .where((i) =>
+                    i.product.id == c['productId'] && i.modifiers.isEmpty)
+                .any((i) =>
+                    (i.product.effectivePrice * 100).round() !=
+                    c['unitPriceMinor'])) {
+              throw StateError(
+                  'ราคาสินค้าในชุดเปลี่ยน กรุณาโหลดสินค้าใหม่ก่อนรับเงิน');
+            }
+          }
+        }
+        bundleDiscount = bundles.fold<double>(
+            0, (s, b) => s + (b['discountMinor'] as num) / 100);
+        if (_discount + bundleDiscount > _subtotal) {
+          throw StateError('ส่วนลดรวมเกินยอดสินค้า กรุณาปรับส่วนลดท้ายบิล');
+        }
+        if (!mounted) return;
+        if (gifts.isNotEmpty || bundles.isNotEmpty) {
+          final proceed = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                    title: const Text('โปรโมชั่นในบิลนี้'),
+                    content: SingleChildScrollView(
+                        child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                          for (final b in bundles)
+                            Text(
+                                '${b['name']} × ${b['sets']} ชุด • ลด ${((b['discountMinor'] as num) / 100).toStringAsFixed(2)} บาท'),
+                          Text(
+                              'ยอดชำระ ${(_total - bundleDiscount).toStringAsFixed(2)} บาท'),
+                          for (final g in gifts)
+                            Text(
+                                'ของแถม: ${g['productName']} × ${g['quantity']} (ฟรี)'),
+                          const SizedBox(height: 12),
+                          const Text('สินค้าแถมจะตัดสต็อกพร้อมบิลนี้'),
+                        ])),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('กลับไปแก้ตะกร้า')),
+                      FilledButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('ดำเนินการต่อ'))
+                    ],
+                  ));
+          if (proceed != true || !mounted) return;
+        }
         if (isDebt) {
           customerName = await _askCustomerName();
           if (customerName == null || !mounted) return;
         } else {
           final result = await showPaymentSheet(context,
-              total: _total, initialChannel: widget.initialChannel);
+              total: _total - bundleDiscount,
+              initialChannel: widget.initialChannel);
           if (result == null || !mounted) return;
           method = result.method;
           channel = result.salesChannel;
@@ -262,6 +421,8 @@ class _PosScreenState extends State<PosScreen> {
                   paymentMethod: method,
                   salesChannel: channel,
                   staffName: _activeStaffName,
+                  buyGetQuote: gifts,
+                  bundleQuote: bundles,
                   loyaltyCustomerId: _loyaltyCustomer?.id));
       if (!mounted) return;
       setState(() {
@@ -388,10 +549,10 @@ class _PosScreenState extends State<PosScreen> {
           itemBuilder: (_, i) => SaleProductCard(
             product: products[i],
             unavailableLabel:
-                !products[i].isRecipeMode && products[i].stock <= 0
+                !products[i].isRecipeMode && products[i].saleable <= 0
                     ? 'หมด'
                     : null,
-            onTap: !products[i].isRecipeMode && products[i].stock <= 0
+            onTap: !products[i].isRecipeMode && products[i].saleable <= 0
                 ? null
                 : () => _addToCart(products[i]),
           ),
@@ -451,6 +612,14 @@ class _PosScreenState extends State<PosScreen> {
                 child: LayoutBuilder(builder: (context, constraints) {
                   final wide = constraints.maxWidth >= 900;
                   final controls = <Widget>[
+                    Align(
+                        alignment: Alignment.centerLeft,
+                        child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: OutlinedButton.icon(
+                                onPressed: _chooseBundle,
+                                icon: const Icon(Icons.inventory_2_outlined),
+                                label: const Text('เลือกชุดสินค้า')))),
                     // Product search
                     Padding(
                       padding: const EdgeInsets.symmetric(
@@ -464,7 +633,11 @@ class _PosScreenState extends State<PosScreen> {
                     StreamBuilder<List<Product>>(
                       stream: ProductService.watchAll(),
                       builder: (ctx, snap) {
-                        final cats = ['ทั้งหมด', ...ProductService.categories];
+                        final cats = [
+                          'ทั้งหมด',
+                          ...ProductService.categoriesFor(
+                              snap.data ?? const []),
+                        ];
                         return SizedBox(
                           height: max(48,
                               MediaQuery.textScalerOf(context).scale(18) + 24),
@@ -643,7 +816,7 @@ class _PosScreenState extends State<PosScreen> {
                   }
                   return MobileSalesWorkspace(
                     itemCount:
-                        _cart.fold<int>(0, (sum, item) => sum + item.quantity),
+                        _cart.fold<num>(0, (sum, item) => sum + item.quantity),
                     total: _total,
                     catalog: CustomScrollView(slivers: [
                       SliverToBoxAdapter(child: Column(children: controls)),
@@ -748,8 +921,8 @@ class _ProductSearchState extends State<_ProductSearch> {
                             : null,
                         title: Text(p.name),
                         subtitle: Text(p.isOnSale
-                            ? '${formatBaht(p.effectivePrice)} (ปกติ ${formatBaht(p.price)}) · สต็อก ${p.stock}'
-                            : '${formatBaht(p.price)} · สต็อก ${p.stock}'),
+                            ? '${formatBaht(p.effectivePrice)} (ปกติ ${formatBaht(p.price)}) · สต็อก ${p.saleable}'
+                            : '${formatBaht(p.price)} · สต็อก ${p.saleable}'),
                         trailing: Text(p.barcode,
                             style: const TextStyle(
                                 fontSize: 11, color: Colors.grey)),

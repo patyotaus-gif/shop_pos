@@ -196,16 +196,16 @@ class _OfflineCashState extends State<OfflineCashScreen>
 
   double get _total => OfflineService.cartTotal(_cart);
   Future<void> _add(Product p) async {
-    final sold = _bills.fold<int>(
+    final sold = _bills.fold<num>(
         0,
         (sum, row) =>
             sum +
             (jsonDecode(row['payload'] as String)['items'] as List)
                 .where((i) => i['productId'] == p.id)
-                .fold<int>(0, (n, i) => n + (i['quantity'] as int)));
+                .fold<num>(0, (n, i) => n + (i['quantity'] as int)));
     final inCart = _cart
         .where((i) => i.product.id == p.id)
-        .fold<int>(0, (n, i) => n + i.quantity);
+        .fold<num>(0, (n, i) => n + i.quantity);
     if (_cart.length >= 50 || (!p.isRecipeMode && sold + inCart >= p.stock)) {
       setState(() => _error = 'สต็อกในเครื่องไม่พอ หรือครบ 50 รายการแล้ว');
       return;

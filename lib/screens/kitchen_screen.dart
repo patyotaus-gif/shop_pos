@@ -9,6 +9,8 @@ import '../models/order.dart';
 import '../services/order_service.dart';
 import '../services/settings_service.dart';
 import '../services/kitchen_print_service.dart';
+import '../utils/operation_error.dart';
+import 'table_detail_screen.dart';
 
 class KitchenScreen extends StatefulWidget {
   const KitchenScreen(
@@ -16,16 +18,36 @@ class KitchenScreen extends StatefulWidget {
       this.orders,
       this.onlineOrders,
       this.settings,
-      this.printJobs});
+      this.printJobs,
+      this.saveOutput});
   final Stream<List<TableOrder>>? orders;
   final Stream<List<ShopOrder>>? onlineOrders;
   final Stream<Map<String, dynamic>>? settings;
   final Stream<Map<String, Map<String, dynamic>>>? printJobs;
+  final Future<void> Function(String)? saveOutput;
   @override
   State<KitchenScreen> createState() => _KitchenScreenState();
 }
 
 class _KitchenScreenState extends State<KitchenScreen> {
+  bool _savingOutput = false;
+  bool _showHistory = false;
+  Future<void> _changeOutput(Set<String> selection) async {
+    if (_savingOutput) return;
+    setState(() => _savingOutput = true);
+    try {
+      await performShopOperation(
+          context,
+          () => (widget.saveOutput ??
+              SettingsService.saveKitchenOutput)(selection.first),
+          timeout: const Duration(seconds: 20),
+          message: 'กำลังบันทึกวิธีรับงานครัว',
+          success: 'บันทึกวิธีรับงานครัวแล้ว');
+    } finally {
+      if (mounted) setState(() => _savingOutput = false);
+    }
+  }
+
   late final tableStream = widget.orders ?? TableService.watchKitchenOrders();
   late final onlineStream = widget.onlineOrders ??
       (widget.orders != null
@@ -59,24 +81,18 @@ class _KitchenScreenState extends State<KitchenScreen> {
             return Column(children: [
               Padding(
                   padding: const EdgeInsets.all(8),
-                  child: SegmentedButton<String>(
-                      segments: const [
-                        ButtonSegment(
-                            value: 'screen',
-                            icon: Icon(Icons.monitor),
-                            label: Text('จอครัว')),
-                        ButtonSegment(
-                            value: 'printer',
-                            icon: Icon(Icons.print),
-                            label: Text('เครื่องพิมพ์ครัว'))
-                      ],
-                      selected: {
-                        printer ? 'printer' : 'screen'
-                      },
-                      onSelectionChanged: (v) => performShopOperation(
-                          context,
-                          () => SettingsService.saveSettings(
-                              {'kitchenOutput': v.first})))),
+                  child: SegmentedButton<String>(segments: const [
+                    ButtonSegment(
+                        value: 'screen',
+                        icon: Icon(Icons.monitor),
+                        label: Text('จอครัว')),
+                    ButtonSegment(
+                        value: 'printer',
+                        icon: Icon(Icons.print),
+                        label: Text('เครื่องพิมพ์ครัว'))
+                  ], selected: {
+                    printer ? 'printer' : 'screen'
+                  }, onSelectionChanged: _savingOutput ? null : _changeOutput)),
               if (printer)
                 const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 12),
@@ -140,79 +156,138 @@ class _KitchenScreenState extends State<KitchenScreen> {
                                       (a.pickupStartAt ?? a.createdAt)
                                           .compareTo(
                                               b.pickupStartAt ?? b.createdAt));
+                                final historyCount = ts
+                                        .where((o) =>
+                                            o.status == TableOrderStatus.closed)
+                                        .length +
+                                    os
+                                        .where((o) =>
+                                            o.status == OrderStatus.completed)
+                                        .length;
                                 if (ts.isEmpty && os.isEmpty) {
                                   return const _EmptyKitchen();
                                 }
                                 return ListView(
                                     padding: const EdgeInsets.all(12),
                                     children: [
+                                      if (historyCount > 0)
+                                        SwitchListTile(
+                                          title: Text(
+                                              'ใบงานที่ปิดบิลหรือเสร็จแล้ว ($historyCount)'),
+                                          subtitle: const Text(
+                                              'ยังไม่ยืนยันพิมพ์ ไม่ใช่บิลค้างชำระ'),
+                                          value: _showHistory,
+                                          onChanged: (value) => setState(
+                                              () => _showHistory = value),
+                                        ),
+                                      if (!_showHistory &&
+                                          ts.every((o) =>
+                                              o.status !=
+                                              TableOrderStatus.open) &&
+                                          os.every((o) =>
+                                              o.status ==
+                                              OrderStatus.completed))
+                                        const Padding(
+                                            padding: EdgeInsets.all(20),
+                                            child: Text(
+                                                'ไม่มีงานครัวที่กำลังดำเนินการ')),
                                       for (final o in os)
-                                        Card(
-                                            child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(12),
-                                                child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      Text(
-                                                          o.tableName == null
-                                                              ? 'ออนไลน์ • รับกลับบ้าน'
-                                                              : 'ออนไลน์ • โต๊ะ ${o.tableName}',
-                                                          style: const TextStyle(
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold)),
-                                                      Text(
-                                                          '${o.customerName} • ${o.status.label}'),
-                                                      if (o.pickupDescription !=
-                                                          null)
-                                                        Text(o
-                                                            .pickupDescription!),
-                                                      for (final i in o.items)
-                                                        ListTile(
-                                                            dense: true,
-                                                            title: Text(
-                                                                '${i.productName} × ${i.quantity}'),
-                                                            subtitle: i
-                                                                    .preparationNote
-                                                                    .isEmpty
-                                                                ? null
-                                                                : Text(i
-                                                                    .preparationNote)),
-                                                      if (printer)
-                                                        _PrintActions(
-                                                            source: 'online',
-                                                            orderId: o.id,
-                                                            job: jobs.data![
-                                                                'online-${o.id}']),
-                                                      if (o.status ==
-                                                          OrderStatus.paid)
-                                                        FilledButton(
-                                                            onPressed: () => performShopOperation(
-                                                                context,
-                                                                () => OrderService
-                                                                    .updateStatus(
-                                                                        o.id,
-                                                                        OrderStatus
-                                                                            .accepted)),
-                                                            child: const Text(
-                                                                'เริ่มเตรียม')),
-                                                      if (o.status ==
-                                                          OrderStatus.accepted)
-                                                        FilledButton(
-                                                            onPressed: () => performShopOperation(
-                                                                context,
-                                                                () => OrderService
-                                                                    .updateStatus(
-                                                                        o.id,
-                                                                        OrderStatus
-                                                                            .ready)),
-                                                            child: const Text(
-                                                                'พร้อมรับ / เสิร์ฟแล้ว')),
-                                                    ]))),
-                                      for (final o in ts) ...[
+                                        if (_showHistory ||
+                                            o.status != OrderStatus.completed)
+                                          Card(
+                                              child: Padding(
+                                                  padding:
+                                                      const EdgeInsets.all(12),
+                                                  child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Text(
+                                                            o.tableName == null
+                                                                ? 'ออนไลน์ • รับกลับบ้าน'
+                                                                : 'ออนไลน์ • โต๊ะ ${o.tableName}',
+                                                            style: const TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold)),
+                                                        Text(
+                                                            '${o.customerName} • ${o.status.label}'),
+                                                        if (o.pickupDescription !=
+                                                            null)
+                                                          Text(o
+                                                              .pickupDescription!),
+                                                        for (final i in o.items)
+                                                          ListTile(
+                                                              dense: true,
+                                                              title: Text(
+                                                                  '${i.productName} × ${i.quantity}'),
+                                                              subtitle: i
+                                                                      .preparationNote
+                                                                      .isEmpty
+                                                                  ? null
+                                                                  : Text(i
+                                                                      .preparationNote)),
+                                                        if (printer)
+                                                          _PrintActions(
+                                                              source: 'online',
+                                                              orderId: o.id,
+                                                              job: jobs.data![
+                                                                  'online-${o.id}']),
+                                                        if (o.status ==
+                                                            OrderStatus.paid)
+                                                          FilledButton(
+                                                              onPressed: () => performShopOperation(
+                                                                  context,
+                                                                  () => OrderService
+                                                                      .updateStatus(
+                                                                          o.id,
+                                                                          OrderStatus
+                                                                              .accepted),
+                                                                  timeout: const Duration(
+                                                                      seconds:
+                                                                          25)),
+                                                              child: const Text(
+                                                                  'เริ่มเตรียม')),
+                                                        if (o.status ==
+                                                            OrderStatus
+                                                                .accepted)
+                                                          FilledButton(
+                                                              onPressed: () => performShopOperation(
+                                                                  context,
+                                                                  () => OrderService
+                                                                      .updateStatus(
+                                                                          o.id,
+                                                                          OrderStatus
+                                                                              .ready),
+                                                                  timeout: const Duration(
+                                                                      seconds:
+                                                                          25)),
+                                                              child: const Text(
+                                                                  'พร้อมรับ / เสิร์ฟแล้ว')),
+                                                        if (o.status ==
+                                                            OrderStatus.ready)
+                                                          FilledButton(
+                                                              onPressed: () => performShopOperation(
+                                                                  context,
+                                                                  () => OrderService
+                                                                      .updateStatus(
+                                                                          o.id,
+                                                                          OrderStatus
+                                                                              .completed),
+                                                                  timeout:
+                                                                      const Duration(
+                                                                          seconds:
+                                                                              25),
+                                                                  success:
+                                                                      'ส่งมอบออเดอร์แล้ว'),
+                                                              child: const Text(
+                                                                  'ส่งมอบแล้ว / เสร็จสิ้น')),
+                                                      ]))),
+                                      for (final o in ts.where((o) =>
+                                          _showHistory ||
+                                          o.status ==
+                                              TableOrderStatus.open)) ...[
                                         if (o.status == TableOrderStatus.closed)
                                           const Text(
                                               'ปิดบิลแล้ว • ตรวจว่าครัวได้รับใบงานเดิมหรือยังก่อนพิมพ์'),
@@ -344,10 +419,35 @@ class _TicketCard extends StatelessWidget {
                   tone: OperationalTone.success,
                   icon: Icons.check_circle_outline),
             Text(
-              _elapsed(order.openedAt),
+              order.status == TableOrderStatus.closed
+                  ? 'ปิดบิลแล้ว • ประวัติใบงานครัว'
+                  : _elapsed(order.openedAt),
               style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
             ),
             const Divider(height: 16),
+            if (order.status == TableOrderStatus.open)
+              TextButton.icon(
+                icon: const Icon(Icons.receipt_long_outlined),
+                label: const Text('ไปที่บิลโต๊ะ / ปิดโต๊ะ'),
+                onPressed: () async {
+                  try {
+                    final table = await runShopOperation(
+                        context, () => TableService.getTable(order.tableId),
+                        timeout: const Duration(seconds: 15),
+                        message: 'กำลังเปิดบิลโต๊ะ');
+                    if (table == null) throw StateError('ไม่พบโต๊ะนี้');
+                    if (context.mounted) {
+                      await Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => TableDetailScreen(table: table)));
+                    }
+                  } catch (error) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(operationError(error))));
+                    }
+                  }
+                },
+              ),
             Expanded(
               child: ListView.separated(
                 itemCount: kitchenItems.length,
@@ -403,7 +503,7 @@ class _ItemRow extends StatelessWidget {
           ? null
           : () => performShopOperation(
               context, () => TableService.markItemReady(orderId, item.id),
-              success: 'พร้อมเสิร์ฟแล้ว'),
+              timeout: const Duration(seconds: 20), success: 'พร้อมเสิร์ฟแล้ว'),
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),

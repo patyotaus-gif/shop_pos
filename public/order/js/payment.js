@@ -1,9 +1,11 @@
-import { initPickup, refreshPickup, pickupPayload } from './pickup.js?v=20261009';
+import { initPickup, refreshPickup, pickupPayload } from './pickup.js?v=20261013stock';
 // Order form + PromptPay payment + slip verification.
 // Logic moved VERBATIM from the old public/order/index.html inline script —
 // do not "improve" payload/CRC/compression code here.
-import { shopId, apiFetch, orderContext } from './util.js?v=20261009';
-import { items, clearCart } from './cart.js?v=20261009';
+import { shopId, apiFetch, orderContext } from './util.js?v=20261013stock';
+import { items, clearCart } from './cart.js?v=20261013stock';
+import { initCoupons, couponPayload } from './coupons.js?v=20261013stock';
+import {initBuyGet, refreshGifts, giftPayload, giftText, bundleText} from './buy-get.js?v=20261013stock';
 // Payload builder now lives in the shared module (also used by /subscribe);
 // re-exported so this module's interface (and its Node tests) is unchanged.
 import { crc16, buildPromptPayPayload } from '../../js/promptpay-qr.js';
@@ -51,12 +53,15 @@ export function openOrderModal() {
   if(savedPayment()) {resumePayment(); return;}
   document.getElementById('modalOverlay').classList.add('open');
   refreshPickup();
+  refreshGifts();
 }
 function closeOrderModal() {
   document.getElementById('modalOverlay').classList.remove('open');
 }
 
 export function initPayment() {
+  initBuyGet();
+  initCoupons();
   initPickup();
   document.getElementById('payBtn').addEventListener('click', submitOrder);
   document.getElementById('cancelBtn').addEventListener('click', closeOrderModal);
@@ -85,6 +90,10 @@ async function submitOrder() {
 
   let pickup;
   try { pickup = pickupPayload(); } catch (error) { alert(error.message); return; }
+  let coupon;
+  try { coupon = couponPayload(); } catch (error) { alert(error.message); return; }
+  let gifts;
+  try { gifts = giftPayload(); } catch (error) { alert(error.message); return; }
   const orderItems = items().map((i) => ({
     productId: i.id,
     quantity: i.quantity,
@@ -92,7 +101,7 @@ async function submitOrder() {
     ...(i.notes ? { notes: i.notes } : {}),
   }));
 
-  const signature = JSON.stringify({ name, phone, orderItems, pickup });
+  const signature = JSON.stringify({ name, phone, orderItems, pickup, coupon, gifts });
   if (!lastRequest || lastRequest.signature !== signature) lastRequest = { signature, id: crypto.randomUUID() };
   const payBtn = document.getElementById('payBtn');
   payBtn.disabled = true;
@@ -101,7 +110,7 @@ async function submitOrder() {
   try {
     const customerToken=Array.from(crypto.getRandomValues(new Uint8Array(32)), v=>v.toString(16).padStart(2,'0')).join('');
     const request = {
-        shopId, ...pickup, requestId:lastRequest.id, customerToken,
+        shopId, ...pickup, ...coupon, ...gifts, requestId:lastRequest.id, customerToken,
         customerName:name, customerPhone:phone, items:orderItems,
         ...(orderContext.mode === 'takeaway' ? {orderType:'takeaway'} : {}),
         ...(orderContext.mode === 'prepaidTable' && orderContext.table ? {orderType:'dineInPrepaid',tableId:orderContext.table.id,tableName:orderContext.table.name} : {}),
@@ -117,7 +126,7 @@ async function submitOrder() {
     if (!res.ok || !data.orderId) {
       if((res.status===400 || res.status===409) && !data.existingOrder) {forgetPayment(); lastRequest=null;}
       alert('เกิดข้อผิดพลาด: ' + (data.error || 'กรุณาลองใหม่'));
-      if (res.status === 409) await refreshPickup();
+      if (res.status === 409) {await refreshPickup(); await refreshGifts();}
       return;
     }
     pendingOrder = {...data,customerToken};
@@ -137,7 +146,8 @@ async function submitOrder() {
   }
 }
 
-function showPaymentScreen({ finalAmount, total, promptpayId, promptpayName, pickupLabel }) {
+function showPaymentScreen({ finalAmount, total, promptpayId, promptpayName, pickupLabel, coupon, discount, subtotal, buyGet, bundles }) {
+  document.getElementById('payGifts').textContent=[bundleText(bundles),giftText(buyGet)].filter(Boolean).join('\n');
   const waiting = !pendingOrder.status || pendingOrder.status === 'pendingPayment';
   const review = pendingOrder.awaitingReview === true;
   document.getElementById('payQrBox').hidden = !waiting || review;
@@ -167,6 +177,8 @@ function showPaymentScreen({ finalAmount, total, promptpayId, promptpayName, pic
     ? `ยอดสินค้า ฿${total.toFixed(2)} + เศษ ${Math.round((finalAmount - total) * 100)} สตางค์ (ใช้แยกออเดอร์)`
     : '';
   document.getElementById('payCentsNote').textContent = centsNote;
+  document.getElementById('payCouponNote').textContent = coupon
+    ? `ยอดสินค้า ${Number(coupon.subtotalMinor/100).toFixed(2)} บาท − คูปอง ${coupon.code} ${Number(coupon.discountMinor/100).toFixed(2)} บาท = ${Number(total).toFixed(2)} บาท` : '';
   document.getElementById('payReceiver').textContent =
     promptpayName || 'ผู้รับเงิน';
   document.getElementById('payReceiverId').textContent =

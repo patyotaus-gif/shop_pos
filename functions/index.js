@@ -21,9 +21,13 @@ exports.staffManage = onCall(staffAccess.manage);
 exports.staffSwitchSession = onCall(staffAccess.switchSession);
 exports.staffWorkspace = onCall(staffAccess.workspace);
 exports.staffCheckout = onCall(staffAccess.checkout);
+exports.quoteCounterGifts = onCall({enforceAppCheck:true},staffAccess.quoteGifts);
+exports.counterBundleCatalog = onCall({enforceAppCheck:true},staffAccess.bundleCatalog);
 const kitchenPrint = require('./kitchen_print').handlers({db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError});
 exports.claimKitchenPrint = onCall(kitchenPrint.claim);
 exports.finishKitchenPrint = onCall(kitchenPrint.finish);
+const tableRecovery = require('./table_recovery').handlers({db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError});
+exports.reconcileRestaurantTable = onCall(tableRecovery.reconcile);
 const offlineSales = require('./offline_sales').createOfflineSales({
   db: admin.firestore(), FieldValue: admin.firestore.FieldValue, Timestamp: admin.firestore.Timestamp,
 });
@@ -33,6 +37,15 @@ exports.offlineSync = onCall(offlineSales.sync);
 const orderAccounting = require('./order_accounting').handlers({db:admin.firestore(), FieldValue:admin.firestore.FieldValue, HttpsError});
 exports.confirmOrderPayment = onCall(orderAccounting.confirm);
 exports.transitionOrder = onCall(orderAccounting.transition);
+exports.manageCoupon = onCall({enforceAppCheck:true}, require('./coupons').manage({
+  db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError,
+}));
+exports.manageBundle = onCall({enforceAppCheck:true}, require('./bundles').manage({
+  db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError,
+}));
+exports.manageBuyGet = onCall({enforceAppCheck:true}, require('./buy_get').manage({
+  db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError,
+}));
 const cashAccounting=require('./cash_accounting').handlers({db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError});
 exports.openCashSession=onCall(cashAccounting.open);
 exports.recordCashMovement=onCall(cashAccounting.recordCashMovement);
@@ -301,6 +314,7 @@ exports.getShopPublic = onRequest({ cors: true }, async (req, res) => {
       price: onSale ? sale : regular,
       ...(onSale ? { originalPrice: regular } : {}),
       stock: require('./order_inventory').menuStock(doc.id, inventoryState),
+      unit: p.unit || 'ชิ้น', isWeighed: p.isWeighed === true,
       category: p.category || "",
       imageUrl: p.imageUrl || "",
       // Upsell popup material: pinned products are the shop's own picks.
@@ -318,6 +332,10 @@ exports.getShopPublic = onRequest({ cors: true }, async (req, res) => {
   const settings = settingsSnap.data() || {};
 
   const out = { name: shop.name || "ร้านค้า", products };
+  const bundleShop=db.collection('shops').doc(shopId);
+  const productDocs=new Map(prodSnap.docs.map(d=>[d.id,d]));
+  out.bundles=await require('./bundles').catalog(bundleShop,ref=>
+    ref.parent.id==='products'?Promise.resolve(productDocs.get(ref.id)||{data:()=>null}):ref.get());
   out.pickup = await pickupScheduling.availability(db.collection("shops").doc(shopId), settings.pickup);
   if (settings.logoUrl) out.logoUrl = settings.logoUrl;
   // Owner-paused ordering — client still gets name/logo so the closed
@@ -378,11 +396,11 @@ exports.createOrderCheckout = onRequest(
     const pricedItems=[];
     try {
       for (const raw of items) {
-        if(!require('./order_accounting').validId(raw.productId) || !Number.isInteger(raw.quantity) || raw.quantity<1 || raw.quantity>99)throw new Error('ข้อมูลสินค้าไม่ถูกต้อง');
+        if(!require('./order_accounting').validId(raw.productId) || !require('./stock_quantity').valid(raw.quantity,true) || raw.quantity>99)throw new Error('ข้อมูลสินค้าไม่ถูกต้อง');
         const p=(await shopRef.collection('products').doc(raw.productId).get()).data();
         if(!p)throw new Error('ไม่พบสินค้า');
         const line=priceLine({productId:raw.productId,quantity:raw.quantity,optionIds:raw.optionIds||[],notes:''},p,(p.modifierGroupIds||[]).map(id=>groupsById[id]).filter(Boolean),new Date());
-        pricedItems.push({productId:raw.productId,productName:line.productName,quantity:raw.quantity,price:Math.round(line.unitPrice*100)/100,
+        pricedItems.push({productId:raw.productId,productName:line.productName,quantity:raw.quantity,unit:p.unit||'ชิ้น',isWeighed:p.isWeighed===true,price:Math.round(line.unitPrice*100)/100,
           modifiers:line.modifiers,costPrice:Number(p.costPrice||0),costKnown:Number(p.costPrice)>0,category:String(p.category||'ทั่วไป')});
       }
     } catch(e){res.status(400).json({error:e.message});return;}
@@ -411,9 +429,9 @@ exports.createOrderCheckout = onRequest(
         price_data: {
           currency: "thb",
           product_data: { name: item.productName },
-          unit_amount: Math.round(item.price * 100),
+          unit_amount: Math.round(item.price * item.quantity * 100),
         },
-        quantity: item.quantity,
+        quantity: 1,
       })),
       mode: "payment",
       success_url: `https://pok-pok.app/order/success/?order=${orderRef.id}`,
@@ -482,18 +500,25 @@ exports.createPromptPayOrder = onRequest(
     if (!(await _verifyAppCheck(req, res))) return;
 
     const { shopId, customerName, customerPhone, items, tableId, tableName, orderType, pickupSlot, pickupMode, requestId, customerToken } = req.body;
-    if (!shopId || !customerName || !customerPhone || !Array.isArray(items) || items.length === 0) {
+    const coupons = require('./coupons');
+    const quoting = ['quoteCoupon','quoteGifts'].includes(req.body.action);
+    const couponCode = coupons.codeOf(req.body.couponCode);
+    if (!require('./customer_order').validId(shopId) ||
+        (!quoting && (!customerName || !customerPhone)) || !Array.isArray(items) || items.length === 0) {
       res.status(400).json({ error: "ข้อมูลไม่ครบ" });
       return;
     }
     // Optional context tags from QR links (display-only).
     const customerAccess = require('./customer_order');
-    if (!customerAccess.normalizePhone(customerPhone) || (customerToken != null && !customerAccess.validToken(customerToken))) {
+    if ((!quoting && !customerAccess.normalizePhone(customerPhone)) || (customerToken != null && !customerAccess.validToken(customerToken))) {
       res.status(400).json({error:'กรุณากรอกเบอร์โทรให้ถูกต้อง เช่น 0812345678 หรือ +66812345678'}); return;
     }
     const safeOrderType = ["takeaway", "dineInPrepaid"].includes(orderType)
       ? orderType
       : null;
+    if ((req.body.action === 'quoteCoupon' || req.body.couponCode) && !coupons.validCode(couponCode)) {
+      res.status(400).json({error:'คูปอง: โค้ดไม่ถูกต้อง'}); return;
+    }
 
     if (items.length > 100) {
       res.status(400).json({ error: "รายการมากเกินไป" });
@@ -533,7 +558,7 @@ exports.createPromptPayOrder = onRequest(
       const productId =
         typeof raw?.productId === "string" ? raw.productId.trim() : "";
       const q = raw?.quantity;
-      if (!productId || !Number.isInteger(q) || q < 1) {
+      if (!customerAccess.validId(productId) || !require('./stock_quantity').valid(q,true)) {
         res.status(400).json({ error: "ข้อมูลรายการไม่ถูกต้อง" });
         return;
       }
@@ -566,17 +591,41 @@ exports.createPromptPayOrder = onRequest(
         costPrice: Number(p.costPrice || 0),
         costKnown: Number(p.costPrice) > 0,
         category: String(p.category || 'ทั่วไป'),
-        productName: line.productName,
+        productName: line.productName, unit: p.unit || 'ชิ้น', isWeighed: p.isWeighed === true,
         price: line.unitPrice,
         quantity,
         ...(line.modifiers.length ? { modifiers: line.modifiers } : {}),
         ...(line.notes ? { notes: line.notes } : {}),
       });
-      total += line.unitPrice * quantity;
+      total += Math.round(line.unitPrice * quantity * 100)/100;
     }
 
     if (total < 20) {
       res.status(400).json({ error: "ยอดสั่งขั้นต่ำ ฿20" });
+      return;
+    }
+
+    total = Math.round(total * 100) / 100;
+    if (quoting) {
+      try {
+        if (req.body.action === 'quoteGifts') {
+          const result = await admin.firestore().runTransaction(async tx=>({
+            buyGet:await require('./buy_get').quote(shopRef,pricedItems,ref=>tx.get(ref)),
+            bundles:await require('./bundles').quote(shopRef,pricedItems,ref=>tx.get(ref)),
+          }));
+          res.json({...result,bundleDiscount:require('./bundles').discountMinor(result.bundles)/100});
+          return;
+        }
+        const result=await admin.firestore().runTransaction(async tx=>{
+          const bundles=await require('./bundles').quote(shopRef,pricedItems,ref=>tx.get(ref));
+          const coupon=(await tx.get(shopRef.collection('coupons').doc(couponCode))).data();
+          return coupons.quote(coupon,Math.round(total*100)-require('./bundles').discountMinor(bundles));
+        });
+        res.json(result);
+      } catch (error) {
+        const known = error.couponError || error.buyGetError || error.bundleError;
+        res.status(known ? 400 : 503).json({error:known ? error.message : 'ตรวจโปรโมชั่นไม่สำเร็จ กรุณาลองใหม่'});
+      }
       return;
     }
 
@@ -587,6 +636,9 @@ exports.createPromptPayOrder = onRequest(
       customerName, customerPhone, items, tableId: tableId || null, tableName: tableName || null,
       orderType: safeOrderType, pickupSlot: pickupSlot || null, pickupMode: pickupMode || null,
       customerTokenHash: customerToken ? customerAccess.tokenHash(customerToken) : null,
+      ...(couponCode ? {couponCode,couponQuote:req.body.couponQuote || null} : {}),
+      ...(req.body.buyGetQuote ? {buyGetQuote:req.body.buyGetQuote} : {}),
+      ...(req.body.bundleQuote ? {bundleQuote:req.body.bundleQuote} : {}),
     })).digest('hex');
     // Create order doc first so its ID seeds the unique cents
     const ordersRef = admin
@@ -604,6 +656,9 @@ exports.createPromptPayOrder = onRequest(
 
     const orderData = {
       requestSignature,
+      ...(req.body.buyGetQuote ? {buyGetQuote:req.body.buyGetQuote} : {}),
+      ...(req.body.bundleQuote ? {bundleQuote:req.body.bundleQuote} : {}),
+      ...(couponCode ? {couponCode,couponQuote:req.body.couponQuote || null} : {}),
       ...(customerToken ? {customerTokenHash:customerAccess.tokenHash(customerToken)} : {}),
       promptpayIdSnapshot: promptpayId,
       promptpayNameSnapshot: promptpayName,
@@ -626,7 +681,7 @@ exports.createPromptPayOrder = onRequest(
       });
     } catch (error) {
       console.error("Pickup reservation failed", error.code || "validation");
-      const known = /^(ช่วงเวลา|ร้านปิด|เวลานัด|สินค้า|สูตร|กรุณาให้ร้าน)/.test(error.message || '');
+      const known = error.couponError || error.buyGetError || error.bundleError || /^(ช่วงเวลา|ร้านปิด|เวลานัด|สินค้า|สูตร|กรุณาให้ร้าน)/.test(error.message || '');
       res.status(known ? 409 : 503).json({ error: known ? error.message : "บันทึกออเดอร์ไม่สำเร็จ กรุณาลองใหม่",existingOrder:error.existingOrder===true });
       return;
     }
@@ -635,6 +690,9 @@ exports.createPromptPayOrder = onRequest(
       orderId: orderRef.id,
       pickupLabel: pickup.pickupLabel || null,
       total: pickup.total,
+      ...(pickup.buyGet ? {buyGet:pickup.buyGet} : {}),
+      ...(pickup.bundles ? {bundles:pickup.bundles,bundleDiscount:pickup.bundleDiscount} : {}),
+      ...(pickup.coupon ? {coupon:pickup.coupon,discount:pickup.discount,subtotal:pickup.subtotal} : {}),
       finalAmount: pickup.finalAmount,
       promptpayId: pickup.promptpayIdSnapshot || promptpayId,
       promptpayName: pickup.promptpayNameSnapshot ?? promptpayName,
@@ -2226,7 +2284,7 @@ exports.createTableOrder = onRequest(
           costPrice: Number(p.costPrice || 0),
           costKnown: Number(p.costPrice) > 0,
           category: String(p.category || 'ทั่วไป'),
-          quantity: line.quantity,
+          quantity: line.quantity, unit: p.unit || 'ชิ้น', isWeighed: p.isWeighed === true,
           ...(line.modifiers.length ? { modifiers: line.modifiers } : {}),
           ...(line.notes ? { notes: line.notes } : {}),
           kitchenStatus: autoSend ? "sent" : "pending",

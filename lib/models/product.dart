@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'ingredient.dart';
+import '../utils/stock_quantity.dart';
 
 class Product {
   final String id;
@@ -8,9 +9,28 @@ class Product {
   final String barcode;
   final double price;
   final double costPrice;
-  final int stock;
-  final int lowStockThreshold;
+  final num stock;
+  final int stockRevision;
+  final num lowStockThreshold;
   final String category;
+  final String sku;
+  final String unit;
+  final String packUnit;
+  final num unitsPerPack;
+  final String supplierName;
+  final String storageLocation;
+  final String notes;
+  final bool isWeighed;
+  final bool trackLots;
+  final List<Map<String, dynamic>> stockLots;
+  num get saleable {
+    try {
+      return saleableStock(toFirestore());
+    } on StateError {
+      return 0;
+    }
+  }
+
   final bool isPinned;
   final String? imagePath;
   final String? imageUrl;
@@ -43,8 +63,19 @@ class Product {
     required this.price,
     this.costPrice = 0,
     required this.stock,
+    this.stockRevision = 0,
     this.lowStockThreshold = 5,
     this.category = 'ทั่วไป',
+    this.sku = '',
+    this.unit = 'ชิ้น',
+    this.packUnit = 'แพ็ก',
+    this.unitsPerPack = 1,
+    this.supplierName = '',
+    this.storageLocation = '',
+    this.notes = '',
+    this.isWeighed = false,
+    this.trackLots = false,
+    this.stockLots = const [],
     this.isPinned = false,
     this.imagePath,
     this.imageUrl,
@@ -83,23 +114,38 @@ class Product {
   double get profitMargin =>
       effectivePrice > 0 ? (profit / effectivePrice) * 100 : 0;
 
-  factory Product.fromFirestore(Map<String, dynamic> data, String id) => Product(
+  factory Product.fromFirestore(Map<String, dynamic> data, String id) =>
+      Product(
         id: id,
         name: data['name'] ?? '',
         barcode: data['barcode'] ?? '',
         price: (data['price'] ?? 0).toDouble(),
         costPrice: (data['costPrice'] ?? 0).toDouble(),
+        stockRevision: (data['stockRevision'] as num? ?? 0).toInt(),
         stock: data['stock'] ?? 0,
         lowStockThreshold: data['lowStockThreshold'] ?? 5,
         category: data['category'] ?? 'ทั่วไป',
+        sku: data['sku'] ?? '',
+        unit: data['unit'] ?? 'ชิ้น',
+        packUnit: data['packUnit'] ?? 'แพ็ก',
+        unitsPerPack: data['unitsPerPack'] as num? ?? 1,
+        supplierName: data['supplierName'] ?? '',
+        storageLocation: data['storageLocation'] ?? '',
+        notes: data['notes'] ?? '',
+        isWeighed: data['isWeighed'] == true,
+        trackLots: data['trackLots'] == true,
+        stockLots: (data['stockLots'] as List? ?? [])
+            .map((l) => Map<String, dynamic>.from(l as Map))
+            .toList(),
         isPinned: data['isPinned'] ?? false,
         imagePath: data['imagePath'],
         imageUrl: data['imageUrl'],
         salePrice: (data['salePrice'] as num?)?.toDouble(),
         saleUntil: (data['saleUntil'] as Timestamp?)?.toDate(),
-        modifierGroupIds: ((data['modifierGroupIds'] as List<dynamic>?) ?? const [])
-            .map((e) => e.toString())
-            .toList(),
+        modifierGroupIds:
+            ((data['modifierGroupIds'] as List<dynamic>?) ?? const [])
+                .map((e) => e.toString())
+                .toList(),
         stockMode: data['stockMode'] == 'recipe' ? 'recipe' : 'count',
         recipe: ((data['recipe'] as List<dynamic>?) ?? const [])
             .map((e) => RecipeLine.fromMap(e as Map<String, dynamic>))
@@ -111,9 +157,19 @@ class Product {
         'barcode': barcode,
         'price': price,
         'costPrice': costPrice,
-        'stock': stock,
+        'stock': stock, 'stockRevision': stockRevision,
         'lowStockThreshold': lowStockThreshold,
         'category': category,
+        'sku': sku,
+        'unit': unit,
+        'packUnit': packUnit,
+        'unitsPerPack': unitsPerPack,
+        'supplierName': supplierName,
+        'storageLocation': storageLocation,
+        'notes': notes,
+        'isWeighed': isWeighed,
+        'trackLots': trackLots,
+        'stockLots': stockLots,
         'isPinned': isPinned,
         if (imagePath != null) 'imagePath': imagePath,
         if (imageUrl != null) 'imageUrl': imageUrl,
@@ -134,9 +190,19 @@ class Product {
     String? barcode,
     double? price,
     double? costPrice,
-    int? stock,
-    int? lowStockThreshold,
+    num? stock,
+    num? lowStockThreshold,
     String? category,
+    String? sku,
+    String? unit,
+    String? packUnit,
+    num? unitsPerPack,
+    String? supplierName,
+    String? storageLocation,
+    String? notes,
+    bool? isWeighed,
+    bool? trackLots,
+    List<Map<String, dynamic>>? stockLots,
     bool? isPinned,
     String? imagePath,
     String? imageUrl,
@@ -153,8 +219,19 @@ class Product {
         price: price ?? this.price,
         costPrice: costPrice ?? this.costPrice,
         stock: stock ?? this.stock,
+        stockRevision: stockRevision,
         lowStockThreshold: lowStockThreshold ?? this.lowStockThreshold,
         category: category ?? this.category,
+        sku: sku ?? this.sku,
+        unit: unit ?? this.unit,
+        packUnit: packUnit ?? this.packUnit,
+        unitsPerPack: unitsPerPack ?? this.unitsPerPack,
+        supplierName: supplierName ?? this.supplierName,
+        storageLocation: storageLocation ?? this.storageLocation,
+        notes: notes ?? this.notes,
+        isWeighed: isWeighed ?? this.isWeighed,
+        trackLots: trackLots ?? this.trackLots,
+        stockLots: stockLots ?? this.stockLots,
         isPinned: isPinned ?? this.isPinned,
         imagePath: imagePath ?? this.imagePath,
         imageUrl: imageUrl ?? this.imageUrl,

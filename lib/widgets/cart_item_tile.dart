@@ -1,3 +1,4 @@
+import '../widgets/stock_quantity_dialog.dart';
 import 'package:flutter/material.dart';
 import '../utils/money_format.dart';
 import '../models/cart_item.dart';
@@ -11,7 +12,7 @@ class CartItemTile extends StatelessWidget {
       required this.onQtyChanged});
   final CartItem item;
   final VoidCallback onRemove;
-  final ValueChanged<int> onQtyChanged;
+  final ValueChanged<num> onQtyChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -86,12 +87,11 @@ class CartItemTile extends StatelessWidget {
                                     TextButton(
                                         onPressed: () async {
                                           final quantity =
-                                              await showDialog<int>(
-                                                  context: context,
-                                                  builder: (_) =>
-                                                      _QuantityDialog(
-                                                          quantity:
-                                                              item.quantity));
+                                              await showStockQuantity(context,
+                                                  unit: item.product.unit,
+                                                  weighed:
+                                                      item.product.isWeighed,
+                                                  initial: item.quantity);
                                           if (quantity != null &&
                                               context.mounted) {
                                             onQtyChanged(quantity);
@@ -120,48 +120,4 @@ class CartItemTile extends StatelessWidget {
                       ]))),
     );
   }
-}
-
-class _QuantityDialog extends StatefulWidget {
-  const _QuantityDialog({required this.quantity});
-  final int quantity;
-  @override
-  State<_QuantityDialog> createState() => _QuantityDialogState();
-}
-
-class _QuantityDialogState extends State<_QuantityDialog> {
-  late final _controller = TextEditingController(text: '${widget.quantity}');
-  String? _error;
-  void _submit() {
-    final quantity = int.tryParse(_controller.text.trim());
-    if (quantity == null || quantity < 1) {
-      setState(() => _error = 'กรอกจำนวนเต็มตั้งแต่ 1 ขึ้นไป');
-      return;
-    }
-    Navigator.pop(context, quantity);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-        title: const Text('จำนวน'),
-        content: TextField(
-            controller: _controller,
-            autofocus: true,
-            keyboardType: TextInputType.number,
-            onSubmitted: (_) => _submit(),
-            decoration: InputDecoration(
-                border: const OutlineInputBorder(), errorText: _error)),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('ยกเลิก')),
-          FilledButton(onPressed: _submit, child: const Text('ตกลง')),
-        ],
-      );
 }

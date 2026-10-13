@@ -91,7 +91,7 @@ class NotificationService {
     );
   }
 
-  static Future<void> showLowStock(String productName, int stock) async {
+  static Future<void> showLowStock(String productName, num stock) async {
     await init();
     await _showLocal(
       'สินค้าใกล้หมด: $productName',

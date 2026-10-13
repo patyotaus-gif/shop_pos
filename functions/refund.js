@@ -1,3 +1,4 @@
+const stock = require('./stock_quantity');
 ﻿'use strict';
 const {minor,ledgerContext,writeMovement}=require('./money_ledger');
 async function refundSale({db,stripe,shopId,saleId,reason,returnToStock=false,refundMethod,actor,FieldValue}) {
@@ -11,6 +12,11 @@ async function refundSale({db,stripe,shopId,saleId,reason,returnToStock=false,re
   // implemented. Never record a local refund as if external money was returned.
   if(sale.paymentProvider==='omise'||sale.omiseChargeId)throw new Error('ต้องตรวจและคืนเงินผ่าน Omise ก่อนบันทึกคืนเงินในระบบ');
   if(returnToStock&&!sale.stockDeducted)throw new Error('บิลเก่าไม่มีประวัติตัดสต็อก กรุณาตรวจสต็อกแยก');
+  // Validate lot provenance before contacting a payment provider.
+  if(returnToStock && sale.stripePaymentIntentId) for(const [id,q] of Object.entries(sale.stockDeducted)) {
+    const p=(await shop.collection('products').doc(id).get()).data();
+    if(p)stock.restore(p,q,sale.stockLotsDeducted?.[id]);
+  }
   let stripeRefundId=null, stripeRefundStatus=null;
   if(sale.stripePaymentIntentId){
     const previous=await stripe.refunds.list({payment_intent:sale.stripePaymentIntentId,limit:100});
@@ -38,12 +44,19 @@ async function refundSale({db,stripe,shopId,saleId,reason,returnToStock=false,re
       throw new Error('ยอดลูกหนี้ไม่ตรงกับบิลขาย ต้องตรวจสอบก่อนคืนเงิน');
     const method=s.isDebt?(refundMethod||'cash'):s.paymentMethod;
     if(!['cash','transfer','qr','online'].includes(method))throw new Error('ช่องทางคืนเงินไม่ถูกต้อง');
-    const products=[];
+    const products=[], stockReturnPending=[];
     if(returnToStock){
       if(!s.stockDeducted)throw new Error('บิลเก่าไม่มีประวัติตัดสต็อก กรุณาคืนเงินโดยไม่คืนสต็อก แล้วตรวจสต็อกแยก');
       for(const [id,quantity] of Object.entries(s.stockDeducted)){
         const product=shop.collection('products').doc(id);
-        if((await tx.get(product)).exists)products.push({ref:product,quantity});
+        const data=(await tx.get(product)).data();
+        if(data) {
+          try {products.push({ref:product,quantity,data,update:stock.restore(data,quantity,s.stockLotsDeducted?.[id])});}
+          catch(e) {
+            if(!stripeRefundId)throw e;
+            stockReturnPending.push(id);
+          }
+        } else stockReturnPending.push(id);
       }
     }
     const customerRef=s.loyaltyCustomerId?shop.collection('customers').doc(s.loyaltyCustomerId):null;
@@ -52,8 +65,9 @@ async function refundSale({db,stripe,shopId,saleId,reason,returnToStock=false,re
     const order=orderRef?await tx.get(orderRef):null;
     const context=await ledgerContext(tx,shop), at=FieldValue.serverTimestamp();
     tx.update(ref,{isRefunded:true,refundedAt:at,refundReason:reason.trim(),returnToStock,
-      refundAmount:paid/100,refundMethod:method,refundedBy:actor||shopId,stripeRefundId,stripeRefundStatus});
-    for(const p of products)tx.update(p.ref,{stock:FieldValue.increment(p.quantity)});
+      refundAmount:paid/100,refundMethod:method,refundedBy:actor||shopId,stripeRefundId,stripeRefundStatus,
+      ...(stockReturnPending.length?{stockReturnPending,needsReview:true,offlineReview:[...(s.offlineReview||[]),'คืนเงินแล้ว ต้องตรวจคืนสต๊อก: '+stockReturnPending.join(', ')]}:{})});
+    for(const p of products)stock.write(tx,p.ref,p.data,p.update,{id:'refund-'+saleId,kind:'refund',referenceId:saleId,actor:actor||shopId,reason},FieldValue);
     if(debts)for(const d of debts.docs)tx.update(d.ref,{cancelledAt:at,cancelReason:reason.trim(),refundedAmount:paid/100});
     if(order?.exists)tx.update(orderRef,{status:'cancelled',refundedAt:at,cancelReason:reason.trim(),saleId});
     if(customer?.exists)tx.update(customerRef,{

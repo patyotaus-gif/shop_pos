@@ -14,12 +14,16 @@ let failKitchen = true, kitchenRequests = [];
 let failSlip = true, slipRequests = [], checkoutRequests = [];
 const fixtureOrders = new Map();
 const pickupSlots = [{id:'1791340200000', label:'07/10/2026 09:30–09:45 น.'}, {id:'1791341100000', label:'07/10/2026 09:45–10:00 น.'}];
+const bundle={id:'tea-water',revision:'b1',name:'ชาคู่น้ำ',priceMinor:5000,maxSets:1,
+  components:[{productId:'tea',quantity:2,unitPriceMinor:2500},{productId:'water',quantity:1,unitPriceMinor:1000}]};
+const bundleQuote=checkout=>checkout.shopId==='bundles' && checkout.items.some(i=>i.productId==='tea'&&i.quantity>=2)&&checkout.items.some(i=>i.productId==='water'&&i.quantity>=1)
+  ? [{...bundle,sets:1,discountMinor:1000}]:[];
 const server = http.createServer(async (req,res) => {
   const url = new URL(req.url,'http://localhost');
   if(url.pathname === '/api/shopPublic') {
     res.setHeader('Content-Type','application/json');
-    const menu = url.searchParams.get('shop') === 'single' ? products.map(p=>({...p,category:'ทั่วไป'})) : products;
-    return res.end(JSON.stringify({name:'ร้านทดสอบ',products:menu, ...(url.searchParams.get('shop') === 'pickup' ? {pickup:{enabled:true,slots:pickupSlots}} : {}), ...(url.searchParams.has('table') ?
+    const menu = url.searchParams.get('shop') === 'weighed' ? [{id:'weighed',name:'ข้าวชั่ง',price:80,stock:2.5,isWeighed:true,unit:'กก.',category:'อาหาร'}] : url.searchParams.get('shop') === 'single' ? products.map(p=>({...p,category:'ทั่วไป'})) : url.searchParams.get('shop')==='bundles'?products.map(p=>({...p,stock:10})):products;
+    return res.end(JSON.stringify({name:'ร้านทดสอบ',products:menu,bundles:url.searchParams.get('shop')==='bundles'?[bundle]:[], ...(url.searchParams.get('shop') === 'pickup' ? {pickup:{enabled:true,slots:pickupSlots}} : {}), ...(url.searchParams.has('table') ?
       {table:{id:url.searchParams.get('table'),name:'A1'},tableOrderMode:'postpaid'} : {})}));
   }
   if(url.pathname === '/api/createTableOrder') {
@@ -41,10 +45,22 @@ const server = http.createServer(async (req,res) => {
   }
   if(url.pathname === '/api/createPromptPayOrder') {
     let body='';for await(const part of req)body+=part;
-    const checkout=JSON.parse(body);checkoutRequests.push(checkout);
+    const checkout=JSON.parse(body);
     res.setHeader('Content-Type','application/json');
+    if(checkout.action==='quoteGifts') {
+      const qty=checkout.items.filter(i=>i.productId==='tea').reduce((s,i)=>s+i.quantity,0);
+      return res.end(JSON.stringify({bundles:bundleQuote(checkout),buyGet:checkout.shopId==='coupons' && qty>=2 ?
+        [{promotionId:'tea',revision:'test',productId:'water',productName:'น้ำดื่ม',quantity:1}] : []}));
+    }
+    if(checkout.action==='quoteCoupon') {
+      if(checkout.couponCode!=='SAVE10') {res.statusCode=400;return res.end(JSON.stringify({error:'คูปองหมดอายุแล้ว'}));}
+      const subtotalMinor=checkout.items.reduce((sum,i)=>sum+products.find(p=>p.id===i.productId).price*i.quantity*100,0)-bundleQuote(checkout).reduce((s,b)=>s+b.discountMinor,0);
+      return res.end(JSON.stringify({code:'SAVE10',subtotalMinor,discountMinor:1000,totalMinor:subtotalMinor-1000}));
+    }
+    checkoutRequests.push(checkout);
     const id='web-'+checkout.requestId;
-    if(!fixtureOrders.has(id))fixtureOrders.set(id,{orderId:id,status:'pendingPayment',customerToken:checkout.customerToken,pickupLabel:pickupSlots.find(s=>s.id===checkout.pickupSlot)?.label,total:25,finalAmount:25,promptpayId:'0812345678',promptpayName:'ร้านทดสอบ'});
+    const coupon=checkout.couponCode ? {coupon:{code:checkout.couponCode,...checkout.couponQuote},subtotal:checkout.couponQuote.subtotalMinor/100,discount:10,total:checkout.couponQuote.subtotalMinor/100-10,finalAmount:checkout.couponQuote.subtotalMinor/100-10} : {};
+    if(!fixtureOrders.has(id))fixtureOrders.set(id,{orderId:id,status:'pendingPayment',customerToken:checkout.customerToken,buyGet:checkout.buyGetQuote,bundles:checkout.bundleQuote,pickupLabel:pickupSlots.find(s=>s.id===checkout.pickupSlot)?.label,total:25,finalAmount:25,...coupon,promptpayId:'0812345678',promptpayName:'ร้านทดสอบ'});
     return res.end(JSON.stringify(fixtureOrders.get(id)));
   }
   if(url.pathname === '/api/verifyPromptPaySlip') {
@@ -61,7 +77,7 @@ const server = http.createServer(async (req,res) => {
   let data=fs.readFileSync(file);
   if(file.endsWith('order'+path.sep+'index.html')) {
     data=Buffer.from(data.toString().replace(/<script type="module">[\s\S]*?<\/script>/g,
-      '<script type="module">import "/order/js/main.js?v=20261007"; window.__startOrderPage();</script>'));
+      '<script type="module">import "/order/js/main.js?v=20261013b"; window.__startOrderPage();</script>'));
   }
   res.setHeader('Content-Type',file.endsWith('.js')?'text/javascript; charset=utf-8':file.endsWith('.css')?'text/css; charset=utf-8':file.endsWith('.html')?'text/html; charset=utf-8':'application/octet-stream');
   res.end(data);
@@ -172,7 +188,70 @@ const server = http.createServer(async (req,res) => {
     await page.locator('#slipFileInput').setInputFiles(slip);
     await page.waitForURL('**/order/success/**');
     assert.ok((await page.locator('#pickup').textContent()).includes('09:45–10:00'));
+    await page.goto(base.replace('shop=fixture&table=t1','shop=coupons'));
+    await page.locator('[data-id="tea"] .add-btn').click();
+    await page.evaluate(async()=>{const cart=await import('/order/js/cart.js?v=20261013stock');cart.addOne('tea');});
+    await page.locator('#cartBtn').click();await page.locator('#checkoutBtn').click();
+    await page.locator('#couponCode').fill('INVALID');await page.locator('#couponApply').click();
+    await page.locator('#giftStatus').filter({hasText:'ของแถม: น้ำดื่ม'}).waitFor();
+    await page.locator('#couponStatus').filter({hasText:'หมดอายุ'}).waitFor();
+    await page.locator('#couponCode').fill('save10');await page.locator('#couponApply').click();
+    await page.locator('#couponStatus').filter({hasText:'จองสิทธิ์'}).waitFor();
+    assert.equal(await page.locator('#modalTotal').textContent(),'฿40.00');
+    await page.evaluate(async()=>{const cart=await import('/order/js/cart.js?v=20261013stock');cart.addOne('tea');});
+    await page.locator('#couponStatus').filter({hasText:'ตะกร้าเปลี่ยน'}).waitFor();
+    assert.equal(await page.evaluate(async()=>{try{(await import('/order/js/buy-get.js?v=20261013b')).giftPayload();return false;}catch{return true;}}),true);
+    await page.locator('#giftRefresh').click();await page.locator('#giftStatus').filter({hasText:'ของแถม: น้ำดื่ม'}).waitFor();
+    assert.equal(await page.evaluate(async()=>{try{(await import('/order/js/coupons.js?v=20261013b')).couponPayload();return false;}catch{return true;}}),true);
+    await page.locator('#couponApply').click();await page.locator('#couponStatus').filter({hasText:'จองสิทธิ์'}).waitFor();
+    assert.equal(await page.locator('#modalTotal').textContent(),'฿65.00');
+    assert.ok(await page.locator('#modal').evaluate(n=>n.scrollWidth<=n.clientWidth),'coupon form fits 320px');
+    await page.locator('#customerName').fill('Coupon test');await page.locator('#customerPhone').fill('0800000000');
+    await page.locator('#payBtn').click();await page.locator('#payOverlay.open').waitFor();
+    assert.equal(checkoutRequests.at(-1).couponCode,'SAVE10');
+    assert.equal(checkoutRequests.at(-1).buyGetQuote[0].quantity,1);
+    assert.match(await page.locator('#payGifts').textContent(),/น้ำดื่ม/);
+    assert.equal(checkoutRequests.at(-1).couponQuote.discountMinor,1000);
+    assert.match(await page.locator('#payCouponNote').textContent(),/SAVE10/);
+    await page.reload();await page.locator('#payOverlay.open').waitFor();
+    assert.match(await page.locator('#payCouponNote').textContent(),/SAVE10/,'resume keeps coupon breakdown');
+    assert.match(await page.locator('#payGifts').textContent(),/น้ำดื่ม/,'resume keeps free gifts');
+    await page.goto(base.replace('shop=fixture&table=t1','shop=bundles'));
+    await page.locator('.bundle-card button').click();
+    assert.ok(await page.locator('.bundle-card button').isDisabled(),'maximum sets cannot be added twice');
+    await page.locator('#cartBtn').click();await page.locator('#checkoutBtn').click();
+    await page.locator('#giftStatus').filter({hasText:'ชาคู่น้ำ'}).waitFor();
+    assert.equal(await page.locator('#modalTotal').textContent(),'฿50.00');
+    await page.locator('#couponCode').fill('SAVE10');await page.locator('#couponApply').click();
+    await page.locator('#couponStatus').filter({hasText:'จองสิทธิ์'}).waitFor();
+    assert.equal(await page.locator('#modalTotal').textContent(),'฿40.00');
+    await page.locator('#couponClear').click();assert.equal(await page.locator('#modalTotal').textContent(),'฿50.00','clearing coupon keeps bundle savings');
+    await page.locator('#couponCode').fill('SAVE10');await page.locator('#couponApply').click();
+    await page.locator('#couponStatus').filter({hasText:'จองสิทธิ์'}).waitFor();
+    await page.locator('#customerName').fill('Bundle test');await page.locator('#customerPhone').fill('0800000000');
+    await page.locator('#payBtn').click();await page.locator('#payOverlay.open').waitFor();
+    assert.equal(checkoutRequests.at(-1).bundleQuote[0].discountMinor,1000);
+    assert.equal(checkoutRequests.at(-1).couponQuote.subtotalMinor,5000);
+    await page.reload();await page.locator('#payOverlay.open').waitFor();
+    assert.match(await page.locator('#payGifts').textContent(),/ชาคู่น้ำ/,'resume keeps bundle breakdown');
+    assert.ok(!/NaN/.test(await page.locator('#payCouponNote').textContent()));
+    await page.goto(base.replace('shop=fixture&table=t1','shop=weighed'));
+    await page.locator('[data-id="weighed"] .add-btn').click();
+    await page.locator('#weightQty').fill('0.250');
+    await page.locator('#sheetPrimary').click();
+    await page.locator('#cartBtn').click();
+    assert.match(await page.locator('#cartItems').textContent(),/0.25 กก./);
+    assert.equal(await page.locator('#modalTotal').textContent(),'฿20.00');
+    await page.reload();
+    await page.locator('#cartBtn').click();
+    assert.equal(await page.locator('#modalTotal').textContent(),'฿20.00');
+    await page.locator('#cartItems input').fill('0.375');
+    await page.locator('#cartItems input').press('Tab');
+    assert.equal(await page.locator('#modalTotal').textContent(),'฿30.00');
+    await page.locator('#cartItems input').click();
+    await page.waitForTimeout(350); // Finish the drawer transition for its screenshot.
+    await page.screenshot({path:'.remember/tmp/inventory-weighted-web.png'});
     assert.deepEqual(errors,[]);
-    console.log('PASS mobile grid, categories/search, choices, notes, drafts, kitchen retry, slip PNG compression and same-file retry, truthful pending-review receipt');
+    console.log('PASS mobile grid, categories/search, choices, notes, drafts, kitchen retry, slips, coupons, gifts, bundles and payment recovery');
   } finally {await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>server.close());

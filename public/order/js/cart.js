@@ -3,8 +3,10 @@
 //
 // A cart line includes the product, sorted option IDs and preparation note.
 // Identical configurations merge; different instructions must stay separate.
-import { escHtml, fmtBaht } from './util.js?v=20261009';
+import { escHtml, fmtBaht } from './util.js?v=20261013stock';
 
+const rounded = q => Math.round(q*1000)/1000;
+const normalize = (q, weighed) => Number.isFinite(q) ? (weighed ? rounded(q) : Math.floor(q)) : 0;
 const cart = Object.create(null); // keyed by product, options AND preparation note
 const listeners = [];
 
@@ -22,7 +24,7 @@ export function clearCart() {
 
 export function items() { return Object.values(cart); }
 export function count() { return items().reduce((s, i) => s + i.quantity, 0); }
-export function total() { return items().reduce((s, i) => s + i.price * i.quantity, 0); }
+export function total() { return items().reduce((s, i) => s + Math.round(i.price * i.quantity*100)/100, 0); }
 
 // Total quantity of a product across all its lines — for the card badge +
 // stock cap.
@@ -38,15 +40,15 @@ export function setQty(id, qty, meta) {
   const existing = cart[key];
   const stock = existing ? existing.stock : (meta?.stock ?? 0);
   const otherQty = getQty(id) - (existing?.quantity ?? 0);
-  const q = Math.max(0, Math.min(Math.floor(qty), stock - otherQty));
+  const q = Math.max(0, Math.min(normalize(qty, existing?.isWeighed ?? meta?.isWeighed), stock - otherQty));
   if (q <= 0) {
     delete cart[key];
   } else if (existing) {
-    existing.quantity = q;
+    existing.quantity = rounded(q);
   } else {
     cart[key] = {
       key, id, name: meta.name, price: meta.price, stock: meta.stock,
-      quantity: q, optionIds: [], modifiers: [], notes: '',
+      quantity: rounded(q), unit: meta.unit || 'ชิ้น', isWeighed: meta.isWeighed === true, optionIds: [], modifiers: [], notes: '',
     };
   }
   emit();
@@ -62,14 +64,14 @@ export function addLine(meta, qty = 1) {
   const existing = cart[key];
   const otherQty = getQty(meta.id) - (existing?.quantity ?? 0);
   const room = Math.max(0, meta.stock - otherQty);
-  const q = Math.min((existing?.quantity ?? 0) + qty, room);
+  const q = Math.min(normalize((existing?.quantity ?? 0) + qty, meta.isWeighed), room);
   if (q <= 0) { emit(); return; }
   if (existing) {
-    existing.quantity = q;
+    existing.quantity = rounded(q);
   } else {
     cart[key] = {
       key, id: meta.id, name: meta.name, price: meta.price, stock: meta.stock,
-      quantity: q, optionIds: meta.optionIds || [],
+      quantity: rounded(q), unit: meta.unit || 'ชิ้น', isWeighed: meta.isWeighed === true, optionIds: meta.optionIds || [],
       modifiers: meta.modifiers || [], notes: meta.notes || '',
     };
   }
@@ -81,8 +83,8 @@ export function setLineQty(key, qty) {
   const line = cart[key];
   if (!line) return;
   const otherQty = getQty(line.id) - line.quantity;
-  const q = Math.max(0, Math.min(qty, line.stock - otherQty));
-  if (q <= 0) delete cart[key]; else line.quantity = q;
+  const q = Math.max(0, Math.min(normalize(qty, line.isWeighed), line.stock - otherQty));
+  if (q <= 0) delete cart[key]; else line.quantity = rounded(q);
   emit();
 }
 
@@ -110,6 +112,13 @@ export function initCartUI({ onCheckout }) {
     const line = cart[btn.dataset.key];
     if (line) setLineQty(btn.dataset.key, line.quantity + Number(btn.dataset.delta));
   });
+  document.getElementById('cartItems').addEventListener('change', e => {
+    const input=e.target.closest('input[data-key]');
+    if(!input)return;
+    const n=Number(input.value);
+    if(!Number.isFinite(n)||n<=0||Math.abs(n*1000-Math.round(n*1000))>1e-6){renderCartUI();return;}
+    setLineQty(input.dataset.key,n);
+  });
   onCartChange(renderCartUI);
   renderCartUI();
 }
@@ -134,11 +143,11 @@ function renderCartUI() {
         <div class="cart-item-name">${escHtml(item.name)}</div>
         ${mods ? `<div class="cart-item-mods">${mods}</div>` : ''}
         ${item.notes ? `<div class="cart-item-mods">📝 ${escHtml(item.notes)}</div>` : ''}
-        <div class="cart-item-price">${fmtBaht(item.price)} × ${item.quantity} = ${fmtBaht(item.price * item.quantity)}</div>
+        <div class="cart-item-price">${fmtBaht(item.price)} × ${item.quantity} ${escHtml(item.unit)} = ${fmtBaht(item.price * item.quantity)}</div>
       </div>
       <div class="qty-controls">
         <button class="qty-btn" data-key="${escHtml(item.key)}" data-delta="-1">−</button>
-        <span class="qty-num">${item.quantity}</span>
+        ${item.isWeighed ? `<label>${escHtml(item.unit)}<input type="number" inputmode="decimal" min="0.001" step="0.001" max="99" style="width:80px" data-key="${escHtml(item.key)}" value="${item.quantity}" aria-label="จำนวน ${escHtml(item.unit)}"></label>` : `<span class="qty-num">${item.quantity}</span>`}
         <button class="qty-btn" data-key="${escHtml(item.key)}" data-delta="1">+</button>
       </div>
     </div>`;

@@ -7,7 +7,8 @@ class IngredientCheckout {
       Transaction tx,
       DocumentReference<Map<String, dynamic>> shop,
       List<SaleItem> items,
-      Map reserved) async {
+      Map reserved,
+      {bool strictStock = false}) async {
     final usage = <String, double>{};
     void add(dynamic raw, num quantity) {
       for (final line in (raw as List?) ?? []) {
@@ -26,6 +27,10 @@ class IngredientCheckout {
           (await tx.get(shop.collection('products').doc(i.productId))).data() ??
               {};
       if (products[i.productId]!['stockMode'] == 'recipe') {
+        if (i.isGift &&
+            ((products[i.productId]!['recipe'] as List?)?.isEmpty ?? true)) {
+          throw StateError('สินค้าแถมไม่มีสูตรวัตถุดิบ กรุณาตรวจโปรโมชั่น');
+        }
         add(products[i.productId]!['recipe'], i.quantity);
       }
       for (final m in i.modifiers) {
@@ -45,10 +50,10 @@ class IngredientCheckout {
       final ingredient =
           (await tx.get(shop.collection('ingredients').doc(entry.key))).data();
       final held = (reserved[entry.key] as num? ?? 0).toDouble();
-      if (held > 0 &&
+      if ((strictStock || held > 0 || items.any((i) => i.isGift)) &&
           ((ingredient?['stock'] as num? ?? 0) - entry.value + 1e-9) < held) {
         throw StateError(
-            'วัตถุดิบถูกจองโดยออเดอร์ออนไลน์ กรุณาตรวจสอบก่อนรับเงิน');
+            'วัตถุดิบไม่พอหรือถูกจองออนไลน์ กรุณาตรวจสอบก่อนรับเงิน');
       }
       if (ingredient != null) live[entry.key] = entry.value;
     }

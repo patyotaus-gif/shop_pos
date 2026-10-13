@@ -1,5 +1,5 @@
 // Drafts belong to one browser tab and one shop/table. Never trust saved prices.
-import { items, addLine, clearCart, onCartChange } from './cart.js?v=20261009';
+import { items, addLine, clearCart, onCartChange } from './cart.js?v=20261013stock';
 
 export function cartStorageKey(shop, mode, table) {
   return 'pokpok-draft-v1:' + JSON.stringify([shop, mode, table || null]);
@@ -12,9 +12,10 @@ export function restoreDraft(raw, products, now = Date.now()) {
       saved.at > now || !Array.isArray(saved.lines)) return;
   const catalog = new Map(products.map((p) => [p.id, p]));
   for (const line of saved.lines.slice(0, 100)) {
-    if (!line || !Array.isArray(line.optionIds) || !Number.isInteger(line.quantity) || line.quantity <= 0) continue;
+    if (!line || !Array.isArray(line.optionIds) || !Number.isFinite(line.quantity) || line.quantity <= 0) continue;
     const p = catalog.get(line.id);
     if (!p || !Number.isFinite(p.stock) || p.stock <= 0 || !Number.isFinite(p.price)) continue;
+    if (p.isWeighed ? Math.abs(line.quantity*1000-Math.round(line.quantity*1000))>1e-6 : !Number.isInteger(line.quantity)) continue;
     const ids = new Set(line.optionIds);
     const modifiers = [];
     let valid = ids.size === line.optionIds.length;
@@ -27,7 +28,7 @@ export function restoreDraft(raw, products, now = Date.now()) {
     if (!valid || modifiers.length !== ids.size) continue;
     const price = Math.max(0, p.price + modifiers.reduce((sum, m) => sum + m.priceAdjust, 0));
     if (!Number.isFinite(price)) continue;
-    addLine({ id: p.id, name: p.name, stock: p.stock, price: Math.round(price * 100) / 100,
+    addLine({ id: p.id, name: p.name, unit: p.unit, isWeighed: p.isWeighed, stock: p.stock, price: Math.round(price * 100) / 100,
       optionIds: [...ids], modifiers, notes: typeof line.notes === 'string' ? line.notes.trim().slice(0, 200) : '' },
     Math.min(line.quantity, 99));
   }

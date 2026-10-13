@@ -1,13 +1,14 @@
 // Entry point. The inline App Check module in index.html calls
 // window.__startOrderPage() AFTER setting window.__appCheckToken, so the
 // first /api/shopPublic call always carries a token (endpoint is enforced).
-import { shopId, tableParam, takeawayParam, orderContext, apiFetch, escHtml } from './util.js?v=20261009';
-import { initCatalog, renderProducts } from './catalog.js?v=20261009';
-import { initCartUI } from './cart.js?v=20261009';
-import { initPayment, openOrderModal } from './payment.js?v=20261009';
-import { initUpsell, maybeShowUpsell } from './upsell.js?v=20261009';
-import { initTableOrder, openTableOrderSheet } from './tableorder.js?v=20261009';
-import { initCartPersistence } from './cart-store.js?v=20261009';
+import { shopId, tableParam, takeawayParam, orderContext, apiFetch, escHtml } from './util.js?v=20261013stock';
+import { initCatalog, renderProducts } from './catalog.js?v=20261013stock';
+import { initCartUI } from './cart.js?v=20261013stock';
+import { initPayment, openOrderModal } from './payment.js?v=20261013stock';
+import { initUpsell, maybeShowUpsell } from './upsell.js?v=20261013stock';
+import { initTableOrder, openTableOrderSheet } from './tableorder.js?v=20261013stock';
+import { initCartPersistence } from './cart-store.js?v=20261013stock';
+import { initBundles } from './bundles.js?v=20261013stock';
 
 function showError(msg) {
   document.getElementById('loading').style.display = 'none';
@@ -96,6 +97,7 @@ async function start() {
     }
 
     renderProducts(data.products || []);
+    if (!dineIn) initBundles(data.bundles, data.products || []);
     document.getElementById('catalogTools').hidden = false;
     initUpsell({
       products: data.products || [],

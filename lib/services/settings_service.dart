@@ -41,6 +41,18 @@ class SettingsService {
     await _doc().set(data, SetOptions(merge: true));
   }
 
+  // Transactions fail offline instead of leaving an unconfirmed queued write.
+  static Future<void> saveKitchenOutput(String output) async {
+    if (!['screen', 'printer'].contains(output)) {
+      throw ArgumentError.value(output, 'output');
+    }
+    final ref = _doc();
+    await ref.firestore.runTransaction((tx) async {
+      await tx.get(ref);
+      tx.set(ref, {'kitchenOutput': output}, SetOptions(merge: true));
+    }, timeout: const Duration(seconds: 15), maxAttempts: 2);
+  }
+
   static Stream<Map<String, dynamic>> watchSettings() =>
       _doc().snapshots().map((s) => s.data() ?? {});
 

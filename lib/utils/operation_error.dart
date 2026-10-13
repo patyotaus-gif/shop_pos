@@ -1,7 +1,11 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 
 String operationError(Object error) {
+  if (error is TimeoutException) {
+    return 'ยังยืนยันผลไม่ได้ กรุณาตรวจอินเทอร์เน็ตและสถานะรายการก่อนลองซ้ำ';
+  }
   if (error is StateError) return error.message;
   if (error is FirebaseFunctionsException &&
       ['failed-precondition', 'invalid-argument', 'already-exists', 'not-found']
