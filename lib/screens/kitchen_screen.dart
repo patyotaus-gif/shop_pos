@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../theme/operational_colors.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/shop_operation.dart';
@@ -213,6 +214,8 @@ class _KitchenScreenState extends State<KitchenScreen> {
                                                                         .bold)),
                                                         Text(
                                                             '${o.customerName} • ${o.status.label}'),
+                                                        Text(
+                                                            'รับออเดอร์ ${DateFormat('dd/MM/yyyy HH:mm').format(o.createdAt.toLocal())} น.'),
                                                         if (o.pickupDescription !=
                                                             null)
                                                           Text(o
@@ -419,11 +422,12 @@ class _TicketCard extends StatelessWidget {
                   tone: OperationalTone.success,
                   icon: Icons.check_circle_outline),
             Text(
-              order.status == TableOrderStatus.closed
-                  ? 'ปิดบิลแล้ว • ประวัติใบงานครัว'
-                  : _elapsed(order.openedAt),
+              'รับออเดอร์ ${DateFormat('dd/MM/yyyy HH:mm').format(order.openedAt.toLocal())} น.',
               style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
             ),
+            if (order.status == TableOrderStatus.closed)
+              Text('ปิดบิลแล้ว • ประวัติใบงานครัว',
+                  style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
             const Divider(height: 16),
             if (order.status == TableOrderStatus.open)
               TextButton.icon(
@@ -466,14 +470,6 @@ class _TicketCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _elapsed(DateTime opened) {
-    final mins = DateTime.now().difference(opened).inMinutes;
-    if (mins < 1) return 'เปิดเมื่อสักครู่';
-    if (mins < 60) return 'เปิดมา $mins นาที';
-    final h = mins ~/ 60;
-    return 'เปิดมา $h ชม. ${mins % 60} นาที';
   }
 }
 

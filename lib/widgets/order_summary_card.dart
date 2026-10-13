@@ -181,7 +181,7 @@ class _OrderSummaryCardState extends State<OrderSummaryCard> {
                   'โทร ${order.customerPhone.isEmpty ? 'ไม่ระบุ' : order.customerPhone}',
                   style: TextStyle(fontSize: 14, color: cs.onSurfaceVariant)),
               Text(
-                  'สั่งเมื่อ ${DateFormat('dd/MM HH:mm', 'th_TH').format(order.createdAt)}',
+                  'รับออเดอร์ ${DateFormat('dd/MM/yyyy HH:mm', 'th_TH').format(order.createdAt.toLocal())} น.',
                   style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
               if (order.autoConfirmed)
                 Padding(
