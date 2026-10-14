@@ -221,6 +221,42 @@ class TableService {
     return _edit(orderId, (items) => appendPending(items, pending));
   }
 
+  /// Commit a selection once, including when the response to a previous
+  /// attempt was lost. Merge against the latest tab, not the picker snapshot.
+  static Future<void> addItems(String orderId, List<TableOrderItem> items,
+      {required String requestId}) async {
+    if (requestId.isEmpty || items.isEmpty) {
+      throw StateError('กรุณาเลือกสินค้าก่อนบันทึก');
+    }
+    for (final item in items) {
+      if (!validStockQuantity(item.quantity, weight: item.isWeighed) ||
+          !item.unitPrice.isFinite ||
+          item.unitPrice < 0) {
+        throw StateError('จำนวนหรือราคาสินค้าไม่ถูกต้อง');
+      }
+    }
+    final ref = _tableOrdersCol().doc(orderId);
+    await ref.firestore.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      if (!snap.exists) throw StateError('ไม่พบออเดอร์');
+      final applied = List<String>.from(
+          snap.data()?['appliedItemBatchIds'] as List? ?? const []);
+      if (applied.contains(requestId)) return;
+      final order = TableOrder.fromFirestore(snap.data()!, snap.id);
+      if (order.status != TableOrderStatus.open) {
+        throw StateError('บิลนี้ปิดหรือยกเลิกแล้ว กรุณาเปิดหน้าโต๊ะใหม่');
+      }
+      var next = order.items;
+      for (final item in items) {
+        next = appendPending(next, item);
+      }
+      tx.update(ref, {
+        'items': next.map((item) => item.toMap()).toList(),
+        'appliedItemBatchIds': [...applied, requestId],
+      });
+    });
+  }
+
   static Future<void> setItemQuantity(
           String orderId, String itemId, num quantity,
           {required num expectedQuantity}) =>

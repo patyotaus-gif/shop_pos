@@ -41,6 +41,7 @@ import 'widgets/side_navigation_shell.dart';
 import 'widgets/connection_status_banner.dart';
 import 'widgets/workspace_sections.dart';
 import 'widgets/recoverable_auth_builder.dart';
+import 'widgets/app_viewport.dart';
 
 // Default to light — Pokpok is a light-brand design and does not follow
 // the device's system dark setting. Dark is opt-in (Settings), persisted
@@ -97,6 +98,7 @@ class _BootingApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
+      builder: AppViewport.builder,
       home: _PokpokSplash(),
     );
   }
@@ -110,6 +112,7 @@ class _BootErrorApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      builder: AppViewport.builder,
       home: Scaffold(
         backgroundColor: const Color(0xFFF5F1EC),
         body: SafeArea(
@@ -162,6 +165,7 @@ class ShopPosApp extends StatelessWidget {
         themeMode: mode,
         theme: PokpokTheme.light(),
         darkTheme: PokpokTheme.dark(),
+        builder: AppViewport.builder,
         home: RecoverableAuthBuilder<User?>(
           streamFactory: () => AuthService.authStateStream,
           builder: (context, snap, retry) {
@@ -458,7 +462,7 @@ class _MainShellState extends State<MainShell> {
         final shopType = shopSnap.data?.shopType ?? ShopType.retail;
         final hasTables = Entitlements.canUseTables(tier, shopType);
         // Solo tier doesn't include the customer DB / debts feature, so
-        // the ลูกหนี้ tab is hidden for them. Tap on the upgrade
+        // the ลูกค้าเครดิต tab is hidden for them. Tap on the upgrade
         // surfaces in Settings nudges them to Lite if they want it back.
         final showDebts = Entitlements.canUseCustomerDb(tier);
 
@@ -483,7 +487,7 @@ class _MainShellState extends State<MainShell> {
               AppNavigationItem(
                 screen: showDebts
                     ? WorkspaceSections(
-                        labels: const ['ออเดอร์', 'ลูกหนี้ / ค้างชำระ'],
+                        labels: const ['ออเดอร์', 'ลูกค้าเครดิต'],
                         pages: [const OrdersScreen(), const DebtScreen()])
                     : const OrdersScreen(),
                 icon: Icons.shopping_bag_outlined,

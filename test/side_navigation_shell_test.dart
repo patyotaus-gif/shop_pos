@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shop_pos/widgets/side_navigation_shell.dart';
+import 'package:shop_pos/widgets/app_viewport.dart';
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -10,6 +11,10 @@ void main() {
       {double textScale = 1}) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
+    tester.view.padding = const FakeViewPadding(bottom: 34);
+    tester.view.viewPadding = const FakeViewPadding(bottom: 34);
+    addTearDown(tester.view.resetPadding);
+    addTearDown(tester.view.resetViewPadding);
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(MaterialApp(
@@ -18,7 +23,7 @@ void main() {
         data: MediaQuery.of(context).copyWith(
           textScaler: TextScaler.linear(textScale),
         ),
-        child: child!,
+        child: AppViewport(child: child!),
       ),
       home: const _ShellHarness(),
     ));
@@ -90,6 +95,8 @@ void main() {
     await openShell(tester, const Size(375, 812));
     expect(find.text('99+'), findsOneWidget);
     expect(find.byType(NavigationBar), findsOneWidget);
+    expect(tester.getSize(find.byType(NavigationBar)).height, 64);
+    expect(tester.getBottomRight(find.byType(NavigationBar)).dy, 812 - 34);
     await tester.tap(find.text('ออเดอร์'));
     await tester.pumpAndSettle();
     expect(find.text('หน้าออเดอร์'), findsOneWidget);
@@ -126,7 +133,7 @@ class _ShellHarnessState extends State<_ShellHarness> {
             'ครัว',
             'สินค้า',
             'รายงาน',
-            'ลูกหนี้',
+            'ลูกค้าเครดิต',
             'AI',
             'QR สั่งอาหาร',
             'ตั้งค่า',

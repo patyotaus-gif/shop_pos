@@ -53,8 +53,11 @@ class _TablesScreenState extends State<TablesScreen> {
               final scale = MediaQuery.textScalerOf(context);
               final available = constraints.maxWidth - 32;
               final desired = ((available + 12) / 192).ceil();
+              // Keep the normal two-column phone layout, but reserve more
+              // width for the payment label when accessibility text grows.
+              final readableWidth = math.max(124.0, scale.scale(160) - 36);
               final readable =
-                  ((available + 12) / (scale.scale(124) + 12)).floor();
+                  ((available + 12) / (readableWidth + 12)).floor();
               final columns = math.max(1, math.min(desired, readable));
               return GridView.builder(
                 padding: const EdgeInsets.all(16),

@@ -72,6 +72,13 @@ abstract final class PokpokTheme {
         shape: shape.copyWith(side: BorderSide(color: cs.outlineVariant)),
       ),
       dividerTheme: DividerThemeData(color: cs.outlineVariant, thickness: 1),
+      // ExpansionTile's default top/bottom rules can cross floating labels
+      // in adjacent forms. Keep sections borderless with room for labels.
+      expansionTileTheme: const ExpansionTileThemeData(
+        shape: Border(),
+        collapsedShape: Border(),
+        childrenPadding: EdgeInsets.symmetric(vertical: 8),
+      ),
       filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
         minimumSize: const Size(48, 48),

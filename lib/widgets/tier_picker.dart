@@ -62,7 +62,7 @@ class TierPicker extends StatelessWidget {
                     }
                   : switch (tier) {
                       ShopTier.solo => 'ขายสินค้า · รับเงิน · รายงานรายวัน',
-                      ShopTier.lite => 'เพิ่มสต็อก · ลูกหนี้ · พิมพ์ใบเสร็จ',
+                      ShopTier.lite => 'เพิ่มสต็อก · ลูกค้าเครดิต · พิมพ์ใบเสร็จ',
                       _ => 'เพิ่มพนักงาน 3 ผู้ใช้ · สะสมแต้ม · รายงานเชิงลึก',
                     },
             ),

@@ -100,10 +100,12 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
               value: _trackLots,
               onChanged: (v) => setState(() => _trackLots = v)),
           if (_trackLots && widget.product?.trackLots != true) ...[
+            const SizedBox(height: 12),
             TextFormField(
                 controller: _inventory['lot'],
                 decoration: const InputDecoration(
                     labelText: 'ล็อตของสต๊อกเริ่มต้น (เมื่อมีสต๊อก)')),
+            const SizedBox(height: 16),
             TextFormField(
                 controller: _inventory['expiry'],
                 decoration: const InputDecoration(
@@ -714,6 +716,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                     },
                   ),
                   if (_stockMode == 'count') _inventoryFields(),
+                  if (_stockMode == 'count') const SizedBox(height: 16),
                   if (_stockMode == 'count')
                     Row(
                       children: [

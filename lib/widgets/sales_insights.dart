@@ -69,7 +69,7 @@ class _SalesInsightsState extends State<SalesInsights> {
             contentPadding: EdgeInsets.zero,
             title: const Text('ขายเชื่อ'),
             subtitle: const Text(
-                'ยอดขายเชื่อเดิมในบิล ดูยอดหนี้คงเหลือที่หน้าลูกหนี้'),
+                'ยอดขายเชื่อเดิมในบิล ดูยอดค้างชำระที่หน้าลูกค้าเครดิต'),
             trailing: Text(
                 '฿${active.where((s) => s.isDebt).fold(0.0, (sum, s) => sum + s.total).toStringAsFixed(2)}')),
       const Divider(),

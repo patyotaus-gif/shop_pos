@@ -27,7 +27,7 @@ class Entitlements {
   /// stock adjust history. Solo POS doesn't track stock at SKU level.
   static bool canUseInventory(ShopTier t) => t != ShopTier.solo;
 
-  /// Customer database = the "ลูกหนี้" / debts collection today, plus
+  /// Customer database = the "ลูกค้าเครดิต" / debts collection today, plus
   /// future loyalty + customer history. Solo is single-transaction POS,
   /// no customer record.
   static bool canUseCustomerDb(ShopTier t) => t != ShopTier.solo;
@@ -110,7 +110,7 @@ extension EntitlementFeatureX on EntitlementFeature {
   String get label => switch (this) {
         EntitlementFeature.paperReceipt => 'ใบเสร็จกระดาษ + cash drawer',
         EntitlementFeature.inventory => 'จัดการสต็อกสินค้า',
-        EntitlementFeature.customerDb => 'ฐานข้อมูลลูกค้า + ลูกหนี้',
+        EntitlementFeature.customerDb => 'ฐานข้อมูลลูกค้า + ลูกค้าเครดิต',
         EntitlementFeature.loyalty => 'ระบบสะสมแต้มลูกค้า',
         EntitlementFeature.advancedReports => 'รายงานเชิงลึก',
         EntitlementFeature.kitchen => 'หน้าจอครัว',

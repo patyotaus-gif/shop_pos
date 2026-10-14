@@ -70,7 +70,7 @@ class _TableFormScreenState extends State<TableFormScreen> {
   Future<void> _delete() async {
     if (widget.table!.status == TableStatus.occupied) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ลบไม่ได้ — โต๊ะนี้กำลังมีลูกค้า')),
+        const SnackBar(content: Text('ลบไม่ได้ — โต๊ะนี้ยังมีบิลเปิดอยู่')),
       );
       return;
     }

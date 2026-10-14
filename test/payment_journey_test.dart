@@ -9,6 +9,7 @@ import 'package:shop_pos/widgets/payment_sheet.dart';
 import 'package:shop_pos/widgets/cart_item_tile.dart';
 import 'package:shop_pos/widgets/mobile_sales_workspace.dart';
 import 'package:shop_pos/widgets/pos_checkout_panel.dart';
+import 'package:shop_pos/widgets/app_viewport.dart';
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -20,6 +21,10 @@ void main() {
       ValueChanged<PaymentResult?>? onResult}) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
+    tester.view.padding = const FakeViewPadding(bottom: 48);
+    tester.view.viewPadding = const FakeViewPadding(bottom: 48);
+    addTearDown(tester.view.resetPadding);
+    addTearDown(tester.view.resetViewPadding);
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(MaterialApp(
@@ -27,7 +32,7 @@ void main() {
       builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context)
               .copyWith(textScaler: TextScaler.linear(scale)),
-          child: child!),
+          child: AppViewport(child: child!)),
       home: Scaffold(
           body: Builder(
               builder: (context) => FilledButton(

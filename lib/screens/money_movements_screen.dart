@@ -268,7 +268,7 @@ class _MoneyMovementsScreenState extends State<MoneyMovementsScreen> {
                 StreamBuilder<List<Debt>>(
                     stream: DebtService.watchUnpaid(),
                     builder: (context, debts) => ListTile(
-                          title: const Text('ลูกหนี้คงค้างปัจจุบัน'),
+                          title: const Text('ยอดค้างชำระปัจจุบัน'),
                           trailing: Text(debts.hasError
                               ? 'โหลดไม่สำเร็จ'
                               : !debts.hasData

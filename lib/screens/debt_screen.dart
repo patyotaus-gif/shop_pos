@@ -15,7 +15,7 @@ class DebtScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('ลูกหนี้'), centerTitle: true),
+      appBar: AppBar(title: const Text('ลูกค้าเครดิต'), centerTitle: true),
       body: StreamBuilder<List<Debt>>(
         stream: DebtService.watchUnpaid(),
         builder: (ctx, snap) {
@@ -36,7 +36,7 @@ class DebtScreen extends StatelessWidget {
                   Icon(Icons.check_circle_outline,
                       size: 64, color: Colors.green),
                   SizedBox(height: 8),
-                  Text('ไม่มีลูกหนี้คงค้าง'),
+                  Text('ไม่มีรายการค้างชำระ'),
                 ],
               ),
             );
@@ -56,7 +56,7 @@ class DebtScreen extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('ยอดหนี้รวม',
+                    const Text('ยอดค้างชำระรวม',
                         style: TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 16)),
                     Text('฿${_baht.format(totalDebt)}',
@@ -261,7 +261,7 @@ class _DebtTile extends StatelessWidget {
           builder: (ctx, setState) => PopScope(
                 canPop: !busy,
                 child: AlertDialog(
-                  title: const Text('รับชำระหนี้'),
+                  title: const Text('รับชำระยอดค้าง'),
                   content: Column(mainAxisSize: MainAxisSize.min, children: [
                     Text(debt.customerName),
                     Text('คงค้าง ฿${_baht.format(debt.remaining)}'),

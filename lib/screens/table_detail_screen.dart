@@ -10,7 +10,6 @@ import '../models/sale.dart';
 import '../services/settings_service.dart';
 import '../services/table_service.dart';
 import '../services/quantity_edit_queue.dart';
-import '../widgets/modifier_picker_sheet.dart';
 import '../widgets/payment_sheet.dart';
 import '../widgets/product_picker_sheet.dart';
 import '../widgets/split_bill_sheet.dart';
@@ -184,28 +183,7 @@ class _OpenOrderViewState extends State<TableOrderView> {
   }
 
   Future<void> _addItem() async {
-    final picked = await showProductPicker(context);
-    if (picked == null || !mounted) return;
-
-    final quantity = picked.isWeighed
-        ? await showStockQuantity(context, unit: picked.unit, weighed: true)
-        : 1;
-    if (quantity == null || !mounted) return;
-    // Always open the picker: it collects modifier choices (if the product
-    // has groups) plus an optional kitchen note for any dish.
-    final pick = await showModifierPicker(context, product: picked);
-    if (pick == null || !mounted) return; // user cancelled the sheet
-
-    final item = TableService.itemFromProduct(
-      picked,
-      quantity: quantity,
-      modifiers: pick.modifiers,
-      notes: pick.notes,
-    );
-    if (!mounted) return;
-    await performShopOperation(
-        context, () => TableService.addItem(widget.order.id, item),
-        success: 'เพิ่มรายการรอส่งครัวแล้ว');
+    await showTableProductPicker(context, orderId: widget.order.id);
   }
 
   Future<void> _changeQty(int index, num delta) async {
