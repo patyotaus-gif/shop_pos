@@ -178,7 +178,13 @@ service cloud.firestore {
         allow read, write: if isOwner();
       }
       match /tableOrders/{orderId} {
-        allow read, write: if isOwner();
+        allow read: if isOwner();
+        allow create: if isOwner() && request.resource.data.get('tablePromotion', null) == null;
+        allow update: if isOwner()
+          && request.resource.data.get('tablePromotion', null) == resource.data.get('tablePromotion', null)
+          && (resource.data.get('tablePromotion', null) == null
+            || (resource.data.status == 'open' && request.resource.data.status in ['open', 'cancelled']));
+        allow delete: if isOwner() && resource.data.get('tablePromotion', null) == null;
       }
       match /modifierGroups/{groupId} {
         allow read, write: if isOwner();

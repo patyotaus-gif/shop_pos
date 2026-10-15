@@ -41,8 +41,10 @@ class PaymentResult {
 class _PaymentSheet extends StatefulWidget {
   final double total;
   final SalesChannel initialChannel;
+  final String? summary;
 
-  const _PaymentSheet({required this.total, required this.initialChannel});
+  const _PaymentSheet(
+      {required this.total, required this.initialChannel, this.summary});
 
   @override
   State<_PaymentSheet> createState() => _PaymentSheetState();
@@ -242,6 +244,10 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                     ),
                     textAlign: TextAlign.center),
                 const SizedBox(height: 20),
+                if (widget.summary != null) ...[
+                  Text(widget.summary!),
+                  const SizedBox(height: 16),
+                ],
                 Text('วิธีชำระเงิน',
                     style: TextStyle(
                       fontSize: 13,
@@ -536,6 +542,7 @@ Future<PaymentResult?> showPaymentSheet(
   BuildContext context, {
   required double total,
   SalesChannel initialChannel = SalesChannel.storefront,
+  String? summary,
 }) {
   return showModalBottomSheet<PaymentResult>(
     context: context,
@@ -549,8 +556,8 @@ Future<PaymentResult?> showPaymentSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (ctx) =>
-        _PaymentSheet(total: total, initialChannel: initialChannel),
+    builder: (ctx) => _PaymentSheet(
+        total: total, initialChannel: initialChannel, summary: summary),
   );
 }
 

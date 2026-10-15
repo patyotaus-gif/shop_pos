@@ -30,7 +30,7 @@ class SalesToolsScreen extends StatelessWidget {
                     context,
                     Icons.inventory_2_outlined,
                     'ชุดสินค้า',
-                    'เลือกสินค้าครบชุด รับราคาพิเศษทั้งเคาน์เตอร์และออนไลน์',
+                    'เลือกสินค้าครบชุด รับราคาพิเศษที่เคาน์เตอร์ บิลโต๊ะ และออนไลน์',
                     () => Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -39,7 +39,7 @@ class SalesToolsScreen extends StatelessWidget {
                     context,
                     Icons.card_giftcard,
                     'ซื้อแถม',
-                    'ซื้อครบจำนวน รับของแถมที่เคาน์เตอร์และลิงก์สั่งสินค้า',
+                    'ซื้อครบจำนวน รับของแถมที่เคาน์เตอร์ บิลโต๊ะ และลิงก์สั่งสินค้า',
                     () => Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -48,7 +48,7 @@ class SalesToolsScreen extends StatelessWidget {
                     context,
                     Icons.confirmation_number_outlined,
                     'โค้ดส่วนลด',
-                    'สร้างโค้ดสำหรับลิงก์สั่งสินค้า พร้อมยอดขั้นต่ำและจำนวนสิทธิ์',
+                    'สร้างโค้ดสำหรับลิงก์สั่งสินค้าและบิลโต๊ะ พร้อมยอดขั้นต่ำและจำนวนสิทธิ์',
                     () => Navigator.push(
                         context,
                         MaterialPageRoute(

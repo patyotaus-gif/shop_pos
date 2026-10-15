@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import '../utils/daily_stream.dart';
 import '../widgets/shop_operation.dart';
 import '../widgets/safe_detail_sheet.dart';
 import '../widgets/refund_reason_dialog.dart';
@@ -33,6 +35,7 @@ class _ReportScreenState extends State<ReportScreen>
   DateTimeRange? _customRange;
   bool _pickingRange = false;
   int _lastTab = 0;
+  late final StreamSubscription<DateTime> _dayChanges;
 
   final _baht = NumberFormat('#,##0.00', 'th_TH');
   final _dateFmt = DateFormat('dd/MM/yyyy HH:mm', 'th_TH');
@@ -41,6 +44,11 @@ class _ReportScreenState extends State<ReportScreen>
   @override
   void initState() {
     super.initState();
+    _dayChanges = watchDaily<DateTime>((day) => Stream.value(day))
+        .skip(1)
+        .listen((_) {
+      if (mounted) setState(() {});
+    });
     _tab = TabController(length: 4, vsync: this);
     _tab.addListener(() {
       if (_tab.indexIsChanging || _tab.index == _lastTab) return;
@@ -51,6 +59,7 @@ class _ReportScreenState extends State<ReportScreen>
 
   @override
   void dispose() {
+    _dayChanges.cancel();
     _tab.dispose();
     super.dispose();
   }

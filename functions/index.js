@@ -28,6 +28,9 @@ exports.claimKitchenPrint = onCall(kitchenPrint.claim);
 exports.finishKitchenPrint = onCall(kitchenPrint.finish);
 const tableRecovery = require('./table_recovery').handlers({db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError});
 exports.reconcileRestaurantTable = onCall(tableRecovery.reconcile);
+exports.tablePromotions = onCall({enforceAppCheck:true}, require('./table_promotions').handlers({
+  db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError,
+}));
 const offlineSales = require('./offline_sales').createOfflineSales({
   db: admin.firestore(), FieldValue: admin.firestore.FieldValue, Timestamp: admin.firestore.Timestamp,
 });

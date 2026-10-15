@@ -43,7 +43,7 @@ void main() {
     expect(find.byType(AlertDialog), findsNothing);
     expect(
         tester
-            .widget<FilledButton>(find.widgetWithText(FilledButton, 'ปิดบิล'))
+            .widget<FilledButton>(find.byKey(const ValueKey('table-payment')))
             .onPressed,
         isNull);
     await tester.pump(const Duration(milliseconds: 350));
@@ -52,7 +52,7 @@ void main() {
     expect(find.text('1'), findsOneWidget);
     expect(
         tester
-            .widget<FilledButton>(find.widgetWithText(FilledButton, 'ปิดบิล'))
+            .widget<FilledButton>(find.byKey(const ValueKey('table-payment')))
             .onPressed,
         isNotNull);
   });

@@ -5,6 +5,7 @@ import '../models/modifier_group.dart';
 import '../models/order_modifier.dart';
 import '../models/product.dart';
 import '../services/modifier_service.dart';
+import '../utils/operation_error.dart';
 
 /// Result of the picker: the chosen modifier snapshots + an optional
 /// free-text note to the kitchen (e.g. "ไม่ใส่ผัก").
@@ -21,6 +22,7 @@ Future<ModifierPick?> showModifierPicker(
   BuildContext context, {
   required Product product,
   List<ModifierGroup>? offlineGroups,
+  Future<List<ModifierGroup>> Function(List<String>)? loadGroups,
 }) {
   return showModalBottomSheet<ModifierPick>(
     context: context,
@@ -29,15 +31,17 @@ Future<ModifierPick?> showModifierPicker(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (_) =>
-        _ModifierPickerSheet(product: product, offlineGroups: offlineGroups),
+    builder: (_) => _ModifierPickerSheet(
+        product: product, offlineGroups: offlineGroups, loadGroups: loadGroups),
   );
 }
 
 class _ModifierPickerSheet extends StatefulWidget {
-  const _ModifierPickerSheet({required this.product, this.offlineGroups});
+  const _ModifierPickerSheet(
+      {required this.product, this.offlineGroups, this.loadGroups});
   final Product product;
   final List<ModifierGroup>? offlineGroups;
+  final Future<List<ModifierGroup>> Function(List<String>)? loadGroups;
 
   @override
   State<_ModifierPickerSheet> createState() => _ModifierPickerSheetState();
@@ -52,11 +56,15 @@ class _ModifierPickerSheetState extends State<_ModifierPickerSheet> {
   @override
   void initState() {
     super.initState();
-    _future = widget.offlineGroups != null
-        ? Future.value(widget.offlineGroups)
-        : widget.product.modifierGroupIds.isEmpty
-            ? Future.value(const <ModifierGroup>[])
-            : ModifierService.getByIds(widget.product.modifierGroupIds);
+    _future = _loadGroups();
+  }
+
+  Future<List<ModifierGroup>> _loadGroups() async {
+    if (widget.offlineGroups != null) return widget.offlineGroups!;
+    if (widget.product.modifierGroupIds.isEmpty) return const [];
+    return (widget.loadGroups ??
+            ModifierService.getByIds)(widget.product.modifierGroupIds)
+        .timeout(const Duration(seconds: 20));
   }
 
   @override
@@ -65,8 +73,13 @@ class _ModifierPickerSheetState extends State<_ModifierPickerSheet> {
     super.dispose();
   }
 
+  // Offline receipts use the prepared base price, as OfflineService does.
+  double get _basePrice => widget.offlineGroups == null
+      ? widget.product.effectivePrice
+      : widget.product.price;
+
   double _previewPrice(List<ModifierGroup> groups) {
-    double total = widget.product.price;
+    double total = _basePrice;
     for (final g in groups) {
       final picks = _selected[g.id] ?? const <String>{};
       for (final o in g.options) {
@@ -136,9 +149,42 @@ class _ModifierPickerSheetState extends State<_ModifierPickerSheet> {
         future: _future,
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              const Text('กำลังโหลดตัวเลือกสินค้า'),
+              TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('ยกเลิก')),
+            ]));
           }
           final groups = snap.data ?? const <ModifierGroup>[];
+          final missingGroups = widget.product.modifierGroupIds
+              .any((id) => !groups.any((group) => group.id == id));
+          if (snap.hasError || missingGroups) {
+            return ListView(
+                controller: scrollCtrl,
+                padding: const EdgeInsets.all(24),
+                children: [
+                  const Icon(Icons.error_outline),
+                  const SizedBox(height: 16),
+                  Text(snap.hasError
+                      ? 'โหลดตัวเลือกสินค้าไม่สำเร็จ\n${operationError(snap.error!)}'
+                      : 'ข้อมูลตัวเลือกสินค้าไม่ครบ กรุณาโหลดใหม่หรือตรวจการตั้งค่าสินค้า'),
+                  const SizedBox(height: 16),
+                  if (widget.offlineGroups == null)
+                    FilledButton(
+                        onPressed: () => setState(() {
+                              _selected.clear();
+                              _future = _loadGroups();
+                            }),
+                        child: const Text('โหลดใหม่')),
+                  TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('ยกเลิก')),
+                ]);
+          }
           final canSubmit = _canSubmit(groups);
           final preview = _previewPrice(groups);
 
@@ -169,7 +215,7 @@ class _ModifierPickerSheetState extends State<_ModifierPickerSheet> {
                                     fontSize: 17, fontWeight: FontWeight.w700)),
                             const SizedBox(height: 2),
                             Text(
-                              'ราคาเริ่มต้น ฿${widget.product.price.toStringAsFixed(0)}',
+                              'ราคาเริ่มต้น ฿${_basePrice.toStringAsFixed(2)}',
                               style: TextStyle(
                                   fontSize: 12,
                                   color: cs.onSurface.withValues(alpha: 0.6)),

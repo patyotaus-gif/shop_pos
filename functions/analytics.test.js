@@ -20,6 +20,48 @@ test('Sydney DST compares calendar days, not fixed 24-hour offsets', () => {
   assert.equal(w.currentFrom.toISOString(), '2026-09-28T14:00:00.000Z');
   assert.equal(w.to.toISOString(), '2026-10-05T13:00:00.000Z');
 });
+test('Thai year-end last millisecond belongs to yesterday, midnight to today', () => {
+  const r = buildAnalysis({days: 7, now: new Date('2027-01-01T01:00:00Z'), sales: [
+    sale('last', {createdAt: new Date('2026-12-31T16:59:59.999Z'), total: 70,
+      items: [item('last', {price: 70, subtotal: 70})]}),
+    sale('first', {createdAt: new Date('2026-12-31T17:00:00Z'), total: 25,
+      items: [item('first', {price: 25, subtotal: 25})]}),
+  ]});
+  assert.equal(r.current.net, 70);
+  assert.equal(r.today.net, 25);
+  assert.equal(r.current.daily.at(-1).day, '2026-12-31');
+  assert.equal(r.current.daily.at(-1).net, 70);
+  assert.equal(r.today.sources[0].day, '2027-01-01');
+});
+test('credit collection next day changes drawer cash, never creates another sale', () => {
+  const {saleMovement, summarizeMovements} = require('./money_ledger');
+  const credit = sale('credit', {isDebt: true, paymentMethod: 'cash'});
+  const original = summarizeMovements([saleMovement(credit, 'test')], 500);
+  const collection = {kind: 'debtPayment', method: 'cash', amountMinor: 6000,
+    salesMinor: 0, debtMinor: -6000};
+  const next = summarizeMovements([collection], original.expectedCash);
+  assert.equal(original.grossTotal, 100);
+  assert.equal(original.expectedCash, 500);
+  assert.equal(next.grossTotal, 0);
+  assert.equal(next.billCount, 0);
+  assert.equal(next.expectedCash, 560);
+  assert.equal(next.debtCollections, 60);
+  const r = report([credit]);
+  assert.equal(r.current.net, 100);
+  assert.equal(r.current.count, 1);
+  assert.equal(r.today.net, 0);
+});
+test('multiple closed rounds on one calendar date remain in one daily sales total', () => {
+  const r = report([
+    sale('morning', {sessionId: 'first', createdAt: new Date('2026-09-06T01:00:00Z')}),
+    sale('evening', {sessionId: 'second', createdAt: new Date('2026-09-06T16:59:59.999Z')}),
+    sale('tomorrow', {sessionId: 'third', createdAt: new Date('2026-09-06T17:00:00Z')}),
+  ]);
+  assert.equal(r.current.daily.at(-1).net, 200);
+  assert.equal(r.current.count, 2);
+  assert.equal(r.today.net, 100);
+  assert.equal(r.current.products[0].units, 2);
+});
 test('bill discount, service, refund and allocated product profit reconcile', () => {
   const r = report([sale('a', { items: [item('a'), item('b', { costPrice: 20 })], total: 190, discount: 20, serviceCharge: 10 }),
     sale('refund', { total: 90, discount: 10, isRefunded: true })]);

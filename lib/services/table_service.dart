@@ -200,6 +200,8 @@ class TableService {
     final index = items.indexWhere((i) =>
         i.kitchenStatus == KitchenStatus.pending &&
         i.productId == item.productId &&
+        i.isGift == item.isGift &&
+        i.promotionId == item.promotionId &&
         i.price == item.price &&
         i.notes == item.notes &&
         modifiersEqual(i.modifiers, item.modifiers));
@@ -266,6 +268,9 @@ class TableService {
           throw StateError('รายการนี้เปลี่ยนไปแล้ว กรุณาตรวจสอบออเดอร์');
         }
         final current = items[index];
+        if (current.isGift) {
+          throw StateError('กรุณาปรับของแถมผ่านตรวจโปรโมชั่น');
+        }
         if (current.quantity != expectedQuantity) {
           throw StateError('จำนวนถูกเปลี่ยนจากอีกเครื่องแล้ว กรุณาตรวจสอบใหม่');
         }
@@ -325,6 +330,49 @@ class TableService {
           })
       .toList());
 
+  static Future<Map<String, dynamic>> promotions(String orderId,
+      {String action = 'preview',
+      String? couponCode,
+      String? revision,
+      bool keepPreparedGifts = false,
+      String reason = ''}) async {
+    final response = await FirebaseFunctions.instanceFor(
+            region: 'asia-southeast1')
+        .httpsCallable('tablePromotions',
+            options: HttpsCallableOptions(timeout: const Duration(seconds: 20)))
+        .call({
+      'shopId': _shopDoc().id,
+      'orderId': orderId,
+      'action': action,
+      if (couponCode != null) 'couponCode': couponCode,
+      if (revision != null) 'revision': revision,
+      if (keepPreparedGifts) 'keepPreparedGifts': true,
+      if (reason.isNotEmpty) 'reason': reason,
+    });
+    return Map<String, dynamic>.from(response.data['promotion'] as Map);
+  }
+
+  static Future<TableOrder> syncPromotions(TableOrder order,
+      {bool send = false,
+      bool keepPreparedGifts = false,
+      String reason = ''}) async {
+    await promotions(order.id,
+        action: send ? 'send' : 'sync',
+        revision: order.promotion?['revision'] as String?,
+        keepPreparedGifts: keepPreparedGifts,
+        reason: reason);
+    return readOrder(order.id);
+  }
+
+  static Future<TableOrder> readOrder(String orderId) async {
+    final snap = await _tableOrdersCol()
+        .doc(orderId)
+        .get(const GetOptions(source: Source.server))
+        .timeout(const Duration(seconds: 20));
+    if (!snap.exists) throw StateError('ไม่พบบิลโต๊ะ');
+    return TableOrder.fromFirestore(snap.data()!, snap.id);
+  }
+
   /// Close the tab: create a matching Sale, deduct stock, free the table.
   /// Returns the new Sale id. Throws if the tab is empty.
   ///
@@ -343,6 +391,24 @@ class TableService {
     int splitCount = 1,
   }) async {
     final expected = order;
+    if (order.promotion != null) {
+      final response = await FirebaseFunctions.instanceFor(
+              region: 'asia-southeast1')
+          .httpsCallable('tablePromotions',
+              options:
+                  HttpsCallableOptions(timeout: const Duration(seconds: 20)))
+          .call({
+        'shopId': _shopDoc().id,
+        'orderId': order.id,
+        'action': 'close',
+        'revision': order.promotion!['revision'],
+        'expectedTotalMinor': order.promotion!['totalMinor'],
+        'paid': paid,
+        'paymentMethod': paymentMethod.name,
+        'splitCount': splitCount,
+      });
+      return response.data['saleId'] as String;
+    }
     final orderRef = _tableOrdersCol().doc(expected.id);
     final saleRef = _salesCol().doc('table-${expected.id}');
     final counterRef = _shopDoc().collection('counters').doc('receipt');

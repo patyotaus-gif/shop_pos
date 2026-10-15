@@ -1,4 +1,5 @@
 import '../utils/stock_quantity.dart';
+import '../utils/daily_stream.dart';
 import 'inventory_service.dart';
 import 'dart:async';
 import 'ingredient_checkout.dart';
@@ -362,19 +363,8 @@ class SaleService {
     } catch (_) {}
   }
 
-  static Stream<List<Sale>> watchToday() {
-    final start = DateTime.now();
-    final startOfDay = DateTime(start.year, start.month, start.day);
-    final nextDay = DateTime(start.year, start.month, start.day + 1);
-    return _salesCol()
-        .where('createdAt',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-        .where('createdAt', isLessThan: Timestamp.fromDate(nextDay))
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((s) =>
-            s.docs.map((d) => Sale.fromFirestore(d.data(), d.id)).toList());
-  }
+  static Stream<List<Sale>> watchToday() =>
+      watchDaily((day) => watchByRange(day, day));
 
   /// Calendar-date report, including every fraction of the selected last day.
   /// An inclusive 23:59:59 cutoff silently omits its final second's receipts.

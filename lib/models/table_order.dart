@@ -26,6 +26,8 @@ class TableOrderItem {
   final String? category;
   final String unit;
   final bool isWeighed;
+  final bool isGift;
+  final String? promotionId;
   final num quantity;
   final String? notes;
   final List<OrderModifier> modifiers;
@@ -43,6 +45,8 @@ class TableOrderItem {
     this.category,
     this.unit = 'ชิ้น',
     this.isWeighed = false,
+    this.isGift = false,
+    this.promotionId,
     required this.quantity,
     this.notes,
     this.modifiers = const [],
@@ -67,6 +71,8 @@ class TableOrderItem {
         category: m['category'] as String?,
         unit: m['unit'] as String? ?? 'ชิ้น',
         isWeighed: m['isWeighed'] == true,
+        isGift: m['isGift'] == true,
+        promotionId: m['promotionId'] as String?,
         quantity: (m['quantity'] ?? 1) as num,
         notes: m['notes'] as String?,
         modifiers: ((m['modifiers'] as List<dynamic>?) ?? const [])
@@ -91,6 +97,8 @@ class TableOrderItem {
         'quantity': quantity,
         'unit': unit,
         'isWeighed': isWeighed,
+        if (isGift) 'isGift': true,
+        if (promotionId != null) 'promotionId': promotionId,
         if (notes != null) 'notes': notes,
         if (modifiers.isNotEmpty)
           'modifiers': modifiers.map((m) => m.toMap()).toList(),
@@ -119,6 +127,8 @@ class TableOrderItem {
         category: category,
         unit: unit,
         isWeighed: isWeighed,
+        isGift: isGift,
+        promotionId: promotionId,
         quantity: quantity ?? this.quantity,
         notes: notes ?? this.notes,
         modifiers: modifiers ?? this.modifiers,
@@ -145,6 +155,7 @@ class TableOrder {
 
   /// Set when status == closed — points to the resulting Sale doc.
   final String? saleId;
+  final Map<String, dynamic>? promotion;
 
   const TableOrder({
     required this.id,
@@ -155,9 +166,27 @@ class TableOrder {
     required this.openedAt,
     this.closedAt,
     this.saleId,
+    this.promotion,
   });
 
   double get subtotal => items.fold<double>(0, (s, i) => s + i.subtotal);
+
+  bool get promotionCurrent {
+    final lines = promotion?['lines'] as List?;
+    final paid = items.where((i) => !i.isGift).toList();
+    if (lines == null || lines.length != paid.length) return false;
+    for (var n = 0; n < paid.length; n++) {
+      final row = lines[n] as Map;
+      final item = paid[n];
+      if (row['id'] != item.id ||
+          row['productId'] != item.productId ||
+          row['quantity'] != item.quantity ||
+          row['unitPrice'] != item.unitPrice) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   num get itemCount => items.fold<num>(0, (s, i) => s + i.quantity);
 
@@ -181,6 +210,9 @@ class TableOrder {
         openedAt: (data['openedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         closedAt: (data['closedAt'] as Timestamp?)?.toDate(),
         saleId: data['saleId'] as String?,
+        promotion: data['tablePromotion'] == null
+            ? null
+            : Map<String, dynamic>.from(data['tablePromotion'] as Map),
       );
 
   Map<String, dynamic> toFirestore() => {
@@ -191,5 +223,6 @@ class TableOrder {
         'openedAt': Timestamp.fromDate(openedAt),
         if (closedAt != null) 'closedAt': Timestamp.fromDate(closedAt!),
         if (saleId != null) 'saleId': saleId,
+        if (promotion != null) 'tablePromotion': promotion,
       };
 }
