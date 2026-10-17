@@ -40,6 +40,9 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
     <!-- Closed-distribution in-app update: lets the app hand a downloaded

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:typed_data';
 import 'package:printing/printing.dart';
 import 'package:file_saver/file_saver.dart';
 import '../models/sale.dart';
@@ -8,6 +9,7 @@ import '../services/auth_service.dart';
 import '../services/sale_service.dart';
 import '../widgets/refund_reason_dialog.dart';
 import '../widgets/shop_operation.dart';
+import '../widgets/bluetooth_print_button.dart';
 
 /// A completed payment stays visible even if the table stream closes its tab.
 class SaleReceiptScreen extends StatefulWidget {
@@ -29,12 +31,30 @@ class SaleReceiptScreen extends StatefulWidget {
 class _SaleReceiptScreenState extends State<SaleReceiptScreen> {
   bool _saving = false;
   String _paper = ReceiptGenerator.paperFormats.keys.first;
+  Sale? _documentSale;
+  final _documents = <String, Future<Uint8List>>{};
+
+  Future<Uint8List> _receiptBytes(Sale sale, String paper) {
+    if (!identical(_documentSale, sale)) {
+      _documentSale = sale;
+      _documents.clear();
+    }
+    return _documents.putIfAbsent(paper, () {
+      final document = ReceiptGenerator.buildReceipt(sale,
+          format: ReceiptGenerator.paperFormats[paper]);
+      // Allow retry after generation fails, without discarding a newer sale.
+      document.then<void>((_) {}, onError: (Object error, StackTrace stack) {
+        if (identical(_documents[paper], document)) _documents.remove(paper);
+      });
+      return document;
+    });
+  }
+
   Future<void> _saveFile(Sale sale) async {
     if (_saving) return;
     setState(() => _saving = true);
     try {
-      final bytes = await ReceiptGenerator.buildReceipt(sale,
-          format: ReceiptGenerator.paperFormats[_paper]);
+      final bytes = await _receiptBytes(sale, _paper);
       final path = await FileSaver.instance.saveAs(
           name: 'receipt_${sale.receiptNo ?? sale.id}',
           bytes: bytes,
@@ -94,6 +114,7 @@ class _SaleReceiptScreenState extends State<SaleReceiptScreen> {
               return const Center(child: CircularProgressIndicator());
             }
             final sale = snapshot.data!;
+            final paper = _paper;
             return Column(children: [
               if (widget.allowRefund && !AuthService.isStaff)
                 sale.isRefunded
@@ -146,6 +167,13 @@ class _SaleReceiptScreenState extends State<SaleReceiptScreen> {
                   icon: const Icon(Icons.download),
                   label: Text(
                       _saving ? 'กำลังบันทึก...' : 'บันทึก PDF ลงเครื่อง')),
+              BluetoothPrintButton(buildPdf: (paperMm) {
+                final selected = paperMm == 80 ? 'สลิป 80 มม.' : 'สลิป 58 มม.';
+                if (mounted && _paper != selected) {
+                  setState(() => _paper = selected);
+                }
+                return _receiptBytes(sale, selected);
+              }),
               Padding(
                   padding: const EdgeInsets.all(12),
                   child: Text(
@@ -157,8 +185,11 @@ class _SaleReceiptScreenState extends State<SaleReceiptScreen> {
                       key: ValueKey(_paper),
                       initialPageFormat: ReceiptGenerator.paperFormats[_paper],
                       pageFormats: ReceiptGenerator.paperFormats,
-                      build: (format) =>
-                          ReceiptGenerator.buildReceipt(sale, format: format),
+                      // Print services may report A4 or different margins.
+                      // Preserve the selected receipt and reuse the exact PDF
+                      // for preview, print, share and save.
+                      build: (_) => _receiptBytes(sale, paper),
+                      dynamicLayout: false,
                       pdfFileName: 'receipt_${sale.receiptNo ?? sale.id}.pdf',
                       canChangeOrientation: false,
                       canChangePageFormat: false,

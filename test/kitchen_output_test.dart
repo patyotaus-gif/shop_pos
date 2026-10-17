@@ -262,4 +262,43 @@ void main() {
     expect(String.fromCharCodes(bytes.take(4)), '%PDF');
     expect(bytes.length, greaterThan(1000));
   });
+  testWidgets('cancel printer selection exits before claiming a kitchen job',
+      (tester) async {
+    var completed = false;
+    await tester.pumpWidget(
+        MaterialApp(home: Scaffold(body: Builder(builder: (context) {
+      return TextButton(
+          onPressed: () async {
+            await KitchenPrintService.printOrder(context,
+                source: 'table', orderId: 'no-claim');
+            completed = true;
+          },
+          child: const Text('พิมพ์'));
+    }))));
+    await tester.tap(find.text('พิมพ์'));
+    await tester.pumpAndSettle();
+    expect(find.text('พิมพ์ใบงานครัวด้วย'), findsOneWidget);
+    await tester.tap(find.text('ยกเลิก'));
+    await tester.pumpAndSettle();
+    expect(completed, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+  test('Bluetooth kitchen tickets build at both roll widths with Thai notes',
+      () async {
+    for (final width in [58, 80]) {
+      final bytes = await KitchenPrintService.buildTicket({
+        'jobId': 'table-test',
+        'title': 'โต๊ะ F1',
+        'customerName': 'ลูกค้า',
+        'pickupLabel': '',
+        'reprint': true,
+        'lines': [
+          {'name': 'กุ้งผัดน้ำพริกเผา', 'quantity': 2, 'note': 'ไม่ใส่น้ำตาล'},
+          {'name': 'ปูผัดผงกะหรี่', 'quantity': 1, 'note': ''}
+        ],
+      }, paperMm: width);
+      expect(String.fromCharCodes(bytes.take(4)), '%PDF');
+      expect(bytes.length, greaterThan(1000));
+    }
+  });
 }

@@ -50,6 +50,18 @@ void main() {
     await tester.pump();
     expect(tester.widget<PdfPreview>(find.byType(PdfPreview)).initialPageFormat,
         ReceiptGenerator.slip58);
+    final slipPreview = tester.widget<PdfPreview>(find.byType(PdfPreview));
+    expect(slipPreview.dynamicLayout, isFalse);
+    final slip = await tester
+        .runAsync(() async => slipPreview.build(ReceiptGenerator.slip58));
+    final printerRequestedA4 =
+        await tester.runAsync(() async => slipPreview.build(PdfPageFormat.a4));
+    final printerRequestedMargins = await tester.runAsync(() async =>
+        slipPreview.build(const PdfPageFormat(164, 842, marginAll: 20)));
+    expect(slip, isNotEmpty);
+    expect(identical(slip, printerRequestedA4), isTrue,
+        reason: 'Printer paper negotiation must not reflow the saved receipt');
+    expect(identical(slip, printerRequestedMargins), isTrue);
     for (final entry in {
       'สลิป 80 มม.': ReceiptGenerator.slip80,
       'A4': PdfPageFormat.a4
@@ -62,6 +74,17 @@ void main() {
           tester.widget<PdfPreview>(find.byType(PdfPreview)).initialPageFormat,
           entry.value);
       expect(find.textContaining('ยอดรวม ฿25.00'), findsOneWidget);
+      final preview = tester.widget<PdfPreview>(find.byType(PdfPreview));
+      final selected =
+          await tester.runAsync(() async => preview.build(entry.value));
+      expect(identical(selected, slip), isFalse,
+          reason: 'An explicit paper selection must generate a new document');
+      expect(
+          identical(
+              selected,
+              await tester
+                  .runAsync(() async => preview.build(PdfPageFormat.a4))),
+          isTrue);
       expect(tester.takeException(), isNull);
     }
     await tester.pumpWidget(const SizedBox.shrink());

@@ -2,6 +2,8 @@ import '../widgets/line_link_card.dart';
 import '../widgets/compact_action.dart';
 import '../widgets/settings_sections.dart';
 import '../widgets/online_payment_readiness.dart';
+import '../services/bluetooth_printer_service.dart';
+import 'bluetooth_printer_screen.dart';
 import 'dart:io';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -773,6 +775,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const Divider(),
                       const SizedBox(height: 16),
                     ]),
+                if (BluetoothPrinterService.supported)
+                  SettingsSection(
+                      title: 'เครื่องพิมพ์',
+                      icon: Icons.print_outlined,
+                      children: [
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.bluetooth),
+                          title: const Text('เครื่องพิมพ์ Bluetooth'),
+                          subtitle: const Text(
+                              'เลือกเครื่องและพิมพ์ทดสอบ • 58 / 80 มม.'),
+                          onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      const BluetoothPrinterScreen())),
+                        )
+                      ]),
                 SettingsSection(
                     title: 'พนักงานและการจัดการ',
                     icon: Icons.groups_outlined,

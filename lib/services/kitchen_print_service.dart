@@ -7,6 +7,10 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'auth_service.dart';
 import '../widgets/shop_operation.dart';
+import 'bluetooth_printer_service.dart';
+import '../screens/bluetooth_printer_screen.dart';
+import '../utils/receipt_generator.dart';
+import '../utils/receipt_text_renderer.dart';
 
 class KitchenPrintService {
   static Stream<Map<String, Map<String, dynamic>>> watchJobs() =>
@@ -25,7 +29,8 @@ class KitchenPrintService {
           .then((r) => r.data)
           .timeout(const Duration(seconds: 25));
 
-  static Future<Uint8List> buildTicket(Map job) async {
+  static Future<Uint8List> buildTicket(Map job, {int? paperMm}) async {
+    if (paperMm != null) return _buildBluetoothTicket(job, paperMm);
     final font = pw.Font.ttf(
         await rootBundle.load('assets/fonts/IBMPlexSansThai-Regular.ttf'));
     final pdf =
@@ -61,10 +66,90 @@ class KitchenPrintService {
     return pdf.save();
   }
 
+  static Future<Uint8List> _buildBluetoothTicket(Map job, int paperMm) async {
+    if (![58, 80].contains(paperMm)) throw ArgumentError('paperMm');
+    final format =
+        paperMm == 80 ? ReceiptGenerator.slip80 : ReceiptGenerator.slip58;
+    final renderer = ReceiptTextRenderer();
+    final content = <pw.Widget>[];
+    Future<void> line(String text, {double size = 10}) async {
+      content.add(await renderer.text(text,
+          maxWidth: format.availableWidth,
+          style: pw.TextStyle(fontSize: size)));
+    }
+
+    if (job['reprint'] == true) {
+      await line('สำเนา / พิมพ์ซ้ำ — ตรวจใบเดิมก่อนทำอาหาร');
+    }
+    await line('ใบงานครัว • ${job['title'] ?? ''}', size: 14);
+    await line('เลขงาน ${job['jobId'] ?? ''}');
+    if ((job['pickupLabel'] ?? '').toString().isNotEmpty) {
+      await line('นัดรับ ${job['pickupLabel']} (เวลาไทย)');
+    }
+    if ((job['customerName'] ?? '').toString().isNotEmpty) {
+      await line('${job['customerName']}');
+    }
+    content.add(pw.Divider());
+    for (final item in job['lines'] as List) {
+      await line('${item['name']} × ${item['quantity']}', size: 12);
+      if ((item['note'] ?? '').toString().isNotEmpty) {
+        await line('${item['note']}');
+      }
+      content.add(pw.SizedBox(height: 6));
+    }
+    content.add(pw.Divider());
+    await line('ใบงานเตรียมอาหาร ไม่ใช่ใบเสร็จ');
+    final font = pw.Font.ttf(
+        await rootBundle.load('assets/fonts/IBMPlexSansThai-Regular.ttf'));
+    final doc =
+        pw.Document(theme: pw.ThemeData.withFont(base: font, bold: font))
+          ..addPage(pw.Page(
+              pageFormat: format,
+              build: (_) => pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: content)));
+    return doc.save();
+  }
+
   static Future<void> printOrder(BuildContext context,
       {required String source,
       required String orderId,
       bool reprint = false}) async {
+    BluetoothPrinterConfig? bluetooth;
+    if (BluetoothPrinterService.supported) {
+      final route = await showDialog<String>(
+          context: context,
+          builder: (ctx) => SimpleDialog(
+                title: const Text('พิมพ์ใบงานครัวด้วย'),
+                children: [
+                  SimpleDialogOption(
+                      onPressed: () => Navigator.pop(ctx, 'bluetooth'),
+                      child: const Text('เครื่องพิมพ์ Bluetooth')),
+                  SimpleDialogOption(
+                      onPressed: () => Navigator.pop(ctx, 'system'),
+                      child: const Text('ระบบพิมพ์ของมือถือ / RawBT')),
+                  SimpleDialogOption(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('ยกเลิก')),
+                ],
+              ));
+      if (route == null || !context.mounted) return;
+      if (route == 'bluetooth') {
+        try {
+          bluetooth = await BluetoothPrinterService.saved();
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(BluetoothPrinterService.errorMessage(e))));
+          }
+          return;
+        }
+        if (!context.mounted) return;
+        bluetooth ??= await Navigator.push<BluetoothPrinterConfig>(context,
+            MaterialPageRoute(builder: (_) => const BluetoothPrinterScreen()));
+        if (bluetooth == null || !context.mounted) return;
+      }
+    }
     Map? job;
     await performShopOperation(context, () async {
       job = Map.from(await _call('claimKitchenPrint',
@@ -78,11 +163,18 @@ class KitchenPrintService {
     }
     var received = false;
     try {
-      final bytes = await buildTicket(job!);
-      final sent = await Printing.layoutPdf(
-          onLayout: (_) => Future.value(bytes),
-          name: 'kitchen_$orderId',
-          format: PdfPageFormat(80 * PdfPageFormat.mm, 297 * PdfPageFormat.mm));
+      final bytes = await buildTicket(job!, paperMm: bluetooth?.paperMm);
+      final bool sent;
+      if (bluetooth != null) {
+        await BluetoothPrinterService.printPdf(bytes, bluetooth);
+        sent = true;
+      } else {
+        sent = await Printing.layoutPdf(
+            onLayout: (_) => Future.value(bytes),
+            name: 'kitchen_$orderId',
+            format:
+                PdfPageFormat(80 * PdfPageFormat.mm, 297 * PdfPageFormat.mm));
+      }
       if (sent && context.mounted) {
         received = await showDialog<bool>(
                 context: context,
@@ -102,10 +194,10 @@ class KitchenPrintService {
                     )) ??
             false;
       }
-    } catch (_) {
+    } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('พิมพ์ไม่สำเร็จ ตรวจเครื่องพิมพ์แล้วลองใหม่')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(BluetoothPrinterService.errorMessage(e))));
       }
     } finally {
       if (context.mounted) {
