@@ -99,11 +99,9 @@ class BluetoothPrinterService {
             bitmap.height));
       }
       if (pages == 0) throw StateError('ไม่พบหน้าใบเสร็จสำหรับพิมพ์');
-      bytes.add([
-        0x1b,
-        0x64,
-        3
-      ]); // Feed for manual tearing; never cut or open a drawer.
+      // Explicit dot feed (~15 mm at 203 dpi) brings the footer past the tear
+      // bar, independently of the printer's configured text line spacing.
+      bytes.add([0x1b, 0x4a, 120]);
       await channel.invokeMethod<void>('printBytes',
           {'address': config.address, 'bytes': bytes.takeBytes()});
     } finally {

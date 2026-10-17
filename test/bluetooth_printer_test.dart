@@ -12,15 +12,16 @@ import 'package:shop_pos/utils/esc_pos_raster.dart';
 
 class _RasterPlatform extends PrintingPlatform {
   bool empty = false;
+  int height = 1;
   @override
   Stream<PdfRaster> raster(
       Uint8List document, List<int>? pages, double dpi) async* {
     if (!empty) {
       yield PdfRaster(
           384,
-          1,
+          height,
           Uint8List.fromList(
-              List.generate(384 * 4, (i) => i % 4 == 3 ? 255 : 0)));
+              List.generate(384 * height * 4, (i) => i % 4 == 3 ? 255 : 0)));
     }
   }
 
@@ -139,8 +140,27 @@ void main() {
     final bytes = data['bytes'] as Uint8List;
     expect(
         bytes.sublist(0, 10), [0x1b, 0x40, 0x1d, 0x76, 0x30, 0, 48, 0, 1, 0]);
-    expect(bytes.sublist(bytes.length - 3), [0x1b, 0x64, 3]);
+    expect(bytes.sublist(bytes.length - 3), [0x1b, 0x4a, 120]);
     expect(bytes.length, 2 + 8 + 48 + 3);
+  });
+  test('long raster includes every footer row before the final tear feed',
+      () async {
+    platform.height = 2049;
+    await BluetoothPrinterService.printPdf(Uint8List(1), config);
+    final bytes = calls.single.arguments['bytes'] as Uint8List;
+    var offset = 2;
+    var rows = 0;
+    while (offset < bytes.length - 3) {
+      expect(bytes.sublist(offset, offset + 4), [0x1d, 0x76, 0x30, 0]);
+      final widthBytes = bytes[offset + 4] + bytes[offset + 5] * 256;
+      final bandRows = bytes[offset + 6] + bytes[offset + 7] * 256;
+      rows += bandRows;
+      offset += 8 + widthBytes * bandRows;
+    }
+    expect(rows, 2049);
+    expect(offset, bytes.length - 3);
+    expect(bytes[offset - 1], 255); // Last black footer pixel survived.
+    expect(bytes.sublist(offset), [0x1b, 0x4a, 120]);
   });
   test('empty PDF and unsupported platform never contact printer', () async {
     platform.empty = true;

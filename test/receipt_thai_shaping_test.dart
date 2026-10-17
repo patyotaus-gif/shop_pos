@@ -7,6 +7,23 @@ import 'package:shop_pos/utils/receipt_text_renderer.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('expanded quantity column preserves the shaped text proportions',
+      () async {
+    final block = await ReceiptTextRenderer().text('2 ชิ้น × 25.00',
+        maxWidth: 120, style: const pw.TextStyle(fontSize: 8));
+    final image =
+        ((block.child! as pw.Stack).children.last as pw.Positioned).child!;
+    final pdf = pw.Document()
+      ..addPage(pw.Page(
+          build: (_) => pw.Row(children: [
+                pw.Expanded(child: block),
+                pw.SizedBox(width: 50),
+              ])));
+    await pdf.save();
+    expect(image.box!.width, closeTo(block.width!, 0.001));
+    expect(image.box!.height, closeTo(block.height!, 0.001));
+  });
+
   test('Thai vowel and tone combinations retain their shaped appearance',
       () async {
     final renderer = ReceiptTextRenderer();
@@ -22,7 +39,7 @@ void main() {
       );
       expect(block.width, lessThanOrEqualTo(220));
       final stack = block.child! as pw.Stack;
-      final image = stack.children.last as pw.Image;
+      final image = (stack.children.last as pw.Positioned).child as pw.Image;
       final bytes = (image.image as pw.MemoryImage).bytes;
       final codec = await ui.instantiateImageCodec(bytes);
       final frame = await codec.getNextFrame();

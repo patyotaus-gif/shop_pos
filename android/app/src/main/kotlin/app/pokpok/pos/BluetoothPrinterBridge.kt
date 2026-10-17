@@ -91,6 +91,9 @@ class BluetoothPrinterBridge(private val activity: Activity, messenger: BinaryMe
         if (!BluetoothAdapter.checkBluetoothAddress(address) || data == null || data.isEmpty() || data.size > 2_000_000) {
             result.error("invalid", "ข้อมูลเครื่องพิมพ์หรือใบเสร็จไม่ถูกต้อง", null); return
         }
+        val job = try { EscPosPrintJob.parse(data) } catch (_: IllegalArgumentException) {
+            result.error("invalid", "ข้อมูลงานพิมพ์ไม่ครบ กรุณาเปิดใบเสร็จใหม่", null); return
+        }
         val device = bt.bondedDevices.firstOrNull { it.address == address }
         if (device == null || device.type == BluetoothDevice.DEVICE_TYPE_LE) {
             result.error("pairing", "จับคู่เครื่องพิมพ์ Bluetooth Classic ในการตั้งค่ามือถือก่อน", null); return
@@ -115,18 +118,15 @@ class BluetoothPrinterBridge(private val activity: Activity, messenger: BinaryMe
                 main.postDelayed(connectTimeout, 15_000)
                 try { connection.connect() } finally { main.removeCallbacks(connectTimeout) }
                 val output = connection.outputStream
-                var offset = 0
-                while (offset < data.size) {
+                job.send(output, beforeWrite = {
                     if (disposed || expired.get()) throw IllegalStateException()
-                    val size = minOf(512, data.size - offset)
                     // Mark before write: an exception can occur after partial delivery.
                     wrote = true
-                    output.write(data, offset, size)
-                    output.flush()
-                    offset += size
-                    Thread.sleep(15)
-                }
-                Thread.sleep(250)
+                }, pause = { duration ->
+                    if (disposed || expired.get()) throw IllegalStateException()
+                    Thread.sleep(duration)
+                    if (disposed || expired.get()) throw IllegalStateException()
+                })
             } catch (_: Exception) {
                 failure = if (wrote) "ส่งงานไม่ครบ อาจพิมพ์บางส่วนแล้ว ตรวจใบเดิมก่อนลองใหม่"
                     else "เชื่อมต่อไม่ได้ ตรวจเครื่องพิมพ์และปิดการเชื่อมต่อใน RawBT หรือแอพอื่น แล้วลองใหม่"

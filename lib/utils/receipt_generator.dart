@@ -8,14 +8,15 @@ import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
 import '../models/sale.dart';
 import 'receipt_text_renderer.dart';
+import 'receipt_logo.dart';
 import '../models/receipt_profile.dart';
 import '../services/settings_service.dart';
 
 class ReceiptGenerator {
   static const slip58 = PdfPageFormat(58 * PdfPageFormat.mm, double.infinity,
-      marginAll: 4 * PdfPageFormat.mm);
+      marginAll: 2 * PdfPageFormat.mm);
   static const slip80 = PdfPageFormat(80 * PdfPageFormat.mm, double.infinity,
-      marginAll: 4 * PdfPageFormat.mm);
+      marginAll: 2 * PdfPageFormat.mm);
   static const paperFormats = <String, PdfPageFormat>{
     'สลิป 58 มม.': slip58,
     'สลิป 80 มม.': slip80,
@@ -74,7 +75,7 @@ class ReceiptGenerator {
       throw ArgumentError.value(format, 'format', 'Invalid receipt paper size');
     }
     final wide = requested.width > 100 * PdfPageFormat.mm;
-    final margin = (wide ? 12 : 4) * PdfPageFormat.mm;
+    final margin = (wide ? 12 : 2) * PdfPageFormat.mm;
     final pageFormat = requested.copyWith(
       marginLeft: math.max(margin, requested.marginLeft),
       marginRight: math.max(margin, requested.marginRight),
@@ -121,13 +122,16 @@ class ReceiptGenerator {
             defaultTextStyle:
                 theme.defaultTextStyle.copyWith(height: 1.3, lineSpacing: 1)));
 
+    final preparedLogo = logo == null ? null : ReceiptLogo.prepare(logo);
     final content = <pw.Widget>[
-      if (logo != null)
+      if (preparedLogo != null)
         pw.Center(
           child: pw.Container(
-            height: 40,
+            width: math.min(contentWidth, 36 * PdfPageFormat.mm),
+            height: 24 * PdfPageFormat.mm,
             margin: const pw.EdgeInsets.only(bottom: 4),
-            child: pw.Image(pw.MemoryImage(logo), fit: pw.BoxFit.contain),
+            child:
+                pw.Image(pw.MemoryImage(preparedLogo), fit: pw.BoxFit.contain),
           ),
         ),
       pw.Center(

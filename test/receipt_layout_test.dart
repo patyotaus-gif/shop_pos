@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:image/image.dart' as img;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdf/pdf.dart';
 import 'package:shop_pos/models/receipt_profile.dart';
@@ -72,6 +74,38 @@ Sale sample(
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test('roll receipt uses narrow margins and enlarges padded shop logo',
+      () async {
+    final logo = img.Image(width: 400, height: 400, numChannels: 4);
+    img.fill(logo, color: img.ColorRgba8(255, 255, 255, 255));
+    img.fillRect(logo,
+        x1: 150,
+        y1: 170,
+        x2: 249,
+        y2: 229,
+        color: img.ColorRgba8(0, 0, 0, 255));
+    // White letter-like cutout makes the bounded artwork easy to inspect.
+    img.fillRect(logo,
+        x1: 180,
+        y1: 180,
+        x2: 219,
+        y2: 219,
+        color: img.ColorRgba8(255, 255, 255, 255));
+    final directory = Directory('.remember/tmp/receipt-tail')
+      ..createSync(recursive: true);
+    for (final format in [ReceiptGenerator.slip58, ReceiptGenerator.slip80]) {
+      expect(format.marginLeft, 2 * PdfPageFormat.mm);
+      expect(format.marginRight, 2 * PdfPageFormat.mm);
+      final bytes = await ReceiptGenerator.buildDocument(
+          sample(method: PaymentMethod.transfer),
+          profile: ReceiptProfile.fromSettings(settings),
+          format: format,
+          logo: Uint8List.fromList(img.encodePng(logo)));
+      await File(
+              '${directory.path}/logo${(format.width / PdfPageFormat.mm).round()}.pdf')
+          .writeAsBytes(bytes);
+    }
+  });
   test('VAT is opt-in, requires issuer details, and legacy stays a receipt',
       () {
     expect(ReceiptProfile.fromSettings({}).vatEnabled, false);

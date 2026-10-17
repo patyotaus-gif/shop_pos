@@ -81,8 +81,15 @@ class ReceiptTextRenderer {
                       .copyWith(renderingMode: PdfTextRenderingMode.invisible)),
             ),
           ),
-          pw.Image(pw.MemoryImage(bytes.buffer.asUint8List()),
-              width: width, height: height, fit: pw.BoxFit.fill),
+          // Keep the shaped image at its measured size even when a Row expands
+          // the enclosing box. Positioned also avoids Image rounding above a
+          // tight fractional-mm constraint while Stack measures its children.
+          pw.Positioned(
+            left: 0,
+            top: 0,
+            child: pw.Image(pw.MemoryImage(bytes.buffer.asUint8List()),
+                width: width, height: height, fit: pw.BoxFit.fill),
+          ),
         ]),
       );
     } finally {
