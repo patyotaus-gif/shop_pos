@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 /// Categories belong to the shop's products, so saving a product also saves
 /// its category without introducing a separate, device-local category list.
-class ProductCategoryField extends StatelessWidget {
+class ProductCategoryField extends StatefulWidget {
   const ProductCategoryField({
     super.key,
     required this.initialValue,
@@ -15,30 +15,132 @@ class ProductCategoryField extends StatelessWidget {
   final ValueChanged<String> onChanged;
 
   @override
-  Widget build(BuildContext context) => Autocomplete<String>(
-        initialValue: TextEditingValue(text: initialValue),
-        optionsBuilder: (value) => categories.where((category) =>
-            category.toLowerCase().contains(value.text.trim().toLowerCase())),
-        onSelected: onChanged,
-        fieldViewBuilder: (context, controller, focusNode, onSubmitted) =>
-            TextFormField(
-          controller: controller,
-          focusNode: focusNode,
-          onChanged: (value) => onChanged(value.trim()),
-          onFieldSubmitted: (_) => onSubmitted(),
-          decoration: const InputDecoration(
-            labelText: 'หมวดหมู่สินค้า',
-            hintText: 'เช่น กาแฟ ขนมอบ อาหารจานเดียว',
-            helperText:
-                'พิมพ์หมวดใหม่หรือเลือกหมวดเดิม\nหมวดใหม่จะบันทึกพร้อมสินค้า',
-            border: OutlineInputBorder(),
+  State<ProductCategoryField> createState() => _ProductCategoryFieldState();
+}
+
+class _ProductCategoryFieldState extends State<ProductCategoryField> {
+  late String _selected = widget.initialValue;
+
+  List<String> get _options => {
+        ...widget.categories,
+        if (_selected.isNotEmpty) _selected,
+      }.where((name) => name.isNotEmpty && name != 'ทั้งหมด').toList()
+        ..sort();
+
+  Future<void> _add() async {
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => _NewCategoryDialog(categories: _options),
+    );
+    if (name == null || !mounted) return;
+    setState(() => _selected = name);
+    widget.onChanged(name);
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          DropdownButtonFormField<String>(
+            key: ValueKey(_selected),
+            initialValue: _options.contains(_selected) ? _selected : null,
+            isExpanded: true,
+            menuMaxHeight: 360,
+            hint: const Text('กดเพื่อเลือกหมวดหมู่'),
+            decoration: const InputDecoration(
+              labelText: 'หมวดหมู่สินค้า',
+              border: OutlineInputBorder(),
+            ),
+            items: _options
+                .map((name) => DropdownMenuItem(
+                      value: name,
+                      child: Text(name, overflow: TextOverflow.ellipsis),
+                    ))
+                .toList(),
+            onChanged: _options.isEmpty
+                ? null
+                : (value) {
+                    if (value == null) return;
+                    setState(() => _selected = value);
+                    widget.onChanged(value);
+                  },
+            validator: (value) => value == null || value.isEmpty
+                ? 'กรุณาเลือกหมวดหมู่สินค้า'
+                : null,
           ),
-          validator: (value) {
-            final name = value?.trim() ?? '';
-            if (name.isEmpty) return 'กรุณาระบุหมวดหมู่สินค้า';
-            if (name == 'ทั้งหมด') return 'กรุณาใช้ชื่ออื่นแทนคำว่า ทั้งหมด';
-            return null;
-          },
+          if (_options.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text('ยังไม่มีหมวดหมู่ กดเพิ่มหมวดหมู่เพื่อเริ่มต้น'),
+            ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: _add,
+              icon: const Icon(Icons.add),
+              label: const Text('เพิ่มหมวดหมู่'),
+            ),
+          ),
+        ],
+      );
+}
+
+class _NewCategoryDialog extends StatefulWidget {
+  const _NewCategoryDialog({required this.categories});
+  final List<String> categories;
+
+  @override
+  State<_NewCategoryDialog> createState() => _NewCategoryDialogState();
+}
+
+class _NewCategoryDialogState extends State<_NewCategoryDialog> {
+  final _form = GlobalKey<FormState>();
+  final _name = TextEditingController();
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (!_form.currentState!.validate()) return;
+    final name = _name.text.trim();
+    final existing = widget.categories
+        .where((item) => item.toLowerCase() == name.toLowerCase())
+        .firstOrNull;
+    Navigator.pop(context, existing ?? name);
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        title: const Text('เพิ่มหมวดหมู่'),
+        scrollable: true,
+        content: Form(
+          key: _form,
+          child: TextFormField(
+            controller: _name,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'ชื่อหมวดหมู่',
+              hintText: 'เช่น เครื่องดื่ม ขนม อาหารจานเดียว',
+              helperText: 'หมวดใหม่จะบันทึกพร้อมสินค้า',
+              helperMaxLines: 2,
+            ),
+            validator: (value) {
+              final name = value?.trim() ?? '';
+              if (name.isEmpty) return 'กรุณาระบุชื่อหมวดหมู่';
+              if (name == 'ทั้งหมด') return 'กรุณาใช้ชื่ออื่นแทนคำว่า ทั้งหมด';
+              return null;
+            },
+            onFieldSubmitted: (_) => _submit(),
+          ),
         ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('ยกเลิก')),
+          FilledButton(onPressed: _submit, child: const Text('เพิ่มและเลือก')),
+        ],
       );
 }

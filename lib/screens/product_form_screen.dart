@@ -145,7 +145,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     _stock = TextEditingController(text: p?.stock.toString() ?? '0');
     _lowStock =
         TextEditingController(text: p?.lowStockThreshold.toString() ?? '5');
-    _category = p?.category ?? 'ทั่วไป';
+    _category = p?.category ?? '';
     _products = ProductService.watchAll();
     _isPinned = p?.isPinned ?? false;
     _modifierGroupIds = {...(p?.modifierGroupIds ?? const <String>[])};

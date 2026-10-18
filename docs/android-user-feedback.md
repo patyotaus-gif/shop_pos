@@ -1,5 +1,33 @@
 # Android pilot feedback — 2026-10-03
 
+## Published release - 1.2.56+73 (2026-10-19)
+
+- Owner authorized publishing the category picker and explicitly requested holding the latest receipt fix. All eight receipt-feed implementation/test files are excluded; their changes are preserved in Git stash `d16fb71b9218cfe90eadb88c70561dc984feb50e` and the private backup `.remember/tmp/held-receipt-feed-after72.patch` (apply check passed).
+- Android printing code in this release matches published build 72. The added feed-only buttons, blank-raster feed and adjustable 35 mm default are NOT included. Do not restore the stash into a release without a new instruction to resume that work.
+- iOS source version advances to 1.2.56 only; owner manually starts Codemagic `ios-release`. No iOS build/upload initiated.
+- Release gates: all 255 Flutter tests and full Flutter analysis passed. Backup of build 72 APK and manifest retained privately; backup APK SHA256 matches the previously verified public artifact. Receipt source compared against release commit `36cbcf2` with no differences.
+- Signed Android release built successfully (226 seconds), package `app.pokpok.pos`, 95,133,698 bytes, SHA256 `885d49beb401f157c03b4c678689650f62d234cf733ffb6e91b0153de3df36b4`. Release signing certificate matches build 72 (`f7dc70e0464fed06f8c0d14907ef71a75effb566e41e67d1aa685491dff547eb`).
+- Firebase Hosting published; full public APK downloaded and verified at `2026-10-18T14:50:55.531Z`. Manifest, bytes/hash, package/version and signing certificate match. No-cache, optional update and minimum supported build 1 preserved. Evidence `.remember/tmp/release73-verified.json`; backup `.remember/tmp/pokpok-build72-backup.apk` and `release72-manifest-backup.json`. Download: https://pok-pok.app/app/pokpok.apk.
+- Hosting only; no functions, rules or production shop records changed. The earlier source-only status of the category picker below is superseded by this release; receipt-feed follow-up remains held.
+
+## Product category picker - source follow-up (2026-10-19)
+
+- New products now start with an unselected category and the prompt `กดเพื่อเลือกหมวดหมู่`; existing products retain their category, including names not yet present in the product stream. Selecting a category requires no typing. The dropdown deduplicates and sorts the shop's existing product categories.
+- An explicit `เพิ่มหมวดหมู่` button opens a name dialog; `เพิ่มและเลือก` trims the name and selects it immediately. Empty names and the reserved filter label `ทั้งหมด` are rejected. Matching existing names are reused (case-insensitive) and cancelling leaves the selection unchanged. Empty shops show guidance to add their first category.
+- Categories continue to save with products; this does not introduce a separate category collection or persist abandoned form drafts. No implicit `ทั่วไป` category or automatic carry-over is selected for a new product. No release or version bump in this turn.
+- Validation: four category widget tests and eight viewport tests passed (selection/reuse, creation, empty shop, validation, cancellation, duplicate names, legacy category, small phone and product-form safe areas). Targeted Flutter analysis reported no issues. Logs `.remember/tmp/category-picker-*`. No production data changed.
+
+## Paper remains inside printer after build 72 - source follow-up (2026-10-18)
+
+- Later feedback supersedes the initial symptom report below: the owner supplied a photo showing the complete payment/thank-you footer and a larger logo, and reports normal printing after reopening and printing again. The extra feed patch remains unpublished and cannot explain that successful print; the original cause is still unconfirmed. Do not automatically release the increased default feed solely on the earlier report.
+
+- User explicitly confirms the supplied video was recorded after installing 1.2.55 (72). Sampled video frames show paper being pulled; they do not prove whether the final text was already printed inside or whether data was dropped. Previous release remains insufficient for the reported device.
+- Replace the fixed ESC J tail with blank GS v 0 raster bands on the same image path used for receipt content. Default trailing feed is approximately 35 mm, adjustable locally to 15/25/35/50 mm. Distances assume 8 dots/mm and require physical verification. Existing printer selection survives migration from three-field preferences. PDF layout is unchanged.
+- Receipt and Bluetooth settings now provide a feed-only button (approximately 20 mm). It does not generate/reprint a receipt or reset the printer. Feed and print share one lock, and errors never automatically retry. Native validation restricts feed-only streams to exactly 160 blank rows, and normal jobs to 12,400 rows including the tail, before opening the connection.
+- Blank raster feed follows the image-height behaviour documented in [Epson GS v 0](https://download4.epson.biz/sec_pubs/pos/reference_en/escpos/gs_lv_0.html); compatibility with this particular printer is still an acceptance test. Existing paced transfer, timeout and two-second drain remain. A completed socket write does not acknowledge physical printing.
+- Validation: 28 focused Flutter tests and five native JVM tests passed, covering both widths/all tail settings, legacy preferences, no reprint from the feed button, exclusion of overlapping jobs, failure cleanup without retry, maximum-length jobs and rejection of nonblank feed-only data. Targeted Flutter analysis is clean and Android debug APK built successfully (39.7 seconds). Logs: `.remember/tmp/paper-feed-*`. A debug build is validation only, not a production upgrade.
+- Source only: no version bump or deployment. Public Android remains 1.2.55+72. No production transactions or cloud settings changed. After publishing, verify the payment and thank-you lines pass the tear bar without pulling; if needed, use feed-only and adjust the saved tail distance.
+
 ## Published release — 1.2.55+72 (2026-10-18)
 
 - User authorized publishing the Bluetooth footer, receipt margins and logo follow-up below. Includes paced raster transfer, explicit tear feed and longer connection drain delay, 2 mm roll margins, padded-logo trimming and larger header artwork, and preserved shaped-text proportions.
