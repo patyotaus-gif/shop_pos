@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'notification_service.dart';
+import 'auto_print_service.dart';
 import 'remembered_owner.dart';
 
 class AuthService {
@@ -151,6 +152,7 @@ class AuthService {
   }
 
   static Future<void> signOut() async {
+    await AutoPrintService.stopLocal();
     NotificationService.stopFCM();
     ownerUnlocked = false;
     _founderClaim = false;

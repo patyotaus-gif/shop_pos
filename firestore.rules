@@ -143,6 +143,14 @@ service cloud.firestore {
         allow read: if isOwner();
         allow write: if false;
       }
+      match /autoPrintConfig/{id} {
+        allow read: if isOwner();
+        allow write: if false;
+      }
+      match /autoPrintJobs/{id} {
+        allow read: if isOwner();
+        allow write: if false;
+      }
       match /inventoryControl/{controlId} {
         allow read: if isOwner();
         allow write: if false;

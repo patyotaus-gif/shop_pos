@@ -43,7 +43,7 @@ class ReceiptGenerator {
   }
 
   static Future<Uint8List> buildReceipt(Sale sale,
-      {String? shopName, PdfPageFormat? format}) async {
+      {String? shopName, PdfPageFormat? format, bool isCopy = false}) async {
     // Never retroactively declare VAT for legacy sales without a tax snapshot.
     final profile = sale.receiptProfile ??
         ReceiptProfile.fromSettings({
@@ -53,13 +53,15 @@ class ReceiptGenerator {
     return buildDocument(sale,
         profile: profile,
         logo: await _loadLogo(profile.logoUrl),
-        format: format);
+        format: format,
+        isCopy: isCopy);
   }
 
   /// The preview, printed receipt, shared PDF and saved file use this layout.
   static Future<Uint8List> buildDocument(Sale sale,
       {required ReceiptProfile profile,
       Uint8List? logo,
+      bool isCopy = false,
       double paperWidthMm = 58,
       PdfPageFormat? format}) async {
     if (paperWidthMm != 58 && paperWidthMm != 80) {
@@ -124,6 +126,8 @@ class ReceiptGenerator {
 
     final preparedLogo = logo == null ? null : ReceiptLogo.prepare(logo);
     final content = <pw.Widget>[
+      if (isCopy)
+        await text('สำเนา / พิมพ์ซ้ำ', textAlign: pw.TextAlign.center),
       if (preparedLogo != null)
         pw.Center(
           child: pw.Container(

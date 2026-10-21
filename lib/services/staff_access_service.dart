@@ -3,6 +3,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'auth_service.dart';
+import 'auto_print_service.dart';
 
 class StaffAccessService {
   static final unlocked = ValueNotifier(false);
@@ -52,6 +53,7 @@ class StaffAccessService {
   static Future<void> switchTo(String id, String pin) async {
     final result =
         await call('staffSwitchSession', {'staffId': id, 'pin': pin});
+    await AutoPrintService.stopLocal();
     _cache = null;
     await AuthService.rememberedOwner.clear();
     AuthService.ownerUnlocked = false;

@@ -1,6 +1,6 @@
 const pickupScheduling = require('./pickup');
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
-const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentUpdated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const admin = require("firebase-admin");
@@ -26,6 +26,22 @@ exports.counterBundleCatalog = onCall({enforceAppCheck:true},staffAccess.bundleC
 const kitchenPrint = require('./kitchen_print').handlers({db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError});
 exports.claimKitchenPrint = onCall(kitchenPrint.claim);
 exports.finishKitchenPrint = onCall(kitchenPrint.finish);
+const autoPrint = require('./auto_print').handlers({db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError});
+exports.configureAutoPrint = onCall(autoPrint.configure);
+exports.heartbeatAutoPrint = onCall(autoPrint.heartbeat);
+exports.claimAutoPrint = onCall(autoPrint.claim);
+exports.finishAutoPrint = onCall(autoPrint.finish);
+exports.reviewAutoPrint = onCall(autoPrint.review);
+for (const [name, collection, source] of [
+  ['queueTableAutoPrint', 'tableOrders', 'table'],
+  ['queueOnlineAutoPrint', 'orders', 'online'],
+  ['queueReceiptAutoPrint', 'sales', 'sale'],
+]) {
+  exports[name] = onDocumentWritten({document:`shops/{shopId}/${collection}/{sourceId}`, retry:true}, event =>
+    autoPrint.enqueue({shopId:event.params.shopId, sourceId:event.params.sourceId, source,
+      before:event.data?.before.data(), after:event.data?.after.data(),
+      eventAtMs:event.data?.after.updateTime?.toMillis() ?? Date.parse(event.time)}));
+}
 const tableRecovery = require('./table_recovery').handlers({db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError});
 exports.reconcileRestaurantTable = onCall(tableRecovery.reconcile);
 exports.tablePromotions = onCall({enforceAppCheck:true}, require('./table_promotions').handlers({

@@ -178,11 +178,16 @@ void main() {
       (tester) async {
     await tester.pumpWidget(MaterialApp(
         home: KitchenScreen(
-            orders: Stream.value([table('waiting'), table('done')]),
+            orders:
+                Stream.value([table('waiting'), table('done'), table('auto')]),
             settings: Stream.value({'kitchenOutput': 'printer'}),
             printJobs: Stream.value({
               'table-done': {
                 'status': 'printed',
+                'printedKeys': ['x']
+              },
+              'table-auto': {
+                'status': 'sent',
                 'printedKeys': ['x']
               },
             }))));
@@ -193,6 +198,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('อาหารโต๊ะwaiting'), findsOneWidget);
     expect(find.text('อาหารโต๊ะdone'), findsNothing);
+    expect(find.text('อาหารโต๊ะauto'), findsNothing);
     final queue = tester.state<ScrollableState>(find.byType(Scrollable).first);
     queue.position.jumpTo(queue.position.maxScrollExtent);
     await tester.pumpAndSettle();

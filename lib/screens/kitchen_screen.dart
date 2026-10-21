@@ -72,7 +72,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
           : CashSessionService.watchLastClosedAt());
   bool needsPrint(Map? job, int count) =>
       job == null ||
-      job['status'] != 'printed' ||
+      !['printed', 'sent'].contains(job['status']) ||
       ((job['printedKeys'] as List?)?.length ?? 0) < count;
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -430,6 +430,7 @@ class _PrintActionsState extends State<_PrintActions> {
           children: [
             Text(switch (widget.job?['status']) {
               'printed' => 'ยืนยันใบงานแล้ว',
+              'sent' => 'ส่งข้อมูลแล้ว • ตรวจใบที่เครื่องพิมพ์',
               'printing' => 'กำลังพิมพ์ / รอยืนยัน',
               'needsReview' => 'ตรวจเครื่องพิมพ์ก่อนลองใหม่',
               _ => 'รอพิมพ์'

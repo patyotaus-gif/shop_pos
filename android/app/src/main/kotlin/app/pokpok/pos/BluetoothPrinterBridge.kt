@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothSocket
 import android.content.Intent
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Handler
@@ -20,11 +21,12 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** Android Classic Bluetooth SPP only. Pairing stays in the OS settings UI. */
-class BluetoothPrinterBridge(private val activity: Activity, messenger: BinaryMessenger) : MethodChannel.MethodCallHandler {
+class BluetoothPrinterBridge(private val context: Context, messenger: BinaryMessenger) : MethodChannel.MethodCallHandler {
+    // Shared across UI and the foreground worker's Flutter engine.
+    companion object { private val busy = AtomicBoolean(false) }
     private val channel = MethodChannel(messenger, "app.pokpok.pos/bluetooth_printer")
     private val main = Handler(Looper.getMainLooper())
     private val worker = Executors.newSingleThreadExecutor()
-    private val busy = AtomicBoolean(false)
     private var permissionResult: MethodChannel.Result? = null
     @Volatile private var socket: BluetoothSocket? = null
     @Volatile private var disposed = false
@@ -32,25 +34,25 @@ class BluetoothPrinterBridge(private val activity: Activity, messenger: BinaryMe
     init { channel.setMethodCallHandler(this) }
 
     private fun permitted() = Build.VERSION.SDK_INT < 31 ||
-        activity.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+        context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
 
-    private fun adapter(): BluetoothAdapter? = activity.getSystemService(BluetoothManager::class.java)?.adapter
+    private fun adapter(): BluetoothAdapter? = context.getSystemService(BluetoothManager::class.java)?.adapter
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         try {
             when (call.method) {
                 "openSettings" -> {
-                    activity.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
+                    context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                     result.success(null)
                 }
                 "pairedDevices" -> {
                     if (!permitted()) {
                         if (permissionResult != null) {
                             result.error("busy", "รอการอนุญาต Bluetooth ก่อน", null)
-                        } else {
+                        } else if (context is Activity) {
                             permissionResult = result
-                            activity.requestPermissions(arrayOf(Manifest.permission.BLUETOOTH_CONNECT), 5812)
-                        }
+                            context.requestPermissions(arrayOf(Manifest.permission.BLUETOOTH_CONNECT), 5812)
+                        } else result.error("permission", "เปิดแอพเพื่ออนุญาต Bluetooth ก่อน", null)
                     } else listDevices(result)
                 }
                 "printBytes" -> printBytes(call, result)

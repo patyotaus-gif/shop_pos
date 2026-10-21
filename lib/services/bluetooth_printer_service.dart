@@ -62,8 +62,8 @@ class BluetoothPrinterService {
 
   /// The supplied PDF must already be laid out for config.paperMm. Rasterize
   /// before opening the socket so rendering errors cannot leave a partial job.
-  static Future<void> printPdf(
-      Uint8List pdf, BluetoothPrinterConfig config) async {
+  static Future<void> printPdf(Uint8List pdf, BluetoothPrinterConfig config,
+      {Future<void> Function()? beforeSend}) async {
     if (!supported) {
       throw StateError('พิมพ์ Bluetooth ตรงรองรับ Android ในรุ่นนี้');
     }
@@ -102,6 +102,9 @@ class BluetoothPrinterService {
       // Explicit dot feed (~15 mm at 203 dpi) brings the footer past the tear
       // bar, independently of the printer's configured text line spacing.
       bytes.add([0x1b, 0x4a, 120]);
+      // Automatic jobs recheck ownership and cancellation after rendering,
+      // immediately before any physical output. Manual callers are unchanged.
+      await beforeSend?.call();
       await channel.invokeMethod<void>('printBytes',
           {'address': config.address, 'bytes': bytes.takeBytes()});
     } finally {

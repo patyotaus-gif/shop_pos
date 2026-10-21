@@ -6,9 +6,12 @@ function fixture(initial={}) {
   function ref(path){return {path,id:path.split('/').pop(),collection:n=>col(path+'/'+n),
     get:async()=>({id:path.split('/').pop(),ref:ref(path),exists:docs.has(path),data:()=>copy(docs.get(path))}),
     update:async data=>write(path,data,true)};}
-  function col(path,filters=[],max=Infinity){return {doc:id=>ref(path+'/'+id),
-    where:(key,op,value)=>col(path,[...filters,[key,op,value]],max),limit:n=>col(path,filters,n),get:async()=>{
-      const selected=[...docs].filter(([p,d])=>p.startsWith(path+'/')&&!p.slice(path.length+1).includes('/')&&filters.every(([k,op,v])=>op==='=='?d[k]===v:op==='in'?v.includes(d[k]):op==='>='?d[k]>=v:d[k]<=v)).slice(0,max);
+  function col(path,filters=[],max=Infinity,sortKey=null){return {doc:id=>ref(path+'/'+id),
+    where:(key,op,value)=>col(path,[...filters,[key,op,value]],max,sortKey),limit:n=>col(path,filters,n,sortKey),
+    orderBy:key=>col(path,filters,max,key),get:async()=>{
+      const matches=[...docs].filter(([p,d])=>p.startsWith(path+'/')&&!p.slice(path.length+1).includes('/')&&filters.every(([k,op,v])=>op==='=='?d[k]===v:op==='in'?v.includes(d[k]):op==='>='?d[k]>=v:d[k]<=v));
+      if(sortKey)matches.sort((a,b)=>a[1][sortKey]-b[1][sortKey]);
+      const selected=matches.slice(0,max);
       const rows=await Promise.all(selected.map(([p])=>ref(p).get()));return {docs:rows,size:rows.length,empty:!rows.length};
     }};}
   function write(path,data,merge){

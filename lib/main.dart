@@ -8,6 +8,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
 import 'services/auth_service.dart';
+import 'services/auto_print_service.dart';
+import 'services/auto_print_worker.dart';
 import 'services/bank_notification_service.dart';
 import 'services/notification_service.dart';
 import 'models/shop.dart';
@@ -47,6 +49,23 @@ import 'widgets/app_viewport.dart';
 // the device's system dark setting. Dark is opt-in (Settings), persisted
 // via ThemeService and loaded at startup.
 final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.light);
+
+@pragma('vm:entry-point')
+void autoPrintMain() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform);
+    await initializeDateFormatting('th_TH', null);
+    final config = Map<String, dynamic>.from(
+        await AutoPrintService.channel.invokeMapMethod('configuration') ?? {});
+    await AutoPrintWorker(config).start();
+  } catch (_) {
+    await AutoPrintService.channel.invokeMethod<void>(
+        'status', {'text': 'เริ่มคิวไม่สำเร็จ กรุณาเปิดแอพแล้วเริ่มใหม่'});
+    await AutoPrintService.channel.invokeMethod<void>('stop');
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

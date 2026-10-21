@@ -1,10 +1,10 @@
 {
-    "version":  "1.2.57",
-    "build":  74,
+    "version":  "1.2.58",
+    "build":  75,
     "url":  "https://pok-pok.app/app/pokpok.apk",
     "minSupportedBuild":  1,
     "mandatory":  false,
-    "notes":  "ย้ายปุ่มเพิ่มหมวดหมู่ไปไว้ท้ายรายการเลือกหมวดหมู่ และนำปุ่มแยกใต้ช่องออก เพิ่มหมวดใหม่ได้จากเมนูเดียวกัน",
-    "sha256":  "8c49830eb937b0e14aa7ede9535f4e2ff02c68816d4141c2fad949c126252558",
-    "sizeBytes":  95133698
+    "notes":  "เพิ่มพิมพ์อัตโนมัติบน Android สำหรับใบงานครัวและใบเสร็จ พร้อมคิวพิมพ์และการตรวจสอบงานที่ส่งไม่สำเร็จ",
+    "sha256":  "b3e7e22ed27875fffc7dd20b769e8dc6355043fed5cb0ac8abe5cba494faafd0",
+    "sizeBytes":  95232126
 }

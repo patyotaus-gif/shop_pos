@@ -62,6 +62,19 @@ void main() {
         .setMockMethodCallHandler(BluetoothPrinterService.channel, null);
   });
 
+  test('automatic authorization failure sends no Bluetooth bytes', () async {
+    await expectLater(
+        BluetoothPrinterService.printPdf(Uint8List(1), config,
+            beforeSend: () async {
+          throw StateError('order cancelled');
+        }),
+        throwsStateError);
+    expect(calls, isEmpty);
+    // Rendering/authorization failure releases the per-engine print lock.
+    await BluetoothPrinterService.printPdf(Uint8List(1), config);
+    expect(calls.map((c) => c.method), ['printBytes']);
+  });
+
   test('raster uses MSB first and alpha compositing on white', () {
     final rgba = Uint8List.fromList([
       0,

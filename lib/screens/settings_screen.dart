@@ -4,6 +4,7 @@ import '../widgets/settings_sections.dart';
 import '../widgets/online_payment_readiness.dart';
 import '../services/bluetooth_printer_service.dart';
 import 'bluetooth_printer_screen.dart';
+import 'auto_print_screen.dart';
 import 'dart:io';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -775,11 +776,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const Divider(),
                       const SizedBox(height: 16),
                     ]),
-                if (BluetoothPrinterService.supported)
-                  SettingsSection(
-                      title: 'เครื่องพิมพ์',
-                      icon: Icons.print_outlined,
-                      children: [
+                SettingsSection(
+                    title: 'เครื่องพิมพ์',
+                    icon: Icons.print_outlined,
+                    children: [
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.print),
+                        title: const Text('พิมพ์อัตโนมัติและคิวพิมพ์'),
+                        subtitle:
+                            const Text('ตั้งเครื่องหลัก • ใบงานครัว • ใบเสร็จ'),
+                        onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const AutoPrintScreen())),
+                      ),
+                      if (BluetoothPrinterService.supported)
                         ListTile(
                           contentPadding: EdgeInsets.zero,
                           leading: const Icon(Icons.bluetooth),
@@ -792,7 +804,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   builder: (_) =>
                                       const BluetoothPrinterScreen())),
                         )
-                      ]),
+                    ]),
                 SettingsSection(
                     title: 'พนักงานและการจัดการ',
                     icon: Icons.groups_outlined,

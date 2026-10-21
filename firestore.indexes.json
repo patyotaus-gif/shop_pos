@@ -1,6 +1,14 @@
 {
   "indexes": [
     {
+      "collectionGroup": "autoPrintJobs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAtMs", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "orders",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
