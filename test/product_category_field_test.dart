@@ -5,6 +5,17 @@ import 'package:shop_pos/services/product_service.dart';
 import 'package:shop_pos/widgets/product_category_field.dart';
 
 void main() {
+  Future<void> openAddCategory(WidgetTester tester) async {
+    expect(find.widgetWithText(TextButton, 'เพิ่มหมวดหมู่'), findsNothing);
+    await tester.tap(find.byType(DropdownButtonFormField<Object>));
+    await tester.pumpAndSettle();
+    final action =
+        find.byKey(const ValueKey('add-category-menu')).hitTestable();
+    expect(action, findsOneWidget);
+    await tester.tap(action);
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('new category is trimmed and can be reused after product save',
       (tester) async {
     var selected = '';
@@ -24,8 +35,7 @@ void main() {
     expect(find.text('กดเพื่อเลือกหมวดหมู่'), findsOneWidget);
     expect(find.byType(TextFormField), findsNothing);
     expect(form.currentState!.validate(), isFalse);
-    await tester.tap(find.text('เพิ่มหมวดหมู่'));
-    await tester.pumpAndSettle();
+    await openAddCategory(tester);
     await tester.enterText(find.byType(TextFormField), '  ขนมอบ  ');
     await tester.tap(find.text('เพิ่มและเลือก'));
     await tester.pumpAndSettle();
@@ -40,7 +50,7 @@ void main() {
         category: selected);
     final saved = Product.fromFirestore(product.toFirestore(), product.id);
     expect(ProductService.categoriesFor([saved, saved]), ['ขนมอบ']);
-    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.tap(find.byType(DropdownButtonFormField<Object>));
     await tester.pumpAndSettle();
     await tester.tap(find.text('กาแฟ').last);
     await tester.pumpAndSettle();
@@ -65,8 +75,7 @@ void main() {
     ));
     expect(form.currentState!.validate(), isTrue);
     expect(find.text('หมวดเดิมที่ไม่มีในรายการ'), findsWidgets);
-    await tester.tap(find.text('เพิ่มหมวดหมู่'));
-    await tester.pumpAndSettle();
+    await openAddCategory(tester);
     for (final name in ['   ', 'ทั้งหมด']) {
       await tester.enterText(find.byType(TextFormField), name);
       await tester.tap(find.text('เพิ่มและเลือก'));
@@ -93,9 +102,12 @@ void main() {
         onChanged: (value) => selected = value,
       )),
     ));
-    expect(find.text('ยังไม่มีหมวดหมู่ กดเพิ่มหมวดหมู่เพื่อเริ่มต้น'),
+    expect(find.text('ยังไม่มีหมวดหมู่ แตะช่องด้านบนแล้วเลือกเพิ่มหมวดหมู่'),
         findsOneWidget);
-    await tester.tap(find.text('เพิ่มหมวดหมู่'));
+    await tester.tap(find.byType(DropdownButtonFormField<Object>));
+    await tester.pumpAndSettle();
+    await tester
+        .tap(find.byKey(const ValueKey('add-category-menu')).hitTestable());
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField), 'เครื่องดื่ม');
     await tester.tap(find.text('เพิ่มและเลือก'));
@@ -117,21 +129,84 @@ void main() {
         onChanged: (value) => selected = value,
       )),
     ));
-    await tester.tap(find.text('เพิ่มหมวดหมู่'));
-    await tester.pumpAndSettle();
+    await openAddCategory(tester);
     await tester.enterText(find.byType(TextFormField), 'cancelled');
     await tester.tap(find.text('ยกเลิก'));
     await tester.pumpAndSettle();
     expect(selected, isNull);
-    await tester.tap(find.text('เพิ่มหมวดหมู่'));
-    await tester.pumpAndSettle();
+    await openAddCategory(tester);
     await tester.enterText(find.byType(TextFormField), ' coffee ');
     await tester.tap(find.text('เพิ่มและเลือก'));
     await tester.pumpAndSettle();
     expect(selected, 'Coffee');
-    final field = tester.widget<DropdownButtonFormField<String>>(
-        find.byType(DropdownButtonFormField<String>));
+    final field = tester.widget<DropdownButtonFormField<Object>>(
+        find.byType(DropdownButtonFormField<Object>));
     expect(field.initialValue, 'Coffee');
     expect(tester.takeException(), isNull);
   });
+
+  for (final initial in ['', 'ขนม']) {
+    testWidgets('phone dropdown can add and cancel with initial "$initial"',
+        (tester) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      tester.view.padding = const FakeViewPadding(bottom: 48);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPadding);
+      addTearDown(tester.view.resetViewInsets);
+      final form = GlobalKey<FormState>();
+      final changes = <String>[];
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: SafeArea(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 220, 16, 16),
+                child: Form(
+                  key: form,
+                  child: ProductCategoryField(
+                    initialValue: initial,
+                    categories: const ['ขนม', 'อาหาร'],
+                    onChanged: changes.add,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ));
+      Future<void> openAdd() async {
+        await tester.tap(find.byType(DropdownButtonFormField<Object>));
+        await tester.pumpAndSettle();
+        final action =
+            find.byKey(const ValueKey('add-category-menu')).hitTestable();
+        expect(action, findsOneWidget);
+        expect(tester.getTopLeft(action).dy,
+            greaterThan(tester.getBottomLeft(find.text('อาหาร').last).dy));
+        await tester.tap(action);
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsOneWidget);
+        expect(changes, isEmpty);
+      }
+
+      await openAdd();
+      await tester.tap(find.text('ยกเลิก'));
+      await tester.pumpAndSettle();
+      expect(changes, isEmpty);
+      expect(form.currentState!.validate(), initial.isNotEmpty);
+      await tester.pumpAndSettle();
+      await openAdd();
+      tester.view.viewInsets = const FakeViewPadding(bottom: 240);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), 'เครื่องดื่ม');
+      await tester.ensureVisible(find.text('เพิ่มและเลือก'));
+      await tester.tap(find.text('เพิ่มและเลือก'));
+      tester.view.resetViewInsets();
+      await tester.pumpAndSettle();
+      expect(changes, ['เครื่องดื่ม']);
+      expect(form.currentState!.validate(), isTrue);
+      expect(tester.takeException(), isNull);
+    });
+  }
 }

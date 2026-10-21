@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+enum _CategoryAction { add }
+
 /// Categories belong to the shop's products, so saving a product also saves
 /// its category without introducing a separate, device-local category list.
 class ProductCategoryField extends StatefulWidget {
@@ -20,6 +22,7 @@ class ProductCategoryField extends StatefulWidget {
 
 class _ProductCategoryFieldState extends State<ProductCategoryField> {
   late String _selected = widget.initialValue;
+  int _menuRevision = 0;
 
   List<String> get _options => {
         ...widget.categories,
@@ -41,8 +44,8 @@ class _ProductCategoryFieldState extends State<ProductCategoryField> {
   Widget build(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          DropdownButtonFormField<String>(
-            key: ValueKey(_selected),
+          DropdownButtonFormField<Object>(
+            key: ValueKey((_selected, _menuRevision)),
             initialValue: _options.contains(_selected) ? _selected : null,
             isExpanded: true,
             menuMaxHeight: 360,
@@ -51,36 +54,45 @@ class _ProductCategoryFieldState extends State<ProductCategoryField> {
               labelText: 'หมวดหมู่สินค้า',
               border: OutlineInputBorder(),
             ),
-            items: _options
-                .map((name) => DropdownMenuItem(
-                      value: name,
-                      child: Text(name, overflow: TextOverflow.ellipsis),
-                    ))
-                .toList(),
-            onChanged: _options.isEmpty
-                ? null
-                : (value) {
-                    if (value == null) return;
-                    setState(() => _selected = value);
-                    widget.onChanged(value);
-                  },
-            validator: (value) => value == null || value.isEmpty
+            items: [
+              ..._options.map((name) => DropdownMenuItem<Object>(
+                    value: name,
+                    child: Text(name, overflow: TextOverflow.ellipsis),
+                  )),
+              const DropdownMenuItem<Object>(
+                value: _CategoryAction.add,
+                child: Row(children: [
+                  Icon(Icons.add),
+                  SizedBox(width: 8),
+                  Flexible(
+                    child: Text('เพิ่มหมวดหมู่',
+                        key: ValueKey('add-category-menu'),
+                        overflow: TextOverflow.ellipsis),
+                  ),
+                ]),
+              ),
+            ],
+            onChanged: (value) {
+              if (value == _CategoryAction.add) {
+                // The menu action is not a category. Restore the previous
+                // FormField value even when the name dialog is cancelled.
+                setState(() => _menuRevision++);
+                _add();
+              } else if (value is String) {
+                setState(() => _selected = value);
+                widget.onChanged(value);
+              }
+            },
+            validator: (value) => value is! String || value.isEmpty
                 ? 'กรุณาเลือกหมวดหมู่สินค้า'
                 : null,
           ),
           if (_options.isEmpty)
             const Padding(
               padding: EdgeInsets.only(top: 8),
-              child: Text('ยังไม่มีหมวดหมู่ กดเพิ่มหมวดหมู่เพื่อเริ่มต้น'),
+              child:
+                  Text('ยังไม่มีหมวดหมู่ แตะช่องด้านบนแล้วเลือกเพิ่มหมวดหมู่'),
             ),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: _add,
-              icon: const Icon(Icons.add),
-              label: const Text('เพิ่มหมวดหมู่'),
-            ),
-          ),
         ],
       );
 }

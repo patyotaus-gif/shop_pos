@@ -1,5 +1,19 @@
 # Android pilot feedback — 2026-10-03
 
+## Published release - 1.2.57+74 (2026-10-22)
+
+- Owner authorized publishing the final category layout: category names first, `+ เพิ่มหมวดหมู่` at the bottom of the dropdown, no separate add button. Includes empty-shop creation and cancellation preserving the previous selection.
+- Latest receipt-feed patch remains held in stash `d16fb71b9218cfe90eadb88c70561dc984feb50e`; printing source matches release 73. Build 73 APK/manifest backed up privately and APK hash verified. iOS source version 1.2.57 only; owner starts Codemagic manually.
+- Release gates: all 257 Flutter tests and full Flutter analysis passed. Signed release APK built successfully (244.1 seconds): `app.pokpok.pos` 1.2.57+74, 95,133,698 bytes, SHA256 `8c49830eb937b0e14aa7ede9535f4e2ff02c68816d4141c2fad949c126252558`. Signing certificate matches release 73 (`f7dc70e0464fed06f8c0d14907ef71a75effb566e41e67d1aa685491dff547eb`).
+- Firebase Hosting published; full public APK downloaded and verified at `2026-10-21T13:45:51.953Z`. Manifest, hash/size, package/version and certificate verified; no-cache, optional update and minimum build 1 unchanged. Download: https://pok-pok.app/app/pokpok.apk. Evidence `.remember/tmp/release74-verified.json`. No functions, rules or production records changed. The source-only category status below is superseded; receipt patch remains held.
+
+## Add category from open phone menu - source follow-up (2026-10-22)
+
+- Owner reports the add-category button is visible on a tablet but not on a customer's Android phone. The supplied screenshot shows an open category menu; app build is not visible and has been requested. Current code does not hide the add button by device size. Its placement outside the popup can make it inaccessible while that menu is open; this is not proof of the customer's installed version or exact root cause.
+- Owner subsequently confirmed the user found the existing button and requested a layout change: no separate add button; add from the bottom of the category menu. Final implementation places `+ เพิ่มหมวดหมู่` after all category entries and removes the external button. The menu can open even for an empty shop. A typed action value cannot collide with category names and is never sent to product data. Selecting the action restores the field's previous value before the name dialog; cancelling preserves the prior selection, including required validation for an empty value.
+- Source only; no version bump/deployment. The held receipt-feed patch remains untouched in stash `d16fb71b9218cfe90eadb88c70561dc984feb50e`.
+- Final validation: all 14 category/viewport tests passed; targeted Flutter analysis clean. Tests open the menu on a 320 x 568 phone with bottom navigation padding, verify the action appears below category entries and no separate add button exists, add with keyboard insets, cancel with blank/existing selection, and add from an empty shop's menu. Logs `.remember/tmp/category-bottom-action-tests.log` and `category-bottom-action-analysis.log`.
+
 ## Published release - 1.2.56+73 (2026-10-19)
 
 - Owner authorized publishing the category picker and explicitly requested holding the latest receipt fix. All eight receipt-feed implementation/test files are excluded; their changes are preserved in Git stash `d16fb71b9218cfe90eadb88c70561dc984feb50e` and the private backup `.remember/tmp/held-receipt-feed-after72.patch` (apply check passed).
