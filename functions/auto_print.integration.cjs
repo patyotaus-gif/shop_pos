@@ -3,15 +3,15 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const {randomUUID} = require('node:crypto');
-const admin = require('firebase-admin');
+const {initializeApp, deleteApp} = require('firebase-admin/app'), firestoreSdk = require('firebase-admin/firestore');
 const {HttpsError} = require('firebase-functions/v2/https');
 const {initializeTestEnvironment, assertFails, assertSucceeds} = require('@firebase/rules-unit-testing');
 const {doc, setDoc, getDoc} = require('firebase/firestore');
 (async () => {
   assert.match(process.env.FIRESTORE_EMULATOR_HOST || '', /^(127\.0\.0\.1|localhost):\d+$/);
   const projectId = 'demo-pokpok-admin';
-  const app = admin.initializeApp({projectId}, 'auto-print-test');
-  const db = app.firestore(), FieldValue = admin.firestore.FieldValue;
+  const app = initializeApp({projectId}, 'auto-print-test');
+  const db = firestoreSdk.getFirestore(app), FieldValue = firestoreSdk.FieldValue;
   const env = await initializeTestEnvironment({projectId, firestore: {
     rules: fs.readFileSync(require('node:path').join(__dirname, '../firestore.rules'),'utf8'),
   }});
@@ -64,6 +64,6 @@ const {doc, setDoc, getDoc} = require('firebase/firestore');
     assert.equal((await shop.collection('moneyMovements').get()).size,0);
     console.log('PASS auto-print real transactions, duplicate triggers, three competing consumers, manual/auto coordination, new lines, ambiguous recovery, access rules and no money changes');
   } finally {
-    await db.recursiveDelete(shop); await env.cleanup(); await app.delete();
+    await db.recursiveDelete(shop); await env.cleanup(); await deleteApp(app);
   }
 })().catch(e=>{console.error(e);process.exitCode=1;});

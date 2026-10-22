@@ -1,5 +1,6 @@
 'use strict';
 const {owner, validId} = require('./order_accounting');
+const {runTransaction} = require('./transaction_retry');
 
 // Recover only table links. Never settle/cancel orders, stock, or money here.
 function handlers({db, FieldValue, HttpsError}) {
@@ -9,7 +10,7 @@ function handlers({db, FieldValue, HttpsError}) {
     if (!validId(tableId)) throw new HttpsError('invalid-argument', 'Invalid table');
     const shop = db.collection('shops').doc(shopId);
     const tableRef = shop.collection('tables').doc(tableId);
-    return db.runTransaction(async tx => {
+    return runTransaction(db, async tx => {
       const tableSnap = await tx.get(tableRef);
       if (!tableSnap.exists) throw new HttpsError('not-found', 'ไม่พบโต๊ะนี้');
       const table = tableSnap.data();

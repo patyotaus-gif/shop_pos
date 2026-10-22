@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const admin = require('firebase-admin');
+const {initializeApp, deleteApp} = require('firebase-admin/app'), firestoreSdk = require('firebase-admin/firestore');
 const { initializeTestEnvironment, assertFails } = require('@firebase/rules-unit-testing');
 const { doc, getDoc, setDoc } = require('firebase/firestore');
 const { HttpsError } = require('firebase-functions/v2/https');
@@ -8,7 +8,7 @@ const fs = require('node:fs'), path = require('node:path');
   assert.match(process.env.FIRESTORE_EMULATOR_HOST || '', /^(localhost|127\.0\.0\.1):\d+$/);
   const projectId = 'demo-pokpok-admin';
   const env = await initializeTestEnvironment({projectId, firestore: {rules: fs.readFileSync(path.join(__dirname, '../firestore.rules'),'utf8')}});
-  const app = admin.initializeApp({projectId}, 'line-link-test'), db = app.firestore();
+  const app = initializeApp({projectId}, 'line-link-test'), db = firestoreSdk.getFirestore(app);
   const shopId = 'line-owner';
   const request = {auth:{uid:shopId,token:{}},data:{shopId}};
   const api = require('./line_link').handlers({db,HttpsError});
@@ -28,5 +28,5 @@ const fs = require('node:fs'), path = require('node:path');
     assert.equal(linked.lineNotifyEnabled,true);
     assert.equal((await api.status(request)).status,'connected');
     console.log('PASS LINE linking: server-only challenges, owner authorization, atomic single-use recipient binding');
-  } finally { await env.cleanup(); await app.delete(); }
+  } finally { await env.cleanup(); await deleteApp(app); }
 })().catch(error => { console.error(error); process.exitCode=1; });

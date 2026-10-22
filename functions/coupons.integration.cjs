@@ -1,7 +1,7 @@
 // Isolated demo emulator: real transactions + rules, no live customer data.
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {randomUUID,randomBytes}=require('node:crypto');
-const admin=require('firebase-admin');
+const {initializeApp, deleteApp} = require('firebase-admin/app'), firestoreSdk = require('firebase-admin/firestore');
 const {initializeTestEnvironment,assertFails,assertSucceeds}=require('@firebase/rules-unit-testing');
 const {doc,getDoc,setDoc,updateDoc,deleteDoc}=require('firebase/firestore');
 const {HttpsError}=require('firebase-functions/v2/https');
@@ -9,7 +9,7 @@ const {HttpsError}=require('firebase-functions/v2/https');
   assert.match(process.env.FIRESTORE_EMULATOR_HOST||'',/^(127\.0\.0\.1|localhost):\d+$/);
   const projectId='demo-pokpok-admin';
   const env=await initializeTestEnvironment({projectId,firestore:{rules:fs.readFileSync(path.join(__dirname,'../firestore.rules'),'utf8')}});
-  const app=admin.initializeApp({projectId},'coupon-tests'),db=app.firestore(),FieldValue=admin.firestore.FieldValue;
+  const app=initializeApp({projectId},'coupon-tests'),db=firestoreSdk.getFirestore(app),FieldValue=firestoreSdk.FieldValue;
   const shopId='coupon-'+randomUUID(),shop=db.collection('shops').doc(shopId);
   try {
     await shop.set({name:'Coupon test'});
@@ -21,7 +21,7 @@ const {HttpsError}=require('firebase-functions/v2/https');
     const couponRef=shop.collection('coupons').doc('SAVE20');
     const source=fs.readFileSync(require.resolve('./index'),'utf8'),exports={};
     require('node:vm').runInNewContext(source.slice(source.indexOf('exports.createPromptPayOrder ='),source.indexOf('exports.stripeWebhook =')),
-      {exports,onRequest:(_,fn)=>fn,admin:{firestore:Object.assign(()=>({collection:db.collection.bind(db),runTransaction:fn=>db.runTransaction(tx=>Promise.resolve(fn(tx)))}),{FieldValue})},
+      {exports,onRequest:(_,fn)=>fn,firestoreSdk:{getFirestore:()=>({collection:db.collection.bind(db),runTransaction:fn=>db.runTransaction(tx=>Promise.resolve(fn(tx)))}),FieldValue},
         _verifyAppCheck:async()=>true,loadModifierGroups:async()=>({}),priceLine:require('./tableorder').priceLine,
         pickupScheduling:require('./pickup'),require,console});
     const call=async(fn,body)=>{
@@ -76,5 +76,5 @@ const {HttpsError}=require('firebase-functions/v2/https');
     await assertFails(deleteDoc(doc(ownerDb,orderPath)));
     await assertFails(setDoc(doc(ownerDb,`shops/${shopId}/orders/fake`),{coupon:{code:'SAVE20'}}));
     console.log('PASS coupon pricing, concurrency, replay, cancellation, sale/receipt/closing/refund and owner/staff/public rules');
-  } finally {await db.recursiveDelete(shop);await env.cleanup();await app.delete();}
+  } finally {await db.recursiveDelete(shop);await env.cleanup();await deleteApp(app);}
 })().catch(error=>{console.error(error);process.exitCode=1;});

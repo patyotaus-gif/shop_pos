@@ -1,19 +1,19 @@
 // Firestore emulator only. Gateway responses are fixtures; no external payments.
 const assert=require('node:assert/strict'), fs=require('node:fs'), path=require('node:path');
-const admin=require('firebase-admin');
+const {initializeApp, deleteApp} = require('firebase-admin/app'), firestoreSdk = require('firebase-admin/firestore');
 const {initializeTestEnvironment,assertFails}=require('@firebase/rules-unit-testing');
 const {doc,getDoc,setDoc}=require('firebase/firestore');
 const {randomUUID}=require('node:crypto');
 const {handlers}=require('./omise_sandbox');
 (async()=>{
   if(!process.env.FIRESTORE_EMULATOR_HOST)throw Error('Emulator required');
-  const projectId='demo-pokpok-admin', app=admin.initializeApp({projectId},'omise-sandbox-test');
+  const projectId='demo-pokpok-admin', app=initializeApp({projectId},'omise-sandbox-test');
   const env=await initializeTestEnvironment({projectId,firestore:{rules:fs.readFileSync(path.join(__dirname,'../firestore.rules'),'utf8')}});
   try{
-    const db=app.firestore(),id=randomUUID();let charges=0;
+    const db=firestoreSdk.getFirestore(app),id=randomUUID();let charges=0;
     const shop=db.doc('shops/omise-integration-real');
     await shop.set({name:'Untouched fixture'});await shop.collection('sales').doc('old').set({total:777});
-    const h=handlers({db,FieldValue:admin.firestore.FieldValue,assertFounder:r=>{assert.equal(r.auth.uid,'founder');},
+    const h=handlers({db,FieldValue:firestoreSdk.FieldValue,assertFounder:r=>{assert.equal(r.auth.uid,'founder');},
       api:async(p,form)=>{
         if(p.startsWith('/tokens'))return {object:'token',id:'tokn_test_fixture',livemode:false,used:false,card:{id:'card_test_fixture'}};
         if(form)charges++;
@@ -32,5 +32,5 @@ const {handlers}=require('./omise_sandbox');
       await assertFails(getDoc(ref));await assertFails(setDoc(ref,{status:'successful'}));
     }
     console.log('PASS: real Firestore concurrent single-charge claim, isolated writes, all direct client access denied');
-  }finally{await env.cleanup();await app.delete();}
+  }finally{await env.cleanup();await deleteApp(app);}
 })().catch(e=>{console.error(e);process.exitCode=1;});

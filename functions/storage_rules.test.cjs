@@ -28,8 +28,21 @@ const {ref, uploadBytes, getBytes, deleteObject} = require('firebase/storage');
     await assertFails(uploadBytes(ref(owner, logo), new Uint8Array(5 * 1024 * 1024 + 1), image));
     await assertFails(uploadBytes(ref(owner, 'shops/shop-a/private.txt'), bytes, image));
     await assertSucceeds(uploadBytes(ref(owner, 'shops/shop-a/products/test.jpg'), bytes, image));
+    const product = 'shops/shop-a/products/product.jpg';
+    await assertSucceeds(uploadBytes(ref(owner, product), bytes, image));
+    await assertSucceeds(getBytes(ref(guest, product)));
+    for (const type of ['text/html', 'application/javascript', 'image/svg+xml', 'application/octet-stream']) {
+      await assertFails(uploadBytes(ref(owner, product), bytes, {contentType: type}));
+    }
+    await assertSucceeds(uploadBytes(ref(owner, product), new Uint8Array(5 * 1024 * 1024), image));
+    await assertFails(uploadBytes(ref(owner, product), new Uint8Array(5 * 1024 * 1024 + 1), image));
+    for (const actor of [other, staff, guest]) {
+      await assertFails(uploadBytes(ref(actor, product), bytes, image));
+      await assertFails(deleteObject(ref(actor, product)));
+    }
+    await assertSucceeds(deleteObject(ref(owner, product)));
     await assertSucceeds(deleteObject(ref(owner, logo)));
-    console.log('Storage rules passed: owner logo create/update/delete, public read, foreign/staff/anonymous denial, type/size/path limits, product compatibility.');
+    console.log('Storage rules passed: owner logo/product create/update/delete, public read, foreign/staff/anonymous denial, active-content denial and 5 MiB product limit.');
   } finally {
     await env.cleanup();
   }

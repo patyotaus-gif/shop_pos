@@ -1,6 +1,6 @@
 // Real transactions/rules against the isolated demo emulator only.
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
-const {randomUUID,randomBytes}=require('node:crypto'),admin=require('firebase-admin');
+const {randomUUID,randomBytes}=require('node:crypto'),{initializeApp, deleteApp} = require('firebase-admin/app'), firestoreSdk = require('firebase-admin/firestore');
 const {initializeTestEnvironment,assertFails,assertSucceeds}=require('@firebase/rules-unit-testing');
 const {doc,getDoc,setDoc,updateDoc,deleteDoc}=require('firebase/firestore');
 const {HttpsError}=require('firebase-functions/v2/https');
@@ -8,7 +8,7 @@ const {HttpsError}=require('firebase-functions/v2/https');
   assert.match(process.env.FIRESTORE_EMULATOR_HOST||'',/^(127\.0\.0\.1|localhost):\d+$/);
   const projectId='demo-pokpok-admin';
   const env=await initializeTestEnvironment({projectId,firestore:{rules:fs.readFileSync(path.join(__dirname,'../firestore.rules'),'utf8')}});
-  const app=admin.initializeApp({projectId},'buy-get-tests'),db=app.firestore(),FieldValue=admin.firestore.FieldValue;
+  const app=initializeApp({projectId},'buy-get-tests'),db=firestoreSdk.getFirestore(app),FieldValue=firestoreSdk.FieldValue;
   const shopId='gifts-'+randomUUID(),shop=db.collection('shops').doc(shopId);
   try {
     await shop.set({name:'Gift tests'});
@@ -21,7 +21,7 @@ const {HttpsError}=require('firebase-functions/v2/https');
     const promotion=shop.collection('buyGetPromotions').doc('tea');
     const source=fs.readFileSync(require.resolve('./index'),'utf8'),exports={};
     require('node:vm').runInNewContext(source.slice(source.indexOf('exports.createPromptPayOrder ='),source.indexOf('exports.stripeWebhook =')),
-      {exports,onRequest:(_,fn)=>fn,admin:{firestore:Object.assign(()=>({collection:db.collection.bind(db),runTransaction:fn=>db.runTransaction(tx=>Promise.resolve(fn(tx)))}),{FieldValue})},_verifyAppCheck:async()=>true,
+      {exports,onRequest:(_,fn)=>fn,firestoreSdk:{getFirestore:()=>({collection:db.collection.bind(db),runTransaction:fn=>db.runTransaction(tx=>Promise.resolve(fn(tx)))}),FieldValue},_verifyAppCheck:async()=>true,
         loadModifierGroups:async()=>({}),priceLine:require('./tableorder').priceLine,pickupScheduling:require('./pickup'),require,console});
     const call=async(fn,body)=>{
       const result={status:200},res={set(){},status(n){result.status=n;return this;},json(data){result.data=data;},send(){}};
@@ -64,10 +64,10 @@ const {HttpsError}=require('firebase-functions/v2/https');
     assert.equal((await shop.collection('products').doc('cake').get()).data().stock,1);
     assert.equal((await shop.collection('products').doc('tea').get()).data().stock,20);
     // The same promotion also runs through authenticated cashier checkout.
-    await shop.update({tier:'full',subscriptionStatus:'trial',trialEndsAt:admin.firestore.Timestamp.fromMillis(Date.now()+86400000)});
+    await shop.update({tier:'full',subscriptionStatus:'trial',trialEndsAt:firestoreSdk.Timestamp.fromMillis(Date.now()+86400000)});
     await manage(owner({action:'toggle',buyProductId:'tea',active:true}));
     let claims;
-    const staff=require('./staff_access').createStaffAccess({db,FieldValue,Timestamp:admin.firestore.Timestamp,
+    const staff=require('./staff_access').createStaffAccess({db,FieldValue,Timestamp:firestoreSdk.Timestamp,
       auth:{createCustomToken:async(uid,token)=>{claims={uid,token};return 'test-token';}}});
     const member=await staff.manage(owner({name:'Cashier',pin:'123456'}));
     await staff.switchSession(owner({staffId:member.id,pin:'123456'}));
@@ -97,5 +97,5 @@ const {HttpsError}=require('firebase-functions/v2/https');
     await assertFails(deleteDoc(doc(ownerDb,shop.collection('orders').doc(id).path)));
     await assertFails(setDoc(doc(ownerDb,`shops/${shopId}/orders/forged`),{buyGet:q.data.buyGet}));
     console.log('PASS buy/get web and cashier concurrency, reservations, replay, cancellation, costs, payment, closing, refund and access rules');
-  } finally {await db.recursiveDelete(shop);await env.cleanup();await app.delete();}
+  } finally {await db.recursiveDelete(shop);await env.cleanup();await deleteApp(app);}
 })().catch(error=>{console.error(error);process.exitCode=1;});

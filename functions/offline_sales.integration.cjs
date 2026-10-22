@@ -1,13 +1,13 @@
 const assert=require('node:assert/strict');
-const admin=require('firebase-admin');
+const {initializeApp, deleteApp} = require('firebase-admin/app'), firestoreSdk = require('firebase-admin/firestore');
 const {createOfflineSales}=require('./offline_sales');
 (async()=>{
  if(!process.env.FIRESTORE_EMULATOR_HOST)throw Error('Emulator required');
- const app=admin.initializeApp({projectId:'demo-pokpok-admin'},'offline-integration'),db=app.firestore();
+ const app=initializeApp({projectId:'demo-pokpok-admin'},'offline-integration'),db=firestoreSdk.getFirestore(app);
  let clock=new Date('2026-09-26T08:00:00Z');
- const api=createOfflineSales({db,Timestamp:admin.firestore.Timestamp,FieldValue:admin.firestore.FieldValue,now:()=>clock});
+ const api=createOfflineSales({db,Timestamp:firestoreSdk.Timestamp,FieldValue:firestoreSdk.FieldValue,now:()=>clock});
  const shop=db.doc('shops/offline-test-owner'),owner={auth:{uid:shop.id,token:{}},data:{}};
- await shop.set({name:'Offline shop',tier:'full',subscriptionStatus:'trial',trialEndsAt:admin.firestore.Timestamp.fromDate(new Date('2027-01-01'))});
+ await shop.set({name:'Offline shop',tier:'full',subscriptionStatus:'trial',trialEndsAt:firestoreSdk.Timestamp.fromDate(new Date('2027-01-01'))});
  await shop.collection('products').doc('rice').set({name:'Rice',price:50,costPrice:20,stock:3});
  await shop.collection('settings').doc('shop').set({name:'Original issuer',address:'Address',taxId:'9100192800912',receiptVatEnabled:true,receiptVatRate:7});
  const permit=await api.prepare(owner);
@@ -45,5 +45,5 @@ const {createOfflineSales}=require('./offline_sales');
  assert(late.review.some(v=>v.includes('หมดอายุ')));
  await assert.rejects(api.sync({auth:{uid:'unrelated',token:{}},data}),e=>e.code==='permission-denied');
  console.log('Offline integration passed: immutable pricing, concurrent idempotency, stock conflicts, late/revoked staff recovery, deleted products, forged totals/secrets and expiry.');
- await app.delete();
+ await deleteApp(app);
 })().catch(e=>{console.error(e);process.exitCode=1;});

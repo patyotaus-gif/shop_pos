@@ -1,6 +1,6 @@
 // Isolated demo emulator: never connect to live shop data.
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
-const {randomUUID,randomBytes}=require('node:crypto'),admin=require('firebase-admin');
+const {randomUUID,randomBytes}=require('node:crypto'),{initializeApp, deleteApp} = require('firebase-admin/app'), firestoreSdk = require('firebase-admin/firestore');
 const {initializeTestEnvironment,assertFails,assertSucceeds}=require('@firebase/rules-unit-testing');
 const {doc,getDoc,setDoc,updateDoc,deleteDoc}=require('firebase/firestore');
 const {HttpsError}=require('firebase-functions/v2/https');
@@ -8,10 +8,10 @@ const {HttpsError}=require('firebase-functions/v2/https');
   assert.match(process.env.FIRESTORE_EMULATOR_HOST||'',/^(127\.0\.0\.1|localhost):\d+$/);
   const projectId='demo-pokpok-admin';
   const env=await initializeTestEnvironment({projectId,firestore:{rules:fs.readFileSync(path.join(__dirname,'../firestore.rules'),'utf8')}});
-  const app=admin.initializeApp({projectId},'bundle-tests'),db=app.firestore(),FieldValue=admin.firestore.FieldValue;
+  const app=initializeApp({projectId},'bundle-tests'),db=firestoreSdk.getFirestore(app),FieldValue=firestoreSdk.FieldValue;
   const shopId='bundles-'+randomUUID(),shop=db.collection('shops').doc(shopId);
   try {
-    await shop.set({name:'Bundle tests',tier:'full',subscriptionStatus:'trial',trialEndsAt:admin.firestore.Timestamp.fromMillis(Date.now()+86400000)});
+    await shop.set({name:'Bundle tests',tier:'full',subscriptionStatus:'trial',trialEndsAt:firestoreSdk.Timestamp.fromMillis(Date.now()+86400000)});
     await shop.collection('settings').doc('shop').set({promptpayId:'0812345678'});
     await shop.collection('products').doc('tea').set({name:'Tea',price:50,stock:20,costPrice:10});
     await shop.collection('products').doc('cake').set({name:'Cake',price:25,stock:2,costPrice:5});
@@ -26,7 +26,7 @@ const {HttpsError}=require('firebase-functions/v2/https');
     const source=fs.readFileSync(require.resolve('./index'),'utf8'),exports={};
     require('node:vm').runInNewContext(source.slice(source.indexOf('exports.createPromptPayOrder ='),source.indexOf('exports.stripeWebhook ='))
       .replace('const known = error.couponError',"if (!error.couponError && !error.buyGetError && !error.bundleError) console.error(error); const known = error.couponError"),
-      {exports,onRequest:(_,fn)=>fn,admin:{firestore:Object.assign(()=>({collection:db.collection.bind(db),runTransaction:fn=>db.runTransaction(tx=>Promise.resolve(fn(tx)))}),{FieldValue})},_verifyAppCheck:async()=>true,
+      {exports,onRequest:(_,fn)=>fn,firestoreSdk:{getFirestore:()=>({collection:db.collection.bind(db),runTransaction:fn=>db.runTransaction(tx=>Promise.resolve(fn(tx)))}),FieldValue},_verifyAppCheck:async()=>true,
         loadModifierGroups:async()=>({}),priceLine:require('./tableorder').priceLine,pickupScheduling:require('./pickup'),require,console});
     const call=async(fn,body)=>{
       const result={status:200},res={set(){},status(n){result.status=n;return this;},json(data){result.data=data;},send(){}};
@@ -43,6 +43,7 @@ const {HttpsError}=require('firebase-functions/v2/https');
       customerToken:randomBytes(32).toString('hex'),requestId:randomUUID()});
     const a=payload(),b=payload(),both=await Promise.all([checkout(a),checkout(b)]);
     assert.equal(both.filter(r=>r.status===200).length,1,'reservation includes bundle items plus gifts');
+    assert.equal(both.find(r=>r.status!==200).status,409,'losing checkout reports a stock/promotion conflict, not a transaction failure');
     const winner=both[0].status===200?a:b;
     const replay=await checkout(winner);assert.equal(replay.status,200);assert.equal(replay.data.total,90);
     const originalId=replay.data.orderId;
@@ -69,7 +70,7 @@ const {HttpsError}=require('firebase-functions/v2/https');
     assert.equal((await shop.collection('products').doc('cake').get()).data().stock,2);
     await manage(owner(cfg));
     let claims;
-    const staff=require('./staff_access').createStaffAccess({db,FieldValue,Timestamp:admin.firestore.Timestamp,
+    const staff=require('./staff_access').createStaffAccess({db,FieldValue,Timestamp:firestoreSdk.Timestamp,
       auth:{createCustomToken:async(uid,token)=>{claims={uid,token};return 'test-token';}}});
     const member=await staff.manage(owner({name:'Cashier',pin:'123456'}));await staff.switchSession(owner({staffId:member.id,pin:'123456'}));
     const catalog=await staff.bundleCatalog({auth:claims});assert.equal(catalog.bundles[0].priceMinor,10000);
@@ -95,5 +96,5 @@ const {HttpsError}=require('firebase-functions/v2/https');
     await assertFails(deleteDoc(doc(ownerDb,shop.collection('orders').doc(id).path)));
     await assertFails(setDoc(doc(ownerDb,`shops/${shopId}/orders/forged`),{bundles:q.data.bundles}));
     console.log('PASS bundles: web/counter, simultaneous reservations, coupon+gift, replay, net ledger/close, refund and access rules');
-  } finally {await db.recursiveDelete(shop);await env.cleanup();await app.delete();}
+  } finally {await db.recursiveDelete(shop);await env.cleanup();await deleteApp(app);}
 })().catch(error=>{console.error(error);process.exitCode=1;});

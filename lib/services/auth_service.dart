@@ -74,7 +74,7 @@ class AuthService {
   /// Bootstrap founder allowlist — mirrors FOUNDER_EMAILS in
   /// functions/index.js. Additional founders are granted the `founder` custom
   /// claim (see [refreshFounderClaim]); this list just keeps the original
-  /// founder working without waiting on a token refresh. Either way the
+  /// verified founder working without waiting on a token refresh. Either way the
   /// security boundary is server-side — this only shows/hides UI.
   static const _founderEmails = {'patyotaus@gmail.com'};
 
@@ -85,7 +85,10 @@ class AuthService {
   static bool get isFounder {
     if (isStaff) return false;
     final email = _auth.currentUser?.email?.toLowerCase();
-    return _founderClaim || (email != null && _founderEmails.contains(email));
+    return _founderClaim ||
+        (_auth.currentUser?.emailVerified == true &&
+            email != null &&
+            _founderEmails.contains(email));
   }
 
   /// Re-reads the `founder` custom claim from the current user's ID token and
@@ -101,8 +104,8 @@ class AuthService {
       final res = await user.getIdTokenResult(forceRefresh);
       _founderClaim = res.claims?['founder'] == true;
     } catch (_) {
-      // Keep the cached value; the email fallback still covers the bootstrap
-      // founder if the token fetch fails.
+      // Keep the cached value; the verified email fallback still covers the
+      // bootstrap founder if the token fetch fails.
     }
   }
 

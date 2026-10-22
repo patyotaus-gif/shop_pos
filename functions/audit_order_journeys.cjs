@@ -3,17 +3,17 @@
 // Must be run against an isolated Firestore emulator only.
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
-const admin = require('firebase-admin');
+const {initializeApp, deleteApp} = require('firebase-admin/app'), firestoreSdk = require('firebase-admin/firestore');
 const { confirmOrder } = require('./order_accounting');
 (async () => {
   if (!process.env.FIRESTORE_EMULATOR_HOST) throw Error('Emulator required');
-  const app = admin.initializeApp({ projectId: 'demo-pokpok-admin' }, 'audit-journeys');
+  const app = initializeApp({ projectId: 'demo-pokpok-admin' }, 'audit-journeys');
   try {
-    const db = app.firestore(), FieldValue = admin.firestore.FieldValue;
+    const db = firestoreSdk.getFirestore(app), FieldValue = firestoreSdk.FieldValue;
     const source = fs.readFileSync(require.resolve('./index'), 'utf8');
     const exported = {}, scope = {
       exports: exported, onRequest: (_, handler) => handler,
-      admin: { firestore: Object.assign(() => db, { FieldValue }) },
+      firestoreSdk: { getFirestore: () => db, FieldValue },
       _verifyAppCheck: async () => true, loadModifierGroups: async () => ({}),
       priceLine: require('./tableorder').priceLine, pickupScheduling: require('./pickup'), require, console,
     };
@@ -65,5 +65,5 @@ const { confirmOrder } = require('./order_accounting');
     const report = { version: '1.2.38+55', type: 'actual HTTP handler and accounting module on Firestore emulator; App Check stubbed, no bank transfer', findings };
     fs.writeFileSync('../.remember/tmp/audit56-backend-findings.json', JSON.stringify(report, null, 2));
     console.log(JSON.stringify(report, null, 2));
-  } finally { await app.delete(); }
+  } finally { await deleteApp(app); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

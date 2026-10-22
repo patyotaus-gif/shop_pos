@@ -1,13 +1,13 @@
 // Local emulator only: no production order or payment is created.
 const assert = require('node:assert/strict');
-const admin = require('firebase-admin');
+const {initializeApp, deleteApp} = require('firebase-admin/app'), firestoreSdk = require('firebase-admin/firestore');
 const { initializeTestEnvironment, assertFails } = require('@firebase/rules-unit-testing');
 const { doc, setDoc } = require('firebase/firestore');
 const { slots, createWithPickup, availability } = require('./pickup');
 (async () => {
   if (!process.env.FIRESTORE_EMULATOR_HOST) throw Error('Emulator required');
-  const app = admin.initializeApp({ projectId: 'demo-pokpok-admin' }, 'pickup-integration');
-  const db = app.firestore(), shopRef = db.doc('shops/pickup-owner');
+  const app = initializeApp({ projectId: 'demo-pokpok-admin' }, 'pickup-integration');
+  const db = firestoreSdk.getFirestore(app), shopRef = db.doc('shops/pickup-owner');
   const now = Date.parse('2026-10-07T02:00:00Z');
   const pickup = { enabled: true, capacity: 1 };
   await shopRef.collection('settings').doc('shop').set({ pickup });
@@ -32,7 +32,7 @@ const { slots, createWithPickup, availability } = require('./pickup');
   const exported = {};
   require('node:vm').runInNewContext(source.slice(source.indexOf('exports.createPromptPayOrder ='), source.indexOf('exports.stripeWebhook =')), {
     exports: exported, onRequest: (_, handler) => handler,
-    admin: { firestore: Object.assign(() => db, { FieldValue: admin.firestore.FieldValue }) },
+    firestoreSdk: { getFirestore: () => db, FieldValue: firestoreSdk.FieldValue },
     _verifyAppCheck: async () => true, loadModifierGroups: async () => ({}),
     priceLine: require('./tableorder').priceLine, pickupScheduling: require('./pickup'), require, console,
   });
@@ -62,6 +62,6 @@ const { slots, createWithPickup, availability } = require('./pickup');
     await assertFails(setDoc(doc(owner, 'shops/pickup-owner/pickupSlots/control'), { revision: 0 }));
     const guest = env.unauthenticatedContext().firestore();
     await assertFails(setDoc(doc(guest, 'shops/pickup-owner/orders/forged'), { pickupSlot: slot.id }));
-  } finally { await env.cleanup(); await app.delete(); }
+  } finally { await env.cleanup(); await deleteApp(app); }
   console.log('PASS pickup real transaction concurrency, retry, cancellation, timezone, no premature sales, protected slot control');
 })().catch(error => { console.error(error); process.exitCode = 1; });

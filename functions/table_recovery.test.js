@@ -64,3 +64,20 @@ test('unauthenticated, staff and another owner cannot recover this shop tables',
   }
   assert.equal(f.docs.get(tablePath).status, 'occupied');
 });
+
+test('retry re-reads a new live bill instead of clearing the previously closed table', async () => {
+  const f=setup({status:'occupied',currentOrderId:'old'}, {old:{tableId:'t',status:'closed'}});
+  const original=f.db.runTransaction;let first=true;
+  f.db.runTransaction=async action=>{
+    if(first){
+      first=false;
+      f.docs.set(root+'/tableOrders/new',{tableId:'t',status:'open'});
+      f.docs.set(tablePath,{status:'occupied',currentOrderId:'new'});
+      throw Object.assign(new Error('Transaction is invalid or closed.'),{code:3});
+    }
+    return original(action);
+  };
+  assert.deepEqual(await f.run(request),{status:'occupied',orderId:'new'});
+  assert.equal(f.docs.get(tablePath).currentOrderId,'new');
+  assert.equal(f.docs.get(root+'/tableOrders/new').status,'open');
+});

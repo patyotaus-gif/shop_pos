@@ -53,6 +53,22 @@ test('reject stale, disabled, paused and dine-in scheduling, without creating or
   await f.create('asap', undefined);
   assert.equal(f.docs.get('shops/s/orders/asap').pickupMode, 'asap');
 });
+
+test('closed transaction after reservation commit recovers without reserving the slot twice', async () => {
+  const f = setup(), slot = slots(settings, now)[0];
+  const original = f.db.runTransaction;
+  let attempts = 0;
+  f.db.runTransaction = async action => {
+    const result = await original(action);
+    if (++attempts === 1) throw Object.assign(new Error('Transaction is invalid or closed.'), {code: 3});
+    return result;
+  };
+  const result = await f.create('one', slot.id);
+  assert.equal(attempts, 2);
+  assert.equal(result.total, 50);
+  assert.equal(f.docs.get('shops/s/pickupSlots/control').revision, 1);
+  assert.equal([...f.docs.keys()].filter(p => p.startsWith('shops/s/orders/')).length, 1);
+});
 test('changing opening time/slot length cannot hide overlapping existing reservations', async () => {
   const original = { ...settings, slotMinutes: 60 };
   const f = setup(original), old = slots(original, now)[0];

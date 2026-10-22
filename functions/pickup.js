@@ -55,7 +55,7 @@ async function availability(shopRef, raw, now = Date.now()) {
     slots: snapshot.size > 2000 ? [] : options.filter(s => overlapping(snapshot.docs, s) < c.capacity) };
 }
 async function createWithPickup({ db, shopRef, orderRef, order: originalOrder, requestedSlot, pickupMode, now = () => Date.now() }) {
-  return db.runTransaction(async tx => {
+  return require('./transaction_retry').runTransaction(db, async tx => {
     // Firestore may retry this callback after a competing checkout commits.
     // Always recheck the original coupon and undiscounted amount on each run.
     let order = {...originalOrder};

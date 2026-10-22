@@ -1,6 +1,6 @@
 // Local demo Firestore only. Exercises real transactions and client rules.
 const assert=require('node:assert/strict'),{randomUUID}=require('node:crypto');
-const admin=require('firebase-admin'),{HttpsError}=require('firebase-functions/v2/https');
+const {initializeApp, deleteApp} = require('firebase-admin/app'), firestoreSdk = require('firebase-admin/firestore'),{HttpsError}=require('firebase-functions/v2/https');
 const {initializeTestEnvironment,assertFails,assertSucceeds}=require('@firebase/rules-unit-testing');
 const {doc,updateDoc,setDoc,deleteDoc}=require('firebase/firestore');
 const fs=require('node:fs'),path=require('node:path');
@@ -8,7 +8,7 @@ const fs=require('node:fs'),path=require('node:path');
   assert.match(process.env.FIRESTORE_EMULATOR_HOST||'',/^(127\.0\.0\.1|localhost):\d+$/);
   const projectId='demo-pokpok-admin';
   const env=await initializeTestEnvironment({projectId,firestore:{rules:fs.readFileSync(path.join(__dirname,'../firestore.rules'),'utf8')}});
-  const app=admin.initializeApp({projectId},'table-promotions'),db=app.firestore(),FieldValue=admin.firestore.FieldValue;
+  const app=initializeApp({projectId},'table-promotions'),db=firestoreSdk.getFirestore(app),FieldValue=firestoreSdk.FieldValue;
   const shopId='table-promo-'+randomUUID(),shop=db.collection('shops').doc(shopId);
   const call=data=>require('./table_promotions').handlers({db,FieldValue,HttpsError})({auth:{uid:shopId,token:{}},data:{shopId,orderId:'o',...data}});
   try {
@@ -81,5 +81,5 @@ const fs=require('node:fs'),path=require('node:path');
     assert.equal(retained.retainedGifts[0].reason,'ร้านให้ของแถมเดิม');
     assert.equal(retained.stockDeducted.cake,2);
     console.log('PASS table promotions: sync/send races, retained gift audit, rules, net cash close and next-round refund');
-  } finally {await db.recursiveDelete(shop);await env.cleanup();await app.delete();}
+  } finally {await db.recursiveDelete(shop);await env.cleanup();await deleteApp(app);}
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -1,15 +1,15 @@
 // Demo-only Firestore: weighted checkout races, expired lots and history access.
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
-const {randomUUID}=require('node:crypto'),admin=require('firebase-admin');
+const {randomUUID}=require('node:crypto'),{initializeApp, deleteApp} = require('firebase-admin/app'), firestoreSdk = require('firebase-admin/firestore');
 const {initializeTestEnvironment,assertFails,assertSucceeds}=require('@firebase/rules-unit-testing');
 const {doc,getDoc,setDoc,updateDoc,deleteDoc}=require('firebase/firestore');
 (async()=>{
   assert.match(process.env.FIRESTORE_EMULATOR_HOST||'',/^(127\.0\.0\.1|localhost):\d+$/);
-  const projectId='demo-pokpok-admin',app=admin.initializeApp({projectId},'inventory-tests'),db=app.firestore(),FieldValue=admin.firestore.FieldValue;
+  const projectId='demo-pokpok-admin',app=initializeApp({projectId},'inventory-tests'),db=firestoreSdk.getFirestore(app),FieldValue=firestoreSdk.FieldValue;
   const env=await initializeTestEnvironment({projectId,firestore:{rules:fs.readFileSync(path.join(__dirname,'../firestore.rules'),'utf8')}});
   const shopId='inventory-'+randomUUID(),shop=db.collection('shops').doc(shopId);
   try {
-    await shop.set({name:'Inventory tests',tier:'full',subscriptionStatus:'trial',trialEndsAt:admin.firestore.Timestamp.fromMillis(Date.now()+86400000)});
+    await shop.set({name:'Inventory tests',tier:'full',subscriptionStatus:'trial',trialEndsAt:firestoreSdk.Timestamp.fromMillis(Date.now()+86400000)});
     await shop.collection('settings').doc('shop').set({promptpayId:'0812345678'});
     await shop.collection('products').doc('rice').set({name:'Rice',price:80,stock:0.5,isWeighed:true,unit:'kg',trackLots:true,
       stockLots:[{id:'first',number:'L1',expiresOn:'2099-01-01',quantity:0.25},{id:'second',number:'L2',expiresOn:'2099-12-31',quantity:0.25}]});
@@ -42,5 +42,5 @@ const {doc,getDoc,setDoc,updateDoc,deleteDoc}=require('firebase/firestore');
     await assertSucceeds(setDoc(doc(owner,'shops/'+shopId+'/productSkus/RICE'),{productId:'rice'}));
     await assertFails(getDoc(doc(other,'shops/'+shopId+'/productSkus/RICE')));
     console.log('PASS weighted reservation race, FEFO, idempotent sale/refund, immutable owner-only inventory history');
-  } finally {await db.recursiveDelete(shop);await env.cleanup();await app.delete();}
+  } finally {await db.recursiveDelete(shop);await env.cleanup();await deleteApp(app);}
 })().catch(e=>{console.error(e);process.exitCode=1;});

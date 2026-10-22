@@ -1,16 +1,16 @@
 // Firestore emulator only. Never touches real customers or mints a real token.
 const assert=require('node:assert/strict');
-const admin=require('firebase-admin');
+const {initializeApp, deleteApp} = require('firebase-admin/app'), firestoreSdk = require('firebase-admin/firestore');
 const {createStaffAccess}=require('./staff_access');
 (async()=>{
  if(!process.env.FIRESTORE_EMULATOR_HOST)throw Error('Emulator required');
- const app=admin.initializeApp({projectId:'demo-pokpok-admin'},'staff-integration');
- const db=app.firestore();
+ const app=initializeApp({projectId:'demo-pokpok-admin'},'staff-integration');
+ const db=firestoreSdk.getFirestore(app);
  let clock=new Date('2026-09-26T08:00:00Z'),claims;
- const api=createStaffAccess({db,auth:{createCustomToken:async(uid,c)=>{claims={uid,token:c};return 'test-token';}},FieldValue:admin.firestore.FieldValue,Timestamp:admin.firestore.Timestamp,now:()=>clock});
+ const api=createStaffAccess({db,auth:{createCustomToken:async(uid,c)=>{claims={uid,token:c};return 'test-token';}},FieldValue:firestoreSdk.FieldValue,Timestamp:firestoreSdk.Timestamp,now:()=>clock});
  const owner={auth:{uid:'staff-test-owner',token:{}},data:{}};
  const shop=db.doc('shops/staff-test-owner');
- await shop.set({name:'Test shop',tier:'full',shopType:'retail',subscriptionStatus:'trial',trialEndsAt:admin.firestore.Timestamp.fromDate(new Date('2027-01-01'))});
+ await shop.set({name:'Test shop',tier:'full',shopType:'retail',subscriptionStatus:'trial',trialEndsAt:firestoreSdk.Timestamp.fromDate(new Date('2027-01-01'))});
  const created=await api.manage({...owner,data:{name:'Cashier',pin:'123456'}});
  const ref=shop.collection('staff').doc(created.id);
  assert.equal((await ref.get()).data().pin,undefined);
@@ -47,5 +47,5 @@ const {createStaffAccess}=require('./staff_access');
  await assert.rejects(api.workspace({auth:claims,data:{}}),e=>e.code==='permission-denied');
  for(const fn of Object.values(api))await assert.rejects(fn({data:{}}),e=>e.code==='unauthenticated');
  console.log('Staff integration: hashed PIN, lockout, custom claims, sanitized workspace, checkout replay/price/stock, PIN revocation and disabled staff passed.');
- await app.delete();
+ await deleteApp(app);
 })().catch(e=>{console.error(e);process.exitCode=1;});

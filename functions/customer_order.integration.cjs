@@ -1,18 +1,18 @@
 // Real Firestore transactions, isolated demo emulator. Never performs a bank transfer.
 const assert=require('node:assert/strict');
-const admin=require('firebase-admin');
+const {initializeApp, deleteApp} = require('firebase-admin/app'), firestoreSdk = require('firebase-admin/firestore');
 const {randomBytes,randomUUID}=require('node:crypto');
 const {confirmOrder}=require('./order_accounting');
 (async()=>{
   if(!process.env.FIRESTORE_EMULATOR_HOST)throw Error('Emulator required');
-  const app=admin.initializeApp({projectId:'demo-pokpok-admin'},'customer-regression');
+  const app=initializeApp({projectId:'demo-pokpok-admin'},'customer-regression');
   try{
-    const db=app.firestore(),FieldValue=admin.firestore.FieldValue,shopId='customer-regression',shop=db.doc('shops/'+shopId);
+    const db=firestoreSdk.getFirestore(app),FieldValue=firestoreSdk.FieldValue,shopId='customer-regression',shop=db.doc('shops/'+shopId);
     await shop.set({name:'Test shop'});
     await shop.collection('settings').doc('shop').set({promptpayId:'0812345678',tableOrderMode:'prepaid'});
     await shop.collection('products').doc('last').set({name:'Last',price:50,stock:1});
     const source=require('node:fs').readFileSync(require.resolve('./index'),'utf8'),exported={};
-    const scope={exports:exported,onRequest:(_,fn)=>fn,admin:{firestore:Object.assign(()=>db,{FieldValue})},
+    const scope={exports:exported,onRequest:(_,fn)=>fn,firestoreSdk:{getFirestore:()=>db,FieldValue},
       _verifyAppCheck:async()=>true,loadModifierGroups:async()=>({}),priceLine:require('./tableorder').priceLine,
       pickupScheduling:require('./pickup'),require,console};
     require('node:vm').runInNewContext(source.slice(source.indexOf('exports.createPromptPayOrder ='),source.indexOf('exports.stripeWebhook =')),scope);
@@ -89,5 +89,5 @@ const {confirmOrder}=require('./order_accounting');
     await assert.rejects(()=>kp.finish(req({...job,received:true})),/เปลี่ยน/);
     await assert.rejects(()=>kp.claim({auth:{uid:'staff',token:{staffRole:'cashier'}},data:{shopId,source:'table',orderId:'k1'}}));
     console.log('PASS reservation concurrency, secure recovery/cancel, evidence guard, recipe availability/deduction/refund, channel, phone, kitchen print claim/retry/new-lines/permissions');
-  }finally{await app.delete();}
+  }finally{await deleteApp(app);}
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -1,12 +1,12 @@
 // Run only against the local demo emulator; never change a production shop.
 const assert = require('node:assert/strict');
 const {randomUUID} = require('node:crypto');
-const admin = require('firebase-admin');
+const {initializeApp, deleteApp} = require('firebase-admin/app'), firestoreSdk = require('firebase-admin/firestore');
 const {HttpsError} = require('firebase-functions/v2/https');
 (async () => {
   assert.match(process.env.FIRESTORE_EMULATOR_HOST || '', /^(127\.0\.0\.1|localhost):\d+$/);
-  const app = admin.initializeApp({projectId: 'demo-pokpok-admin'}, 'table-recovery-tests');
-  const db = app.firestore(), FieldValue = admin.firestore.FieldValue;
+  const app = initializeApp({projectId: 'demo-pokpok-admin'}, 'table-recovery-tests');
+  const db = firestoreSdk.getFirestore(app), FieldValue = firestoreSdk.FieldValue;
   const shopId = 'table-recovery-' + randomUUID(), shop = db.collection('shops').doc(shopId);
   const ref = shop.collection('tables').doc('one');
   const tab = shop.collection('tableOrders').doc('old');
@@ -17,7 +17,7 @@ const {HttpsError} = require('firebase-functions/v2/https');
     await ref.set({status: 'occupied', currentOrderId: 'old'});
     await tab.set({status: 'closed', tableId: 'one', saleId: 'sale'});
     await shop.collection('sales').doc('sale').set({total: 70});
-    await Promise.all([run(req), run(req)]);
+    await Promise.all(Array.from({length: 5}, () => run(req)));
     assert.equal((await ref.get()).data().status, 'available');
     assert.equal((await tab.get()).data().status, 'closed');
 
@@ -47,6 +47,6 @@ const {HttpsError} = require('firebase-functions/v2/https');
     console.log('PASS table recovery: replay, concurrent QR writer, orphan link, online work guard, unchanged money');
   } finally {
     await db.recursiveDelete(shop);
-    await app.delete();
+    await deleteApp(app);
   }
 })().catch(error => { console.error(error); process.exitCode = 1; });

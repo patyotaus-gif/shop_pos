@@ -1,6 +1,6 @@
 // Emulator regression: all prior attack paths must fail, legitimate flows must work.
 const assert=require('node:assert/strict');
-const admin=require('firebase-admin');
+const {initializeApp, deleteApp} = require('firebase-admin/app'), firestoreSdk = require('firebase-admin/firestore');
 const {initializeTestEnvironment,assertFails,assertSucceeds}=require('@firebase/rules-unit-testing');
 const {doc,setDoc,updateDoc,deleteDoc,deleteField,getDoc}=require('firebase/firestore');
 const {HttpsError}=require('firebase-functions/v2/https');
@@ -9,8 +9,8 @@ const fs=require('node:fs'),path=require('node:path');
   assert.match(process.env.FIRESTORE_EMULATOR_HOST||'',/^(127\.0\.0\.1|localhost):\d+$/);
   const projectId='demo-pokpok-admin';
   const env=await initializeTestEnvironment({projectId,firestore:{rules:fs.readFileSync(path.join(__dirname,'../firestore.rules'),'utf8')}});
-  const app=admin.initializeApp({projectId},'security-hardening'),db=app.firestore();
-  const FieldValue=admin.firestore.FieldValue,Timestamp=admin.firestore.Timestamp;
+  const app=initializeApp({projectId},'security-hardening'),db=firestoreSdk.getFirestore(app);
+  const FieldValue=firestoreSdk.FieldValue,Timestamp=firestoreSdk.Timestamp;
   const market=require('./marketplace').handlers({db,FieldValue,HttpsError});
   const referral=require('./referral').handler({db,Timestamp,FieldValue,HttpsError});
   const owner='secure-shop',other='secure-other',supplier='secure-supplier';
@@ -91,5 +91,5 @@ const fs=require('node:fs'),path=require('node:path');
     assert.equal((await referral(request(owner,{code:'SECUREOTHER'}))).applied,false);
     await assert.rejects(referral(request('secure-staff',{code:'SECUREOTHER'},{staffRole:'cashier'})),e=>e.code==='permission-denied');
     console.log('PASS security hardening: direct writes/tenant substitution/XSS input/price/fee tampering denied; legitimate marketplace lifecycle, replay, race, referral claim isolation passed');
-  } finally {await env.cleanup();await app.delete();}
+  } finally {await env.cleanup();await deleteApp(app);}
 })().catch(e=>{console.error('FAIL security hardening: '+e.stack);process.exitCode=1;});

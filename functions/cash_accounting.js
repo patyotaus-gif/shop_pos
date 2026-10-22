@@ -4,6 +4,7 @@ const {owner, validId}=require('./order_accounting');
 const {minor,ledgerContext,writeMovement,summarizeMovements}=require('./money_ledger');
 const {inspectClose,closeError,labels}=require('./cash_integrity');
 const {inspectOpenWork}=require('./cash_close_work');
+const {runTransaction}=require('./transaction_retry');
 function handlers({db,FieldValue,HttpsError,now=Date.now}) {
   const fail=message=>{throw new HttpsError('failed-precondition',message);};
   async function readCheck(tx,shop,sessionId,session) {
@@ -24,7 +25,7 @@ function handlers({db,FieldValue,HttpsError,now=Date.now}) {
         throw new HttpsError('invalid-argument','ระบุเงินเข้า/ออก จำนวนเงินไม่เกิน 2 ตำแหน่ง และเหตุผลไม่เกิน 300 ตัวอักษร');
       const amountMinor=minor(amount)*(kind==='cashOut'?-1:1);
       const ref=shop.collection('moneyMovements').doc('cash-'+requestId);
-      return db.runTransaction(async tx=>{
+      return runTransaction(db,async tx=>{
         const prior=await tx.get(ref);
         if(prior.exists){
           const p=prior.data();
@@ -45,7 +46,7 @@ function handlers({db,FieldValue,HttpsError,now=Date.now}) {
       const shop=db.collection('shops').doc(owner(request,HttpsError));
       const {sessionId}=request.data;
       if(!validId(sessionId))fail('ข้อมูลรอบไม่ถูกต้อง');
-      return db.runTransaction(async tx=>{
+      return runTransaction(db,async tx=>{
         const snap=await tx.get(shop.collection('cashSessions').doc(sessionId));
         if(!snap.exists)fail('ไม่พบรอบขาย');
         if(snap.data().status==='closed')return {closed:true,canClose:false,issues:[]};
@@ -66,7 +67,7 @@ function handlers({db,FieldValue,HttpsError,now=Date.now}) {
       // Stable request id also makes a lost response safe to retry.
       if(!validId(request.data.requestId))fail('Invalid request');
       const ref=shop.collection('cashSessions').doc(request.data.requestId);
-      return db.runTransaction(async tx=>{
+      return runTransaction(db,async tx=>{
         const context=await ledgerContext(tx,shop), prior=await tx.get(ref);
         const settingsRef=shop.collection('accountingSettings').doc('current');
         const settings=await tx.get(settingsRef);
@@ -95,7 +96,7 @@ function handlers({db,FieldValue,HttpsError,now=Date.now}) {
       const autoOpenNext=request.data.autoOpenNext===true;
       if(autoOpenNext && Math.abs(countedCash*100-minor(countedCash))>0.00001)
         fail('เงินสดนับได้ต้องมีทศนิยมไม่เกิน 2 ตำแหน่ง');
-      return db.runTransaction(async tx=>{
+      return runTransaction(db,async tx=>{
         const context=await ledgerContext(tx,shop), ref=shop.collection('cashSessions').doc(sessionId), snap=await tx.get(ref);
         if(!snap.exists)fail('ไม่พบรอบขาย');
         const session=snap.data();
@@ -142,7 +143,7 @@ function handlers({db,FieldValue,HttpsError,now=Date.now}) {
       const {debtId,requestId,amount,method,expectedPaidAmount}=request.data;
       if(!validId(debtId)||!validId(requestId)||minor(amount)<=0||!['cash','transfer','qr'].includes(method))fail('ข้อมูลรับชำระไม่ถูกต้อง');
       const ref=shop.collection('debts').doc(debtId), payment=shop.collection('debtPayments').doc(requestId);
-      return db.runTransaction(async tx=>{
+      return runTransaction(db,async tx=>{
         const prior=await tx.get(payment), debtSnap=await tx.get(ref);
         if(prior.exists){
           const p=prior.data();

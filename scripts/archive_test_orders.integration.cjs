@@ -1,7 +1,7 @@
 'use strict';
 const assert = require('node:assert/strict');
-const admin = require('../functions/node_modules/firebase-admin');
 const functionRequire = require('node:module').createRequire(require('node:path').resolve(__dirname, '../functions/package.json'));
+const {initializeApp, deleteApp} = functionRequire('firebase-admin/app'), firestoreSdk = functionRequire('firebase-admin/firestore');
 const {HttpsError} = functionRequire('firebase-functions/v2/https');
 const {archiveTestOrders, fingerprint} = require('./archive_test_orders.cjs');
 const {handlers} = require('../functions/cash_accounting');
@@ -9,10 +9,10 @@ const {confirmOrder} = require('../functions/order_accounting');
 
 (async () => {
   assert(process.env.FIRESTORE_EMULATOR_HOST, 'Emulator required');
-  const app = admin.initializeApp({projectId: 'demo-pokpok-admin'}, 'test-order-archive');
-  const db = app.firestore(), FieldValue = admin.firestore.FieldValue;
+  const app = initializeApp({projectId: 'demo-pokpok-admin'}, 'test-order-archive');
+  const db = firestoreSdk.getFirestore(app), FieldValue = firestoreSdk.FieldValue;
   const api = handlers({db, FieldValue, HttpsError});
-  const old = admin.firestore.Timestamp.fromMillis(1000);
+  const old = firestoreSdk.Timestamp.fromMillis(1000);
   async function fixture(id) {
     const shopId = 'archive-tests-' + id, shop = db.doc('shops/' + shopId);
     const request = data => ({auth: {uid: shopId, token: {}}, data: {shopId, ...data}});
@@ -20,7 +20,7 @@ const {confirmOrder} = require('../functions/order_accounting');
     await api.open(request({requestId: 'round', openingFloat: 400, acknowledgeDeviceUpdate: true}));
     const entries = [];
     for (const orderId of ['one', 'two']) {
-      const saleId = 'order-' + orderId, now = admin.firestore.Timestamp.now();
+      const saleId = 'order-' + orderId, now = firestoreSdk.Timestamp.now();
       const originals = {
         order: {status: 'completed', saleId, total: 20, createdAt: old, paidAt: now},
         sale: {orderId, total: 20, createdAt: now, paymentMethod: 'qr', isDebt: false,
@@ -88,5 +88,5 @@ const {confirmOrder} = require('../functions/order_accounting');
       assert.equal((await h.shop.collection('accountingCorrections').get()).size, 0);
     }
     console.log('PASS: inventory, changed round and linked debt all reject without partial writes');
-  } finally { await db.terminate(); await app.delete(); }
+  } finally { await db.terminate(); await deleteApp(app); }
 })().catch(e => {console.error(e); process.exitCode = 1;});

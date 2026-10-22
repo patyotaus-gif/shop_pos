@@ -1,11 +1,11 @@
 const assert=require('node:assert/strict');
 const {randomUUID}=require('node:crypto');
-const admin=require('firebase-admin');
+const {initializeApp, deleteApp} = require('firebase-admin/app'), firestoreSdk = require('firebase-admin/firestore');
 const {HttpsError}=require('firebase-functions/v2/https');
 (async()=>{
   assert.match(process.env.FIRESTORE_EMULATOR_HOST||'',/^(127\.0\.0\.1|localhost):\d+$/);
-  const app=admin.initializeApp({projectId:'demo-pokpok-admin'},'cash-rollover');
-  const db=app.firestore(),FieldValue=admin.firestore.FieldValue;
+  const app=initializeApp({projectId:'demo-pokpok-admin'},'cash-rollover');
+  const db=firestoreSdk.getFirestore(app),FieldValue=firestoreSdk.FieldValue;
   const shopId='rollover-'+randomUUID(),shop=db.collection('shops').doc(shopId);
   const api=require('./cash_accounting').handlers({db,FieldValue,HttpsError});
   const req=data=>({auth:{uid:shopId,token:{}},data:{shopId,acknowledgeDeviceUpdate:true,...data}});
@@ -35,5 +35,5 @@ const {HttpsError}=require('firebase-functions/v2/https');
     assert.equal((await shop.collection('cashSessions').get()).size,3);
     assert.equal((await shop.collection('moneyMovements').where('sessionId','==',null).get()).size,0);
     console.log('PASS atomic cash rollover, concurrent closes/drawer/open, counted carry and immutable history');
-  }finally{await db.recursiveDelete(shop);await app.delete();}
+  }finally{await db.recursiveDelete(shop);await deleteApp(app);}
 })().catch(e=>{console.error(e);process.exitCode=1;});

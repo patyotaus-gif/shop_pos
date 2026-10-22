@@ -1,10 +1,10 @@
 {
-    "version":  "1.2.58",
-    "build":  75,
+    "version":  "1.2.59",
+    "build":  76,
     "url":  "https://pok-pok.app/app/pokpok.apk",
     "minSupportedBuild":  1,
     "mandatory":  false,
-    "notes":  "เพิ่มพิมพ์อัตโนมัติบน Android สำหรับใบงานครัวและใบเสร็จ พร้อมคิวพิมพ์และการตรวจสอบงานที่ส่งไม่สำเร็จ",
-    "sha256":  "b3e7e22ed27875fffc7dd20b769e8dc6355043fed5cb0ac8abe5cba494faafd0",
+    "notes":  "เพิ่มการป้องกันสิทธิ์ผู้ดูแลและไฟล์อัปโหลด อัปเดตความปลอดภัย และแก้การคืนโต๊ะ ปิดยอด และจองสินค้าพร้อมกัน",
+    "sha256":  "cc6fba480b57b2216277ac95459324cb8908bcf6ec43da91a6c416177e4d1034",
     "sizeBytes":  95232126
 }

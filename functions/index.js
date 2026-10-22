@@ -1,17 +1,22 @@
+const {getAuth} = require('firebase-admin/auth');
+const {getMessaging} = require('firebase-admin/messaging');
+const {getStorage} = require('firebase-admin/storage');
+const {getAppCheck} = require('firebase-admin/app-check');
 const pickupScheduling = require('./pickup');
 const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentCreated, onDocumentUpdated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { setGlobalOptions } = require("firebase-functions/v2");
-const admin = require("firebase-admin");
+const {initializeApp} = require('firebase-admin/app');
+const firestoreSdk = require('firebase-admin/firestore');
 const { defineSecret } = require("firebase-functions/params");
 const { shopTypeOf, canUseTables, canSelectTier } = require('./shop_capabilities');
 
-admin.initializeApp();
+initializeApp();
 
 const staffAccess = require('./staff_access').createStaffAccess({
-  db: admin.firestore(), auth: admin.auth(), FieldValue: admin.firestore.FieldValue,
-  Timestamp: admin.firestore.Timestamp,
+  db: firestoreSdk.getFirestore(), auth: getAuth(), FieldValue: firestoreSdk.FieldValue,
+  Timestamp: firestoreSdk.Timestamp,
 });
 
 setGlobalOptions({ region: "asia-southeast1" });
@@ -23,10 +28,10 @@ exports.staffWorkspace = onCall(staffAccess.workspace);
 exports.staffCheckout = onCall(staffAccess.checkout);
 exports.quoteCounterGifts = onCall({enforceAppCheck:true},staffAccess.quoteGifts);
 exports.counterBundleCatalog = onCall({enforceAppCheck:true},staffAccess.bundleCatalog);
-const kitchenPrint = require('./kitchen_print').handlers({db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError});
+const kitchenPrint = require('./kitchen_print').handlers({db:firestoreSdk.getFirestore(),FieldValue:firestoreSdk.FieldValue,HttpsError});
 exports.claimKitchenPrint = onCall(kitchenPrint.claim);
 exports.finishKitchenPrint = onCall(kitchenPrint.finish);
-const autoPrint = require('./auto_print').handlers({db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError});
+const autoPrint = require('./auto_print').handlers({db:firestoreSdk.getFirestore(),FieldValue:firestoreSdk.FieldValue,HttpsError});
 exports.configureAutoPrint = onCall(autoPrint.configure);
 exports.heartbeatAutoPrint = onCall(autoPrint.heartbeat);
 exports.claimAutoPrint = onCall(autoPrint.claim);
@@ -42,42 +47,42 @@ for (const [name, collection, source] of [
       before:event.data?.before.data(), after:event.data?.after.data(),
       eventAtMs:event.data?.after.updateTime?.toMillis() ?? Date.parse(event.time)}));
 }
-const tableRecovery = require('./table_recovery').handlers({db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError});
+const tableRecovery = require('./table_recovery').handlers({db:firestoreSdk.getFirestore(),FieldValue:firestoreSdk.FieldValue,HttpsError});
 exports.reconcileRestaurantTable = onCall(tableRecovery.reconcile);
 exports.tablePromotions = onCall({enforceAppCheck:true}, require('./table_promotions').handlers({
-  db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError,
+  db:firestoreSdk.getFirestore(),FieldValue:firestoreSdk.FieldValue,HttpsError,
 }));
 const offlineSales = require('./offline_sales').createOfflineSales({
-  db: admin.firestore(), FieldValue: admin.firestore.FieldValue, Timestamp: admin.firestore.Timestamp,
+  db: firestoreSdk.getFirestore(), FieldValue: firestoreSdk.FieldValue, Timestamp: firestoreSdk.Timestamp,
 });
 exports.offlinePrepare = onCall(offlineSales.prepare);
 exports.offlineSync = onCall(offlineSales.sync);
 
-const orderAccounting = require('./order_accounting').handlers({db:admin.firestore(), FieldValue:admin.firestore.FieldValue, HttpsError});
+const orderAccounting = require('./order_accounting').handlers({db:firestoreSdk.getFirestore(), FieldValue:firestoreSdk.FieldValue, HttpsError});
 exports.confirmOrderPayment = onCall(orderAccounting.confirm);
 exports.transitionOrder = onCall(orderAccounting.transition);
 exports.manageCoupon = onCall({enforceAppCheck:true}, require('./coupons').manage({
-  db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError,
+  db:firestoreSdk.getFirestore(),FieldValue:firestoreSdk.FieldValue,HttpsError,
 }));
 exports.manageBundle = onCall({enforceAppCheck:true}, require('./bundles').manage({
-  db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError,
+  db:firestoreSdk.getFirestore(),FieldValue:firestoreSdk.FieldValue,HttpsError,
 }));
 exports.manageBuyGet = onCall({enforceAppCheck:true}, require('./buy_get').manage({
-  db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError,
+  db:firestoreSdk.getFirestore(),FieldValue:firestoreSdk.FieldValue,HttpsError,
 }));
-const cashAccounting=require('./cash_accounting').handlers({db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError});
+const cashAccounting=require('./cash_accounting').handlers({db:firestoreSdk.getFirestore(),FieldValue:firestoreSdk.FieldValue,HttpsError});
 exports.openCashSession=onCall(cashAccounting.open);
 exports.recordCashMovement=onCall(cashAccounting.recordCashMovement);
 exports.closeCashSession=onCall(cashAccounting.close);
 exports.getCashCloseReadiness=onCall(cashAccounting.readiness);
 exports.collectDebtPayment=onCall(cashAccounting.collectDebt);
-exports.getAccountingReview=onCall(require('./accounting_review').handler({db:admin.firestore(),HttpsError}));
-exports.reconcileCashMovement=onCall(require('./cash_reconciliation').handler({db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError}));
+exports.getAccountingReview=onCall(require('./accounting_review').handler({db:firestoreSdk.getFirestore(),HttpsError}));
+exports.reconcileCashMovement=onCall(require('./cash_reconciliation').handler({db:firestoreSdk.getFirestore(),FieldValue:firestoreSdk.FieldValue,HttpsError}));
 const stripeSecretKey = defineSecret("STRIPE_SECRET_KEY");
 const stripeWebhookSecret = defineSecret("STRIPE_WEBHOOK_SECRET");
 const omiseTestSecretKey = defineSecret('OMISE_TEST_SECRET_KEY');
 const omiseSandbox = require('./omise_sandbox');
-const omiseTest = omiseSandbox.handlers({db:admin.firestore(), FieldValue:admin.firestore.FieldValue,
+const omiseTest = omiseSandbox.handlers({db:firestoreSdk.getFirestore(), FieldValue:firestoreSdk.FieldValue,
   assertFounder, api:omiseSandbox.client({secret:() => omiseTestSecretKey.value()})});
 exports.omiseSandboxConfig = onCall({enforceAppCheck:true}, omiseTest.config);
 exports.omiseSandboxCreate = onCall({secrets:[omiseTestSecretKey], enforceAppCheck:true, maxInstances:3}, omiseTest.create);
@@ -85,7 +90,7 @@ exports.omiseSandboxStatus = onCall({secrets:[omiseTestSecretKey], enforceAppChe
 exports.omiseSandboxWebhook = onRequest({secrets:[omiseTestSecretKey], maxInstances:3}, omiseTest.webhook);
 const lineChannelAccessToken = defineSecret("LINE_CHANNEL_ACCESS_TOKEN");
 const lineChannelSecret = defineSecret("LINE_CHANNEL_SECRET");
-const lineLink = require('./line_link').handlers({ db: admin.firestore(), HttpsError });
+const lineLink = require('./line_link').handlers({ db: firestoreSdk.getFirestore(), HttpsError });
 exports.startLineLink = onCall(lineLink.start);
 exports.getLineLinkStatus = onCall(lineLink.status);
 exports.cancelLineLink = onCall(lineLink.cancel);
@@ -119,7 +124,7 @@ async function getPlans() {
   const now = Date.now();
   if (_plansCache.tiers && now - _plansCache.at < 60000) return _plansCache.tiers;
   try {
-    const snap = await admin.firestore().doc("config/plans").get();
+    const snap = await firestoreSdk.getFirestore().doc("config/plans").get();
     const tiers = snap.exists && snap.data().tiers ? snap.data().tiers : DEFAULT_TIERS;
     _plansCache = { tiers, at: now };
     return tiers;
@@ -133,7 +138,7 @@ async function getPlans() {
 // to clients directly (rules deny all) — promptpayId/Name travel only in
 // createSubscriptionPayment's response.
 async function getBilling() {
-  const snap = await admin.firestore().doc("config/billing").get();
+  const snap = await firestoreSdk.getFirestore().doc("config/billing").get();
   return snap.exists ? snap.data() : {};
 }
 
@@ -141,8 +146,8 @@ async function getBilling() {
 // or PromptPay slip). Stacks on top of remaining time. Returns the new
 // end date.
 async function applySubscriptionPayment(shopId, tier, billingCycle, locations, planConfig, paymentId) {
-  return require('./subscription_payment').apply({db:admin.firestore(),Timestamp:admin.firestore.Timestamp,
-    FieldValue:admin.firestore.FieldValue,shopId,tier,billingCycle,locations,planConfig,paymentId,shopTypeOf});
+  return require('./subscription_payment').apply({db:firestoreSdk.getFirestore(),Timestamp:firestoreSdk.Timestamp,
+    FieldValue:firestoreSdk.FieldValue,shopId,tier,billingCycle,locations,planConfig,paymentId,shopTypeOf});
 }
 
 const MARKETPLACE_TAKE_RATE = 0.025; // 2.5% — applied at marketplace order
@@ -181,7 +186,7 @@ exports.createCheckoutSession = onCall(
     // Resolve which plan to bill. If a tier is sent, use the new path;
     // otherwise treat the legacy `plan` as a billingCycle on the Full tier.
     const resolvedTier = tier || "full";
-    const shopSnapshot = await admin.firestore().collection('shops').doc(shopId).get();
+    const shopSnapshot = await firestoreSdk.getFirestore().collection('shops').doc(shopId).get();
     if (!shopSnapshot.exists) throw new HttpsError('not-found', 'ไม่พบร้านค้า');
     if (!canSelectTier(shopSnapshot.data(), resolvedTier)) {
       throw new HttpsError('invalid-argument', 'เลือก Solo, Lite หรือ Full');
@@ -256,7 +261,7 @@ async function _verifyAppCheck(req, res) {
     return false;
   }
   try {
-    await admin.appCheck().verifyToken(token);
+    await getAppCheck().verifyToken(token);
     return true;
   } catch (e) {
     res.status(401).json({ error: "App Check failed" });
@@ -271,7 +276,7 @@ exports.getShopPublic = onRequest({ cors: true }, async (req, res) => {
     res.status(400).json({ error: "shop required" });
     return;
   }
-  const db = admin.firestore();
+  const db = firestoreSdk.getFirestore();
   const shopSnap = await db.collection("shops").doc(shopId).get();
   if (!shopSnap.exists) {
     res.status(404).json({ error: "not found" });
@@ -403,7 +408,7 @@ exports.createOrderCheckout = onRequest(
 
     // Re-check pause state server-side — covers a customer with the menu
     // open in a stale tab before the owner paused ordering.
-    const shopRef = admin.firestore().collection("shops").doc(shopId);
+    const shopRef = firestoreSdk.getFirestore().collection("shops").doc(shopId);
     const settingsSnap = await shopRef.collection("settings").doc("shop").get();
     if (settingsSnap.data()?.ordersClosed === true) {
       res.status(400).json({ error: "ร้านปิดรับออเดอร์ชั่วคราว" });
@@ -435,7 +440,7 @@ exports.createOrderCheckout = onRequest(
       paymentMethod:'stripe',
       total,
       status: "pendingPayment",
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: firestoreSdk.FieldValue.serverTimestamp(),
     });
 
     // สร้าง Stripe Checkout session
@@ -471,11 +476,11 @@ exports.createOrderCheckout = onRequest(
 // No QR payload or notification is treated as proof of settlement.
 exports.verifyPromptPaySlip = onRequest(
   { cors: true, memory: "512MiB" },
-  require('./slip_upload').createSlipUpload({db:admin.firestore(),getBucket:()=>admin.storage().bucket(),
-    FieldValue:admin.firestore.FieldValue,verifyAppCheck:_verifyAppCheck})
+  require('./slip_upload').createSlipUpload({db:firestoreSdk.getFirestore(),getBucket:()=>getStorage().bucket(),
+    FieldValue:firestoreSdk.FieldValue,verifyAppCheck:_verifyAppCheck})
 );
 exports.customerOrder = onRequest({cors:true}, require('./customer_order').handler({
-  db:admin.firestore(),FieldValue:admin.firestore.FieldValue,verifyAppCheck:_verifyAppCheck,
+  db:firestoreSdk.getFirestore(),FieldValue:firestoreSdk.FieldValue,verifyAppCheck:_verifyAppCheck,
 }));
 
 // Extract amount from an EMVCo PromptPay QR payload (tag "54" = amount).
@@ -545,7 +550,7 @@ exports.createPromptPayOrder = onRequest(
     }
 
     // Look up the shop's PromptPay settings
-    const shopRef = admin.firestore().collection("shops").doc(shopId);
+    const shopRef = firestoreSdk.getFirestore().collection("shops").doc(shopId);
     const settingsSnap = await shopRef
       .collection("settings").doc("shop").get();
     const settings = settingsSnap.data() || {};
@@ -628,14 +633,14 @@ exports.createPromptPayOrder = onRequest(
     if (quoting) {
       try {
         if (req.body.action === 'quoteGifts') {
-          const result = await admin.firestore().runTransaction(async tx=>({
+          const result = await firestoreSdk.getFirestore().runTransaction(async tx=>({
             buyGet:await require('./buy_get').quote(shopRef,pricedItems,ref=>tx.get(ref)),
             bundles:await require('./bundles').quote(shopRef,pricedItems,ref=>tx.get(ref)),
           }));
           res.json({...result,bundleDiscount:require('./bundles').discountMinor(result.bundles)/100});
           return;
         }
-        const result=await admin.firestore().runTransaction(async tx=>{
+        const result=await firestoreSdk.getFirestore().runTransaction(async tx=>{
           const bundles=await require('./bundles').quote(shopRef,pricedItems,ref=>tx.get(ref));
           const coupon=(await tx.get(shopRef.collection('coupons').doc(couponCode))).data();
           return coupons.quote(coupon,Math.round(total*100)-require('./bundles').discountMinor(bundles));
@@ -660,8 +665,7 @@ exports.createPromptPayOrder = onRequest(
       ...(req.body.bundleQuote ? {bundleQuote:req.body.bundleQuote} : {}),
     })).digest('hex');
     // Create order doc first so its ID seeds the unique cents
-    const ordersRef = admin
-      .firestore()
+    const ordersRef = firestoreSdk.getFirestore()
       .collection("shops").doc(shopId)
       .collection("orders");
     const orderRef = requestId ? ordersRef.doc(`web-${requestId}`) : ordersRef.doc();
@@ -688,7 +692,7 @@ exports.createPromptPayOrder = onRequest(
       finalAmount,
       paymentMethod: "promptpay",
       status: "pendingPayment",
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: firestoreSdk.FieldValue.serverTimestamp(),
       ...(safeOrderType ? { orderType: safeOrderType } : {}),
       ...(tableId ? { tableId: String(tableId).slice(0, 64) } : {}),
       ...(tableName ? { tableName: String(tableName).slice(0, 64) } : {}),
@@ -696,7 +700,7 @@ exports.createPromptPayOrder = onRequest(
     let pickup;
     try {
       pickup = await pickupScheduling.createWithPickup({
-        db: admin.firestore(), shopRef, orderRef, order: orderData, requestedSlot: pickupSlot, pickupMode,
+        db: firestoreSdk.getFirestore(), shopRef, orderRef, order: orderData, requestedSlot: pickupSlot, pickupMode,
       });
     } catch (error) {
       console.error("Pickup reservation failed", error.code || "validation");
@@ -755,10 +759,10 @@ exports.stripeWebhook = onRequest(
     if (event.type === 'refund.updated' || event.type === 'refund.created') {
       const refund=event.data.object, metadata=refund.metadata||{};
       if (refund.status==='succeeded' && metadata.pokpokShopId && metadata.pokpokSaleId) {
-        await require('./refund').refundSale({db:admin.firestore(),stripe,
+        await require('./refund').refundSale({db:firestoreSdk.getFirestore(),stripe,
           shopId:metadata.pokpokShopId,saleId:metadata.pokpokSaleId,
           reason:metadata.pokpokReason||'Stripe refund completed',returnToStock:metadata.pokpokReturnToStock==='true',
-          actor:'stripe',FieldValue:admin.firestore.FieldValue});
+          actor:'stripe',FieldValue:firestoreSdk.FieldValue});
       }
     }
     if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
@@ -782,17 +786,17 @@ exports.stripeWebhook = onRequest(
         }
 
         const {confirmOrder} = require('./order_accounting');
-        const result = await confirmOrder({db:admin.firestore(),FieldValue:admin.firestore.FieldValue,
+        const result = await confirmOrder({db:firestoreSdk.getFirestore(),FieldValue:firestoreSdk.FieldValue,
           shopId,orderId,actor:'stripe',stripeSession:session,paymentRef:session.payment_intent});
         if (result.alreadyRecorded) {res.json({received:true});return;}
-        const orderRef = admin.firestore().collection('shops').doc(shopId).collection('orders').doc(orderId);
+        const orderRef = firestoreSdk.getFirestore().collection('shops').doc(shopId).collection('orders').doc(orderId);
         const orderData = (await orderRef.get()).data();
         // ส่ง FCM notification ไปยังเจ้าของร้าน
-        const shopDoc = await admin.firestore().collection("shops").doc(shopId).get();
+        const shopDoc = await firestoreSdk.getFirestore().collection("shops").doc(shopId).get();
         const fcmToken = shopDoc.data()?.fcmToken;
         if (fcmToken) {
           const itemCount = orderData.items.reduce((s, i) => s + i.quantity, 0);
-          await admin.messaging().send({
+          await getMessaging().send({
             token: fcmToken,
             notification: {
               title: "ออเดอร์ใหม่!",
@@ -803,7 +807,7 @@ exports.stripeWebhook = onRequest(
         }
 
         // ส่ง LINE notification ถ้าเปิดใช้งาน
-        const shopSettingDoc = await admin.firestore()
+        const shopSettingDoc = await firestoreSdk.getFirestore()
           .collection("shops").doc(shopId)
           .collection("settings").doc("shop").get();
         const lineUserId = shopSettingDoc.data()?.lineUserId;
@@ -866,9 +870,9 @@ exports.createRefund = onCall(
     if (!request.auth || request.auth.uid !== shopId) throw new HttpsError('permission-denied', 'Shop owner required');
     const { refundSale } = require('./refund');
     const Stripe = require('stripe');
-    try { return await refundSale({db:admin.firestore(),stripe:Stripe(stripeSecretKey.value()),shopId,saleId,
+    try { return await refundSale({db:firestoreSdk.getFirestore(),stripe:Stripe(stripeSecretKey.value()),shopId,saleId,
       reason:typeof reason==='string' ? reason.slice(0,500) : '',returnToStock:request.data.returnToStock===true,
-      refundMethod:request.data.refundMethod,actor:request.auth.uid,FieldValue:admin.firestore.FieldValue});
+      refundMethod:request.data.refundMethod,actor:request.auth.uid,FieldValue:firestoreSdk.FieldValue});
     } catch(e) {
       if(e.code===14)throw new HttpsError('unavailable','กรุณาลองบิลเดิมอีกครั้ง');
       throw new HttpsError('failed-precondition',e.message);
@@ -1007,7 +1011,7 @@ exports.sendLineMessage = onCall(
   async (request) => {
     const { sendOwnerLineMessage } = require('./line_delivery');
     return sendOwnerLineMessage({
-      request, db: admin.firestore(), HttpsError,
+      request, db: firestoreSdk.getFirestore(), HttpsError,
       push: (to, messages) => _linePush(lineChannelAccessToken.value(), to, messages),
     });
   }
@@ -1031,7 +1035,7 @@ const AI_DAILY_LIMIT_PER_SHOP = 100;
 const AI_MODEL = "gemini-2.5-flash-lite";
 
 const salesAssistant = require('./sales_assistant').handlers({
-  db: admin.firestore(), apiKey: () => geminiApiKey.value(), model: AI_MODEL,
+  db: firestoreSdk.getFirestore(), apiKey: () => geminiApiKey.value(), model: AI_MODEL,
 });
 exports.aiChat = onCall({ secrets: [geminiApiKey], timeoutSeconds: 120, memory: '512MiB' }, salesAssistant.aiChat);
 exports.getSalesAnalysis = onCall({ timeoutSeconds: 120, memory: '512MiB' }, salesAssistant.getSalesAnalysis);
@@ -1087,7 +1091,7 @@ async function _geminiText(apiKey, systemPrompt, userText) {
 // Builds the LINE reply for a free-form message: enforces the daily cap, asks
 // Gemini, and bumps the counter only on a real reply.
 async function _lineAiReply(apiKey, userId, userText) {
-  const usageRef = admin.firestore()
+  const usageRef = firestoreSdk.getFirestore()
     .collection("lineAiUsage").doc(userId)
     .collection("days").doc(new Date().toISOString().slice(0, 10));
   const used = (await usageRef.get()).data()?.count || 0;
@@ -1103,8 +1107,8 @@ async function _lineAiReply(apiKey, userId, userText) {
   }
 
   await usageRef.set({
-    count: admin.firestore.FieldValue.increment(1),
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    count: firestoreSdk.FieldValue.increment(1),
+    updatedAt: firestoreSdk.FieldValue.serverTimestamp(),
   }, { merge: true });
   return reply;
 }
@@ -1118,7 +1122,7 @@ async function _lineAiReply(apiKey, userId, userText) {
 
 
 exports.applyReferral = onCall(require('./referral').handler({
-  db:admin.firestore(),Timestamp:admin.firestore.Timestamp,FieldValue:admin.firestore.FieldValue,HttpsError,
+  db:firestoreSdk.getFirestore(),Timestamp:firestoreSdk.Timestamp,FieldValue:firestoreSdk.FieldValue,HttpsError,
 }));
 
 // ────────────────────────────────────────────────
@@ -1129,12 +1133,12 @@ exports.applyReferral = onCall(require('./referral').handler({
 // can call it, and the client never reads other shops directly — rules
 // stay per-owner.
 // Bootstrap allowlist — kept so the original founder can never be locked out
-// even if custom claims get cleared. New founders are added via the `founder`
+// with a verified email if custom claims get cleared. New founders use the `founder`
 // custom claim (adminSetFounder), no code deploy needed.
 const FOUNDER_EMAILS = ["patyotaus@gmail.com"];
 
 // Throws unless the caller is a founder: either carries the `founder` custom
-// claim (the forward path) or is on the bootstrap email allowlist. Every
+// claim (the forward path) or a verified bootstrap email. Every
 // admin/ops callable funnels through here.
 function assertFounder(request) {
   if (!request.auth) {
@@ -1142,7 +1146,8 @@ function assertFounder(request) {
   }
   const token = request.auth.token || {};
   const email = String(token.email || "").toLowerCase();
-  if (token.founder === true || FOUNDER_EMAILS.includes(email)) {
+  if (!token.staffRole && (token.founder === true ||
+      (token.email_verified === true && FOUNDER_EMAILS.includes(email)))) {
     return;
   }
   throw new HttpsError("permission-denied", "Founder only");
@@ -1163,7 +1168,7 @@ exports.adminSetFounder = onCall(async (request) => {
 
   let user;
   try {
-    user = await admin.auth().getUserByEmail(email);
+    user = await getAuth().getUserByEmail(email);
   } catch (_) {
     throw new HttpsError("not-found", "No user with that email");
   }
@@ -1181,14 +1186,14 @@ exports.adminSetFounder = onCall(async (request) => {
   } else {
     delete claims.founder;
   }
-  await admin.auth().setCustomUserClaims(user.uid, claims);
+  await getAuth().setCustomUserClaims(user.uid, claims);
   return { uid: user.uid, email, founder };
 });
 
 exports.opsMetrics = onCall(async (request) => {
   assertFounder(request);
 
-  const db = admin.firestore();
+  const db = firestoreSdk.getFirestore();
   const snap = await db.collection("shops").get();
   const now = new Date();
   const day = 24 * 60 * 60 * 1000;
@@ -1272,14 +1277,14 @@ exports.opsMetrics = onCall(async (request) => {
 const ADMIN_TIERS = ["solo", "lite", "full", "restaurant"];
 const ADMIN_CYCLES = ["monthly", "yearly"];
 exports.adminChangePlan = onCall(require('./admin_change_plan').createChangePlan({
-  db: admin.firestore(), assertFounder, FieldValue: admin.firestore.FieldValue,
+  db: firestoreSdk.getFirestore(), assertFounder, FieldValue: firestoreSdk.FieldValue,
 }));
 
 // List every shop with the fields the console needs (subscription state +
 // its hardware requests). Sorted newest-first.
 exports.adminListShops = onCall(async (request) => {
   assertFounder(request);
-  const db = admin.firestore();
+  const db = firestoreSdk.getFirestore();
   const snap = await db.collection("shops").orderBy("createdAt", "desc").get();
 
   const shops = [];
@@ -1332,7 +1337,7 @@ exports.adminSetSubscription = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "shopId and op are required");
   }
 
-  const db = admin.firestore();
+  const db = firestoreSdk.getFirestore();
   const ref = db.collection("shops").doc(shopId);
   const snap = await ref.get();
   if (!snap.exists) {
@@ -1350,7 +1355,7 @@ exports.adminSetSubscription = onCall(async (request) => {
     await ref.set(
       {
         subscriptionStatus: "trial",
-        trialEndsAt: admin.firestore.Timestamp.fromDate(
+        trialEndsAt: firestoreSdk.Timestamp.fromDate(
           new Date(base.getTime() + days * dayMs)
         ),
       },
@@ -1374,7 +1379,7 @@ exports.adminSetSubscription = onCall(async (request) => {
     await ref.set(
       {
         subscriptionStatus: "active",
-        subscriptionEndsAt: admin.firestore.Timestamp.fromDate(
+        subscriptionEndsAt: firestoreSdk.Timestamp.fromDate(
           new Date(base.getTime() + days * dayMs)
         ),
         tier,
@@ -1391,7 +1396,7 @@ exports.adminSetSubscription = onCall(async (request) => {
     await ref.set(
       {
         subscriptionStatus: "expired",
-        subscriptionEndsAt: admin.firestore.Timestamp.fromDate(now),
+        subscriptionEndsAt: firestoreSdk.Timestamp.fromDate(now),
       },
       { merge: true }
     );
@@ -1414,8 +1419,7 @@ exports.adminSetHardwareStatus = onCall(async (request) => {
     throw new HttpsError("invalid-argument", `Invalid status: ${status}`);
   }
 
-  const ref = admin
-    .firestore()
+  const ref = firestoreSdk.getFirestore()
     .collection("shops")
     .doc(shopId)
     .collection("hardware")
@@ -1428,7 +1432,7 @@ exports.adminSetHardwareStatus = onCall(async (request) => {
   if (status) {
     update.status = status;
     if (status === "delivered") {
-      update.deliveredAt = admin.firestore.FieldValue.serverTimestamp();
+      update.deliveredAt = firestoreSdk.FieldValue.serverTimestamp();
     }
   }
   if (typeof request.data.note === "string") update.note = request.data.note;
@@ -1450,7 +1454,7 @@ exports.adminUpsertSupplier = onCall(async (request) => {
   if (!d.name) {
     throw new HttpsError("invalid-argument", "name is required");
   }
-  const db = admin.firestore();
+  const db = firestoreSdk.getFirestore();
   const ref = d.supplierId
     ? db.collection("suppliers").doc(String(d.supplierId))
     : db.collection("suppliers").doc();
@@ -1465,7 +1469,7 @@ exports.adminUpsertSupplier = onCall(async (request) => {
   };
   // Only stamp createdAt on first create.
   if (!(await ref.get()).exists) {
-    fields.createdAt = admin.firestore.FieldValue.serverTimestamp();
+    fields.createdAt = firestoreSdk.FieldValue.serverTimestamp();
   }
   await ref.set(fields, { merge: true });
   return { ok: true, supplierId: ref.id };
@@ -1478,7 +1482,7 @@ exports.adminUpsertSupplierProduct = onCall(async (request) => {
   if (!d.supplierId || !d.name) {
     throw new HttpsError("invalid-argument", "supplierId and name required");
   }
-  const db = admin.firestore();
+  const db = firestoreSdk.getFirestore();
   const col = db
     .collection("suppliers")
     .doc(String(d.supplierId))
@@ -1524,7 +1528,7 @@ exports.adminCreateSupplierAccount = onCall(async (request) => {
   // Create (or reuse) the auth account.
   let uid;
   try {
-    const user = await admin.auth().createUser({
+    const user = await getAuth().createUser({
       email,
       password,
       displayName: String(d.name),
@@ -1537,8 +1541,7 @@ exports.adminCreateSupplierAccount = onCall(async (request) => {
     throw new HttpsError("internal", e.message || "createUser failed");
   }
 
-  await admin
-    .firestore()
+  await firestoreSdk.getFirestore()
     .collection("suppliers")
     .doc(uid)
     .set({
@@ -1550,7 +1553,7 @@ exports.adminCreateSupplierAccount = onCall(async (request) => {
       minOrder: Number(d.minOrder || 0),
       lineUserId: d.lineUserId != null ? String(d.lineUserId) : "",
       active: true,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: firestoreSdk.FieldValue.serverTimestamp(),
     });
 
   return { ok: true, supplierId: uid };
@@ -1559,7 +1562,7 @@ exports.adminCreateSupplierAccount = onCall(async (request) => {
 // Supplier updates one of their incoming orders (accept / ship / cancel)
 // from the web portal. Mirrors the new status to the shop's copy so both
 // sides stay in sync. Caller must own the order (auth.uid == supplierId).
-const marketplace = require('./marketplace').handlers({db:admin.firestore(),FieldValue:admin.firestore.FieldValue,HttpsError});
+const marketplace = require('./marketplace').handlers({db:firestoreSdk.getFirestore(),FieldValue:firestoreSdk.FieldValue,HttpsError});
 exports.marketplacePlaceOrder = onCall(marketplace.place);
 exports.marketplaceShopOrderStatus = onCall(marketplace.shopTransition);
 exports.supplierSetOrderStatus = onCall(marketplace.supplierTransition);
@@ -1583,8 +1586,7 @@ exports.notifySupplierNewOrder = onDocumentCreated(
     if (order.status && order.status !== "placed") return;
 
     const supplierId = event.params.supplierId;
-    const supSnap = await admin
-      .firestore()
+    const supSnap = await firestoreSdk.getFirestore()
       .collection("suppliers")
       .doc(supplierId)
       .get();
@@ -1633,7 +1635,7 @@ exports.sendRenewalReminders = onSchedule(
     secrets: [lineChannelAccessToken],
   },
   async () => {
-    const db = admin.firestore();
+    const db = firestoreSdk.getFirestore();
     const now = new Date();
     const startOfToday = new Date(
       now.getFullYear(), now.getMonth(), now.getDate()
@@ -1686,7 +1688,7 @@ exports.sendRenewalReminders = onSchedule(
         // older installs and silently dropped on Android 8+).
         if (shop.fcmToken) {
           try {
-            await admin.messaging().send({
+            await getMessaging().send({
               token: shop.fcmToken,
               notification: { title, body },
               android: {
@@ -1777,14 +1779,14 @@ exports.escalateUnconfirmedOrders = onSchedule(
     secrets: [lineChannelAccessToken],
   },
   async () => {
-    const db = admin.firestore();
+    const db = firestoreSdk.getFirestore();
     const now = Date.now();
-    const cutoff = admin.firestore.Timestamp.fromMillis(now - ESCALATION_THRESHOLD_MS);
+    const cutoff = firestoreSdk.Timestamp.fromMillis(now - ESCALATION_THRESHOLD_MS);
     // Lower bound: only look at recently-paid orders. Without it, the first
     // run would alert on every order ever left at `paid` (owners who fulfil
     // without advancing status accumulate these), and every run would re-scan
     // that unbounded backlog forever — escalatedAt-absence can't be indexed.
-    const floor = admin.firestore.Timestamp.fromMillis(now - 60 * 60 * 1000);
+    const floor = firestoreSdk.Timestamp.fromMillis(now - 60 * 60 * 1000);
 
     // escalatedAt-absence isn't part of the composite index (Firestore can't
     // index "field missing"), so that half of the filter runs in memory via
@@ -1823,7 +1825,7 @@ exports.escalateUnconfirmedOrders = onSchedule(
       // doc → NOT_FOUND, write contention) would reject the whole function
       // and permanently block every later candidate behind this one.
       try {
-        await order.ref.update({ escalatedAt: admin.firestore.FieldValue.serverTimestamp() });
+        await order.ref.update({ escalatedAt: firestoreSdk.FieldValue.serverTimestamp() });
       } catch (e) {
         console.error(`escalation stamp failed for ${order.ref.path}:`, e);
         continue;
@@ -1850,7 +1852,7 @@ exports.escalateUnconfirmedOrders = onSchedule(
       const fcmToken = shopSnap.data()?.fcmToken;
       if (fcmToken) {
         try {
-          await admin.messaging().send({
+          await getMessaging().send({
             token: fcmToken,
             notification: { title: "⚠️ ออเดอร์ค้างนาน", body: text },
             android: {
@@ -1914,7 +1916,7 @@ exports.createSubscriptionPayment = onCall(async (request) => {
     );
   }
 
-  const shopSnap = await admin.firestore().collection("shops").doc(shopId).get();
+  const shopSnap = await firestoreSdk.getFirestore().collection("shops").doc(shopId).get();
   if (!shopSnap.exists) throw new HttpsError('not-found', 'ไม่พบร้านค้า');
   const shopData = shopSnap.data();
   if (!canSelectTier(shopData, tier)) throw new HttpsError('invalid-argument', 'เลือก Solo, Lite หรือ Full');
@@ -1926,7 +1928,7 @@ exports.createSubscriptionPayment = onCall(async (request) => {
 
   // Unique cents per payment (1..99 satang) so concurrent payers to the
   // same account stay distinguishable — same trick as shop orders.
-  const payRef = admin.firestore().collection("subscriptionPayments").doc();
+  const payRef = firestoreSdk.getFirestore().collection("subscriptionPayments").doc();
   const cents = (hashString(payRef.id) % 99) + 1;
   const finalAmount = Math.round((amount + cents / 100) * 100) / 100;
 
@@ -1939,8 +1941,8 @@ exports.createSubscriptionPayment = onCall(async (request) => {
     amount,
     finalAmount,
     status: "pendingPayment",
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    expiresAt: admin.firestore.Timestamp.fromDate(
+    createdAt: firestoreSdk.FieldValue.serverTimestamp(),
+    expiresAt: firestoreSdk.Timestamp.fromDate(
       new Date(Date.now() + 2 * 60 * 60 * 1000)
     ),
   });
@@ -1983,7 +1985,7 @@ exports.verifySubscriptionSlip = onRequest(
     }
 
     try {
-      const payRef = admin.firestore().collection("subscriptionPayments").doc(paymentId);
+      const payRef = firestoreSdk.getFirestore().collection("subscriptionPayments").doc(paymentId);
       const paySnap = await payRef.get();
       if (!paySnap.exists) {
         res.status(404).json({ error: "Payment not found" });
@@ -2035,8 +2037,7 @@ exports.verifySubscriptionSlip = onRequest(
       }
 
       const txKey = hashString(qr.data);
-      const usedRef = admin
-        .firestore()
+      const usedRef = firestoreSdk.getFirestore()
         .collection("usedSubscriptionSlipRefs").doc(String(txKey));
       const usedSnap = await usedRef.get();
       if (usedSnap.exists) {
@@ -2046,7 +2047,7 @@ exports.verifySubscriptionSlip = onRequest(
 
       // Audit copy of the slip.
       const fileName = `billing/slips/${paymentId}.jpg`;
-      const file = admin.storage().bucket().file(fileName);
+      const file = getStorage().bucket().file(fileName);
       await file.save(buf, { contentType: "image/jpeg", resumable: false });
       const [slipUrl] = await file.getSignedUrl({
         action: "read",
@@ -2061,7 +2062,7 @@ exports.verifySubscriptionSlip = onRequest(
 
       await payRef.update({
         status: "paid",
-        paidAt: admin.firestore.FieldValue.serverTimestamp(),
+        paidAt: firestoreSdk.FieldValue.serverTimestamp(),
         paymentRef: `slip:${txKey}`,
         slipUrl,
       });
@@ -2069,7 +2070,7 @@ exports.verifySubscriptionSlip = onRequest(
         paymentId,
         shopId: pay.shopId,
         amount: slipAmount,
-        ts: admin.firestore.FieldValue.serverTimestamp(),
+        ts: firestoreSdk.FieldValue.serverTimestamp(),
       });
 
       // Founder alert on every payment (owner-chosen fraud mitigation:
@@ -2118,9 +2119,9 @@ exports.adminUpsertPlans = onCall(async (request) => {
   } catch (e) {
     throw new HttpsError("invalid-argument", e.message);
   }
-  await admin.firestore().doc("config/plans").set({
+  await firestoreSdk.getFirestore().doc("config/plans").set({
     tiers,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: firestoreSdk.FieldValue.serverTimestamp(),
     updatedBy: request.auth.uid,
   });
   _plansCache = { tiers: null, at: 0 }; // bust this instance's cache
@@ -2137,7 +2138,7 @@ exports.adminSetBilling = onCall(async (request) => {
       "PromptPay ID ต้องเป็นเบอร์ 10 หลัก / บัตรประชาชน 13 หลัก / e-wallet 15 หลัก"
     );
   }
-  await admin.firestore().doc("config/billing").set(
+  await firestoreSdk.getFirestore().doc("config/billing").set(
     {
       promptpayId: digits,
       promptpayName: String(promptpayName || "").trim(),
@@ -2159,8 +2160,7 @@ exports.adminGetBilling = onCall(async (request) => {
 exports.adminListSubscriptionPayments = onCall(async (request) => {
   assertFounder(request);
   const limit = Math.min(50, Math.max(1, parseInt(request.data?.limit || 20)));
-  const snap = await admin
-    .firestore()
+  const snap = await firestoreSdk.getFirestore()
     .collection("subscriptionPayments")
     .orderBy("createdAt", "desc")
     .limit(limit)
@@ -2250,7 +2250,7 @@ exports.createTableOrder = onRequest(
     }
 
     try {
-      const db = admin.firestore();
+      const db = firestoreSdk.getFirestore();
       const shopRef = db.collection("shops").doc(shopId);
       const shopSnap = await shopRef.get();
       if (!shopSnap.exists) {
@@ -2308,7 +2308,7 @@ exports.createTableOrder = onRequest(
           ...(line.notes ? { notes: line.notes } : {}),
           kitchenStatus: autoSend ? "sent" : "pending",
           ...(autoSend
-            ? { sentToKitchenAt: admin.firestore.Timestamp.fromDate(now) }
+            ? { sentToKitchenAt: firestoreSdk.Timestamp.fromDate(now) }
             : {}),
         });
       }
@@ -2336,7 +2336,7 @@ exports.createTableOrder = onRequest(
             }
             tx.update(orderRef, { items: [...existing, ...priced] });
             tx.update(tableRef, {
-              lastWebOrderAt: admin.firestore.FieldValue.serverTimestamp(),
+              lastWebOrderAt: firestoreSdk.FieldValue.serverTimestamp(),
             });
             return { orderId: orderRef.id, appended: true };
           }
@@ -2350,13 +2350,13 @@ exports.createTableOrder = onRequest(
           tableName: table.name || "",
           items: priced,
           status: "open",
-          openedAt: admin.firestore.Timestamp.fromDate(now),
+          openedAt: firestoreSdk.Timestamp.fromDate(now),
           webOrigin: true,
         });
         tx.update(tableRef, {
           status: "occupied",
           currentOrderId: orderRef.id,
-          lastWebOrderAt: admin.firestore.FieldValue.serverTimestamp(),
+          lastWebOrderAt: firestoreSdk.FieldValue.serverTimestamp(),
         });
         return { orderId: orderRef.id, appended: false };
       });
@@ -2372,7 +2372,7 @@ exports.createTableOrder = onRequest(
       try {
         const fcmToken = shopSnap.data().fcmToken;
         if (fcmToken) {
-          await admin.messaging().send({
+          await getMessaging().send({
             token: fcmToken,
             notification: {
               title: "🍽️ ออเดอร์ใหม่จากโต๊ะ!",
@@ -2423,7 +2423,7 @@ exports.setShopSlug = onCall(async (request) => {
     throw new HttpsError("invalid-argument", e.message);
   }
 
-  const db = admin.firestore();
+  const db = firestoreSdk.getFirestore();
   const slugRef = db.collection("slugs").doc(slug);
   const settingsRef = db
     .collection("shops").doc(shopId)
@@ -2453,7 +2453,7 @@ exports.goShop = onRequest({ cors: true }, async (req, res) => {
   const slug = m ? normalizeSlug(decodeURIComponent(m[1])) : "";
   if (slug) {
     try {
-      const snap = await admin.firestore().collection("slugs").doc(slug).get();
+      const snap = await firestoreSdk.getFirestore().collection("slugs").doc(slug).get();
       if (snap.exists) {
         res.redirect(302,
           `/order/?shop=${encodeURIComponent(snap.data().shopId)}&mode=takeaway`);
@@ -2485,7 +2485,7 @@ exports.onSaleDeductIngredients = onDocumentCreated(
     const items = sale.items || [];
     if (!items.length) return;
 
-    const db = admin.firestore();
+    const db = firestoreSdk.getFirestore();
     const shopRef = db.collection("shops").doc(event.params.shopId);
 
     // Resolve products + modifier groups outside the txn (recipes rarely
@@ -2523,7 +2523,7 @@ exports.onSaleDeductIngredients = onDocumentCreated(
     if (!liveIds.length) return;
 
     const deducted = await require('./ingredient_accounting').deduct({db,shop:shopRef,saleRef:snap.ref,usage,
-      FieldValue:admin.firestore.FieldValue});
+      FieldValue:firestoreSdk.FieldValue});
     if (!deducted) return;
 
     // Low-stock alert only on the crossing (pre > threshold → post ≤) so a
@@ -2539,7 +2539,7 @@ exports.onSaleDeductIngredients = onDocumentCreated(
         const fcmToken = (await shopRef.get()).data()?.fcmToken;
         if (fcmToken) {
           const names = crossed.map((id) => pre[id].name || id).join(", ");
-          await admin.messaging().send({
+          await getMessaging().send({
             token: fcmToken,
             notification: {
               title: "วัตถุดิบใกล้หมด",
@@ -2566,9 +2566,9 @@ exports.onSaleRefundRestoreIngredients = onDocumentUpdated(
     const usage = after.ingredientUsage;
     if (!usage || after.ingredientsRestored) return;
 
-    const db = admin.firestore();
+    const db = firestoreSdk.getFirestore();
     const shopRef = db.collection("shops").doc(event.params.shopId);
     await require('./ingredient_accounting').restore({db,shop:shopRef,saleRef:event.data.after.ref,
-      FieldValue:admin.firestore.FieldValue});
+      FieldValue:firestoreSdk.FieldValue});
   }
 );

@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const admin = require('firebase-admin');
+const {initializeApp, deleteApp} = require('firebase-admin/app'), firestoreSdk = require('firebase-admin/firestore');
 const {initializeTestEnvironment, assertFails, assertSucceeds} = require('@firebase/rules-unit-testing');
 const {doc, setDoc, updateDoc, getDoc, deleteField} = require('firebase/firestore');
 const {HttpsError} = require('firebase-functions/v2/https');
@@ -15,13 +15,12 @@ const root = path.join(__dirname, '..');
   assert.match(process.env.FIRESTORE_EMULATOR_HOST || '', /^(127\.0\.0\.1|localhost):\d+$/);
   const projectId = 'demo-pokpok-security';
   const env = await initializeTestEnvironment({projectId, firestore:{rules:fs.readFileSync(path.join(root,'firestore.rules'),'utf8')}});
-  const app = admin.initializeApp({projectId}, 'local-security-audit');
-  const db = app.firestore();
+  const app = initializeApp({projectId}, 'local-security-audit');
+  const db = firestoreSdk.getFirestore(app);
   const findings = [];
   const source = fs.readFileSync(path.join(__dirname,'index.js'),'utf8');
   const exports = {};
-  const firestore = Object.assign(() => db, {Timestamp:admin.firestore.Timestamp, FieldValue:admin.firestore.FieldValue});
-  const context = {exports, admin:{firestore}, HttpsError, REFERRAL_BONUS_DAYS:30, onCall:fn=>fn, console};
+  const context = {exports, firestoreSdk: {...firestoreSdk, getFirestore: () => db}, HttpsError, REFERRAL_BONUS_DAYS:30, onCall:fn=>fn, console};
   function load(name) {
     const start = source.indexOf(`exports.${name} = onCall(`);
     assert.ok(start >= 0);
@@ -47,7 +46,7 @@ const root = path.join(__dirname, '..');
     findings.push({id:'SEC-01',confirmed:true,result:'Normal account with no supplier profile modified another shop marketplace status through server mirror after direct write was denied.'});
 
     const ownShop = db.doc('shops/audit-attacker');
-    const end = admin.firestore.Timestamp.fromMillis(Date.now()+60*86400000);
+    const end = firestoreSdk.Timestamp.fromMillis(Date.now()+60*86400000);
     await ownShop.set({name:'Attacker fixture',tier:'full',trialEndsAt:end,referralCode:'ATTACKER'});
     await db.doc('shops/audit-referrer').set({trialEndsAt:end,referralCode:'AUDITCODE'});
     const applyReferral = load('applyReferral');
@@ -99,5 +98,5 @@ const root = path.join(__dirname, '..');
     findings.push({id:'GUARDS',confirmed:true,result:'Cross-shop direct read/write, direct cashier privilege/financial/print writes and incorrect customer capability denied.'});
     fs.writeFileSync(path.join(root,'.remember/tmp/security-audit-findings.json'),JSON.stringify({at:new Date().toISOString(),scope:'Local emulator + isolated supplier renderer only',findings},null,2));
     for(const finding of findings) console.log('AUDIT '+finding.id+' '+finding.result);
-  } finally { await env.cleanup(); await app.delete(); }
+  } finally { await env.cleanup(); await deleteApp(app); }
 })().catch(e=>{console.error('AUDIT FAILED '+e.message);process.exitCode=1;});

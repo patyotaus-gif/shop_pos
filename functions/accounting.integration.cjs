@@ -1,6 +1,6 @@
 // Executes only on the emulator. Validates actual Firestore retry/locking and device rules.
 const assert=require('node:assert/strict');
-const admin=require('firebase-admin');
+const {initializeApp, deleteApp} = require('firebase-admin/app'), firestoreSdk = require('firebase-admin/firestore');
 const {initializeTestEnvironment,assertFails,assertSucceeds}=require('@firebase/rules-unit-testing');
 const {doc,writeBatch,setDoc,updateDoc,serverTimestamp,increment,getDoc}=require('firebase/firestore');
 const {HttpsError}=require('firebase-functions/v2/https');
@@ -9,11 +9,11 @@ const {handlers}=require('./cash_accounting');
 const {refundSale}=require('./refund');
 (async()=>{
   if(!process.env.FIRESTORE_EMULATOR_HOST)throw Error('Emulator required');
-  const app=admin.initializeApp({projectId:'demo-pokpok-admin'},'accounting-integration');
-  const db=app.firestore(),FieldValue=admin.firestore.FieldValue;
+  const app=initializeApp({projectId:'demo-pokpok-admin'},'accounting-integration');
+  const db=firestoreSdk.getFirestore(app),FieldValue=firestoreSdk.FieldValue;
   const api=handlers({db,FieldValue,HttpsError});
   const subscription=require('./subscription_payment');
-  const subArgs={db,FieldValue,Timestamp:admin.firestore.Timestamp,shopId:'accounting-subscription',tier:'solo',billingCycle:'monthly',locations:1,
+  const subArgs={db,FieldValue,Timestamp:firestoreSdk.Timestamp,shopId:'accounting-subscription',tier:'solo',billingCycle:'monthly',locations:1,
     planConfig:{days:30},paymentId:'same-checkout-event',shopTypeOf:()=> 'retail',now:()=>new Date('2026-10-01T00:00:00Z')};
   const subscriptionResults=await Promise.all([subscription.apply(subArgs),subscription.apply(subArgs)]);
   assert.equal(+subscriptionResults[0],+subscriptionResults[1]);
@@ -77,9 +77,9 @@ const {refundSale}=require('./refund');
   // leave the round open for another check. Closed snapshots never change.
   const reconcile=require('./cash_reconciliation').handler({db,FieldValue,HttpsError});
   await api.open(request({requestId:'reconcile-round',openingFloat:500}));
-  await shop.collection('sales').doc('late-sale').set({total:70,paymentMethod:'cash',createdAt:admin.firestore.Timestamp.fromMillis(1)});
+  await shop.collection('sales').doc('late-sale').set({total:70,paymentMethod:'cash',createdAt:firestoreSdk.Timestamp.fromMillis(1)});
   await shop.collection('moneyMovements').doc('sale-late-sale').set({kind:'sale',saleId:'late-sale',method:'cash',
-    amountMinor:7000,salesMinor:7000,debtMinor:0,occurredAt:admin.firestore.Timestamp.fromMillis(1),
+    amountMinor:7000,salesMinor:7000,debtMinor:0,occurredAt:firestoreSdk.Timestamp.fromMillis(1),
     recordedAt:FieldValue.serverTimestamp(),sessionId:null,needsReconciliation:true});
   const assign=request({sessionId:'reconcile-round',movementId:'sale-late-sale',expectedAmountMinor:7000,
     reason:'Reviewed receipt already in opening cash',cashTreatment:'includedInOpeningFloat'});
@@ -131,6 +131,6 @@ const {refundSale}=require('./refund');
     await assertFails(updateDoc(doc(client,`shops/${shopId}/moneyMovements/sale-${id}`),{amountMinor:0}));
     const staff=env.authenticatedContext('staff-accounting',{staffRole:'cashier',staffShopId:shopId}).firestore();
     await assertFails(getDoc(doc(staff,`shops/${shopId}/moneyMovements/sale-${id}`)));
-  } finally {await env.cleanup();await app.delete();}
+  } finally {await env.cleanup();await deleteApp(app);}
   console.log('PASS accounting transaction races, next-day debt refund, immutable snapshot and device rules');
 })().catch(e=>{console.error(e);process.exitCode=1;});

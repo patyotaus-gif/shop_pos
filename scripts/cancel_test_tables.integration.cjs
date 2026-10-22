@@ -1,17 +1,18 @@
 'use strict';
 const assert = require('node:assert/strict');
-const admin = require('../functions/node_modules/firebase-admin');
+const functionRequire = require('node:module').createRequire(require('node:path').resolve(__dirname, '../functions/package.json'));
+const {initializeApp, deleteApp} = functionRequire('firebase-admin/app'), firestoreSdk = functionRequire('firebase-admin/firestore');
 const {cancelTestTables} = require('./cancel_test_tables.cjs');
 const {fingerprint} = require('./archive_test_orders.cjs');
 const {inspectClose} = require('../functions/cash_integrity');
 const {summarizeMovements} = require('../functions/money_ledger');
 (async () => {
   assert(process.env.FIRESTORE_EMULATOR_HOST, 'Emulator required');
-  const app = admin.initializeApp({projectId: 'demo-pokpok-admin'}, 'test-table-cancel');
-  const db = app.firestore(), FieldValue = admin.firestore.FieldValue;
+  const app = initializeApp({projectId: 'demo-pokpok-admin'}, 'test-table-cancel');
+  const db = firestoreSdk.getFirestore(app), FieldValue = firestoreSdk.FieldValue;
   async function fixture(id) {
     const shopId = 'cancel-test-tables-' + id, shop = db.doc('shops/' + shopId);
-    const now = admin.firestore.Timestamp.now();
+    const now = firestoreSdk.Timestamp.now();
     await shop.collection('cashControl').doc('current').set({sessionId: 'round', revision: 1});
     await shop.collection('cashSessions').doc('round').set({status: 'open', accountingVersion: 1,
       openedAt: now, accountingStartAt: now, openingFloat: 400});
@@ -63,5 +64,5 @@ const {summarizeMovements} = require('../functions/money_ledger');
       assert.equal((await f.shop.collection('accountingCorrections').get()).size, 0);
     }
     console.log('PASS: changed items, replaced table link and recorded sale abort all changes');
-  } finally {await db.terminate(); await app.delete();}
+  } finally {await db.terminate(); await deleteApp(app);}
 })().catch(e => {console.error(e); process.exitCode = 1;});

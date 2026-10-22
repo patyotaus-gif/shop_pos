@@ -1037,3 +1037,55 @@ iOS source version is **1.2.48**. No Codemagic build or TestFlight upload was st
 - ดาวน์โหลด https://pok-pok.app/app/pokpok.apk หลักฐานตรวจอยู่ .remember/tmp/release75-verified.json และ release75-public-signature.log สำรองไฟล์สาธารณะรุ่น 74 และ manifest ไว้แล้ว
 - แพตช์ระยะป้อนกระดาษที่พักไว้ยังอยู่ใน stash d16fb71 ไม่รวมในรุ่นนี้ iOS ปรับเวอร์ชันซอร์สตาม pubspec เท่านั้น ไม่ได้เริ่ม Codemagic หรือเผยแพร่ TestFlight
 - ยังต้องตรวจการพิมพ์กระดาษจริงขณะดับจอ/Doze และการเชื่อมต่อกลับกับเครื่องร้าน ผล emulator เป็นการทดสอบบริการเบื้องหลังและสร้างเอกสาร ไม่ใช่การยืนยันเครื่องพิมพ์จริง
+
+## 2026-10-23 — ทดสอบความปลอดภัย Android 1.2.58 (75) และ backend
+
+ขอบเขต: ตรวจซอร์ส commit 6e91147, ใช้บัญชี/ร้านจำลองใน Firestore และ Storage emulator เท่านั้น ทดสอบ handler ฝั่งเซิร์ฟเวอร์โดยตรงและตรวจ dependency ของ functions ไม่มีการเจาะบัญชีจริง เขียนข้อมูล production ส่งคำสั่งพิมพ์จริง หรือ deploy การแก้ไข แอพยังไม่ได้ถูกทดสอบแบบ reverse engineering/rooted device และไม่ได้ตรวจทุก endpoint แบบ end-to-end
+
+### จุดที่ควรปรับปรุง
+
+1. **อัปโหลดสินค้าไม่จำกัดชนิด/ขนาดที่ระดับแอพ (ยืนยันใน emulator; ปานกลาง)** — `storage.rules:14–16` อนุญาตเจ้าของเขียนไฟล์ใดก็ได้ใต้ `shops/{shopId}/products/{file}` และเปิดอ่านสาธารณะ ต่างจาก logo/supplier ที่มีเงื่อนไข ทดสอบอัปโหลด HTML ที่มีเพียงข้อความและรูปขนาด 5 MiB + 1 byte สำเร็จ บุคคลอื่นอ่าน HTML ได้ แต่ผู้ใช้อื่นเขียนทับไม่ได้ ผลนี้แสดงการใช้พื้นที่เก็บไฟล์สาธารณะผิดวัตถุประสงค์/เพิ่มค่าใช้จ่าย ไม่ได้ยืนยัน XSS บนโดเมนแอพ ข้อเสนอ: จำกัด MIME ของรูป ขนาดไฟล์ และตรวจเนื้อหาเมื่อจำเป็น พร้อมคงการลบรูปเดิมได้
+2. **สิทธิ์ founder มีทางเลือกจากอีเมลโดยไม่ตรวจ email_verified (ช่องว่างเงื่อนไข; ยังไม่ยึดบัญชีจริง)** — `functions/index.js:1139–1149` ใช้ custom claim หรืออีเมลใน allowlist ทดสอบ guard จริงกับ decoded claims จำลองที่ email_verified=false แล้วยอมรับ ขณะที่อีเมลทั่วไปถูกปฏิเสธ ไม่ได้ปลอม Firebase ID token หรือพิสูจน์ว่าออก token สำหรับอีเมลที่มีเจ้าของอยู่แล้วได้ จึงไม่สรุปว่าผู้ใช้ทั่วไปยึดผู้ดูแลได้ทันที ควรยึด server-issued founder claim/UID ที่เชื่อถือได้ หรือเพิ่ม verified-email เฉพาะ fallback พร้อมตรวจสิทธิ์บัญชีผู้ดูแลปัจจุบันก่อนเปลี่ยนเพื่อไม่ให้ล็อกตนเองออก
+3. **Dependency ฝั่ง functions มี advisory 20 รายการ** — `npm audit --omit=dev` รายงาน critical 2, high 7, moderate 10, low 1 เป็นรายการ package รวม dependency ทางอ้อม ไม่ใช่ 20 ช่องทางโจมตีที่พิสูจน์แล้ว ตัว critical คือ proxy-addr 2.0.7 ผ่าน firebase-functions → Express และ websocket-driver 0.7.4 ผ่าน firebase-admin → Realtime Database package ยังไม่ยืนยันเส้นทางโจมตี runtime ของแอพ ไม่พบการกำหนด trust subnet ตามเงื่อนไข proxy-addr ในซอร์ส functions ที่ค้น ควรอัปเดต dependency ที่แก้แล้วและทดสอบความเข้ากันได้ก่อน deploy ไม่ใช้ audit fix --force แบบเหมารวม
+   - [ประกาศ proxy-addr ของผู้ดูแลโครงการ](https://github.com/jshttp/proxy-addr/security/advisories/GHSA-jqcg-44mw-7w3h): แก้ใน 2.0.8; ต้องมีเงื่อนไข trust subnet ตามประกาศ
+   - [ประกาศ websocket-driver ของผู้ดูแลโครงการ](https://github.com/faye/websocket-driver-node/security/advisories/GHSA-xv26-6w52-cph6): แก้ใน 0.7.5; ไม่ได้ทดสอบส่ง payload ทำให้บริการล่ม
+
+### ผลการทดสอบ
+
+- ชุด Firestore integration/access rules 16 ชุด: ผลสุดท้ายผ่าน 15 ชุด รวมสิทธิ์แผน/พนักงาน, offline sales, accounting, ปิดยอดต่อวัน, POS, pickup, customer token/cancel, coupon, buy/get, bundles, inventory, marketplace/referral hardening, LINE linking และ auto-print
+- ชุด table_recovery ยังไม่ผ่าน: `3 INVALID_ARGUMENT: Transaction is invalid or closed` ในกรณีธุรกรรมแข่งกัน ทำซ้ำบน emulator ที่เริ่มใหม่แล้วยังเกิด ต้องตรวจความเสถียรการคืนโต๊ะต่อ ไม่ใช่หลักฐานว่าข้ามสิทธิ์ได้ ส่วน accounting เกิด error นี้รอบแรกแต่ผ่านหลังเริ่ม emulator ใหม่ ไม่ปกปิดผลล้มเหลวรอบแรก
+- ปลอม payment evidence/webhook, mismatch ยอด/สกุลเงิน/บัญชี และ replay: unit tests 20 รายการผ่าน ใช้ provider fixtures ไม่ได้ยิง provider หรือชำระเงินจริง
+- Storage regression เดิมผ่าน: เจ้าของแก้โลโก้ได้, คนอื่น/พนักงาน/anonymous แก้ไม่ได้ และเงื่อนไขชนิด/ขนาดโลโก้ทำงาน; probe อัปโหลดสินค้าด้านบนพบช่องว่างเพิ่มเติม
+- อ่าน/แก้ข้อมูลข้ามร้าน, แก้สิทธิ์สมัครสมาชิกตรง, ปลอม supplier order/ยอด/ค่าธรรมเนียม, รับ referral ซ้ำ, ใช้ customer token ผิด และเขียน autoPrintJobs/autoPrintConfig ตรง ถูกปฏิเสธในกรณีทดสอบที่ครอบคลุม ไม่ถือเป็นการรับรองว่าปลอดภัยทุกเส้นทาง
+- สแกนไฟล์ซอร์สที่ Git ติดตาม 404 ไฟล์ ไม่พบ private-key blocks, payment secret key หรือ GitHub token ตามรูปแบบที่ตรวจ ไม่ครอบคลุม Git history, ไฟล์ ignored, runtime secrets หรือรูปแบบ secret อื่น
+- Probe ซัพพลายเออร์เปลี่ยน active=false เป็น true ทำได้ แต่ตรวจพบว่าหน้าเว็บมีสวิตช์ “เปิดรับออเดอร์” (`public/supplier/index.html:458`) จึงเป็นความสามารถตามออกแบบ ไม่นับเป็นช่องโหว่ ถ้าต้องการให้ผู้ดูแลระงับบัญชีอย่างเด็ดขาดควรมีสถานะแยกที่ server ควบคุม
+
+### หลักฐานทำซ้ำในเครื่อง
+
+- `.remember/tmp/security-20261023-probe.cjs` และ `security-20261023-probe-results.json`: ตรวจ active และ guard ด้วย claims จำลอง; script exit 0 หมายถึงสังเกตพฤติกรรมตาม probe สำเร็จ ไม่ใช่ security pass
+- `.remember/tmp/security-20261023-storage.cjs` / `security-20261023-storage-results.json`: HTML/ไฟล์ใหญ่บน product path ใน demo Storage เท่านั้น
+- `.remember/tmp/security-20261023-rules-direct.log`, `security-20261023-rules-remaining.log`, `security-20261023-final-retry.log`: ผลทั้งรอบแรกและรอบทดสอบซ้ำ ชุดแรกเริ่ม emulator สองตัวพร้อมกันชน logging port; แก้สภาพแวดล้อมและทดสอบซ้ำแล้ว ไม่เอา port conflict มานับเป็นช่องโหว่
+- `.remember/tmp/security-20261023-payments.log`, `security-20261023-storage.log`, `security-20261023-dependencies.json`, `security-20261023-secret-results.json`
+- ปิด emulator ที่เปิดสำหรับงานนี้แล้ว ไม่แก้ซอร์ส runtime/rules/dependency และไม่ปล่อยอัปเดตในงานตรวจรอบนี้
+
+## 2026-10-23 — แก้ไขและเพิ่มการป้องกันจากผลตรวจความปลอดภัย
+
+- รูปสินค้าใน Storage: เจ้าของร้านอัปโหลดได้เฉพาะ JPEG/PNG/WebP/GIF/HEIC/HEIF ไม่เกิน 5 MiB ปฏิเสธ HTML, JavaScript, SVG และไฟล์ชนิดอื่น คนอื่นยังเขียน/ลบไม่ได้ เจ้าของยังลบได้และลูกค้ายังอ่านรูปเมนูได้ เงื่อนไขนี้ตรวจ MIME metadata/ขนาด ไม่ใช่การสแกนเนื้อไฟล์จริง
+- สิทธิ์ founder: bootstrap email ต้องมี `email_verified === true`; staff session ใช้สิทธิ์ founder ไม่ได้ ส่วน custom claim ที่เซิร์ฟเวอร์ออกให้ยังใช้ได้ ปรับการแสดงเมนูใน Flutter ให้ตรงกันด้วย ชุดทดสอบเรียก guard จริงด้วย claims จำลอง ไม่ใช่การปลอม Firebase ID token
+- อัปเดต `firebase-admin` เป็น 14.5.0, `firebase-functions` เป็น 7.4.0 และ dependency lock; เปลี่ยน Admin SDK จาก namespace เป็น modular API ตาม [ข้อกำหนดรุ่น 14](https://firebase.google.com/support/release-notes/admin/node) โดยใช้ Node 22 เดิม รวมถึงปรับ integration harness ที่โหลด handler จริง กำหนด `@grpc/grpc-js` เป็นรุ่นแก้ไขใน major เดิมเพื่อครอบคลุม test SDK ด้วย ไม่ใช้ `npm audit fix --force`
+- แก้การคืนโต๊ะ ธุรกรรมรอบขาย และการจองสินค้าออนไลน์ที่พบ `3 INVALID_ARGUMENT: Transaction is invalid or closed.`: เริ่ม transaction ใหม่พร้อมอ่านข้อมูลล่าสุด จำกัดรวม 3 ครั้ง เฉพาะรหัส/ข้อความนี้ ไม่ลองซ้ำเมื่อผิดสิทธิ์ ผิดเงื่อนไขธุรกิจ หรือ network error ทั่วไป ใช้กับ callback ที่ทำงานในฐานข้อมูลและรับคำขอซ้ำได้เท่านั้น
+- เพิ่ม regression สำหรับเรียกคืนโต๊ะพร้อมกัน 5 คำขอ, มีบิลใหม่แทรกระหว่าง retry, เงินเข้าลิ้นชัก commit แล้วผลลัพธ์สูญหาย, และจำกัดจำนวน retry โดยต้องไม่ล้างบิลใหม่หรือบันทึกเงินซ้ำ
+- ระหว่างทดสอบชุดสินค้า พบการจองพร้อมกันมีคำขอแพ้ที่ตอบ 503 จาก transaction แทน 409 จากสินค้า/โปรโมชัน จึงเพิ่มเงื่อนไขตรวจ response ให้เข้มขึ้น และทดสอบการจองที่ commit แล้วผลลัพธ์สูญหายต้องไม่เพิ่มจำนวนออเดอร์หรือการจองซ้ำ
+- ผลสุดท้าย: `npm test` ผ่าน 162 รายการและ escalation assertions; payment evidence/Omise unit ผ่าน 20 รายการ; Firestore integration/access rules ผ่านครบ 18 ชุด และหลังแก้การจองเพิ่มทดสอบซ้ำ 5 ชุดที่ได้รับผลกระทบ (pickup/customer/coupon/buy-get/bundles) ผ่านทั้งหมด; Storage rules ผ่าน; Dart analyzer ของ auth service ไม่มีปัญหา; Functions โหลด exports ได้ครบ 81 ตัว
+- `npm audit` ไม่พบช่องโหว่ที่รายงานใน dependency ปัจจุบัน ทั้ง production และ dev (0); dependency tree ไม่มีปัญหาและ diff check ผ่าน ผลนี้ไม่ใช่การรับรองว่าทั้งแอพไม่มีช่องโหว่อื่น
+- หลักฐานในเครื่อง: `.remember/tmp/security-fix-unit-complete.log`, `security-fix-payments.log`, `security-fix-rules-complete.log`, `security-fix-checkout-complete.log`, `security-fix-storage.log`, `security-fix-dart.log`, `security-fix-audit-final.json`, `security-fix-dependency-tree.log` เก็บรอบที่ล้มเหลวก่อนแก้ไว้ใน `security-fix-rules*.log` ด้วย ทั้ง error ธุรกรรมและการปรับ test harness/จุดเรียก SDK เก่าไม่ครบ ปิด emulator ที่ใช้ทดสอบแล้ว
+- งานนี้แก้ซอร์สและทดสอบในเครื่อง ยังไม่ deploy Functions/Storage rules หรือปล่อย APK ไม่มีการแก้ข้อมูลร้านจริง รุ่นสาธารณะยัง 1.2.58 (75) และไม่รวมแพตช์ใบเสร็จที่พักไว้
+
+## 2026-10-23 — เผยแพร่ Android 1.2.59 (76): ความปลอดภัยและธุรกรรมพร้อมกัน
+
+- ผู้ใช้สั่งปล่อยอัปเดตหลังแก้ความปลอดภัยด้านบน เผยแพร่ Functions ทั้ง 81 ตัวและ Storage rules แล้ว ตรวจทุกฟังก์ชันเป็น ACTIVE / Node.js 22 / asia-southeast1 พร้อม source hash ใหม่ ไม่มีการเพิ่มหรือลบฟังก์ชัน ไม่แก้ Firestore rules หรือข้อมูลร้าน
+- ตรวจ callable ผู้ดูแล 4 ตัวโดยไม่เข้าสู่ระบบ: opsMetrics, adminListShops, adminSetFounder, adminChangePlan ตอบ 401 UNAUTHENTICATED ทั้งหมด ไม่มีการเรียกคำสั่งแก้ข้อมูลจริง
+- ก่อนเผยแพร่ Flutter tests ผ่านครบ 263 รายการ, `flutter analyze lib test` ไม่มีปัญหา และ release APK build สำเร็จ ผล backend 162 + payment 20 + Firestore 18 ชุด / ตรวจซ้ำ 5 ชุด / Storage ตามบันทึกการแก้ไขด้านบน
+- Firebase Hosting เผยแพร่แล้ว ดาวน์โหลด APK สาธารณะครบไฟล์และยืนยันเมื่อ 2026-10-22T15:05:30.490Z: app.pokpok.pos 1.2.59 build 76, 95,232,126 bytes, SHA-256 `cc6fba480b57b2216277ac95459324cb8908bcf6ec43da91a6c416177e4d1034` ลายเซ็นตรงรุ่นเดิม manifest/hash/ขนาด/เวอร์ชันตรงกัน, no-cache, optional update, minSupportedBuild=1
+- ดาวน์โหลด https://pok-pok.app/app/pokpok.apk สำรอง APK/manifest รุ่น 75 ไว้ใน `.remember/tmp` หลักฐานรอบนี้ `release76-*` รวมผล deployment, function hashes, endpoint guards, build และ public verification
+- แพตช์ใบเสร็จที่พักไว้ยังอยู่ใน stash d16fb71 ไม่รวมในการอัปเดตนี้ iOS เปลี่ยนเวอร์ชันซอร์สตาม pubspec เท่านั้น ไม่เริ่ม Codemagic หรือเผยแพร่ TestFlight
