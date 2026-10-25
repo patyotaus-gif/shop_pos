@@ -790,7 +790,7 @@ class _PosScreenState extends State<PosScreen> {
                     PosCheckoutPanel(
                       preferenceKey: 'checkout-shortcut:${AuthService.shopId}',
                       compact: !wide,
-                      canDiscount: !AuthService.isStaff,
+                      canDiscount: StaffAccessService.can('discount'),
                       canDebt: !AuthService.isStaff,
                       subtotal: _subtotal,
                       discount: _discount,

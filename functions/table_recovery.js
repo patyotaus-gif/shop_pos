@@ -5,12 +5,13 @@ const {runTransaction} = require('./transaction_retry');
 // Recover only table links. Never settle/cancel orders, stock, or money here.
 function handlers({db, FieldValue, HttpsError}) {
   return {reconcile: async request => {
-    const shopId = owner(request, HttpsError);
+    const {shopId} = await require('./staff_permissions').authorize(request,db,HttpsError);
     const {tableId} = request.data;
     if (!validId(tableId)) throw new HttpsError('invalid-argument', 'Invalid table');
     const shop = db.collection('shops').doc(shopId);
     const tableRef = shop.collection('tables').doc(tableId);
     return runTransaction(db, async tx => {
+      await require('./staff_permissions').recheck(tx,shop,request,HttpsError);
       const tableSnap = await tx.get(tableRef);
       if (!tableSnap.exists) throw new HttpsError('not-found', 'ไม่พบโต๊ะนี้');
       const table = tableSnap.data();

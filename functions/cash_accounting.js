@@ -43,10 +43,12 @@ function handlers({db,FieldValue,HttpsError,now=Date.now}) {
       });
     },
     readiness:async request=>{
-      const shop=db.collection('shops').doc(owner(request,HttpsError));
+      const access=await require('./staff_permissions').authorize(request,db,HttpsError,'cashSession');
+      const shop=db.collection('shops').doc(access.shopId);
       const {sessionId}=request.data;
       if(!validId(sessionId))fail('ข้อมูลรอบไม่ถูกต้อง');
       return runTransaction(db,async tx=>{
+        await require('./staff_permissions').recheck(tx,shop,request,HttpsError);
         const snap=await tx.get(shop.collection('cashSessions').doc(sessionId));
         if(!snap.exists)fail('ไม่พบรอบขาย');
         if(snap.data().status==='closed')return {closed:true,canClose:false,issues:[]};
@@ -61,13 +63,18 @@ function handlers({db,FieldValue,HttpsError,now=Date.now}) {
       });
     },
     open:async request=>{
-      const shop=db.collection('shops').doc(owner(request,HttpsError));
+      const access=await require('./staff_permissions').authorize(request,db,HttpsError,'cashSession');
+      const shop=db.collection('shops').doc(access.shopId);
       const openingFloat=request.data.openingFloat;
+      if(typeof openingFloat!=='number'||!Number.isFinite(openingFloat)||openingFloat<0||openingFloat>1e9||
+          Math.abs(openingFloat*100-Math.round(openingFloat*100))>0.00001)
+        throw new HttpsError('invalid-argument','เงินทอนเริ่มต้นต้องเป็นจำนวนเงินไม่ติดลบ ไม่เกิน 2 ตำแหน่ง');
       if(minor(openingFloat)<0)fail('เงินทอนเริ่มต้นต้องไม่ติดลบ');
       // Stable request id also makes a lost response safe to retry.
       if(!validId(request.data.requestId))fail('Invalid request');
       const ref=shop.collection('cashSessions').doc(request.data.requestId);
       return runTransaction(db,async tx=>{
+        await require('./staff_permissions').recheck(tx,shop,request,HttpsError);
         const context=await ledgerContext(tx,shop), prior=await tx.get(ref);
         const settingsRef=shop.collection('accountingSettings').doc('current');
         const settings=await tx.get(settingsRef);
@@ -84,19 +91,22 @@ function handlers({db,FieldValue,HttpsError,now=Date.now}) {
         const at=FieldValue.serverTimestamp();
         const accountingStartAt=settings.data()?.enabledAt || at;
         if(settings.data()?.enabled!==true)tx.set(settingsRef,{enabled:true,enabledAt:at,enabledBy:request.auth.uid});
-        tx.create(ref,{openedAt:at,openedBy:request.auth.uid,openingFloat,status:'open',accountingVersion:1,accountingStartAt});
+        tx.set(settingsRef,{defaultOpeningFloat:openingFloat},{merge:true});
+        tx.create(ref,{openedAt:at,openedBy:request.auth.uid,openedByName:access.name,openingFloat,status:'open',accountingVersion:1,accountingStartAt});
         tx.set(context.ref,{sessionId:ref.id,openedAt:at,revision:FieldValue.increment(1)},{merge:true});
         return {id:ref.id};
       });
     },
     close:async request=>{
-      const shop=db.collection('shops').doc(owner(request,HttpsError));
+      const access=await require('./staff_permissions').authorize(request,db,HttpsError,'cashSession');
+      const shop=db.collection('shops').doc(access.shopId);
       const {sessionId,countedCash}=request.data;
       if(!validId(sessionId)||minor(countedCash)<0)fail('ข้อมูลปิดรอบไม่ถูกต้อง');
       const autoOpenNext=request.data.autoOpenNext===true;
       if(autoOpenNext && Math.abs(countedCash*100-minor(countedCash))>0.00001)
         fail('เงินสดนับได้ต้องมีทศนิยมไม่เกิน 2 ตำแหน่ง');
       return runTransaction(db,async tx=>{
+        await require('./staff_permissions').recheck(tx,shop,request,HttpsError);
         const context=await ledgerContext(tx,shop), ref=shop.collection('cashSessions').doc(sessionId), snap=await tx.get(ref);
         if(!snap.exists)fail('ไม่พบรอบขาย');
         const session=snap.data();
@@ -114,6 +124,7 @@ function handlers({db,FieldValue,HttpsError,now=Date.now}) {
         }
         if(context.sessionId!==sessionId)fail('รอบขายเปลี่ยนแล้ว กรุณาเปิดหน้านี้ใหม่');
         const summary=summarizeMovements(check.rows.map(d=>d.data()),session.openingFloat);
+        summary.report=await require('./cash_report').buildCashReport(tx,shop,check.rows.map(d=>d.data()));
         summary.pendingOrderCount=check.pendingOrderCount;
         summary.openTableCount=check.openTableCount;
         summary.futureOrderCount=check.futureOrderCount;
@@ -128,7 +139,8 @@ function handlers({db,FieldValue,HttpsError,now=Date.now}) {
             fail('พบรอบขายอื่น กรุณาตรวจประวัติรอบก่อนปิดยอด');
         }
         const at=FieldValue.serverTimestamp();
-        tx.update(ref,{status:'closed',closedAt:FieldValue.serverTimestamp(),closedBy:request.auth.uid,countedCash,summary,
+        tx.update(ref,{status:'closed',closedAt:FieldValue.serverTimestamp(),closedBy:request.auth.uid,
+          closedByName:access.name,countedCash,summary,
           integrityVersion:2,checkedMovementCount:check.checkedMovementCount,
           ...(nextRef?{nextSessionId:nextRef.id,carriedCash:countedCash}:{})});
         if(nextRef)tx.create(nextRef,{status:'open',openedAt:at,openedBy:request.auth.uid,

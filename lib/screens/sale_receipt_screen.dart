@@ -1,3 +1,4 @@
+import '../services/staff_access_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:typed_data';
 import 'package:printing/printing.dart';
@@ -32,6 +33,7 @@ class _SaleReceiptScreenState extends State<SaleReceiptScreen> {
   bool _saving = false;
   String _paper = ReceiptGenerator.paperFormats.keys.first;
   Sale? _documentSale;
+  bool _reloadSale = false;
   final _documents = <String, Future<Uint8List>>{};
 
   Future<Uint8List> _receiptBytes(Sale sale, String paper) {
@@ -78,9 +80,12 @@ class _SaleReceiptScreenState extends State<SaleReceiptScreen> {
   late Future<Sale> _sale = _load();
   Future<Sale> _load() async {
     if (widget.loadSale != null) return widget.loadSale!();
-    if (widget.sale != null) return widget.sale!;
-    final doc =
-        await ShopDatabase.shop.collection('sales').doc(widget.saleId).get();
+    if (widget.sale != null && !_reloadSale) return widget.sale!;
+    final id = widget.saleId ?? widget.sale!.id;
+    if (AuthService.isStaff) {
+      return Sale.fromFirestore(await StaffAccessService.read('sales', id), id);
+    }
+    final doc = await ShopDatabase.shop.collection('sales').doc(id).get();
     if (!doc.exists) throw StateError('ยังโหลดใบเสร็จไม่ได้');
     return Sale.fromFirestore(doc.data()!, doc.id);
   }
@@ -116,7 +121,8 @@ class _SaleReceiptScreenState extends State<SaleReceiptScreen> {
             final sale = snapshot.data!;
             final paper = _paper;
             return Column(children: [
-              if (widget.allowRefund && !AuthService.isStaff)
+              if ((widget.allowRefund || AuthService.isStaff) &&
+                  StaffAccessService.can('refund'))
                 sale.isRefunded
                     ? const Text('คืนเงินบิลนี้แล้ว')
                     : TextButton.icon(
@@ -140,6 +146,7 @@ class _SaleReceiptScreenState extends State<SaleReceiptScreen> {
                               success: 'บันทึกคืนเงินแล้ว');
                           if (ok && mounted) {
                             setState(() {
+                              _reloadSale = true;
                               _sale = _load();
                               _sale.ignore();
                             });

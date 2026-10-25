@@ -9,13 +9,14 @@ function owner(request,HttpsError) {
   if(!validId(shopId)) throw new HttpsError('invalid-argument','Invalid shop');
   return shopId;
 }
-async function confirmOrder({db,FieldValue,shopId,orderId,actor,paymentRef,stripeSession,omisePayment}) {
+async function confirmOrder({db,FieldValue,shopId,orderId,actor,paymentRef,stripeSession,omisePayment,checkAccess,staffName,staffId}) {
   if(!validId(shopId)||!validId(orderId)) throw new Error('Invalid order');
   const shop=db.collection('shops').doc(shopId), orderRef=shop.collection('orders').doc(orderId);
   const saleRef=shop.collection('sales').doc('order-'+orderId);
   // Legacy Stripe records use random IDs. Do not blindly manufacture a second sale.
   const legacy=await shop.collection('sales').where('orderId','==',orderId).limit(2).get();
-  return db.runTransaction(async tx=>{
+  return require('./transaction_retry').runTransaction(db,async tx=>{
+    if(checkAccess)await checkAccess(tx);
     const orderSnap=await tx.get(orderRef), prior=await tx.get(saleRef);
     if(!orderSnap.exists) throw new Error('Order not found');
     const order=orderSnap.data();
@@ -71,7 +72,7 @@ async function confirmOrder({db,FieldValue,shopId,orderId,actor,paymentRef,strip
     const context=await ledgerContext(tx,shop);
     const receiptSettings=await tx.get(shop.collection('settings').doc('shop'));
     const now=FieldValue.serverTimestamp();
-    const sale={items:order.items.map(i=>({...i,subtotal:minor(i.price*i.quantity)/100})),total:amount/100,
+    const sale={...(staffName?{staffName}:{}),...(staffId?{staffId}:{}),items:order.items.map(i=>({...i,subtotal:minor(i.price*i.quantity)/100})),total:amount/100,
       discount:(bundleCut+(order.coupon?.discountMinor||0))/100,
       ...(order.bundles ? {bundles:order.bundles,bundleDiscount:bundleCut/100} : {}),
       ...(order.coupon ? {coupon:order.coupon} : {}),
@@ -99,16 +100,19 @@ async function confirmOrder({db,FieldValue,shopId,orderId,actor,paymentRef,strip
 function handlers({db,FieldValue,HttpsError}) {
   return {
     confirm:async request=>{
-      const shopId=owner(request,HttpsError);
-      try {return await confirmOrder({db,FieldValue,shopId,orderId:request.data.orderId,actor:request.auth.uid,
-        paymentRef:typeof request.data.paymentRef==='string'?request.data.paymentRef.slice(0,200):null});}
+      const {shopId,name,staffId}=await require('./staff_permissions').authorize(request,db,HttpsError);
+      try {return await confirmOrder({db,FieldValue,shopId,orderId:request.data.orderId,actor:request.auth.uid,staffName:name,staffId,
+        paymentRef:typeof request.data.paymentRef==='string'?request.data.paymentRef.slice(0,200):null,
+        checkAccess:tx=>require('./staff_permissions').recheck(tx,db.collection('shops').doc(shopId),request,HttpsError)});}
       catch(e){throw new HttpsError('failed-precondition',e.message);}
     },
     transition:async request=>{
-      const shopId=owner(request,HttpsError), {orderId,status,reason}=request.data;
+      const {orderId,status,reason}=request.data;
+      const {shopId}=await require('./staff_permissions').authorize(request,db,HttpsError,status==='cancelled'?'cancel':null);
       if(!validId(orderId))throw new HttpsError('invalid-argument','Invalid order');
       const ref=db.collection('shops').doc(shopId).collection('orders').doc(orderId);
-      return db.runTransaction(async tx=>{
+      return require('./transaction_retry').runTransaction(db,async tx=>{
+        await require('./staff_permissions').recheck(tx,db.collection('shops').doc(shopId),request,HttpsError);
         const doc=await tx.get(ref);if(!doc.exists)throw new HttpsError('not-found','Order not found');
         const old=doc.data(); if(old.status===status)return {success:true};
         const next={paid:'accepted',accepted:'ready',ready:'completed'};

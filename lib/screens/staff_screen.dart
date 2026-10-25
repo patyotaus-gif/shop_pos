@@ -103,7 +103,7 @@ class StaffScreen extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => _StaffForm(existing: existing),
+      builder: (_) => StaffMemberForm(existing: existing),
     );
   }
 }
@@ -125,7 +125,7 @@ class _StaffTile extends StatelessWidget {
       ),
       title:
           Text(staff.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: const Text('พนักงานขาย · PIN ถูกปกปิด'),
+      subtitle: Text('${staff.role.label} · PIN ถูกปกปิด'),
       trailing: IconButton(
         icon: const Icon(Icons.edit_outlined),
         onPressed: () => showModalBottomSheet<void>(
@@ -135,25 +135,27 @@ class _StaffTile extends StatelessWidget {
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
-          builder: (_) => _StaffForm(existing: staff),
+          builder: (_) => StaffMemberForm(existing: staff),
         ),
       ),
     );
   }
 }
 
-class _StaffForm extends StatefulWidget {
-  const _StaffForm({this.existing});
+class StaffMemberForm extends StatefulWidget {
+  const StaffMemberForm({super.key, this.existing});
   final StaffMember? existing;
 
   @override
-  State<_StaffForm> createState() => _StaffFormState();
+  State<StaffMemberForm> createState() => StaffMemberFormState();
 }
 
-class _StaffFormState extends State<_StaffForm> {
+class StaffMemberFormState extends State<StaffMemberForm> {
   late final TextEditingController _name;
   late final TextEditingController _pin;
   bool _saving = false;
+  late StaffRole _position;
+  late Map<String, bool> _permissions;
 
   bool get _isEdit => widget.existing != null;
 
@@ -162,6 +164,10 @@ class _StaffFormState extends State<_StaffForm> {
     super.initState();
     _name = TextEditingController(text: widget.existing?.name ?? '');
     _pin = TextEditingController();
+    _position = widget.existing?.role == StaffRole.owner
+        ? StaffRole.cashier
+        : widget.existing?.role ?? StaffRole.cashier;
+    _permissions = {...?widget.existing?.permissions};
   }
 
   @override
@@ -185,10 +191,11 @@ class _StaffFormState extends State<_StaffForm> {
     setState(() => _saving = true);
     try {
       if (_isEdit) {
-        await StaffService.update(
-            widget.existing!.copyWith(name: name, pin: pin));
+        await StaffService.update(widget.existing!.copyWith(
+            name: name, pin: pin, role: _position, permissions: _permissions));
       } else {
-        await StaffService.create(name: name, pin: pin);
+        await StaffService.create(
+            name: name, pin: pin, role: _position, permissions: _permissions);
       }
       if (mounted) Navigator.pop(context);
     } catch (e) {
@@ -228,64 +235,97 @@ class _StaffFormState extends State<_StaffForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-          20, 20, 20, 20 + MediaQuery.of(context).viewInsets.bottom),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
+    return SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+            child: Padding(
+          padding: EdgeInsets.fromLTRB(
+              20, 20, 20, 20 + MediaQuery.of(context).viewInsets.bottom),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(_isEdit ? 'แก้ไขพนักงาน' : 'เพิ่มพนักงาน',
-                  style: Theme.of(context).textTheme.titleMedium),
-              const Spacer(),
-              if (_isEdit)
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  onPressed: _delete,
+              Row(
+                children: [
+                  Expanded(
+                      child: Text(_isEdit ? 'แก้ไขพนักงาน' : 'เพิ่มพนักงาน',
+                          style: Theme.of(context).textTheme.titleMedium)),
+                  if (_isEdit)
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      onPressed: _delete,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _name,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'ชื่อพนักงาน',
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
                 ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _pin,
+                keyboardType: TextInputType.number,
+                maxLength: 8,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'PIN 4–8 หลัก',
+                  hintText: 'แก้ไข: เว้นว่างเพื่อใช้ PIN เดิม',
+                  prefixIcon: Icon(Icons.pin_outlined),
+                  border: OutlineInputBorder(),
+                  counterText: '',
+                ),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<StaffRole>(
+                  isExpanded: true,
+                  initialValue: _position,
+                  decoration: const InputDecoration(labelText: 'ตำแหน่ง'),
+                  items: StaffRole.values
+                      .where((r) => r != StaffRole.owner)
+                      .map((r) =>
+                          DropdownMenuItem(value: r, child: Text(r.label)))
+                      .toList(),
+                  onChanged: (r) {
+                    if (r != null) setState(() => _position = r);
+                  }),
+              const Text(
+                  'ทุกตำแหน่งขาย รับเงิน จัดการโต๊ะ ออเดอร์ และงานครัวได้เหมือนกัน'),
+              const SizedBox(height: 12),
+              const Text('สิทธิ์เพิ่มเติมรายคน'),
+              for (final e in const {
+                'discount': 'ลดราคา',
+                'cancel': 'ยกเลิกบิล',
+                'refund': 'คืนเงิน',
+                'cashSession': 'เปิด–ปิดรอบ',
+                'reports': 'ดูรายงาน',
+                'cost': 'ดูต้นทุน',
+                'stock': 'ปรับสต๊อก'
+              }.entries)
+                SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(e.value),
+                    value: _permissions[e.key] == true,
+                    onChanged: (v) => setState(() => _permissions[e.key] = v)),
+              CompactAction(
+                  child: FilledButton(
+                onPressed: _saving ? null : _save,
+                style: FilledButton.styleFrom(minimumSize: const Size(64, 50)),
+                child: _saving
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : Text(_isEdit ? 'บันทึก' : 'เพิ่มพนักงาน'),
+              )),
             ],
           ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _name,
-            textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(
-              labelText: 'ชื่อพนักงาน',
-              prefixIcon: Icon(Icons.person_outline),
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _pin,
-            keyboardType: TextInputType.number,
-            maxLength: 8,
-            obscureText: true,
-            decoration: const InputDecoration(
-              labelText: 'PIN 4–8 หลัก',
-              hintText: 'แก้ไข: เว้นว่างเพื่อใช้ PIN เดิม',
-              prefixIcon: Icon(Icons.pin_outlined),
-              border: OutlineInputBorder(),
-              counterText: '',
-            ),
-          ),
-          const SizedBox(height: 16),
-          CompactAction(
-              child: FilledButton(
-            onPressed: _saving ? null : _save,
-            style: FilledButton.styleFrom(minimumSize: const Size(64, 50)),
-            child: _saving
-                ? const SizedBox(
-                    height: 18,
-                    width: 18,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white))
-                : Text(_isEdit ? 'บันทึก' : 'เพิ่มพนักงาน'),
-          )),
-        ],
-      ),
-    );
+        )));
   }
 }

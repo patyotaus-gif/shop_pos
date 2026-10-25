@@ -1,3 +1,4 @@
+import 'staff_access_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import '../models/order.dart';
@@ -10,41 +11,54 @@ class OrderService {
           .doc(AuthService.shopId)
           .collection('orders');
 
-  static Stream<List<ShopOrder>> watchActive() => _col()
-      .where('status', whereIn: [
-        'pendingPayment',
-        'paid',
-        'accepted',
-        'ready',
-      ])
-      .snapshots()
-      .map((s) {
-        final orders =
-            s.docs.map((d) => ShopOrder.fromFirestore(d.data(), d.id)).toList();
-        // Pending payment first (needs attention), then by created time.
-        orders.sort((a, b) {
-          if (a.status == OrderStatus.pendingPayment &&
-              b.status != OrderStatus.pendingPayment) {
-            return -1;
-          }
-          if (b.status == OrderStatus.pendingPayment &&
-              a.status != OrderStatus.pendingPayment) {
-            return 1;
-          }
-          return (a.pickupStartAt ?? a.createdAt)
-              .compareTo(b.pickupStartAt ?? b.createdAt);
-        });
-        return orders;
-      });
+  static Stream<List<ShopOrder>> watchActive() => AuthService.isStaff
+      ? watchAll().map((rows) => rows
+          .where((r) => ![OrderStatus.completed, OrderStatus.cancelled]
+              .contains(r.status))
+          .toList())
+      : _col()
+          .where('status', whereIn: [
+            'pendingPayment',
+            'paid',
+            'accepted',
+            'ready',
+          ])
+          .snapshots()
+          .map((s) {
+            final orders = s.docs
+                .map((d) => ShopOrder.fromFirestore(d.data(), d.id))
+                .toList();
+            // Pending payment first (needs attention), then by created time.
+            orders.sort((a, b) {
+              if (a.status == OrderStatus.pendingPayment &&
+                  b.status != OrderStatus.pendingPayment) {
+                return -1;
+              }
+              if (b.status == OrderStatus.pendingPayment &&
+                  a.status != OrderStatus.pendingPayment) {
+                return 1;
+              }
+              return (a.pickupStartAt ?? a.createdAt)
+                  .compareTo(b.pickupStartAt ?? b.createdAt);
+            });
+            return orders;
+          });
 
-  static Stream<List<ShopOrder>> watchAll() =>
-      _col().orderBy('createdAt', descending: true).snapshots().map((s) =>
+  static Stream<List<ShopOrder>> watchAll() => AuthService.isStaff
+      ? StaffAccessService.watch('orders').map((rows) => rows
+          .map((r) => ShopOrder.fromFirestore(r, r['id'] as String))
+          .toList()
+        ..sort((a, b) => a.createdAt.compareTo(b.createdAt)))
+      : _col().orderBy('createdAt', descending: true).snapshots().map((s) =>
           s.docs.map((d) => ShopOrder.fromFirestore(d.data(), d.id)).toList());
 
-  static Stream<int> watchNewOrders() => _col()
-      .where('status', isEqualTo: 'paid')
-      .snapshots()
-      .map((s) => s.docs.length);
+  static Stream<int> watchNewOrders() => AuthService.isStaff
+      ? watchAll()
+          .map((rows) => rows.where((r) => r.status == OrderStatus.paid).length)
+      : _col()
+          .where('status', isEqualTo: 'paid')
+          .snapshots()
+          .map((s) => s.docs.length);
 
   static Future<void> updateStatus(String orderId, OrderStatus status,
       {String? reason}) async {
@@ -58,15 +72,19 @@ class OrderService {
     });
   }
 
-  static Stream<List<ShopOrder>> watchPendingPayment() => _col()
+  static Stream<List<ShopOrder>> watchPendingPayment() => AuthService.isStaff
+      ? watchAll().map((rows) =>
+          rows.where((r) => r.status == OrderStatus.pendingPayment).toList())
+      : _col()
           .where('status', isEqualTo: OrderStatus.pendingPayment.name)
           .snapshots()
           .map((s) {
-        final orders =
-            s.docs.map((d) => ShopOrder.fromFirestore(d.data(), d.id)).toList();
-        orders.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-        return orders;
-      });
+          final orders = s.docs
+              .map((d) => ShopOrder.fromFirestore(d.data(), d.id))
+              .toList();
+          orders.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+          return orders;
+        });
 
   /// Mark a pending order as paid (manual confirm by the shop owner after
   /// they've eyeballed their banking app). Records the optional [paymentRef]

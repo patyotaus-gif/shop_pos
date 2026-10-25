@@ -41,6 +41,7 @@ import 'widgets/subscription_gate.dart';
 import 'widgets/update_prompt.dart';
 import 'widgets/side_navigation_shell.dart';
 import 'widgets/connection_status_banner.dart';
+import 'widgets/cash_session_status_banner.dart';
 import 'widgets/workspace_sections.dart';
 import 'widgets/recoverable_auth_builder.dart';
 import 'widgets/app_viewport.dart';
@@ -571,7 +572,11 @@ class _MainShellState extends State<MainShell> {
             final safeIndex = selected < 0 ? 0 : selected;
             return SideNavigationShell(
               items: tabs,
-              statusBanner: const ConnectionStatusBanner(),
+              statusBanner:
+                  const Column(mainAxisSize: MainAxisSize.min, children: [
+                CashSessionStatusBanner(),
+                ConnectionStatusBanner(),
+              ]),
               selectedIndex: safeIndex,
               onSelected: (index) =>
                   setState(() => _selectedLabel = tabs[index].label),

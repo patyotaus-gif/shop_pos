@@ -31,9 +31,14 @@ class StaffService {
     required String name,
     required String pin,
     StaffRole role = StaffRole.cashier,
+    Map<String, bool> permissions = const {},
   }) async {
-    final result = await StaffAccessService.call(
-        'staffManage', {'name': name, 'pin': pin});
+    final result = await StaffAccessService.call('staffManage', {
+      'name': name,
+      'pin': pin,
+      'position': role.name,
+      'permissions': permissions
+    });
     return result['id'] as String;
   }
 
@@ -42,7 +47,9 @@ class StaffService {
       'id': staff.id,
       'name': staff.name,
       'pin': staff.pin,
-      'active': staff.active
+      'active': staff.active,
+      'position': staff.role.name,
+      'permissions': staff.permissions,
     });
   }
 

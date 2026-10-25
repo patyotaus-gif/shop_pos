@@ -1,5 +1,13 @@
 # Android pilot feedback — 2026-10-03
 
+## Published release - 1.2.60+77 (2026-10-26)
+
+- Released staff positions with shared operational access and individually assigned extra permissions, explicit cash-round opening with a closed-round banner, detailed closing reports, and the LINE settings gray-screen fix. Earlier source-only notes for these changes are superseded by this release.
+- Validation: full Flutter analysis clean; 30 focused Flutter tests, 170 backend tests plus escalation assertions, and staff/accounting/table emulator checks passed during development. Signed Android release build passed in 156.7 seconds. No physical-device or printer acceptance is claimed.
+- All 82 backend functions verified ACTIVE on Node.js 22 in asia-southeast1 with updated source hashes, including new staffWork. Deployment hit transient mutation quotas; four unchanged functions were explicitly redeployed before publishing the APK. Unauthenticated calls to staffWork, staffManage, openCashSession and closeCashSession were rejected. No Firestore/Storage rules or production shop records changed.
+- Full public APK downloaded and verified at 2026-10-25T16:44:39.480Z: app.pokpok.pos 1.2.60+77, 95,510,778 bytes, SHA256 `34023965555ca070decb5d70065bf711c06809cf7288075917d4041116a2b38d`. Package, version and original signing certificate verified; manifest matches, no-cache, optional update and minimum supported build 1 preserved. Download: https://pok-pok.app/app/pokpok.apk.
+- Evidence is under ignored `.remember/tmp/release77-*`; previous build 76 APK and manifest backed up. Held receipt-feed stash `d16fb71b9218cfe90eadb88c70561dc984feb50e` remains excluded. iOS source version updated only; no Codemagic/TestFlight build started.
+
 ## Published release - 1.2.57+74 (2026-10-22)
 
 - Owner authorized publishing the final category layout: category names first, `+ เพิ่มหมวดหมู่` at the bottom of the dropdown, no separate add button. Includes empty-shop creation and cancellation preserving the previous selection.
@@ -1089,3 +1097,43 @@ iOS source version is **1.2.48**. No Codemagic build or TestFlight upload was st
 - Firebase Hosting เผยแพร่แล้ว ดาวน์โหลด APK สาธารณะครบไฟล์และยืนยันเมื่อ 2026-10-22T15:05:30.490Z: app.pokpok.pos 1.2.59 build 76, 95,232,126 bytes, SHA-256 `cc6fba480b57b2216277ac95459324cb8908bcf6ec43da91a6c416177e4d1034` ลายเซ็นตรงรุ่นเดิม manifest/hash/ขนาด/เวอร์ชันตรงกัน, no-cache, optional update, minSupportedBuild=1
 - ดาวน์โหลด https://pok-pok.app/app/pokpok.apk สำรอง APK/manifest รุ่น 75 ไว้ใน `.remember/tmp` หลักฐานรอบนี้ `release76-*` รวมผล deployment, function hashes, endpoint guards, build และ public verification
 - แพตช์ใบเสร็จที่พักไว้ยังอยู่ใน stash d16fb71 ไม่รวมในการอัปเดตนี้ iOS เปลี่ยนเวอร์ชันซอร์สตาม pubspec เท่านั้น ไม่เริ่ม Codemagic หรือเผยแพร่ TestFlight
+
+## 2026-10-26 — แก้ช่องกรอกรหัส LINE เป็นพื้นที่สีเทา
+
+- ผู้ใช้ยืนยันว่าเกิดทันทีในหน้าตั้งค่าการแจ้งเตือนทั้ง Android/iOS รุ่นล่าสุด
+- ทำซ้ำได้เมื่อทดสอบส่วนตั้งค่า LINE ภายใน `SettingsSections` จริง: เปิด ExpansionTile แล้วเกิด `type 'bool' is not a subtype of type 'double?' in type cast` ทั้ง 6 ขนาด/สเกล ทดสอบช่องเดี่ยวใน ListView ที่ไม่มี PageStorageKey ไม่เกิด จึงต้องคงตัวครอบจริงใน regression
+- สาเหตุ: ExpansionTile บันทึกสถานะ bool กับช่องกรอกที่อ่านตำแหน่งเลื่อน double ใช้ PageStorage path ร่วมกันจาก ListView ของหมวดตั้งค่า
+- แยกส่วนกรอกรหัสเป็น `LineNotificationSettings` และกำหนด PageStorageKey ต่างกันให้หัวข้อพับได้กับ TextField เพื่อไม่ให้ชนกัน ทั้งยังคืนสถานะเมื่อสลับหมวดได้
+- ผ่าน widget tests 8 รายการ: LINE 6 กรณี (ความกว้าง 320/393/800 × text scale 1.0/1.6) และ settings navigation เดิม 2 กรณี ครอบคลุมเปิดหัวข้อ กรอกและบันทึก สลับหมวดกลับมา รหัสคงเดิม และพับ/เปิดซ้ำ ไม่มี exception หรือ tap warning
+- `dart analyze` ไฟล์ที่เปลี่ยนผ่าน ไม่มีปัญหา ผลนี้เป็น automated widget test ยังไม่ได้ยืนยันบนเครื่องผู้ใช้จริง
+- ยังไม่ปล่อยอัปเดต ไม่เปลี่ยนบริการ LINE/ข้อมูลร้าน และไม่แตะงานใบเสร็จที่พักไว้ หลักฐานก่อนแก้ `.remember/tmp/line-settings-repro.log`
+
+## 2026-10-26 — เปิดรอบขายด้วยเงินทอนที่ยืนยัน และเตือนเมื่อรอบปิด
+
+- แอพส่ง `autoOpenNext: false` เมื่อปิดรอบ เก็บยอดนับจริง/ส่วนต่าง/รายงานรอบเดิมตามเดิม ไม่ยกยอดเงินสดนับจริงมาเปิดรอบต่อ
+- เปิดรอบขายต้องยืนยันเงินทอน โดยเติมค่าจาก `accountingSettings/current.defaultOpeningFloat` ที่เซิร์ฟเวอร์บันทึกพร้อมธุรกรรมเปิดรอบครั้งล่าสุดของร้าน ใช้ร่วมกันหลายเครื่อง ไม่เปลี่ยนค่าจากยอดนับตอนปิดรอบ ตรวจจำนวนเงินไม่ติดลบ/ไม่เกิน 2 ตำแหน่งทั้ง client และ server
+- หน้าสรุปปิดรอบมี “เปิดรอบถัดไป” สำหรับร้านขายต่อ กดแล้วเข้าสู่ขั้นยืนยันเงินทอนก่อนเปิด หากยกเลิกยังคงปิดอยู่
+- เพิ่มแถบ “รอบขายปิดอยู่” และปุ่มไปหน้าเปิดรอบใน shell เจ้าของร้านที่เริ่มระบบบัญชีแล้ว แถบหายเมื่อพบรอบเปิด ไม่อ้างว่าร้านออนไลน์ถูกปิด ไม่เปลี่ยนการรับออเดอร์ออนไลน์ ถ้าอ่านสถานะล้มเหลวแสดงแจ้งตรวจสถานะไม่สำเร็จ
+- ทดสอบ Node บัญชี/ปิดรอบ/กระทบยอด 48 รายการผ่าน, Firestore emulator cash rollover + manual close/reopen ผ่าน (รวม concurrent close และ immutable history), widget แถบจอ 320 ตัวอักษร 1.6 ผ่าน, analyzer ไฟล์ที่เปลี่ยนผ่านหลังแก้ style warnings หลักฐาน `.remember/tmp/manual-cash-{tests,emulator}.log`
+- ต้องปล่อยทั้ง backend openCashSession และ client เพื่อใช้การจำเงินทอนครบถ้วน ยังไม่ deploy/อัปเวอร์ชัน เครื่องแอพเก่าที่ร้องขอ autoOpenNext ยังทำงานแบบเดิมเพื่อความเข้ากันได้ ไม่แก้ประวัติจริง ไม่แตะ patch ใบเสร็จที่พักไว้
+
+## 2026-10-26 — รายงานปิดรอบ Z แบบละเอียด
+
+- เพิ่มเลขอ้างอิงรอบ เลขผู้เสียภาษี ผู้เปิด/ปิดพร้อมรหัสบัญชี และแคชเชียร์พร้อมรหัสพนักงานที่มีบิลในรอบ ชื่อผู้เปิด/ปิดเก็บจาก authenticated owner token ไม่ใช้ชื่อที่ client ส่งมา รอบเก่าไม่เดาชื่อย้อนหลัง
+- Snapshot รายละเอียดจาก sales ที่อ้างอิงโดย moneyMovements ภายใน transaction ปิดรอบ: ยอดก่อนส่วนลด ส่วนลด ค่าบริการ ยอดปรับการชำระ ยอดขายที่คืน รายการ/จำนวนสินค้าคืน แคชเชียร์ และช่องทางขาย เมื่อข้อมูลต้นทางไม่ครบแสดงแจ้งแทนยอดสมมติ จำกัดรายการรายละเอียดสินค้า/แคชเชียร์ 100 เพื่อคุมขนาด snapshot
+- วิธีชำระเงินแยกจากช่องทางเดลิเวอรี ออนไลน์ยังไม่อ้างว่าแยกบัตร/วอลเล็ตได้ถ้าต้นทางไม่บันทึก ยกเลิกก่อนขายยังไม่มีจำนวนใน report จึงระบุไม่มีข้อมูล ไม่แสดง 0 และยังไม่ได้เพิ่ม event tracking สำหรับกรณีนี้
+- สรุปลิ้นชักแสดงเงินทอน ยอดขายเงินสด รับหนี้เงินสด คืนเงินสด รับเข้า จ่ายออก คงเหลือตามระบบ นับจริง ผลต่าง และสถานะ เงินสดตรงยอด/เกิน/ขาด คำนวณผลต่างเป็นสตางค์ ไม่แสดงจ่ายออก -0.00 ตัวอย่าง 1000+3500 กับนับจริง4500 แสดงผลต่าง0/ตรงยอด
+- ใช้ฟอนต์ไทยใน assets สร้าง PDF ได้โดยไม่โหลดฟอนต์จากอินเทอร์เน็ต แยก build PDF เพื่อทดสอบ ตัวอย่าง `.remember/tmp/zreport-detailed-preview.pdf` และ legacy preview
+- Node บัญชี/กระทบยอด 48 tests + cash_report 2 tests ผ่าน; PDF/เงินเกินขาด 2 tests ผ่าน ตรวจ static analysis ผ่านทั้ง model/generator/test/UI และ Firestore emulator ปิดรอบพร้อม snapshot ใหม่ผ่าน ยังไม่ทดสอบพิมพ์เครื่องจริง ยังไม่ deploy/release ไม่แตะ patch ใบเสร็จขายที่พักไว้
+
+## 2026-10-26 — ตำแหน่งพนักงานและสิทธิ์รายคน
+
+- แยกตำแหน่งแคชเชียร์ / เสิร์ฟ / ครัว / ผู้จัดการออกจากสิทธิ์ ทุกตำแหน่งเข้าหน้าขาย โต๊ะ ออเดอร์ และจอครัวได้ ใช้ PIN และบัญชีพนักงานที่จำกัดขอบเขตร้านเดิม เจ้าของยังเป็นบัญชีเจ้าของโดยไม่ต้องสร้างพนักงานให้ตัวเอง
+- เจ้าของกำหนดเพิ่มได้รายคน: ลดราคา/คูปอง, ยกเลิก, คืนเงิน, เปิด–ปิดรอบ, รายงานยอดขาย, ดูต้นทุน และตรวจนับสต๊อก เปลี่ยนสิทธิ์แล้ว session เดิมถูกปฏิเสธ ต้องเข้าใช้งานใหม่ ชื่อตำแหน่งไม่ให้สิทธิ์ผู้จัดการร้านโดยอัตโนมัติ
+- staffWork อ่านเฉพาะฟิลด์งานร้านที่อนุญาต ตัดต้นทุน/PIN ออกจากข้อมูลทั่วไป ไม่เปิด Firestore rules ให้พนักงานอ่านเอกสารสินค้าหรือบิลทั้งก้อน ราคาสินค้าและตัวเลือกเสริมคำนวณฝั่ง server; mutation ตรวจร้าน สถานะสมาชิก เวอร์ชันสิทธิ์ และรายการล่าสุดใน transaction
+- งานโต๊ะเพิ่มสินค้าเป็นชุดพร้อม request ID, ตรวจจำนวนเดิมก่อนเปลี่ยน, ส่งครัว/พร้อมเสิร์ฟ, รับชำระผ่านระบบโปรโมชั่นเดิม และอ่านใบเสร็จที่ลบต้นทุนแล้ว ยกเลิกรายการเตรียมแล้วบันทึกของเสีย/ตัดสต๊อกเมื่อเลือกใช้ของไปแล้ว การรับเงิน/เปิด–ปิดรอบเก็บชื่อกับรหัสผู้ทำรายการจริง
+- หน้าสิทธิ์เพิ่มเติมมีรายงานตามช่วงวันไม่เกิน 31 วัน (2,000 บิล/ครั้ง), ตรวจนับสินค้าจำนวนเต็มและชั่งน้ำหนัก รวมล็อตเดิม/วันหมดอายุ และกันจำนวนต่ำกว่าที่จองออนไลน์ การรับล็อตใหม่/สูตรวัตถุดิบและตรวจแก้รายการเงินผิดปกติยังเป็นงานเจ้าของร้าน
+- ข้อมูลปฏิบัติงานพนักงานอัปเดตด้วย callable ทุก 5 วินาที (workspace 15 วินาที); สูงสุด 500 รายการค้าง มีข้อความหากเกิน ไม่ตัดทิ้งเงียบ ๆ ประวัติออเดอร์ใช้ 100 ออเดอร์ล่าสุด + งานค้างทั้งหมด จอครัวพนักงานเป็นโหมดหน้าจอ การตั้งค่า/คิวเครื่องพิมพ์ครัวยังคงให้เจ้าของจัดการ
+- ฟอร์มพนักงานเลื่อนได้ มี SafeArea และแก้หัวข้อ/ตัวเลือกตำแหน่งล้นจอ ทดสอบมือถือ 320 px และแท็บเล็ต 800 px ที่ text scale 1.4 ผ่าน
+- ตรวจแล้ว: flutter analyze ทั้งโครงการไม่มีปัญหา; Flutter 30 tests ผ่าน (สิทธิ์/ฟอร์ม, ตาราง/โปรโมชั่น/ตัวเลือกสินค้า, ปิดรอบ/PDF); npm test ผ่าน 170 tests รวมการป้องกันสิทธิ์; Firestore emulator staff_work, staff_access และ table_promotions ผ่าน รวม 4 ตำแหน่ง, retry/concurrency, การถอนสิทธิ์, ข้ามร้าน, ราคาปลอม, ของเสีย, สินค้าชั่งและล็อต, คืนเงิน, เปิด–ปิดรอบและประวัติออเดอร์
+- ยังไม่ปล่อยอัปเดตหรือเปลี่ยนเวอร์ชัน ยังไม่ได้ยืนยันบนมือถือ/เครื่องพิมพ์จริง งานใบเสร็จที่พักไว้ไม่ถูกนำกลับมา ต้อง deploy staffWork และ callable ที่เปลี่ยนพร้อม backend ก่อนปล่อยแอพที่ใช้หน้าพนักงานใหม่

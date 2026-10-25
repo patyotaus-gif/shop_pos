@@ -26,6 +26,7 @@ function saleMovement(sale, actor) {
 function summarizeMovements(rows, openingFloat) {
   let gross=0, debt=0, refund=0, cash=0, cashSales=0, bills=0, collections=0, cashIn=0, cashOut=0, openingCashIncluded=0, reconciledCount=0;
   const byMethod={};
+  let cashDebtCollections=0,cashRefunds=0;
   for (const r of rows) {
     const amount=r.amountMinor || 0;
     if(r.reconciliation)reconciledCount++;
@@ -33,6 +34,8 @@ function summarizeMovements(rows, openingFloat) {
     gross += r.salesMinor || 0; debt += r.debtMinor || 0; refund += r.refundMinor || 0;
     if (r.kind==='sale') { bills++; if(r.method==='cash')cashSales+=amount; }
     if (r.kind==='debtPayment') collections+=amount;
+    if (r.kind==='debtPayment'&&r.method==='cash') cashDebtCollections+=amount;
+    if (r.kind==='refund'&&r.method==='cash') cashRefunds-=amount;
     if (r.method==='cash') cash+=amount;
     if (r.kind==='cashIn') {cashIn+=amount;continue;}
     if (r.kind==='cashOut') {cashOut-=amount;continue;}
@@ -42,6 +45,7 @@ function summarizeMovements(rows, openingFloat) {
     cashSales:cashSales/100,expectedCash:(minor(openingFloat)+cash-openingCashIncluded)/100,openingFloat,
     openingCashIncluded:openingCashIncluded/100,reconciledCount,
     debtCollections:collections/100,cashIn:cashIn/100,cashOut:cashOut/100,
+    cashDebtCollections:cashDebtCollections/100,cashRefunds:cashRefunds/100,
     byMethod:Object.fromEntries(Object.entries(byMethod).map(([k,v])=>[k,v/100]))};
 }
 module.exports={minor,ledgerContext,writeMovement,saleMovement,summarizeMovements};

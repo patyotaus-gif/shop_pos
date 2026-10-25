@@ -110,12 +110,17 @@ function handlers({db,FieldValue,HttpsError,now=()=>new Date()}) {
     return {data,items};
   }
   return async request=>{
-    const shopId=require('./order_accounting').owner(request,HttpsError),raw=request.data||{};
-    if(!require('./order_accounting').validId(raw.orderId)||!['preview','apply','sync','send','close'].includes(raw.action))throw new HttpsError('invalid-argument','คำสั่งไม่ถูกต้อง');
+    const raw=request.data||{};
+    const actor=await require('./staff_permissions').authorize(request,db,HttpsError,
+      raw.action==='cancel'?'cancel':raw.action==='apply'||Object.hasOwn(raw,'couponCode')||raw.keepPreparedGifts?'discount':null);
+    const shopId=actor.shopId;
+    if(!require('./order_accounting').validId(raw.orderId)||!['preview','apply','sync','send','close','cancel'].includes(raw.action))throw new HttpsError('invalid-argument','คำสั่งไม่ถูกต้อง');
     const shop=db.collection('shops').doc(shopId),ref=shop.collection('tableOrders').doc(raw.orderId);
-    try {return await db.runTransaction(async tx=>{
+    try {return await require('./transaction_retry').runTransaction(db,async tx=>{
+      await require('./staff_permissions').recheck(tx,shop,request,HttpsError);
       const order=(await tx.get(ref)).data();
       if(!order)fail('ไม่พบบิลโต๊ะ');
+      if(raw.action==='cancel'&&order.status==='cancelled')return {success:true};
       if(raw.action==='close'&&order.status==='closed'&&order.saleId)return {saleId:order.saleId};
       if(order.status!=='open')fail('บิลนี้ปิดหรือยกเลิกแล้ว');
       if(!Array.isArray(order.items)||order.items.length>200)fail('รายการสินค้าไม่ถูกต้อง');
@@ -127,6 +132,21 @@ function handlers({db,FieldValue,HttpsError,now=()=>new Date()}) {
       }
       const tableRef=shop.collection('tables').doc(order.tableId),table=(await tx.get(tableRef)).data();
       if(table?.currentOrderId!==raw.orderId)fail('โต๊ะเปลี่ยนบิลแล้ว');
+      if(raw.action==='cancel'){
+        if(typeof raw.reason!=='string'||!raw.reason.trim()||raw.reason.length>500||typeof raw.consumePrepared!=='boolean')fail('กรุณาระบุเหตุผลยกเลิก');
+        const expected=order.items.map(i=>({id:i.id,quantity:i.quantity,kitchenStatus:i.kitchenStatus}));
+        if(JSON.stringify(expected)!==JSON.stringify(raw.expectedItems))fail('รายการเปลี่ยนแล้ว กรุณาตรวจสอบก่อนยกเลิก');
+        const prepared=raw.consumePrepared?order.items.filter(i=>i.kitchenStatus!=='pending'):[];
+        const inv=prepared.length?await inventory(tx,shop,prepared):null;
+        if(inv){
+          for(const [id,a] of Object.entries(inv.allocations))stock.write(tx,shop.collection('products').doc(id),inv.products[id],a,{id:'waste-'+ref.id,kind:'waste',referenceId:ref.id,actor:actor.actor,reason:raw.reason.trim()},FieldValue);
+          for(const [id,qty] of Object.entries(inv.usage))tx.update(shop.collection('ingredients').doc(id),{stock:FieldValue.increment(-qty)});
+          tx.set(shop.collection('inventoryWaste').doc('table-'+ref.id),{tableOrderId:ref.id,reason:raw.reason.trim(),createdAt:FieldValue.serverTimestamp(),items:prepared,productUsage:inv.quantities,ingredientUsage:inv.usage,actor:actor.actor});
+        }
+        tx.update(ref,{status:'cancelled',closedAt:now(),cancelReason:raw.reason.trim(),consumedPreparedItems:raw.consumePrepared,cancelledBy:actor.actor,cancelledByName:actor.name});
+        tx.update(tableRef,{status:'available',currentOrderId:null});
+        return {success:true};
+      }
       if(raw.action==='sync'||raw.action==='send') {
         const saved=order.tablePromotion;
         const code=Object.hasOwn(raw,'couponCode')?coupons.codeOf(raw.couponCode):saved?.coupon?.code||'';
@@ -190,7 +210,7 @@ function handlers({db,FieldValue,HttpsError,now=()=>new Date()}) {
         total:p.totalMinor/100,discount:p.discountMinor/100,bundleDiscount:p.bundleDiscountMinor/100,bundles:p.bundles,buyGet:p.buyGet,
         ...(p.coupon?{coupon:p.coupon}:{}),...(p.retainedGifts?{retainedGifts:p.retainedGifts}:{}),serviceCharge:p.serviceMinor/100,paid:raw.paymentMethod==='cash'?raw.paid:p.totalMinor/100,
         change:raw.paymentMethod==='cash'?(ledger.minor(raw.paid)-p.totalMinor)/100:0,paymentMethod:raw.paymentMethod,
-        salesChannel:'dineIn',tableName:order.tableName,customerName:'โต๊ะ '+order.tableName,splitCount:raw.splitCount,
+        staffName:actor.name,...(actor.staffId?{staffId:actor.staffId}:{}),salesChannel:'dineIn',tableName:order.tableName,customerName:'โต๊ะ '+order.tableName,splitCount:raw.splitCount,
         createdAt:date,receiptNo:`T-${day}-${String(seq).padStart(3,'0')}`,receiptProfile:require('./receipt_profile').receiptProfile(settings),
         accountingVersion:1,isDebt:false,isRefunded:false,ingredientsDeducted:true,ingredientUsage:inv.usage,
         stockDeducted:Object.fromEntries(Object.keys(inv.allocations).map(id=>[id,inv.quantities[id]])),

@@ -1,0 +1,102 @@
+const assert=require('node:assert/strict');
+const {randomUUID}=require('node:crypto');
+const {initializeApp,deleteApp}=require('firebase-admin/app');
+const sdk=require('firebase-admin/firestore');
+const {HttpsError}=require('firebase-functions/v2/https');
+(async()=>{
+ assert.match(process.env.FIRESTORE_EMULATOR_HOST||'',/^(127\.0\.0\.1|localhost):\d+$/);
+ const app=initializeApp({projectId:'demo-pokpok-admin'},'staff-work'),db=sdk.getFirestore(app),FieldValue=sdk.FieldValue,Timestamp=sdk.Timestamp;
+ const shopId='staff-work-'+randomUUID(),shop=db.collection('shops').doc(shopId),deps={db,FieldValue,HttpsError};
+ const work=require('./staff_work').handler(deps),table=require('./table_promotions').handlers(deps),online=require('./order_accounting').handlers(deps),cash=require('./cash_accounting').handlers(deps);
+ let claims;
+ const staff=require('./staff_access').createStaffAccess({...deps,Timestamp,auth:{createCustomToken:async(uid,token)=>{claims={uid,token};return 'test';}}});
+ const owner=data=>({auth:{uid:shopId,token:{name:'Owner'}},data:{shopId,...data}});
+ try{
+  await shop.set({name:'Test',tier:'restaurant',subscriptionStatus:'active',subscriptionEndsAt:Timestamp.fromMillis(Date.now()+86400000)});
+  await shop.collection('settings').doc('shop').set({name:'Test',serviceChargePercent:0});
+  await shop.collection('products').doc('food').set({name:'Food',price:50,costPrice:20,stock:100,stockRevision:0});
+  for(const position of ['cashier','waiter','kitchen','manager']){
+   console.log('Testing position:',position);
+   const {id}=await staff.manage(owner({name:position,position,pin:'123456',permissions:{}}));
+   await staff.switchSession(owner({staffId:id,pin:'123456'}));
+   const auth=claims,req=data=>({auth,data:{shopId,...data}});
+   const ws=await staff.workspace(req({}));assert.equal(ws.position,position);assert.equal(ws.products[0].costPrice,undefined);
+   await shop.collection('tables').doc(position).set({name:position,status:'available',createdAt:Timestamp.now()});
+   const opened=await work(req({action:'open',tableId:position}));
+   assert.equal((await work(req({action:'open',tableId:position}))).orderId,opened.orderId);
+   const orderId=opened.orderId;
+   console.log(' opened table');
+   const add=req({action:'add',orderId,requestId:'add-'+position,items:[{productId:'food',quantity:2,optionIds:[],price:0,costPrice:0}]});
+   await Promise.all([work(add),work(add)]);
+   let record=(await work(req({action:'read',collection:'tableOrders',id:orderId}))).record;
+   assert.equal(record.items.length,1);assert.equal(record.items[0].price,50);assert.equal(record.items[0].costPrice,undefined);
+   const itemId=record.items[0].id;
+   await work(req({action:'quantity',orderId,itemId,quantity:3,expectedQuantity:2}));
+   await assert.rejects(work(req({action:'quantity',orderId,itemId,quantity:4,expectedQuantity:2})));
+   const synced=await table(req({action:'send',orderId}));
+   console.log(' sent kitchen');
+   await work(req({action:'ready',orderId,itemId}));
+   await assert.rejects(table(req({action:'apply',orderId,couponCode:'FREE'})),e=>e.code==='permission-denied');
+   await assert.rejects(table(req({action:'cancel',orderId,reason:'test'})),e=>e.code==='permission-denied');
+   const close=req({action:'close',orderId,revision:synced.promotion.revision,expectedTotalMinor:15000,paid:150,paymentMethod:'cash',splitCount:1});
+   const sales=await Promise.all([table(close),table(close)]);assert.equal(sales[0].saleId,sales[1].saleId);
+   console.log(' closed table');
+   const receipt=(await work(req({action:'read',collection:'sales',id:sales[0].saleId}))).record;
+   assert.equal(receipt.staffId,id);assert.equal(receipt.staffName,position);assert.equal(receipt.items[0].costPrice,undefined);
+   const onlineId='online-'+position;
+   await shop.collection('orders').doc(onlineId).set({status:'pendingPayment',createdAt:Timestamp.now(),customerName:'Test',items:[{productId:'food',productName:'Food',price:50,quantity:1}],total:50,finalAmount:50,paymentMethod:'promptpay'});
+   await online.confirm(req({orderId:onlineId}));
+   console.log(' confirmed online');
+   for(const status of ['accepted','ready','completed'])await online.transition(req({orderId:onlineId,status}));
+   assert.ok((await work(req({action:'read',collection:'orders'}))).records.some(o=>o.id===onlineId&&o.status==='completed'));
+   assert.equal((await shop.collection('sales').doc('order-'+onlineId).get()).data().staffId,id);
+   await assert.rejects(work(req({action:'read',collection:'staff'})),e=>e.code==='permission-denied');
+   await assert.rejects(work({...req({action:'read',collection:'tables'}),data:{shopId:'other',action:'read',collection:'tables'}}),e=>e.code==='permission-denied');
+   await assert.rejects(work(req({action:'products'})),e=>e.code==='permission-denied');
+   await assert.rejects(cash.open(req({requestId:'cash-'+position,openingFloat:100})),e=>e.code==='permission-denied');
+   await staff.manage(owner({id,name:position,position,permissions:{discount:true,cancel:true,cashSession:true,reports:true,cost:true,stock:true,refund:true}}));
+   await assert.rejects(work(req({action:'read',collection:'tables'})),e=>e.code==='permission-denied');
+   await staff.switchSession(owner({staffId:id,pin:'123456'}));
+   const privileged=data=>({auth:claims,data:{shopId,...data}});
+   const catalog=(await work(privileged({action:'products'}))).records;assert.equal(catalog[0].unitCost,20);
+   const count=privileged({action:'stockCount',productId:'food',requestId:'count-'+position,quantity:100,expectedRevision:catalog[0].stockRevision,reason:'test'});
+   await work(count);await work(count);
+   const sale=await staff.checkout(privileged({requestId:'discount-sale-'+position,items:[{productId:'food',quantity:1,optionIds:[]}],discount:5,paid:45,expectedTotal:45,paymentMethod:'cash'}));
+   assert.equal(sale.total,45);assert.equal(sale.discount,5);
+   const cancelId=(await work(privileged({action:'open',tableId:position}))).orderId;
+   await work(privileged({action:'add',orderId:cancelId,requestId:'cancel-add-'+position,items:[{productId:'food',quantity:1,optionIds:[]}]}));
+   await table(privileged({action:'send',orderId:cancelId}));
+   const cancelOrder=(await work(privileged({action:'read',collection:'tableOrders',id:cancelId}))).record;
+   const beforeWaste=(await shop.collection('products').doc('food').get()).data().stock;
+   const cancellation=privileged({action:'cancel',orderId:cancelId,reason:'customer left',consumePrepared:true,expectedItems:cancelOrder.items.map(i=>({id:i.id,quantity:i.quantity,kitchenStatus:i.kitchenStatus}))});
+   await table(cancellation);await table(cancellation);
+   assert.equal((await shop.collection('products').doc('food').get()).data().stock,beforeWaste-1);
+   if(position==='cashier'){
+    await shop.collection('products').doc('weighted').set({name:'Weighted',price:100,costPrice:30,stock:2.5,stockRevision:0,isWeighed:true,trackLots:true,stockLots:[{id:'lot',number:'L1',expiresOn:'2099-12-31',quantity:2.5}]});
+    const counted=privileged({action:'stockCount',productId:'weighted',requestId:'count-lot',quantity:1.125,expectedRevision:0,lotId:'lot',reason:'lot count'});
+    await work(counted);await work(counted);
+    const product=(await shop.collection('products').doc('weighted').get()).data();
+    assert.equal(product.stock,1.125);assert.equal(product.stockLots[0].quantity,1.125);
+    await assert.rejects(work(privileged({action:'stockCount',productId:'weighted',requestId:'stale-lot',quantity:1,expectedRevision:0,lotId:'lot',reason:'stale'})));
+    await require('./staff_permissions').authorize(privileged({}),db,HttpsError,'refund');
+    await require('./refund').refundSale({db,FieldValue,shopId,saleId:sale.id,reason:'test',actor:claims.uid,returnToStock:false});
+    assert.equal((await work(privileged({action:'read',collection:'sales',id:sale.id}))).record.isRefunded,true);
+   }
+   const report=await work(privileged({action:'report',from:new Date(Date.now()-86400000).toISOString(),to:new Date(Date.now()+86400000).toISOString()}));assert.ok(report.records.length>=3);
+   assert.equal(report.records[0].items[0].costPrice,undefined);
+   // Revoking with an empty permission map must remove every old grant.
+   await staff.manage(owner({id,name:position,permissions:{}}));
+   await staff.switchSession(owner({staffId:id,pin:'123456'}));
+   await assert.rejects(work(privileged({action:'products'})),e=>e.code==='permission-denied');
+  }
+  // A separate authorized cashier can open/close and is named in the report.
+  const {id}=await staff.manage(owner({name:'Closing cashier',position:'cashier',pin:'123456',permissions:{cashSession:true}}));
+  await staff.switchSession(owner({staffId:id,pin:'123456'}));
+  const r=data=>({auth:claims,data:{shopId,...data}});
+  await cash.open(r({requestId:'cash-final',openingFloat:1000,acknowledgeDeviceUpdate:true}));
+  await cash.close(r({sessionId:'cash-final',countedCash:1000,autoOpenNext:false}));
+  const session=(await work(r({action:'read',collection:'cashSessions',id:'cash-final'}))).record;
+  assert.equal(session.openedByName,'Closing cashier');assert.equal(session.closedByName,'Closing cashier');assert.equal(session.status,'closed');
+  console.log('PASS: four positions share table/order/payment work; server prices, idempotency, receipts, staff attribution, extra permissions and revocation');
+ }finally{await db.recursiveDelete(shop);await deleteApp(app);}
+})().catch(e=>{console.error(e);process.exitCode=1;});

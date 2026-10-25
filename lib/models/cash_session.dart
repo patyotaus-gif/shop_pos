@@ -2,13 +2,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'sale.dart';
 
-/// End-of-day cash session (ปิดยอดสิ้นวัน). A pure reporting wrapper — sales
-/// are never gated by a session; closing just snapshots the period and
-/// reconciles the drawer.
+/// End-of-day cash session (ปิดยอดสิ้นวัน), including the immutable closing
+/// summary used when reprinting a report.
 class CashSession {
   final String id;
   final DateTime openedAt;
   final String? openedBy;
+  final String? openedByName;
+  final String? closedByName;
   final double openingFloat;
   final bool closed;
   final DateTime? closedAt;
@@ -25,6 +26,8 @@ class CashSession {
     required this.id,
     required this.openedAt,
     this.openedBy,
+    this.openedByName,
+    this.closedByName,
     this.openingFloat = 0,
     this.closed = false,
     this.closedAt,
@@ -43,6 +46,8 @@ class CashSession {
         id: id,
         openedAt: (d['openedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         openedBy: d['openedBy'] as String?,
+        openedByName: d['openedByName'] as String?,
+        closedByName: d['closedByName'] as String?,
         openingFloat: (d['openingFloat'] ?? 0).toDouble(),
         closed: d['status'] == 'closed',
         closedAt: (d['closedAt'] as Timestamp?)?.toDate(),
@@ -62,6 +67,9 @@ class CashSession {
 /// Aggregated numbers for a session — computed by [summarizeSession] and
 /// snapshotted on the session at close so the Z-report never re-queries.
 class SessionSummary {
+  final Map<String, dynamic>? report;
+  final double? cashDebtCollections;
+  final double? cashRefunds;
   final int billCount;
   final double grossTotal;
   final Map<String, double> byMethod; // paymentMethod name → total (non-debt)
@@ -81,6 +89,9 @@ class SessionSummary {
   final int futureOrderCount;
 
   const SessionSummary({
+    this.report,
+    this.cashDebtCollections,
+    this.cashRefunds,
     required this.billCount,
     required this.grossTotal,
     required this.byMethod,
@@ -99,9 +110,19 @@ class SessionSummary {
     this.futureOrderCount = 0,
   });
 
-  double overShort(double countedCash) => countedCash - expectedCash;
+  double overShort(double countedCash) =>
+      ((countedCash * 100).round() - (expectedCash * 100).round()) / 100;
+  String cashStatus(double countedCash) => overShort(countedCash) == 0
+      ? 'เงินสดตรงยอด'
+      : overShort(countedCash) > 0
+          ? 'เงินสดเกิน'
+          : 'เงินสดขาด';
 
   Map<String, dynamic> toMap() => {
+        if (report != null) 'report': report,
+        if (cashDebtCollections != null)
+          'cashDebtCollections': cashDebtCollections,
+        if (cashRefunds != null) 'cashRefunds': cashRefunds,
         'billCount': billCount,
         'grossTotal': grossTotal,
         'byMethod': byMethod,
@@ -121,6 +142,10 @@ class SessionSummary {
       };
 
   factory SessionSummary.fromMap(Map<String, dynamic> m) => SessionSummary(
+        report:
+            m['report'] is Map ? Map<String, dynamic>.from(m['report']) : null,
+        cashDebtCollections: (m['cashDebtCollections'] as num?)?.toDouble(),
+        cashRefunds: (m['cashRefunds'] as num?)?.toDouble(),
         billCount: (m['billCount'] ?? 0) as int,
         grossTotal: (m['grossTotal'] ?? 0).toDouble(),
         byMethod: {

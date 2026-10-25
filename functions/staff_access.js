@@ -6,6 +6,7 @@ const { priceLine, effectivePriceOf } = require('./tableorder');
 const fail = (code, message) => { throw new HttpsError(code, message); };
 const idOk = id => typeof id === 'string' && /^[\w-]{1,128}$/.test(id);
 const pinOk = pin => typeof pin === 'string' && /^\d{4,8}$/.test(pin);
+const staffPermissions=require('./staff_permissions');
 function hashPin(pin) {
   const salt = crypto.randomBytes(16).toString('hex');
   return { pinSalt: salt, pinHash: crypto.scryptSync(pin, salt, 32).toString('hex') };
@@ -71,7 +72,11 @@ function createStaffAccess({db, auth, FieldValue, Timestamp, now=()=>new Date()}
   async function manage(request) {
     const user=signed(request);
     if(user.token?.staffRole) fail('permission-denied','เฉพาะเจ้าของร้าน');
-    const {id,name,pin,active=true}=request.data || {};
+    const {id,name,pin,active=true,position,permissions}=request.data || {};
+    if(position!==undefined&&!staffPermissions.positions.includes(position))fail('invalid-argument','ตำแหน่งไม่ถูกต้อง');
+    if(permissions!==undefined&&(!permissions||Array.isArray(permissions)||typeof permissions!=='object'||
+        Object.entries(permissions).some(([k,v])=>!staffPermissions.permissions.includes(k)||typeof v!=='boolean')))
+      fail('invalid-argument','สิทธิ์พนักงานไม่ถูกต้อง');
     if(id!==undefined&&!idOk(id)) fail('invalid-argument','รหัสพนักงานไม่ถูกต้อง');
     if(typeof name!=='string'||!name.trim()||name.length>100||typeof active!=='boolean'||(pin && !pinOk(pin))) fail('invalid-argument','ตรวจชื่อและ PIN 4–8 หลัก');
     const shop=shopRef(user.uid),ref=id?shop.collection('staff').doc(id):shop.collection('staff').doc();
@@ -84,7 +89,10 @@ function createStaffAccess({db, auth, FieldValue, Timestamp, now=()=>new Date()}
       if(active && all.docs.filter(d=>d.id!==ref.id&&d.data().active!==false).length>=staffCap(s.data())) fail('resource-exhausted','จำนวนพนักงานครบตามแผนแล้ว');
       const previous=existing.data() || {};
       tx.set(ref,{name:name.trim(),role:'cashier',active,createdAt:previous.createdAt || Timestamp.fromDate(now()),
-        sessionVersion:Number(previous.sessionVersion||0)+(secret||previous.active!==active?1:0),
+        position:position||previous.position||'cashier',
+        permissions:Object.fromEntries(staffPermissions.permissions.map(k=>[k,(permissions??previous.permissions??{})[k]===true])),
+        sessionVersion:Number(previous.sessionVersion||0)+(secret||previous.active!==active||
+          (permissions!==undefined&&JSON.stringify(permissions)!==JSON.stringify(previous.permissions||{}))?1:0),
         ...(secret?{...secret,pin:FieldValue.delete(),failedAttempts:0,lockedUntil:FieldValue.delete()}:{}),
       },{merge:true});
     });
@@ -116,10 +124,10 @@ function createStaffAccess({db, auth, FieldValue, Timestamp, now=()=>new Date()}
     const ctx=await scope(request);if(!ctx.member) fail('permission-denied','ใช้สำหรับโหมดพนักงาน');
     const [products,groups,settings]=await Promise.all([ctx.ref.collection('products').get(),ctx.ref.collection('modifierGroups').get(),ctx.ref.collection('settings').doc('shop').get()]);
     const cfg=settings.data() || {};
-    return {staffName:ctx.member.name,shop:{name:ctx.shop.name,email:'',tier:ctx.shop.tier||'full',shopType:ctx.shop.shopType||'retail',
+    return {staffName:ctx.member.name,position:ctx.member.position||'cashier',permissions:ctx.member.permissions||{},shop:{name:ctx.shop.name,email:'',tier:ctx.shop.tier||'full',shopType:ctx.shop.shopType||'retail',
       subscriptionStatus:ctx.shop.subscriptionStatus,trialEndsAt:ctx.shop.trialEndsAt?.toDate().toISOString()||null,
       subscriptionEndsAt:ctx.shop.subscriptionEndsAt?.toDate().toISOString()||null},
-      settings:Object.fromEntries(['name','taxId','address','promptpayId','promptpayName'].map(k=>[k,cfg[k]||''])),
+      settings:{...require('./receipt_profile').receiptProfile(cfg),serviceChargePercent:Number(cfg.serviceChargePercent||0),promptpayId:cfg.promptpayId||'',promptpayName:cfg.promptpayName||''},
       products:products.docs.map(d=>{const p=d.data();return {id:d.id,name:p.name||'',barcode:p.barcode||'',price:effectivePriceOf(p,now()),stock:p.stock||0,stockLots:p.stockLots||[],unit:p.unit||'ชิ้น',isWeighed:p.isWeighed===true,trackLots:p.trackLots===true,
         category:p.category||'ทั่วไป',imageUrl:p.imageUrl||'',stockMode:p.stockMode||'count',modifierGroupIds:p.modifierGroupIds||[]};}),
       groups:groups.docs.map(d=>{const g=d.data();return {id:d.id,name:g.name,required:g.required===true,multiSelect:g.multiSelect===true,
@@ -143,9 +151,11 @@ function createStaffAccess({db, auth, FieldValue, Timestamp, now=()=>new Date()}
     const {requestId,items,paid,paymentMethod,expectedTotal,salesChannel}=request.data||{};
     if(salesChannel!==undefined&&!['storefront','dineIn','takeaway','lineMan','grab','otherDelivery'].includes(salesChannel)) fail('invalid-argument','ช่องทางขายไม่ถูกต้อง');
     if(!idOk(requestId)||requestId.length<10||!['cash','transfer','qr'].includes(paymentMethod)||!Number.isFinite(paid)||paid<0||paid>1e9||!Number.isFinite(expectedTotal)||expectedTotal<0||expectedTotal>1e9) fail('invalid-argument','ข้อมูลชำระเงินไม่ถูกต้อง');
-    if(request.data.discount || request.data.isDebt) fail('permission-denied','ส่วนลดและขายเชื่อให้เจ้าของร้านดำเนินการ');
+    const manualDiscount=request.data.discount??0;
+    if(typeof manualDiscount!=='number'||!Number.isFinite(manualDiscount)||manualDiscount<0||manualDiscount>1e9||Math.abs(manualDiscount*100-Math.round(manualDiscount*100))>1e-6)fail('invalid-argument','ส่วนลดไม่ถูกต้อง');
+    if((manualDiscount&&ctx.member.permissions?.discount!==true)||request.data.isDebt)fail('permission-denied','ไม่มีสิทธิ์ลดราคาหรือขายเชื่อ');
     if(!Array.isArray(items)||!items.length||items.length>50||items.some(i=>!idOk(i.productId))) fail('invalid-argument','รายการสินค้าไม่ถูกต้อง');
-    const digest=crypto.createHash('sha256').update(JSON.stringify({items,paid,paymentMethod,expectedTotal,...(salesChannel?{salesChannel}:{}),
+    const digest=crypto.createHash('sha256').update(JSON.stringify({items,paid,paymentMethod,expectedTotal,...(manualDiscount?{manualDiscount}:{}),...(salesChannel?{salesChannel}:{}),
       ...(request.data.buyGetQuote?{buyGetQuote:request.data.buyGetQuote}:{}),
       ...(request.data.bundleQuote?{bundleQuote:request.data.bundleQuote}:{})})).digest('hex');
     const ref=ctx.ref.collection('sales').doc(requestId);
@@ -174,7 +184,8 @@ function createStaffAccess({db, auth, FieldValue, Timestamp, now=()=>new Date()}
         if(!p.exists)fail('failed-precondition','สินค้าแถมถูกลบ');
         products.set(i.productId,p.data());
       }
-      const total=(Math.round(priced.reduce((s,i)=>s+i.subtotal,0)*100)-Math.round(bundleDiscount*100))/100;
+      const total=(Math.round(priced.reduce((s,i)=>s+i.subtotal,0)*100)-Math.round((bundleDiscount+manualDiscount)*100))/100;
+      if(total<0)fail('invalid-argument','ส่วนลดเกินยอดสินค้า');
       if(Math.abs(total-expectedTotal)>0.009) fail('failed-precondition','ราคาสินค้าเปลี่ยน กรุณาติดต่อเจ้าของร้านก่อนรับเงินเพิ่ม');
       if(paymentMethod==='cash'&&paid<total) fail('invalid-argument','จำนวนเงินรับไม่พอ');
       const quantities=new Map();for(const i of priced) quantities.set(i.productId,(quantities.get(i.productId)||0)+i.quantity);
@@ -193,7 +204,7 @@ function createStaffAccess({db, auth, FieldValue, Timestamp, now=()=>new Date()}
       const datePart=key=>parts.find(p=>p.type===key).value;
       const day=String((Number(datePart('year'))+543)%100).padStart(2,'0')+datePart('month')+datePart('day');
       const seq=count.data()?.day===day?Number(count.data().seq||0)+1:1;
-      const sale={items:priced,total,discount:bundleDiscount,
+      const sale={items:priced,total,discount:bundleDiscount+manualDiscount,
         ...(bundles.length?{bundles,bundleDiscount}:{}),paid:paymentMethod==='cash'?paid:total,change:paymentMethod==='cash'?Math.round((paid-total)*100)/100:0,
         ...(promotion.buyGet?{buyGet:promotion.buyGet}:{}),
         paymentMethod,...(salesChannel?{salesChannel}:{}),isDebt:false,isRefunded:false,createdAt:Timestamp.fromDate(now()),staffName:member.data().name,staffId:ctx.user.token.staffId,

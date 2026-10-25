@@ -1,3 +1,5 @@
+import '../services/auth_service.dart';
+import '../services/staff_access_service.dart';
 import 'package:flutter/material.dart';
 import '../models/sale.dart';
 import '../services/shop_database.dart';
@@ -7,6 +9,12 @@ class OrderSaleScreen extends StatelessWidget {
   const OrderSaleScreen({super.key, required this.orderId});
   final String orderId;
   Future<Sale> _load() async {
+    if (AuthService.isStaff) {
+      final order = await StaffAccessService.read('orders', orderId);
+      final id = order['saleId'] as String?;
+      if (id == null) throw StateError('ยังไม่มีใบเสร็จ');
+      return Sale.fromFirestore(await StaffAccessService.read('sales', id), id);
+    }
     final result = await ShopDatabase.shop
         .collection('sales')
         .where('orderId', isEqualTo: orderId)

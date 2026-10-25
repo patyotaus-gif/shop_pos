@@ -1,3 +1,5 @@
+import 'auth_service.dart';
+import 'staff_access_service.dart';
 import '../utils/stock_quantity.dart';
 import 'inventory_service.dart';
 import 'dart:convert';
@@ -42,12 +44,19 @@ class TableService {
 
   // ───────────────────────── Tables CRUD ─────────────────────────
 
-  static Stream<List<RestaurantTable>> watchTables() =>
-      _tablesCol().orderBy('createdAt').snapshots().map((s) => s.docs
+  static Stream<List<RestaurantTable>> watchTables() => AuthService.isStaff
+      ? StaffAccessService.watch('tables').map((rows) => rows
+          .map((r) => RestaurantTable.fromFirestore(r, r['id'] as String))
+          .toList())
+      : _tablesCol().orderBy('createdAt').snapshots().map((s) => s.docs
           .map((d) => RestaurantTable.fromFirestore(d.data(), d.id))
           .toList());
 
   static Future<RestaurantTable?> getTable(String tableId) async {
+    if (AuthService.isStaff) {
+      final r = await StaffAccessService.read('tables', tableId);
+      return RestaurantTable.fromFirestore(r, tableId);
+    }
     final snap = await _tablesCol().doc(tableId).get();
     if (!snap.exists) return null;
     return RestaurantTable.fromFirestore(snap.data()!, snap.id);
@@ -88,37 +97,54 @@ class TableService {
 
   /// Watch every open tab across all tables — used by the kitchen
   /// display to show all in-progress tickets in one place.
-  static Stream<List<TableOrder>> watchOpenOrders() => _tableOrdersCol()
-      .where('status', isEqualTo: 'open')
-      .snapshots()
-      .map((s) =>
-          s.docs.map((d) => TableOrder.fromFirestore(d.data(), d.id)).toList()
+  static Stream<List<TableOrder>> watchOpenOrders() => AuthService.isStaff
+      ? StaffAccessService.watch('tableOrders').map((rows) => rows
+          .map((r) => TableOrder.fromFirestore(r, r['id'] as String))
+          .toList()
+        ..sort((a, b) => a.openedAt.compareTo(b.openedAt)))
+      : _tableOrdersCol().where('status', isEqualTo: 'open').snapshots().map(
+          (s) => s.docs
+              .map((d) => TableOrder.fromFirestore(d.data(), d.id))
+              .toList()
             ..sort((a, b) => a.openedAt.compareTo(b.openedAt)));
 
   // Paid/closed tabs stay reachable in printer mode until their tickets are acknowledged.
-  static Stream<List<TableOrder>> watchKitchenOrders() => _tableOrdersCol()
-      .where('status', whereIn: ['open', 'closed'])
-      .snapshots()
-      .map((s) =>
-          s.docs.map((d) => TableOrder.fromFirestore(d.data(), d.id)).toList()
+  static Stream<List<TableOrder>> watchKitchenOrders() => AuthService.isStaff
+      ? watchOpenOrders()
+      : _tableOrdersCol()
+          .where('status', whereIn: ['open', 'closed'])
+          .snapshots()
+          .map((s) => s.docs
+              .map((d) => TableOrder.fromFirestore(d.data(), d.id))
+              .toList()
             ..sort((a, b) => a.openedAt.compareTo(b.openedAt)));
 
   /// Watch the single open order for [tableId] (or null if the table is
   /// available). Conflicting legacy tabs must not be silently hidden.
   static Stream<TableOrder?> watchOpenOrderForTable(String tableId) =>
-      _tableOrdersCol()
-          .where('tableId', isEqualTo: tableId)
-          .where('status', isEqualTo: 'open')
-          .limit(2)
-          .snapshots()
-          .map((s) {
-        if (s.docs.length > 1) {
-          throw StateError('พบหลายบิลเปิดในโต๊ะเดียวกัน กรุณาติดต่อทีมงาน');
-        }
-        return s.docs.isEmpty
-            ? null
-            : TableOrder.fromFirestore(s.docs.first.data(), s.docs.first.id);
-      });
+      AuthService.isStaff
+          ? watchOpenOrders().map((rows) {
+              final matches = rows.where((r) => r.tableId == tableId).toList();
+              if (matches.length > 1) {
+                throw StateError('พบหลายบิลในโต๊ะเดียวกัน');
+              }
+              return matches.isEmpty ? null : matches.single;
+            })
+          : _tableOrdersCol()
+              .where('tableId', isEqualTo: tableId)
+              .where('status', isEqualTo: 'open')
+              .limit(2)
+              .snapshots()
+              .map((s) {
+              if (s.docs.length > 1) {
+                throw StateError(
+                    'พบหลายบิลเปิดในโต๊ะเดียวกัน กรุณาติดต่อทีมงาน');
+              }
+              return s.docs.isEmpty
+                  ? null
+                  : TableOrder.fromFirestore(
+                      s.docs.first.data(), s.docs.first.id);
+            });
 
   static Future<String> reconcileTable(String tableId) async {
     final result = await FirebaseFunctions.instanceFor(
@@ -133,6 +159,10 @@ class TableService {
   /// Open a new tab on [table]. Marks the table occupied and writes an
   /// empty TableOrder doc. Returns the new order id.
   static Future<String> openOrder(RestaurantTable table) async {
+    if (AuthService.isStaff) {
+      return (await StaffAccessService.work(
+          'open', {'tableId': table.id}))['orderId'] as String;
+    }
     final tableRef = _tablesCol().doc(table.id);
     final orderRef = _tableOrdersCol().doc();
     // Detect legacy orphan tabs; the transaction below serializes new tabs
@@ -218,6 +248,9 @@ class TableService {
   }
 
   static Future<void> addItem(String orderId, TableOrderItem item) {
+    if (AuthService.isStaff) {
+      return addItems(orderId, [item], requestId: const Uuid().v4());
+    }
     final pending = item.copyWith(
         id: const Uuid().v4(), kitchenStatus: KitchenStatus.pending);
     return _edit(orderId, (items) => appendPending(items, pending));
@@ -227,6 +260,21 @@ class TableService {
   /// attempt was lost. Merge against the latest tab, not the picker snapshot.
   static Future<void> addItems(String orderId, List<TableOrderItem> items,
       {required String requestId}) async {
+    if (AuthService.isStaff) {
+      await StaffAccessService.work('add', {
+        'orderId': orderId,
+        'requestId': requestId,
+        'items': items
+            .map((i) => {
+                  'productId': i.productId,
+                  'quantity': i.quantity,
+                  'optionIds': i.modifiers.map((m) => m.optionId).toList(),
+                  'notes': i.notes
+                })
+            .toList()
+      });
+      return;
+    }
     if (requestId.isEmpty || items.isEmpty) {
       throw StateError('กรุณาเลือกสินค้าก่อนบันทึก');
     }
@@ -262,63 +310,76 @@ class TableService {
   static Future<void> setItemQuantity(
           String orderId, String itemId, num quantity,
           {required num expectedQuantity}) =>
-      _edit(orderId, (items) {
-        final index = items.indexWhere((i) => i.id == itemId);
-        if (index < 0) {
-          throw StateError('รายการนี้เปลี่ยนไปแล้ว กรุณาตรวจสอบออเดอร์');
-        }
-        final current = items[index];
-        if (current.isGift) {
-          throw StateError('กรุณาปรับของแถมผ่านตรวจโปรโมชั่น');
-        }
-        if (current.quantity != expectedQuantity) {
-          throw StateError('จำนวนถูกเปลี่ยนจากอีกเครื่องแล้ว กรุณาตรวจสอบใหม่');
-        }
-        if (current.kitchenStatus != KitchenStatus.pending) {
-          if (quantity > current.quantity) {
-            return appendPending(
-                items,
-                current.copyWith(
-                    id: const Uuid().v4(),
-                    quantity: quantity - current.quantity,
-                    kitchenStatus: KitchenStatus.pending));
-          }
-          throw StateError(
-              'รายการส่งครัวแล้ว กรุณาประสานครัวก่อนยกเลิกหรือปรับลด');
-        }
-        final next = [...items];
-        if (quantity <= 0) {
-          next.removeAt(index);
-        } else {
-          next[index] = current.copyWith(quantity: quantity);
-        }
-        return next;
-      });
+      AuthService.isStaff
+          ? StaffAccessService.work('quantity', {
+              'orderId': orderId,
+              'itemId': itemId,
+              'quantity': quantity,
+              'expectedQuantity': expectedQuantity
+            }).then((_) {})
+          : _edit(orderId, (items) {
+              final index = items.indexWhere((i) => i.id == itemId);
+              if (index < 0) {
+                throw StateError('รายการนี้เปลี่ยนไปแล้ว กรุณาตรวจสอบออเดอร์');
+              }
+              final current = items[index];
+              if (current.isGift) {
+                throw StateError('กรุณาปรับของแถมผ่านตรวจโปรโมชั่น');
+              }
+              if (current.quantity != expectedQuantity) {
+                throw StateError(
+                    'จำนวนถูกเปลี่ยนจากอีกเครื่องแล้ว กรุณาตรวจสอบใหม่');
+              }
+              if (current.kitchenStatus != KitchenStatus.pending) {
+                if (quantity > current.quantity) {
+                  return appendPending(
+                      items,
+                      current.copyWith(
+                          id: const Uuid().v4(),
+                          quantity: quantity - current.quantity,
+                          kitchenStatus: KitchenStatus.pending));
+                }
+                throw StateError(
+                    'รายการส่งครัวแล้ว กรุณาประสานครัวก่อนยกเลิกหรือปรับลด');
+              }
+              final next = [...items];
+              if (quantity <= 0) {
+                next.removeAt(index);
+              } else {
+                next[index] = current.copyWith(quantity: quantity);
+              }
+              return next;
+            });
 
-  static Future<void> sendToKitchen(String orderId) => _edit(orderId, (items) {
-        final now = DateTime.now();
-        return items
-            .map((i) => i.kitchenStatus == KitchenStatus.pending
-                ? i.copyWith(
-                    kitchenStatus: KitchenStatus.sent, sentToKitchenAt: now)
-                : i)
-            .toList();
-      });
+  static Future<void> sendToKitchen(String orderId) => AuthService.isStaff
+      ? promotions(orderId, action: 'send').then((_) {})
+      : _edit(orderId, (items) {
+          final now = DateTime.now();
+          return items
+              .map((i) => i.kitchenStatus == KitchenStatus.pending
+                  ? i.copyWith(
+                      kitchenStatus: KitchenStatus.sent, sentToKitchenAt: now)
+                  : i)
+              .toList();
+        });
 
   static Future<void> markItemReady(String orderId, String itemId) =>
-      _edit(orderId, (items) {
-        final index = items.indexWhere((i) => i.id == itemId);
-        if (index < 0) {
-          throw StateError('รายการนี้เปลี่ยนไปแล้ว กรุณาตรวจสอบใหม่');
-        }
-        if (items[index].kitchenStatus == KitchenStatus.pending) {
-          throw StateError('รายการนี้ยังไม่ได้ส่งครัว');
-        }
-        final next = [...items];
-        next[index] = next[index].copyWith(
-            kitchenStatus: KitchenStatus.ready, readyAt: DateTime.now());
-        return next;
-      });
+      AuthService.isStaff
+          ? StaffAccessService.work(
+              'ready', {'orderId': orderId, 'itemId': itemId}).then((_) {})
+          : _edit(orderId, (items) {
+              final index = items.indexWhere((i) => i.id == itemId);
+              if (index < 0) {
+                throw StateError('รายการนี้เปลี่ยนไปแล้ว กรุณาตรวจสอบใหม่');
+              }
+              if (items[index].kitchenStatus == KitchenStatus.pending) {
+                throw StateError('รายการนี้ยังไม่ได้ส่งครัว');
+              }
+              final next = [...items];
+              next[index] = next[index].copyWith(
+                  kitchenStatus: KitchenStatus.ready, readyAt: DateTime.now());
+              return next;
+            });
 
   static String billingSignature(TableOrder order) => jsonEncode(order.items
       .map((i) => {
@@ -365,6 +426,10 @@ class TableService {
   }
 
   static Future<TableOrder> readOrder(String orderId) async {
+    if (AuthService.isStaff) {
+      return TableOrder.fromFirestore(
+          await StaffAccessService.read('tableOrders', orderId), orderId);
+    }
     final snap = await _tableOrdersCol()
         .doc(orderId)
         .get(const GetOptions(source: Source.server))
@@ -390,6 +455,9 @@ class TableService {
     double serviceChargePercent = 0,
     int splitCount = 1,
   }) async {
+    if (AuthService.isStaff && order.promotion == null) {
+      throw StateError('กรุณาตรวจโปรโมชั่นก่อนรับชำระ');
+    }
     final expected = order;
     if (order.promotion != null) {
       final response = await FirebaseFunctions.instanceFor(
@@ -572,6 +640,23 @@ class TableService {
   /// table; does NOT touch stock.
   static Future<void> cancelOrder(TableOrder order,
       {String reason = 'ยกเลิกก่อนชำระ', bool consumePrepared = true}) async {
+    if (AuthService.isStaff) {
+      await StaffAccessService.call('tablePromotions', {
+        'shopId': AuthService.shopId,
+        'orderId': order.id,
+        'action': 'cancel',
+        'reason': reason,
+        'consumePrepared': consumePrepared,
+        'expectedItems': order.items
+            .map((i) => {
+                  'id': i.id,
+                  'quantity': i.quantity,
+                  'kitchenStatus': i.kitchenStatus.name
+                })
+            .toList()
+      });
+      return;
+    }
     final ref = _tableOrdersCol().doc(order.id);
     final tableRef = _tablesCol().doc(order.tableId);
     await ref.firestore.runTransaction((tx) async {

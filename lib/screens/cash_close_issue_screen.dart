@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/cash_close_check.dart';
 import '../models/table_order.dart';
 import '../services/shop_database.dart';
+import '../services/auth_service.dart';
+import '../services/staff_access_service.dart';
 import 'orders_screen.dart';
 import 'table_detail_screen.dart';
 import 'money_movements_screen.dart';
@@ -22,6 +24,12 @@ class _CashCloseIssueScreenState extends State<CashCloseIssueScreen> {
       return OrderDetailScreen(orderId: widget.issue.id);
     }
     if (widget.issue.type != 'openTable') {
+      if (AuthService.isStaff) {
+        return Scaffold(
+            appBar: AppBar(title: const Text('ตรวจยอดก่อนปิดรอบ')),
+            body: const Center(
+                child: Text('รายการเงินต้องให้เจ้าของร้านตรวจสอบก่อนปิดรอบ')));
+      }
       return MoneyMovementsScreen(
           initialMovementId: widget.issue.type == 'unassignedMovement'
               ? widget.issue.id
@@ -31,10 +39,13 @@ class _CashCloseIssueScreenState extends State<CashCloseIssueScreen> {
         appBar: AppBar(title: Text(widget.issue.label)),
         body: StreamBuilder(
             key: ValueKey(_retry),
-            stream: ShopDatabase.shop
-                .collection('tableOrders')
-                .doc(widget.issue.id)
-                .snapshots(),
+            stream: AuthService.isStaff
+                ? StaffAccessService.watchRecord('tableOrders', widget.issue.id)
+                : ShopDatabase.shop
+                    .collection('tableOrders')
+                    .doc(widget.issue.id)
+                    .snapshots()
+                    .map((d) => d.data()),
             builder: (context, snap) {
               if (snap.hasError) {
                 return Center(
@@ -45,13 +56,13 @@ class _CashCloseIssueScreenState extends State<CashCloseIssueScreen> {
               if (!snap.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
-              final data = snap.data!.data();
+              final data = snap.data;
               if (data == null || data['status'] != 'open') {
                 return const Center(
                     child: Text('บิลนี้ไม่ค้างแล้ว กลับไปตรวจปิดยอดได้'));
               }
               return TableOrderView(
-                  order: TableOrder.fromFirestore(data, snap.data!.id));
+                  order: TableOrder.fromFirestore(data, widget.issue.id));
             }));
   }
 }

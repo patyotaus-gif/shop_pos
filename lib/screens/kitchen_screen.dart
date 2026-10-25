@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
 import 'package:intl/intl.dart';
 import '../theme/operational_colors.dart';
 import '../widgets/status_badge.dart';
@@ -65,11 +66,15 @@ class _KitchenScreenState extends State<KitchenScreen> {
   late final printStream = widget.printJobs ??
       (widget.orders != null
           ? Stream.value(<String, Map<String, dynamic>>{})
-          : KitchenPrintService.watchJobs());
+          : AuthService.isStaff
+              ? Stream.value(<String, Map<String, dynamic>>{})
+              : KitchenPrintService.watchJobs());
   late final closeStream = widget.lastClosedAt ??
       (widget.orders != null
           ? Stream<DateTime?>.value(null)
-          : CashSessionService.watchLastClosedAt());
+          : AuthService.isStaff
+              ? Stream<DateTime?>.value(null)
+              : CashSessionService.watchLastClosedAt());
   bool needsPrint(Map? job, int count) =>
       job == null ||
       !['printed', 'sent'].contains(job['status']) ||
@@ -86,22 +91,28 @@ class _KitchenScreenState extends State<KitchenScreen> {
             if (!settings.hasData) {
               return const Center(child: CircularProgressIndicator());
             }
-            final printer = settings.data!['kitchenOutput'] == 'printer';
+            final printer = !AuthService.isStaff &&
+                settings.data!['kitchenOutput'] == 'printer';
             return Column(children: [
-              Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: SegmentedButton<String>(segments: const [
-                    ButtonSegment(
-                        value: 'screen',
-                        icon: Icon(Icons.monitor),
-                        label: Text('จอครัว')),
-                    ButtonSegment(
-                        value: 'printer',
-                        icon: Icon(Icons.print),
-                        label: Text('เครื่องพิมพ์ครัว'))
-                  ], selected: {
-                    printer ? 'printer' : 'screen'
-                  }, onSelectionChanged: _savingOutput ? null : _changeOutput)),
+              if (!AuthService.isStaff)
+                Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: SegmentedButton<String>(
+                        segments: const [
+                          ButtonSegment(
+                              value: 'screen',
+                              icon: Icon(Icons.monitor),
+                              label: Text('จอครัว')),
+                          ButtonSegment(
+                              value: 'printer',
+                              icon: Icon(Icons.print),
+                              label: Text('เครื่องพิมพ์ครัว'))
+                        ],
+                        selected: {
+                          printer ? 'printer' : 'screen'
+                        },
+                        onSelectionChanged:
+                            _savingOutput ? null : _changeOutput)),
               if (printer)
                 const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 12),

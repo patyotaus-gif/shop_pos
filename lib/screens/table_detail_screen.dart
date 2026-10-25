@@ -9,6 +9,7 @@ import '../models/table_order.dart';
 import '../models/sale.dart';
 import '../services/settings_service.dart';
 import '../services/table_service.dart';
+import '../services/staff_access_service.dart';
 import '../services/table_promotion_controller.dart';
 import '../services/quantity_edit_queue.dart';
 import '../widgets/payment_sheet.dart';
@@ -675,7 +676,10 @@ class _OpenOrderViewState extends State<TableOrderView> {
                         if (_quantityPreview.isNotEmpty || _promotions.busy)
                           const LinearProgressIndicator(),
                         TextButton.icon(
-                          onPressed: _busy || empty || _promotions.busy
+                          onPressed: !StaffAccessService.can('discount') ||
+                                  _busy ||
+                                  empty ||
+                                  _promotions.busy
                               ? null
                               : _reviewPromotions,
                           icon:
@@ -823,7 +827,9 @@ class _OpenOrderViewState extends State<TableOrderView> {
                         const SizedBox(height: 4),
                         CompactAction(
                             child: TextButton.icon(
-                          onPressed: _busy ? null : _cancel,
+                          onPressed: _busy || !StaffAccessService.can('cancel')
+                              ? null
+                              : _cancel,
                           icon: const Icon(Icons.cancel_outlined,
                               size: 16, color: Colors.red),
                           label: const Text('ยกเลิกออเดอร์',

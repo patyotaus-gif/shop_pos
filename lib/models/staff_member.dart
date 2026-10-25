@@ -1,19 +1,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// A staff profile within a single shop login. Pokpok is single-account
-/// per shop (one Firebase Auth user = the owner); "users" in the tier
-/// feature list are PIN-based profiles under that one login, not separate
-/// logins. This is how most Thai counter POS systems work: one device,
-/// several staff who identify with a PIN so sales can be attributed and
-/// the owner sees who rang what.
+/// A PIN profile with a scoped Firebase staff session. Position is descriptive;
+/// common operational access and individually granted permissions are separate.
 ///
 /// Lives at `shops/{shopId}/staff/{staffId}`.
-enum StaffRole { owner, cashier }
+enum StaffRole { owner, cashier, waiter, kitchen, manager }
 
 extension StaffRoleX on StaffRole {
   String get label => switch (this) {
         StaffRole.owner => 'เจ้าของร้าน',
-        StaffRole.cashier => 'พนักงาน',
+        StaffRole.cashier => 'แคชเชียร์',
+        StaffRole.waiter => 'พนักงานเสิร์ฟ',
+        StaffRole.kitchen => 'ครัว',
+        StaffRole.manager => 'ผู้จัดการ',
       };
 }
 
@@ -27,6 +26,7 @@ class StaffMember {
   final String pin;
   final StaffRole role;
   final bool active;
+  final Map<String, bool> permissions;
   final DateTime createdAt;
 
   const StaffMember({
@@ -35,6 +35,7 @@ class StaffMember {
     required this.pin,
     this.role = StaffRole.cashier,
     this.active = true,
+    this.permissions = const {},
     required this.createdAt,
   });
 
@@ -44,10 +45,14 @@ class StaffMember {
         name: data['name'] ?? '',
         pin: data['pin'] ?? '',
         role: StaffRole.values.firstWhere(
-          (e) => e.name == (data['role'] ?? 'cashier'),
+          (e) => e.name == (data['position'] ?? data['role'] ?? 'cashier'),
           orElse: () => StaffRole.cashier,
         ),
         active: data['active'] ?? true,
+        permissions: {
+          for (final e in (data['permissions'] as Map? ?? {}).entries)
+            e.key as String: e.value == true
+        },
         createdAt:
             (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       );
@@ -56,16 +61,24 @@ class StaffMember {
         'name': name,
         'pin': pin,
         'role': role.name,
+        'position': role.name,
+        'permissions': permissions,
         'active': active,
         'createdAt': Timestamp.fromDate(createdAt),
       };
 
-  StaffMember copyWith({String? name, String? pin, bool? active}) =>
+  StaffMember copyWith(
+          {String? name,
+          String? pin,
+          bool? active,
+          StaffRole? role,
+          Map<String, bool>? permissions}) =>
       StaffMember(
         id: id,
         name: name ?? this.name,
         pin: pin ?? this.pin,
-        role: role,
+        role: role ?? this.role,
+        permissions: permissions ?? this.permissions,
         active: active ?? this.active,
         createdAt: createdAt,
       );

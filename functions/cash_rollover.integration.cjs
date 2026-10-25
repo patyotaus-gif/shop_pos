@@ -34,6 +34,15 @@ const {HttpsError}=require('firebase-functions/v2/https');
     assert.deepEqual((await shop.collection('cashSessions').doc('first').get()).data(),old);
     assert.equal((await shop.collection('cashSessions').get()).size,3);
     assert.equal((await shop.collection('moneyMovements').where('sessionId','==',null).get()).size,0);
+    const current=(await shop.collection('cashSessions').where('status','==','open').get()).docs[0];
+    await api.close(req({sessionId:current.id,countedCash:5000,autoOpenNext:false}));
+    assert.equal((await shop.collection('cashSessions').where('status','==','open').get()).size,0);
+    assert.equal((await shop.collection('accountingSettings').doc('current').get()).data().defaultOpeningFloat,500);
+    await api.open(req({requestId:'manual-next',openingFloat:1000}));
+    assert.equal((await shop.collection('accountingSettings').doc('current').get()).data().defaultOpeningFloat,1000);
+    const manualSummary=await api.close(req({sessionId:'manual-next',countedCash:1000,autoOpenNext:false}));
+    assert.equal(manualSummary.expectedCash,1000);
+    assert.equal(manualSummary.grossTotal,0);
     console.log('PASS atomic cash rollover, concurrent closes/drawer/open, counted carry and immutable history');
   }finally{await db.recursiveDelete(shop);await deleteApp(app);}
 })().catch(e=>{console.error(e);process.exitCode=1;});

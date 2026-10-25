@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../models/cash_session.dart';
 import '../models/cash_close_check.dart';
 import '../services/cash_session_service.dart';
+import '../services/auth_service.dart';
 import '../services/staff_service.dart';
 import '../utils/zreport_generator.dart';
 import '../widgets/shop_operation.dart';
@@ -37,13 +38,14 @@ class CashSessionScreen extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              ListTile(
-                  leading: const Icon(Icons.account_balance_wallet_outlined),
-                  title: const Text('เงินเข้า–ออกและรายการรอตรวจสอบ'),
-                  onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const MoneyMovementsScreen()))),
+              if (!AuthService.isStaff)
+                ListTile(
+                    leading: const Icon(Icons.account_balance_wallet_outlined),
+                    title: const Text('เงินเข้า–ออกและรายการรอตรวจสอบ'),
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const MoneyMovementsScreen()))),
               if (open == null)
                 _OpenCard()
               else
@@ -92,7 +94,7 @@ class _OpenCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('ยังไม่ได้เปิดรอบ',
+            const Text('รอบขายปิดอยู่',
                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
             const SizedBox(height: 4),
             Text('เปิดรอบตอนเช้าโดยใส่จำนวนเงินทอนในลิ้นชัก',
@@ -105,7 +107,7 @@ class _OpenCard extends StatelessWidget {
             const SizedBox(height: 12),
             FilledButton.icon(
               icon: const Icon(Icons.play_arrow),
-              label: const Text('เปิดรอบ'),
+              label: const Text('เปิดรอบขาย'),
               onPressed: () => _openDialog(context),
             ),
           ],
@@ -117,17 +119,20 @@ class _OpenCard extends StatelessWidget {
 
 Future<void> _openDialog(BuildContext context) async {
   var enabled = false;
+  var defaultFloat = 0.0;
   final loaded = await performShopOperation(context, () async {
     enabled = await CashSessionService.accountingEnabled();
+    defaultFloat = await CashSessionService.defaultOpeningFloat();
   }, message: 'กำลังตรวจสถานะรอบขาย', success: 'ตรวจสถานะรอบขายแล้ว');
   if (!loaded || !context.mounted) return;
   var accepted = enabled;
-  final ctrl = TextEditingController(text: '0');
+  String? amountError;
+  final ctrl = TextEditingController(text: defaultFloat.toStringAsFixed(2));
   final ok = await showDialog<bool>(
     context: context,
     builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-              title: const Text('เปิดรอบ'),
+              title: const Text('เปิดรอบขาย — ยืนยันเงินทอน'),
               content: SingleChildScrollView(
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                 TextField(
@@ -135,7 +140,11 @@ Future<void> _openDialog(BuildContext context) async {
                   autofocus: true,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
+                      errorText: amountError,
+                      helperText:
+                          'ใช้เงินทอนครั้งล่าสุดของร้าน แก้ไขและยืนยันได้',
+                      helperMaxLines: 2,
                       labelText: 'เงินทอนเริ่มต้นในลิ้นชัก (บาท)',
                       prefixText: '฿',
                       border: OutlineInputBorder()),
@@ -160,12 +169,31 @@ Future<void> _openDialog(BuildContext context) async {
                     onPressed: () => Navigator.pop(ctx, false),
                     child: const Text('ยกเลิก')),
                 FilledButton(
-                    onPressed: accepted ? () => Navigator.pop(ctx, true) : null,
+                    onPressed: accepted
+                        ? () {
+                            final value = double.tryParse(
+                                ctrl.text.trim().replaceAll(',', ''));
+                            if (value == null ||
+                                !value.isFinite ||
+                                value < 0 ||
+                                value > 1e9 ||
+                                (value * 100 - (value * 100).round()).abs() >
+                                    0.00001) {
+                              setDialogState(() => amountError =
+                                  'ใส่จำนวนเงิน 0–1,000,000,000 ไม่เกิน 2 ตำแหน่ง');
+                              return;
+                            }
+                            Navigator.pop(ctx, true);
+                          }
+                        : null,
                     child: const Text('เปิดรอบ')),
               ],
             )),
   );
-  if (ok != true) return;
+  if (ok != true) {
+    ctrl.dispose();
+    return;
+  }
   final float = double.tryParse(ctrl.text.trim().replaceAll(',', ''));
   ctrl.dispose();
   if (float == null || !float.isFinite || float < 0 || !context.mounted) return;
@@ -253,6 +281,11 @@ Future<void> _closeDialog(BuildContext context, CashSession session) async {
     if (!context.mounted || (destination == null && selectedIssue == null)) {
       return;
     }
+    if (AuthService.isStaff && destination == CashCloseDestination.money) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('รายการเงินต้องให้เจ้าของร้านตรวจสอบก่อนปิดรอบ')));
+      return;
+    }
     final Widget screen = selectedIssue != null
         ? CashCloseIssueScreen(issue: selectedIssue!)
         : switch (destination!) {
@@ -280,7 +313,7 @@ Future<void> _closeDialog(BuildContext context, CashSession session) async {
             const Padding(
               padding: EdgeInsets.only(top: 8),
               child: Text(
-                  'ปิดยอดแล้วจะเปิดรอบใหม่อัตโนมัติ เงินสดที่นับได้จะเป็นเงินตั้งต้นรอบใหม่ ยอดขายเริ่มที่ 0 หากนำเงินออกจากลิ้นชักให้บันทึกเงินออกตามจริง'),
+                  'ปิดรอบแล้วระบบจะหยุดรอเปิดรอบขายใหม่ ยอดนับจริงนี้ใช้สรุปรอบเดิม ไม่ได้นำไปเป็นเงินตั้งต้นรอบใหม่'),
             ),
           if (check.futureOrderCount > 0)
             Text(
@@ -309,9 +342,7 @@ Future<void> _closeDialog(BuildContext context, CashSession session) async {
             if (v == null || !v.isFinite || v < 0) return;
             Navigator.pop(ctx, v);
           },
-          child: Text(session.accountingVersion == 1
-              ? 'ปิดยอดและเปิดรอบต่อ'
-              : 'ปิดรอบ'),
+          child: const Text('ปิดรอบ'),
         ),
       ],
     ),
@@ -343,7 +374,7 @@ Future<void> _closeDialog(BuildContext context, CashSession session) async {
   // Another terminal may have closed this session first. Show the saved count.
   final savedCounted = closedSession!.countedCash ?? counted;
   final overShort = summary.overShort(savedCounted);
-  await showDialog<void>(
+  final openNext = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
       title: const Text('ปิดรอบแล้ว'),
@@ -352,9 +383,11 @@ Future<void> _closeDialog(BuildContext context, CashSession session) async {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (closedSession!.nextSessionId == null)
+            const Text('รอบขายปิดอยู่ เปิดรอบใหม่และยืนยันเงินทอนก่อนขายต่อ'),
           if (closedSession!.nextSessionId != null) ...[
             Text(
-                'เปิดรอบถัดไปให้อัตโนมัติแล้ว เงินตั้งต้น ฿${_baht.format(closedSession!.carriedCash ?? savedCounted)}'),
+                'เปิดรอบถัดไปแล้ว เงินตั้งต้น ฿${_baht.format(closedSession!.carriedCash ?? savedCounted)}'),
             const SizedBox(height: 12),
           ],
           _sumRow('ยอดขายสุทธิในรอบ', '฿${_baht.format(summary.grossTotal)}'),
@@ -377,7 +410,7 @@ Future<void> _closeDialog(BuildContext context, CashSession session) async {
           _sumRow('นับได้จริง', '฿${_baht.format(savedCounted)}'),
           const Divider(),
           _sumRow(
-            overShort >= 0 ? 'เกิน' : 'ขาด',
+            summary.cashStatus(savedCounted),
             '฿${_baht.format(overShort.abs())}',
             color: overShort == 0
                 ? null
@@ -386,6 +419,10 @@ Future<void> _closeDialog(BuildContext context, CashSession session) async {
         ],
       ),
       actions: [
+        if (closedSession!.nextSessionId == null)
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('เปิดรอบถัดไป')),
         TextButton(
             onPressed: () => Navigator.pop(ctx), child: const Text('ปิด')),
         FilledButton.icon(
@@ -402,6 +439,7 @@ Future<void> _closeDialog(BuildContext context, CashSession session) async {
       ],
     ),
   );
+  if (openNext == true && context.mounted) await _openDialog(context);
 }
 
 Widget _sumRow(String label, String value, {Color? color}) => Padding(

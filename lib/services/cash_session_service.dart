@@ -1,3 +1,4 @@
+import 'staff_access_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/cash_session.dart';
@@ -11,7 +12,37 @@ import 'package:flutter/foundation.dart';
 /// End-of-day cash sessions (ปิดยอดสิ้นวัน). One open session at a time; the
 /// Z-report summary is snapshotted on close so history never re-queries.
 class CashSessionService {
+  static Stream<bool> watchAccountingEnabled() => FirebaseFirestore.instance
+      .collection('shops')
+      .doc(AuthService.shopId)
+      .collection('accountingSettings')
+      .doc('current')
+      .snapshots()
+      .map((s) => s.data()?['enabled'] == true);
+
+  static Future<double> defaultOpeningFloat() async {
+    if (AuthService.isStaff) {
+      return ((await StaffAccessService.read(
+                      'accountingSettings', 'current'))['defaultOpeningFloat']
+                  as num? ??
+              0)
+          .toDouble();
+    }
+    final snap = await FirebaseFirestore.instance
+        .collection('shops')
+        .doc(AuthService.shopId)
+        .collection('accountingSettings')
+        .doc('current')
+        .get(const GetOptions(source: Source.server));
+    return (snap.data()?['defaultOpeningFloat'] as num?)?.toDouble() ?? 0;
+  }
+
   static Future<bool> accountingEnabled() async {
+    if (AuthService.isStaff) {
+      return (await StaffAccessService.read(
+              'accountingSettings', 'current'))['enabled'] ==
+          true;
+    }
     final snap = await FirebaseFirestore.instance
         .collection('shops')
         .doc(AuthService.shopId)
@@ -29,21 +60,27 @@ class CashSessionService {
 
   /// The currently open session, or null. Stream so the dashboard/screen
   /// reflect open/closed live.
-  static Stream<CashSession?> watchOpen() => _col()
-      .where('status', isEqualTo: 'open')
-      .limit(1)
-      .snapshots()
-      .map((s) => s.docs.isEmpty
-          ? null
-          : CashSession.fromFirestore(s.docs.first.data(), s.docs.first.id));
+  static Stream<CashSession?> watchOpen() => AuthService.isStaff
+      ? watchHistory().map((rows) => rows.where((r) => !r.closed).firstOrNull)
+      : _col().where('status', isEqualTo: 'open').limit(1).snapshots().map(
+          (s) => s.docs.isEmpty
+              ? null
+              : CashSession.fromFirestore(
+                  s.docs.first.data(), s.docs.first.id));
 
-  static Stream<List<CashSession>> watchHistory({int limit = 30}) => _col()
-      .orderBy('openedAt', descending: true)
-      .limit(limit)
-      .snapshots()
-      .map((s) => s.docs
-          .map((d) => CashSession.fromFirestore(d.data(), d.id))
-          .toList());
+  static Stream<List<CashSession>> watchHistory(
+          {int limit = 30}) =>
+      AuthService.isStaff
+          ? StaffAccessService.watch('cashSessions').map((rows) => rows
+              .map((r) => CashSession.fromFirestore(r, r['id'] as String))
+              .toList())
+          : _col()
+              .orderBy('openedAt', descending: true)
+              .limit(limit)
+              .snapshots()
+              .map((s) => s.docs
+                  .map((d) => CashSession.fromFirestore(d.data(), d.id))
+                  .toList());
 
   /// Closing, rather than midnight or opening a new round, archives kitchen history.
   static Stream<DateTime?> watchLastClosedAt() => _col()
@@ -99,7 +136,7 @@ class CashSessionService {
       'sessionId': session.id,
       'countedCash': countedCash,
       'acknowledgeLegacy': acknowledgeLegacy,
-      'autoOpenNext': session.accountingVersion == 1,
+      'autoOpenNext': false,
     });
     return get(session.id);
   }
@@ -137,6 +174,10 @@ class CashSessionService {
   }
 
   static Future<CashSession> get(String id) async {
+    if (AuthService.isStaff) {
+      return CashSession.fromFirestore(
+          await StaffAccessService.read('cashSessions', id), id);
+    }
     final doc =
         await _col().doc(id).get(const GetOptions(source: Source.server));
     return CashSession.fromFirestore(doc.data()!, doc.id);

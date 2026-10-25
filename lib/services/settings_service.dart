@@ -53,8 +53,10 @@ class SettingsService {
     }, timeout: const Duration(seconds: 15), maxAttempts: 2);
   }
 
-  static Stream<Map<String, dynamic>> watchSettings() =>
-      _doc().snapshots().map((s) => s.data() ?? {});
+  static Stream<Map<String, dynamic>> watchSettings() => AuthService.isStaff
+      ? StaffAccessService.watchWorkspace()
+          .map((w) => Map<String, dynamic>.from(w['settings'] as Map))
+      : _doc().snapshots().map((s) => s.data() ?? {});
 
   static Future<Map<String, dynamic>> getLineSettings() async {
     final data = await getSettings();

@@ -6,6 +6,41 @@ import 'auth_service.dart';
 import 'auto_print_service.dart';
 
 class StaffAccessService {
+  static Future<Map<String, dynamic>> work(String action,
+          [Map<String, dynamic> data = const {}]) =>
+      call('staffWork',
+          {'shopId': AuthService.shopId, 'action': action, ...data});
+
+  static Future<Map<String, dynamic>> read(
+          String collection, String id) async =>
+      firestoreDates(
+          (await work('read', {'collection': collection, 'id': id}))['record']
+              as Map);
+
+  static Stream<List<Map<String, dynamic>>> watch(String collection) async* {
+    final uid = AuthService.currentUser?.uid;
+    while (AuthService.isStaff && AuthService.currentUser?.uid == uid) {
+      final result = await work('read', {'collection': collection});
+      yield (result['records'] as List)
+          .map((r) => firestoreDates(r as Map))
+          .toList();
+      await Future<void>.delayed(const Duration(seconds: 5));
+    }
+  }
+
+  static Stream<Map<String, dynamic>> watchRecord(
+      String collection, String id) async* {
+    final uid = AuthService.currentUser?.uid;
+    while (AuthService.isStaff && AuthService.currentUser?.uid == uid) {
+      yield await read(collection, id);
+      await Future<void>.delayed(const Duration(seconds: 5));
+    }
+  }
+
+  static bool can(String permission) =>
+      !AuthService.isStaff ||
+      (_cacheUid == AuthService.currentUser?.uid &&
+          (_cache?['permissions'] as Map?)?[permission] == true);
   static final unlocked = ValueNotifier(false);
   static Map<String, dynamic>? _cache;
   static String? _cacheUid;
@@ -41,13 +76,20 @@ class StaffAccessService {
   }
 
   static Map<String, dynamic> firestoreDates(Map raw) {
-    final data = Map<String, dynamic>.from(raw);
-    for (final field in ['createdAt', 'trialEndsAt', 'subscriptionEndsAt']) {
-      if (data[field] is String) {
-        data[field] = Timestamp.fromDate(DateTime.parse(data[field]));
+    dynamic convert(dynamic value, [String key = '']) {
+      if (value is Map) {
+        return value
+            .map((k, v) => MapEntry(k.toString(), convert(v, k.toString())));
       }
+      if (value is List) return value.map((v) => convert(v)).toList();
+      if (value is String && key.endsWith('At')) {
+        final date = DateTime.tryParse(value);
+        if (date != null) return Timestamp.fromDate(date);
+      }
+      return value;
     }
-    return data;
+
+    return Map<String, dynamic>.from(convert(raw) as Map);
   }
 
   static Future<void> switchTo(String id, String pin) async {

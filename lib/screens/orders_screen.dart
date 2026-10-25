@@ -12,6 +12,8 @@ import '../widgets/compact_action.dart';
 import '../models/order.dart';
 
 import '../services/order_service.dart';
+import '../services/staff_access_service.dart';
+import '../services/auth_service.dart';
 import '../widgets/shop_operation.dart';
 
 class OrdersScreen extends StatefulWidget {
@@ -98,6 +100,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 ? b.createdAt.compareTo(a.createdAt)
                 : orderDueAt(a).compareTo(orderDueAt(b)));
           return Column(children: [
+            if (AuthService.isStaff && _filter == OrderQueue.history)
+              const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Text('ประวัติจาก 100 ออเดอร์ล่าสุดของร้าน')),
             SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.all(8),
@@ -116,9 +122,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
             Divider(height: 1, color: cs.outlineVariant),
             Expanded(
                 child: orders.isEmpty
-                    ? Center(
-                        child:
-                            Text('ไม่มีออเดอร์ในหมวด ${_filter.label}'))
+                    ? Center(child: Text('ไม่มีออเดอร์ในหมวด ${_filter.label}'))
                     : ListView.builder(
                         padding: const EdgeInsets.all(12),
                         itemCount: orders.length,
@@ -362,7 +366,9 @@ class _PendingPaymentActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ActionButtons(children: [
         OutlinedButton(
-            onPressed: () => _cancel(context),
+            onPressed: StaffAccessService.can('cancel')
+                ? () => _cancel(context)
+                : null,
             style: OutlinedButton.styleFrom(
                 foregroundColor: Theme.of(context).colorScheme.error),
             child: const Text('ยกเลิก')),
@@ -421,8 +427,14 @@ class OrderDetailScreen extends StatefulWidget {
 }
 
 class _OrderDetailScreenState extends State<OrderDetailScreen> {
-  late var _stream =
-      ShopDatabase.shop.collection('orders').doc(widget.orderId).snapshots();
+  Stream<Map<String, dynamic>?> _watch() => AuthService.isStaff
+      ? StaffAccessService.watchRecord('orders', widget.orderId)
+      : ShopDatabase.shop
+          .collection('orders')
+          .doc(widget.orderId)
+          .snapshots()
+          .map((d) => d.data());
+  late var _stream = _watch();
   @override
   Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(title: const Text('รายละเอียดออเดอร์')),
@@ -432,24 +444,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             if (snap.hasError) {
               return Center(
                   child: TextButton(
-                      onPressed: () => setState(() => _stream = ShopDatabase
-                          .shop
-                          .collection('orders')
-                          .doc(widget.orderId)
-                          .snapshots()),
+                      onPressed: () => setState(() => _stream = _watch()),
                       child: const Text('โหลดไม่ได้ · ลองใหม่')));
             }
             if (!snap.hasData) {
               return const Center(child: CircularProgressIndicator());
             }
-            if (!snap.data!.exists) {
-              return const Center(child: Text('ไม่พบออเดอร์นี้'));
-            }
             return ListView(padding: const EdgeInsets.all(12), children: [
               _OrderCard(
                   expanded: true,
-                  order: ShopOrder.fromFirestore(
-                      snap.data!.data()!, snap.data!.id)),
+                  order: ShopOrder.fromFirestore(snap.data!, widget.orderId)),
             ]);
           }));
 }

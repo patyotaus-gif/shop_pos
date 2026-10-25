@@ -1,3 +1,4 @@
+import '../services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../theme/operational_colors.dart';
@@ -46,6 +47,10 @@ class _TablesScreenState extends State<TablesScreen> {
           }
           final tables = snap.data ?? const [];
           if (tables.isEmpty) {
+            if (AuthService.isStaff) {
+              return const Center(
+                  child: Text('ยังไม่มีโต๊ะ กรุณาให้เจ้าของร้านเพิ่มโต๊ะ'));
+            }
             return _EmptyState(onAdd: () => _addTable(context));
           }
           return LayoutBuilder(
@@ -73,18 +78,22 @@ class _TablesScreenState extends State<TablesScreen> {
                 itemBuilder: (_, i) => _TableCard(
                   table: tables[i],
                   onTap: () => _openDetail(context, tables[i]),
-                  onLongPress: () => _editTable(context, tables[i]),
+                  onLongPress: AuthService.isStaff
+                      ? null
+                      : () => _editTable(context, tables[i]),
                 ),
               );
             },
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _addTable(context),
-        icon: const Icon(Icons.add),
-        label: const Text('เพิ่มโต๊ะ'),
-      ),
+      floatingActionButton: AuthService.isStaff
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => _addTable(context),
+              icon: const Icon(Icons.add),
+              label: const Text('เพิ่มโต๊ะ'),
+            ),
     );
   }
 
@@ -116,7 +125,7 @@ class _TableCard extends StatelessWidget {
 
   final RestaurantTable table;
   final VoidCallback onTap;
-  final VoidCallback onLongPress;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {

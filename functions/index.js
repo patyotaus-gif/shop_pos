@@ -25,6 +25,7 @@ exports.staffList = onCall(staffAccess.list);
 exports.staffManage = onCall(staffAccess.manage);
 exports.staffSwitchSession = onCall(staffAccess.switchSession);
 exports.staffWorkspace = onCall(staffAccess.workspace);
+exports.staffWork = onCall(require('./staff_work').handler({db:firestoreSdk.getFirestore(),FieldValue:firestoreSdk.FieldValue,HttpsError}));
 exports.staffCheckout = onCall(staffAccess.checkout);
 exports.quoteCounterGifts = onCall({enforceAppCheck:true},staffAccess.quoteGifts);
 exports.counterBundleCatalog = onCall({enforceAppCheck:true},staffAccess.bundleCatalog);
@@ -867,7 +868,7 @@ exports.createRefund = onCall(
     if (typeof shopId !== 'string' || typeof saleId !== 'string' || !shopId || !saleId || shopId.includes('/') || saleId.includes('/')) {
       throw new HttpsError('invalid-argument', 'shopId and saleId required');
     }
-    if (!request.auth || request.auth.uid !== shopId) throw new HttpsError('permission-denied', 'Shop owner required');
+    await require('./staff_permissions').authorize(request,firestoreSdk.getFirestore(),HttpsError,'refund');
     const { refundSale } = require('./refund');
     const Stripe = require('stripe');
     try { return await refundSale({db:firestoreSdk.getFirestore(),stripe:Stripe(stripeSecretKey.value()),shopId,saleId,

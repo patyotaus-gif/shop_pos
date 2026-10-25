@@ -11,6 +11,33 @@ async function setup(){
   await api.open(req({requestId:'first',openingFloat:500}));
   return {...f,api};
 }
+
+test('manual close stays closed; next opening remembers float not closing cash',async()=>{
+  const f=await setup();
+  await f.api.recordCashMovement(req({requestId:'in',sessionId:'first',kind:'cashIn',amount:4500,reason:'cash'}));
+  await f.api.close(req({sessionId:'first',countedCash:5000,autoOpenNext:false}));
+  const old=structuredClone(f.docs.get(path+'cashSessions/first'));
+  assert.equal(old.status,'closed');
+  assert.equal(old.nextSessionId,undefined);
+  assert.equal(f.docs.get(path+'accountingSettings/current').defaultOpeningFloat,500);
+  assert.equal([...f.docs].filter(([p,d])=>p.startsWith(path+'cashSessions/')&&d.status==='open').length,0);
+  await f.api.open(req({requestId:'next',openingFloat:1000}));
+  assert.equal(f.docs.get(path+'cashSessions/next').openingFloat,1000);
+  assert.equal(f.docs.get(path+'accountingSettings/current').defaultOpeningFloat,1000);
+  await f.api.close(req({sessionId:'first',countedCash:999,autoOpenNext:false}));
+  assert.deepEqual(f.docs.get(path+'cashSessions/first'),old);
+  const summary=await f.api.close(req({sessionId:'next',countedCash:1000,autoOpenNext:false}));
+  assert.equal(summary.grossTotal,0);
+  assert.equal(summary.expectedCash,1000);
+});
+
+test('opening rejects invalid float before changing saved default',async()=>{
+  const f=await setup();
+  for(const openingFloat of [-0.001,0.001,NaN,Infinity,'1000',1e9+1]) {
+    await assert.rejects(f.api.open(req({requestId:'invalid',openingFloat})),{code:'invalid-argument'});
+  }
+  assert.equal(f.docs.get(path+'accountingSettings/current').defaultOpeningFloat,500);
+});
 test('automatic successor carries counted cash, preserves shortage and starts revenue at zero',async()=>{
   const f=await setup();
   await f.api.recordCashMovement(req({requestId:'in',sessionId:'first',kind:'cashIn',amount:20,reason:'float'}));
