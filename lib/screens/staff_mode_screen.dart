@@ -24,23 +24,38 @@ class StaffModeScreen extends StatelessWidget {
                 Material(
                     color:
                         Theme.of(context).colorScheme.surfaceContainerHighest,
-                    child: ListTile(
-                      leading: const Icon(Icons.badge_outlined),
-                      title: FutureBuilder<Map<String, dynamic>>(
-                          future: StaffAccessService.workspace(),
-                          builder: (context, snap) => Text(
-                              snap.hasError
-                                  ? operationError(snap.error!)
-                                  : '${snap.data?['staffName'] ?? 'กำลังตรวจสิทธิ์…'} · ${StaffRole.values.firstWhere((r) => r.name == snap.data?['position'], orElse: () => StaffRole.cashier).label}',
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis)),
-                      subtitle: const Text('ขาย รับเงิน โต๊ะ ออเดอร์ และครัว'),
-                      trailing: TextButton.icon(
-                          onPressed: () =>
-                              StaffAccessService.unlocked.value = false,
-                          icon: const Icon(Icons.lock_outline),
-                          label: const Text('ล็อก / เปลี่ยนผู้ใช้')),
-                    )),
+                    child: Padding(
+                        padding: const EdgeInsets.only(left: 12, right: 4),
+                        child: Row(children: [
+                          const Icon(Icons.badge_outlined, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                              child: FutureBuilder<Map<String, dynamic>>(
+                                  future: StaffAccessService.workspace(),
+                                  builder: (context, snap) {
+                                    final label = snap.hasError
+                                        ? operationError(snap.error!)
+                                        : snap.hasData
+                                            ? '${snap.data!['staffName'] ?? 'พนักงาน'} · ${StaffRole.values.firstWhere((r) => r.name == snap.data!['position'], orElse: () => StaffRole.cashier).label}'
+                                            : 'กำลังตรวจสิทธิ์…';
+                                    return Tooltip(
+                                        message: label,
+                                        child: Text(label,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyMedium,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis));
+                                  })),
+                          IconButton(
+                            tooltip: 'ล็อก / เปลี่ยนผู้ใช้',
+                            constraints: const BoxConstraints(
+                                minWidth: 48, minHeight: 48),
+                            onPressed: () =>
+                                StaffAccessService.unlocked.value = false,
+                            icon: const Icon(Icons.lock_outline),
+                          ),
+                        ]))),
                 const TabBar(isScrollable: true, tabs: [
                   Tab(text: 'ขาย'),
                   Tab(text: 'โต๊ะ'),

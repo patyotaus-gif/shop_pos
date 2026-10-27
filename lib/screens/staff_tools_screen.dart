@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
+import 'staff_inventory_screen.dart';
 import 'package:intl/intl.dart';
 import '../models/sale.dart';
 import '../services/staff_access_service.dart';
 import '../utils/operation_error.dart';
-import '../widgets/shop_operation.dart';
+
 import 'cash_session_screen.dart';
 import 'sale_receipt_screen.dart';
 
@@ -18,7 +18,7 @@ class _StaffToolsScreenState extends State<StaffToolsScreen> {
   late Future<Map<String, dynamic>> _workspace = StaffAccessService.workspace();
   @override
   Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: const Text('สิทธิ์เพิ่มเติม')),
+      appBar: AppBar(title: const Text('เพิ่มเติม')),
       body: FutureBuilder<Map<String, dynamic>>(
           future: _workspace,
           builder: (context, snap) {
@@ -33,10 +33,18 @@ class _StaffToolsScreenState extends State<StaffToolsScreen> {
               return const Center(child: CircularProgressIndicator());
             }
             final p = snap.data!['permissions'] as Map? ?? {};
+            if (![
+              'cashSession',
+              'reports',
+              'cost',
+              'stock',
+              'stockReceive',
+              'stockWaste',
+              'stockHistory'
+            ].any((key) => p[key] == true)) {
+              return const Center(child: Text('ไม่มีเมนูเพิ่มเติม'));
+            }
             return ListView(children: [
-              ListTile(
-                  title: Text('พนักงาน: ${snap.data!['staffName']}'),
-                  subtitle: const Text('สิทธิ์เพิ่มเติมกำหนดโดยเจ้าของร้าน')),
               if (p['cashSession'] == true)
                 ListTile(
                     leading: const Icon(Icons.point_of_sale),
@@ -53,26 +61,20 @@ class _StaffToolsScreenState extends State<StaffToolsScreen> {
                         context,
                         MaterialPageRoute<void>(
                             builder: (_) => const _StaffReport()))),
-              if (p['cost'] == true || p['stock'] == true)
+              if ([
+                'cost',
+                'stock',
+                'stockReceive',
+                'stockWaste',
+                'stockHistory'
+              ].any((key) => p[key] == true))
                 ListTile(
                     leading: const Icon(Icons.inventory_2_outlined),
-                    title: Text(p['stock'] == true
-                        ? 'ตรวจนับสต๊อกสินค้า'
-                        : 'ต้นทุนสินค้า'),
+                    title: const Text('สต๊อกสินค้า'),
                     onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute<void>(
-                            builder: (_) => const _StaffInventory()))),
-              for (final entry in const {
-                'discount': 'ลดราคาในหน้ารับชำระ / ใช้คูปองบิลโต๊ะ',
-                'cancel': 'ยกเลิกบิลโต๊ะและออเดอร์ที่ยังไม่ชำระ',
-                'refund': 'คืนเงินจากหน้าใบเสร็จ'
-              }.entries)
-                ListTile(
-                    title: Text(entry.value),
-                    trailing: Icon(p[entry.key] == true
-                        ? Icons.check_circle
-                        : Icons.lock_outline)),
+                            builder: (_) => const StaffInventoryScreen()))),
             ]);
           }));
 }
@@ -163,135 +165,4 @@ class _StaffReportState extends State<_StaffReport> {
                   ]);
                 }))
       ]));
-}
-
-class _StaffInventory extends StatefulWidget {
-  const _StaffInventory();
-  @override
-  State<_StaffInventory> createState() => _StaffInventoryState();
-}
-
-class _StaffInventoryState extends State<_StaffInventory> {
-  late Future<Map<String, dynamic>> _data = StaffAccessService.work('products');
-  void _reload() => setState(() => _data = StaffAccessService.work('products'));
-  Future<void> _count(Map p) async {
-    final lots = (p['stockLots'] as List? ?? []).cast<Map>();
-    String? lotId = lots.firstOrNull?['id'] as String?;
-    final quantity = TextEditingController();
-    final reason = TextEditingController();
-    final requestId = const Uuid().v4();
-    bool busy = false;
-    await showDialog<void>(
-        context: context,
-        builder: (ctx) => StatefulBuilder(
-            builder: (ctx, setDialog) => AlertDialog(
-                    title: Text('ตรวจนับ ${p['name']}'),
-                    content: SingleChildScrollView(
-                        child:
-                            Column(mainAxisSize: MainAxisSize.min, children: [
-                      if (p['trackLots'] == true)
-                        DropdownButtonFormField<String>(
-                            initialValue: lotId,
-                            isExpanded: true,
-                            decoration:
-                                const InputDecoration(labelText: 'ล็อตสินค้า'),
-                            items: lots
-                                .map((l) => DropdownMenuItem(
-                                    value: l['id'] as String,
-                                    child: Text(
-                                        '${l['number']} · ${l['expiresOn']}')))
-                                .toList(),
-                            onChanged: busy
-                                ? null
-                                : (v) => setDialog(() => lotId = v)),
-                      TextField(
-                          controller: quantity,
-                          enabled: !busy,
-                          keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true),
-                          decoration: InputDecoration(
-                              labelText: 'จำนวนที่นับได้ (${p['unit']})')),
-                      TextField(
-                          controller: reason,
-                          enabled: !busy,
-                          maxLength: 300,
-                          decoration: const InputDecoration(
-                              labelText: 'เหตุผลตรวจนับ')),
-                    ])),
-                    actions: [
-                      TextButton(
-                          onPressed: busy ? null : () => Navigator.pop(ctx),
-                          child: const Text('ยกเลิก')),
-                      FilledButton(
-                          onPressed: busy
-                              ? null
-                              : () async {
-                                  final q = num.tryParse(quantity.text.trim());
-                                  if (q == null ||
-                                      q < 0 ||
-                                      reason.text.trim().isEmpty) {
-                                    return;
-                                  }
-                                  setDialog(() => busy = true);
-                                  final ok = await performShopOperation(
-                                      ctx,
-                                      () => StaffAccessService.work(
-                                              'stockCount', {
-                                            'productId': p['id'],
-                                            'requestId': requestId,
-                                            'quantity': q,
-                                            'expectedRevision':
-                                                p['stockRevision'],
-                                            'reason': reason.text.trim(),
-                                            'lotId': lotId
-                                          }).then((_) {}),
-                                      success: 'บันทึกตรวจนับแล้ว');
-                                  if (ctx.mounted) {
-                                    if (ok) {
-                                      Navigator.pop(ctx);
-                                    } else {
-                                      setDialog(() => busy = false);
-                                    }
-                                  }
-                                },
-                          child: Text(busy ? 'กำลังบันทึก…' : 'บันทึก'))
-                    ])));
-    quantity.dispose();
-    reason.dispose();
-    if (mounted) _reload();
-  }
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: const Text('สินค้า / ตรวจนับ'), actions: [
-        IconButton(onPressed: _reload, icon: const Icon(Icons.refresh))
-      ]),
-      body: FutureBuilder<Map<String, dynamic>>(
-          future: _data,
-          builder: (context, snap) {
-            if (snap.hasError) {
-              return Center(child: Text(operationError(snap.error!)));
-            }
-            if (!snap.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            final rows = (snap.data!['records'] as List).cast<Map>();
-            return ListView(children: [
-              const ListTile(
-                  subtitle: Text(
-                      'ตรวจนับจำนวนคงเหลือ สินค้าแบบล็อตต้องเลือกล็อตเดิม ส่วนการรับล็อตใหม่และวัตถุดิบให้เจ้าของร้านจัดการ')),
-              for (final p in rows)
-                ListTile(
-                    title: Text('${p['name']}'),
-                    subtitle: Text(
-                        'คงเหลือ ${p['stock']} ${p['unit']}${p.containsKey('unitCost') ? ' · ต้นทุน ฿${p['unitCost']}' : ''}'),
-                    trailing: StaffAccessService.can('stock') &&
-                            p['stockMode'] != 'recipe'
-                        ? IconButton(
-                            tooltip: 'ตรวจนับ',
-                            icon: const Icon(Icons.edit_outlined),
-                            onPressed: () => _count(p))
-                        : null),
-            ]);
-          }));
 }

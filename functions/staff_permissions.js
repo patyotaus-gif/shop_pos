@@ -1,6 +1,6 @@
 'use strict';
 const positions=['cashier','waiter','kitchen','manager'];
-const permissions=['discount','cancel','refund','cashSession','reports','cost','stock'];
+const permissions=['discount','cancel','refund','cashSession','reports','cost','stock','stockReceive','stockWaste','stockHistory'];
 async function authorize(request,db,HttpsError,permission=null){
   const auth=request.auth,shopId=request.data?.shopId;
   const deny=()=>{throw new HttpsError('permission-denied','ไม่มีสิทธิ์ทำรายการนี้ กรุณาติดต่อเจ้าของร้าน');};

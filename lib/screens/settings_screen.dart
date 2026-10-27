@@ -1,3 +1,4 @@
+import 'owner_pin_screen.dart';
 import '../widgets/line_notification_settings.dart';
 import '../widgets/line_link_card.dart';
 import '../widgets/compact_action.dart';
@@ -809,6 +810,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: 'พนักงานและการจัดการ',
                     icon: Icons.groups_outlined,
                     children: [
+                      OwnerPinSettingsTile(onChanged: () async {
+                        final uid = AuthService.currentUser?.uid;
+                        final remembered = uid != null &&
+                            await AuthService.rememberedOwner
+                                .matches(uid, isStaff: AuthService.isStaff);
+                        if (mounted) {
+                          setState(() => _rememberOwner = remembered);
+                        }
+                      }),
                       // Staff — PIN profiles. Full/Restaurant opens management;
                       // Solo/Lite gets a locked tile that opens the upgrade prompt.
                       StreamBuilder<Shop?>(

@@ -26,6 +26,7 @@ function handler({db,FieldValue,HttpsError}){
   const raw=request.data||{};
   const ctx=await authorize(request,db,HttpsError);
   const shop=db.collection('shops').doc(ctx.shopId);
+  if(require('./staff_inventory').actions.includes(raw.action))return require('./staff_inventory').handler({db,FieldValue,HttpsError})(request,ctx);
   if(raw.action==='report'){
    await authorize(request,db,HttpsError,'reports');
    const from=new Date(raw.from),to=new Date(raw.to);
@@ -39,25 +40,6 @@ function handler({db,FieldValue,HttpsError}){
    const rows=await shop.collection('products').limit(501).get();
    if(rows.size>500)fail('รายการมากเกินไป กรุณาให้เจ้าของร้านจัดการสินค้า');
    return {records:rows.docs.map(d=>{const p=d.data();return clean({id:d.id,name:p.name,stock:p.stock||0,stockRevision:p.stockRevision||0,unit:p.unit||'ชิ้น',isWeighed:p.isWeighed===true,trackLots:p.trackLots===true,stockMode:p.stockMode||'own',stockLots:p.stockLots||[],...(ctx.permissions?.cost?{unitCost:p.costPrice||0}:{})});})};
-  }
-  if(raw.action==='stockCount'){
-   await authorize(request,db,HttpsError,'stock');
-   if(!validId(raw.productId)||!validId(raw.requestId)||typeof raw.reason!=='string'||!raw.reason.trim()||raw.reason.length>300)fail('ระบุสินค้าและเหตุผลตรวจนับ');
-   const stock=require('./stock_quantity'),ref=shop.collection('products').doc(raw.productId),movement=ref.collection('stockMovements').doc('staff-'+raw.requestId);
-   return require('./transaction_retry').runTransaction(db,async tx=>{
-    await require('./staff_permissions').recheck(tx,shop,request,HttpsError);
-    const [snapshot,prior,reserved]=await Promise.all([tx.get(ref),tx.get(movement),tx.get(shop.collection('inventoryControl').doc('online'))]);
-    if(prior.exists){if(prior.data().actor!==ctx.actor||prior.data().counted!==raw.quantity||prior.data().lotId!==(raw.lotId||null)||prior.data().reason!==raw.reason.trim())fail('รหัสคำขอซ้ำ');return {success:true};}
-    const p=snapshot.data();if(!p||p.stockMode==='recipe')fail('สินค้านี้ใช้ตรวจนับโดยตรงไม่ได้');
-    if(Number(p.stockRevision||0)!==raw.expectedRevision)fail('สต๊อกเปลี่ยนแล้ว กรุณาโหลดใหม่และตรวจนับอีกครั้ง');
-    if(!stock.valid(raw.quantity,p.isWeighed===true,true))fail('จำนวนไม่ถูกต้อง');
-    let update={stock:raw.quantity};
-    if(p.trackLots){const lots=stock.lotsOf(p),lot=lots.find(l=>l.id===raw.lotId);if(!lot)fail('เลือกล็อตที่ต้องการตรวจนับ');lot.quantity=raw.quantity;update={stock:stock.round(lots.reduce((s,l)=>s+l.quantity,0)),stockLots:lots};}
-    if(stock.available({...p,...update})<Number(reserved.data()?.products?.[ref.id]||0))fail('จำนวนต่ำกว่าสินค้าที่ถูกจองออนไลน์');
-    stock.write(tx,ref,p,update,{id:movement.id,kind:'count',actor:ctx.actor,reason:raw.reason.trim()},FieldValue);
-    tx.set(movement,{counted:raw.quantity,lotId:raw.lotId||null},{merge:true});
-    return {success:true};
-   });
   }
   if(raw.action==='read'){
    if(!Object.hasOwn(fields,raw.collection))throw new HttpsError('permission-denied','ไม่มีสิทธิ์อ่านข้อมูลนี้');

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'notification_service.dart';
 import 'auto_print_service.dart';
 import 'remembered_owner.dart';
+import 'owner_unlock_service.dart';
 
 class AuthService {
   static final _auth = FirebaseAuth.instance;
@@ -154,13 +155,14 @@ class AuthService {
     }
   }
 
-  static Future<void> signOut() async {
+  static Future<void> signOut({bool forgetOwnerDevice = true}) async {
     await AutoPrintService.stopLocal();
     NotificationService.stopFCM();
     ownerUnlocked = false;
     _founderClaim = false;
     try {
       await rememberedOwner.clear();
+      if (forgetOwnerDevice) await OwnerUnlockService.forget();
     } finally {
       await _auth.signOut();
     }

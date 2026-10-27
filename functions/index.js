@@ -24,6 +24,12 @@ setGlobalOptions({ region: "asia-southeast1" });
 exports.staffList = onCall(staffAccess.list);
 exports.staffManage = onCall(staffAccess.manage);
 exports.staffSwitchSession = onCall(staffAccess.switchSession);
+const ownerUnlock = require('./owner_unlock').createOwnerUnlock({
+  db: firestoreSdk.getFirestore(), auth: getAuth(), Timestamp: firestoreSdk.Timestamp,
+});
+exports.setupOwnerUnlock = onCall(ownerUnlock.setup);
+exports.unlockOwner = onCall(ownerUnlock.unlock);
+exports.disableOwnerUnlock = onCall(ownerUnlock.disable);
 exports.staffWorkspace = onCall(staffAccess.workspace);
 exports.staffWork = onCall(require('./staff_work').handler({db:firestoreSdk.getFirestore(),FieldValue:firestoreSdk.FieldValue,HttpsError}));
 exports.staffCheckout = onCall(staffAccess.checkout);

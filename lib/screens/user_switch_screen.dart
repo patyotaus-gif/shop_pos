@@ -3,6 +3,8 @@ import '../services/auth_service.dart';
 import '../services/staff_access_service.dart';
 import '../utils/operation_error.dart';
 import 'offline_cash_screen.dart';
+import 'owner_pin_screen.dart';
+import '../services/owner_unlock_service.dart';
 
 class UserSwitchScreen extends StatefulWidget {
   const UserSwitchScreen({super.key, this.loadStaff, this.switchTo});
@@ -60,10 +62,32 @@ class _UserSwitchScreenState extends State<UserSwitchScreen> {
   }
 
   Future<void> _owner() async {
-    // Never restore a cached owner credential when leaving staff mode.
-    await AuthService.signOut();
-    StaffAccessService.unlocked.value = false;
-    if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      if (await OwnerUnlockService.available()) {
+        if (!mounted) return;
+        final unlocked = await Navigator.push<bool>(
+            context, MaterialPageRoute(builder: (_) => const OwnerPinScreen()));
+        if (!mounted || unlocked == null) return; // Back means stay locked.
+        if (unlocked) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+          return;
+        }
+      }
+      // Fallback authenticates using the original account; it never restores a
+      // cached owner credential. Keep the PIN binding for a forgotten PIN reset.
+      await AuthService.signOut(forgetOwnerDevice: false);
+      StaffAccessService.unlocked.value = false;
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+    } catch (e) {
+      if (mounted) setState(() => _error = operationError(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   @override
@@ -74,13 +98,13 @@ class _UserSwitchScreenState extends State<UserSwitchScreen> {
         body: ListView(padding: const EdgeInsets.all(20), children: [
           const OfflineEntryButton(),
           const Text(
-              'เจ้าของร้านจัดการข้อมูลและสิทธิ์ พนักงานขายและรับเงินได้ แต่ดูรายงาน ต้นทุน ตั้งค่า หรือคืนเงินไม่ได้'),
+              'เลือกผู้ใช้งาน เจ้าของร้านจัดการข้อมูลและกำหนดสิทธิ์เพิ่มเติมให้พนักงานได้'),
           const SizedBox(height: 16),
           ListTile(
               leading: const Icon(Icons.admin_panel_settings_outlined),
               title: const Text('เจ้าของร้าน'),
               subtitle: const Text(
-                  'เข้าสู่ระบบด้วยบัญชีเจ้าของร้าน (อีเมล / Google / Apple)'),
+                  'ใช้ PIN เจ้าของที่ตั้งไว้บนเครื่องนี้ หรือบัญชี อีเมล / Google / Apple'),
               onTap: _busy ? null : _owner),
           const Divider(),
           if (_busy) const LinearProgressIndicator(),

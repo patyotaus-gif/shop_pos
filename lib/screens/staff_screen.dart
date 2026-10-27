@@ -305,7 +305,10 @@ class StaffMemberFormState extends State<StaffMemberForm> {
                 'cashSession': 'เปิด–ปิดรอบ',
                 'reports': 'ดูรายงาน',
                 'cost': 'ดูต้นทุน',
-                'stock': 'ปรับสต๊อก'
+                'stock': 'ตรวจนับสต๊อก',
+                'stockReceive': 'รับสินค้าเข้า',
+                'stockWaste': 'ตัดของเสีย / ชำรุด',
+                'stockHistory': 'ดูประวัติสต๊อก',
               }.entries)
                 SwitchListTile(
                     contentPadding: EdgeInsets.zero,
