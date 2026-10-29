@@ -26,7 +26,8 @@
     <div class="icon">🎉</div>
     <h1>สั่งสินค้าสำเร็จ!</h1>
     <p class="subtitle">ขอบคุณที่สั่งซื้อ<br/>ร้านค้าได้รับ order ของคุณแล้ว</p>
-    <p id="pickup" class="subtitle"></p>
+    <p id="orderNumber" class="subtitle" style="overflow-wrap:anywhere"></p>
+    <p id="pickup" class="subtitle" style="white-space:pre-line"></p>
     <div class="steps">
       <div class="step"><div class="step-num">1</div><span>ร้านค้าตรวจสอบและยืนยัน order</span></div>
       <div class="step"><div class="step-num">2</div><span>เตรียมสินค้าให้พร้อม</span></div>
@@ -35,9 +36,12 @@
     </div>
     <div class="note">ร้านจะติดต่อกลับทางโทรศัพท์เมื่อสินค้าพร้อม</div>
   </div>
-<script>
+<script type="module">
+  import {pickupDescription} from '/order/js/order-display.mjs';
+  const number = new URLSearchParams(location.search).get('number') || new URLSearchParams(location.search).get('order');
+  if (number) document.getElementById('orderNumber').textContent = 'เลขออเดอร์ ' + number.slice(0, 128);
   const pickup = new URLSearchParams(location.search).get("pickup");
-  if (pickup) document.getElementById("pickup").textContent = "นัดรับ " + pickup.slice(0, 100) + " (เวลาไทย)";
+  if (pickup) document.getElementById("pickup").textContent = pickupDescription(pickup.slice(0, 100));
   if (new URLSearchParams(location.search).get('review') === '1') {
     document.title = 'ส่งสลิปแล้ว รอร้านยืนยัน';
     document.querySelector('h1').textContent = 'ส่งสลิปแล้ว รอร้านยืนยัน';

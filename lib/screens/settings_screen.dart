@@ -1133,7 +1133,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               color: cs.primary.withValues(alpha: 0.3)),
                         ),
                         child: const Text(
-                          'ลูกค้าที่สั่งของออนไลน์จะเห็น QR PromptPay พร้อมจำนวนเงิน (มีเศษ\nสตางค์ระบุออเดอร์)\nเงินจะเข้าบัญชีร้านโดยตรง — Pokpok ไม่หักค่าธรรมเนียม',
+                          'ลูกค้าที่สั่งของออนไลน์จะเห็น QR PromptPay ตามยอดสุทธิ\nเงินจะเข้าบัญชีร้านโดยตรง — Pokpok ไม่หักค่าธรรมเนียม',
                           style: TextStyle(fontSize: 12, color: Colors.grey),
                         ),
                       ),
@@ -1209,7 +1209,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'Auto-confirm จาก notification ธนาคาร',
+                                    'ช่วยตรวจยอดจากแจ้งเตือนธนาคาร',
                                     style: TextStyle(
                                       fontWeight: FontWeight.w700,
                                       color: _bankListenerGranted

@@ -1,6 +1,13 @@
 import 'product.dart';
 import 'order_modifier.dart';
 
+/// Keep an amount discount within the edited basket's value. Call when the
+/// basket changes so a discount cleared with the last item cannot return later.
+double cartDiscountAfterEdit(Iterable<CartItem> items, double discount) {
+  final subtotal = items.fold<double>(0, (sum, item) => sum + item.subtotal);
+  return discount.clamp(0.0, subtotal < 0 ? 0.0 : subtotal);
+}
+
 class CartItem {
   final Product product;
   final num quantity;

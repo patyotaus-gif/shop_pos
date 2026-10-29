@@ -25,7 +25,7 @@ class OrderTicketScreen extends StatelessWidget {
                   'ใบงานออเดอร์ • ${order.tableName == null ? 'รับกลับบ้าน' : 'โต๊ะ ${order.tableName}'}',
                   style: pw.TextStyle(
                       fontWeight: pw.FontWeight.bold, fontSize: 18)),
-              pw.Text('เลขออเดอร์ ${order.id}'),
+              pw.Text('เลขออเดอร์ ${order.displayNumber}'),
               pw.Text('${order.customerName} • ${order.customerPhone}'),
               if (order.pickupDescription != null)
                 pw.Padding(

@@ -53,11 +53,13 @@ class OrderItem {
 
 class ShopOrder {
   final String id;
+  final String? orderNumber;
+  String get displayNumber => orderNumber ?? id;
   final String customerName;
   final String customerPhone;
   final List<OrderItem> items;
 
-  /// Merchandise total after any coupon discount, before identifying satang.
+  /// Merchandise total after discounts.
   final double total;
   final double discount;
   final String? couponCode;
@@ -65,8 +67,8 @@ class ShopOrder {
   final List<Map<String, dynamic>> bundles;
 
   /// The amount the customer is actually instructed to transfer. May differ
-  /// from [total] by 1–99 satang so two parallel orders never collide on the
-  /// same banking notification (see PromptPayQR.uniqueAmountFor).
+  /// from [total] on older orders with an identifying-satang amount. New
+  /// orders charge the exact total; old QR amounts must remain unchanged.
   /// Falls back to [total] for legacy orders that didn't carry this field.
   final double finalAmount;
 
@@ -76,9 +78,7 @@ class ShopOrder {
   /// Bank/SlipOK transaction reference once the order is marked paid.
   final String? paymentRef;
 
-  /// Signed URL of the slip image, set when verifyPromptPaySlip auto-
-  /// confirmed the order. Null for orders confirmed manually or by
-  /// the Android notification listener.
+  /// Uploaded slip evidence awaiting review, not proof of payment by itself.
   final String? slipUrl;
 
   /// True when the order was confirmed by an automated path (slip
@@ -86,6 +86,7 @@ class ShopOrder {
   /// "ได้รับเงินแล้ว" manually.
   final bool autoConfirmed;
   final bool bankMatchPending;
+  final bool bankMatchAmbiguous;
 
   final OrderStatus status;
   final DateTime createdAt;
@@ -100,14 +101,22 @@ class ShopOrder {
   final DateTime? pickupEndAt;
   final String? pickupLabel;
 
-  String? get pickupDescription => pickupLabel != null
-      ? 'นัดรับ $pickupLabel (เวลาไทย)'
-      : pickupMode == 'asap'
-          ? 'รับเร็วที่สุด • รอร้านแจ้งพร้อมรับ'
-          : null;
+  String? get pickupDescription {
+    final parts =
+        RegExp(r'^(\d{2}/\d{2}/\d{4})\s+(.+)$').firstMatch(pickupLabel ?? '');
+    if (parts != null) {
+      return 'วันรับสินค้า: ${parts[1]}\nเวลารับ: ${parts[2]} (เวลาไทย)';
+    }
+    return pickupLabel != null
+        ? 'นัดรับ $pickupLabel (เวลาไทย)'
+        : pickupMode == 'asap'
+            ? 'รับเร็วที่สุด • รอร้านแจ้งพร้อมรับ'
+            : null;
+  }
 
   const ShopOrder({
     required this.id,
+    this.orderNumber,
     required this.customerName,
     required this.customerPhone,
     required this.items,
@@ -122,6 +131,7 @@ class ShopOrder {
     this.slipUrl,
     this.autoConfirmed = false,
     this.bankMatchPending = false,
+    this.bankMatchAmbiguous = false,
     required this.status,
     required this.createdAt,
     this.paidAt,
@@ -137,6 +147,7 @@ class ShopOrder {
   factory ShopOrder.fromFirestore(Map<String, dynamic> data, String id) =>
       ShopOrder(
         id: id,
+        orderNumber: data['orderNumber'] as String?,
         customerName: data['customerName'] ?? '',
         customerPhone: data['customerPhone'] ?? '',
         items: (data['items'] as List<dynamic>? ?? [])
@@ -154,7 +165,9 @@ class ShopOrder {
         paymentRef: data['paymentRef'] as String?,
         slipUrl: data['slipUrl'] as String?,
         autoConfirmed: data['autoConfirmed'] as bool? ?? false,
-        bankMatchPending: data['bankMatchStatus'] == 'awaitingOwner',
+        bankMatchPending:
+            ['awaitingOwner', 'ambiguous'].contains(data['bankMatchStatus']),
+        bankMatchAmbiguous: data['bankMatchStatus'] == 'ambiguous',
         status: OrderStatus.values.firstWhere(
           (e) => e.name == (data['status'] ?? 'pendingPayment'),
           orElse: () => OrderStatus.pendingPayment,

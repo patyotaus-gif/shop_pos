@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:intl/intl.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:uuid/uuid.dart';
 import '../services/staff_inventory_api.dart';
 import '../utils/operation_error.dart';
 import '../utils/stock_quantity.dart';
+import 'stock_receive_scan_screen.dart';
 
 const _actions = {
   'stockReceive': 'รับสินค้าเข้า',
@@ -75,14 +75,58 @@ class _StaffInventoryScreenState extends State<StaffInventoryScreen> {
   }
 
   Future<void> _scan() async {
-    final code = await Navigator.push<String>(
-        context, MaterialPageRoute(builder: (_) => const _InventoryScanner()));
+    final code = await Navigator.push<String>(context,
+        MaterialPageRoute(builder: (_) => const InventoryCodeScanner()));
     if (!mounted || code == null) return;
     setState(() {
       _mode = 'barcode';
       _search.text = code;
     });
     await _load(reset: true);
+  }
+
+  Future<void> _scanReceive() async {
+    await Navigator.push<void>(
+        context,
+        MaterialPageRoute(
+            builder: (_) =>
+                StockReceiveScanScreen(onCode: (context, code) async {
+                  if (!widget.api.can('stockReceive')) {
+                    throw StateError(
+                        'ไม่มีสิทธิ์รับสินค้าเข้า กรุณาติดต่อเจ้าของร้าน');
+                  }
+                  final result = await widget.api.call(
+                      'inventoryProducts', {'search': code, 'mode': 'barcode'});
+                  final rows = result['records'] as List;
+                  if (rows.isEmpty) {
+                    throw StateError(
+                        'ไม่พบสินค้า กรุณาตรวจรหัสในช่องบาร์โค้ดของสินค้า');
+                  }
+                  if (rows.length > 1 || result['nextCursor'] != null) {
+                    throw StateError(
+                        'รหัสนี้ซ้ำหลายสินค้า ให้เจ้าของร้านแก้รหัสก่อนรับเข้า');
+                  }
+                  final detail = await widget.api.call('inventoryProduct',
+                      {'productId': (rows.single as Map)['id']});
+                  final product =
+                      Map<String, dynamic>.from(detail['record'] as Map);
+                  if (product['barcode'] != code) {
+                    throw StateError('รหัสสินค้าเปลี่ยนแล้ว กรุณาสแกนใหม่');
+                  }
+                  if (product['stockMode'] == 'recipe') {
+                    throw StateError(
+                        'สินค้านี้ใช้สูตร กรุณารับเข้าที่หน้าวัตถุดิบ');
+                  }
+                  if (!context.mounted) return;
+                  await showDialog<bool>(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) => StaffStockAdjustmentDialog(
+                          product: product,
+                          action: 'stockReceive',
+                          api: widget.api));
+                })));
+    if (mounted) await _load(reset: true);
   }
 
   @override
@@ -99,6 +143,13 @@ class _StaffInventoryScreenState extends State<StaffInventoryScreen> {
             Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(children: [
+                  if (widget.api.can('stockReceive'))
+                    SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                            onPressed: _busy ? null : _scanReceive,
+                            icon: const Icon(Icons.qr_code_scanner),
+                            label: const Text('สแกนรับสินค้าเข้า'))),
                   DropdownButtonFormField<String>(
                       initialValue: _mode,
                       key: ValueKey(_mode),
@@ -131,7 +182,7 @@ class _StaffInventoryScreenState extends State<StaffInventoryScreen> {
                                     icon: const Icon(Icons.search))),
                             onSubmitted: (_) => _load(reset: true))),
                     IconButton(
-                        tooltip: 'สแกนบาร์โค้ด',
+                        tooltip: 'สแกน QR / บาร์โค้ดเพื่อค้นหา',
                         onPressed: _busy ? null : _scan,
                         icon: const Icon(Icons.barcode_reader))
                   ]),
@@ -170,33 +221,6 @@ class _StaffInventoryScreenState extends State<StaffInventoryScreen> {
                     child: const Text('โหลดสินค้าเพิ่มเติม')),
             ])),
           ])));
-}
-
-class _InventoryScanner extends StatefulWidget {
-  const _InventoryScanner();
-  @override
-  State<_InventoryScanner> createState() => _InventoryScannerState();
-}
-
-class _InventoryScannerState extends State<_InventoryScanner> {
-  bool _done = false;
-  @override
-  Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: const Text('สแกนบาร์โค้ด')),
-      body: SafeArea(
-          child: MobileScanner(
-              errorBuilder: (context, error) => const Center(
-                  child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Text(
-                          'เปิดกล้องไม่สำเร็จ กรุณาตรวจสิทธิ์กล้อง หรือกลับไปกรอกบาร์โค้ด'))),
-              onDetect: (capture) {
-                final value = capture.barcodes.firstOrNull?.rawValue;
-                if (!_done && value != null && value.trim().isNotEmpty) {
-                  _done = true;
-                  Navigator.pop(context, value.trim());
-                }
-              })));
 }
 
 class StaffInventoryDetailScreen extends StatefulWidget {

@@ -116,6 +116,34 @@ Future<void> openDialog(WidgetTester tester, FakeInventoryApi api,
 }
 
 void main() {
+  testWidgets('scan receiving opens authorized form without writing stock',
+      (tester) async {
+    final api = FakeInventoryApi({'stockReceive'});
+    await host(tester, StaffInventoryScreen(api: api));
+    await tester.tap(find.text('สแกนรับสินค้าเข้า'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, '885001');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(find.byType(StaffStockAdjustmentDialog), findsOneWidget);
+    expect(api.calls.where((c) => c['action'] == 'stockReceive'), isEmpty);
+    expect(
+        api.calls.any((c) =>
+            c['action'] == 'inventoryProducts' &&
+            c['mode'] == 'barcode' &&
+            c['search'] == '885001'),
+        isTrue);
+    expect(find.text('ต้นทุนรวมที่รับเข้า (บาท)'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('staff without receiving permission has no scan-receive entry',
+      (tester) async {
+    await host(
+        tester, StaffInventoryScreen(api: FakeInventoryApi({'stockHistory'})));
+    expect(find.text('สแกนรับสินค้าเข้า'), findsNothing);
+  });
+
   testWidgets('phone detail shows only authorized actions and product identity',
       (tester) async {
     final api = FakeInventoryApi({'stockReceive'});

@@ -9,6 +9,7 @@ import 'dart:typed_data';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
+import '../widgets/pos_basket.dart';
 import '../widgets/compact_action.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -272,14 +273,19 @@ class _PosScreenState extends State<PosScreen> {
     });
   }
 
-  void _removeFromCart(int idx) => setState(() => _cart.removeAt(idx));
+  void _removeFromCart(int idx) => setState(() {
+        _cart.removeAt(idx);
+        _discount = cartDiscountAfterEdit(_cart, _discount);
+      });
 
   void _updateQty(int idx, num qty) {
     if (qty <= 0) {
       _removeFromCart(idx);
     } else {
-      setState(
-          () => _cart[idx] = _cart[idx].copyWith(quantity: stockRound(qty)));
+      setState(() {
+        _cart[idx] = _cart[idx].copyWith(quantity: stockRound(qty));
+        _discount = cartDiscountAfterEdit(_cart, _discount);
+      });
     }
   }
 
@@ -695,112 +701,81 @@ class _PosScreenState extends State<PosScreen> {
                       },
                     ),
                   ];
-                  final basket = Column(children: [
-                    Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                        child: Row(children: [
-                          const Icon(Icons.shopping_cart_outlined, size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(
-                              child: Text('รายการขาย',
-                                  style:
-                                      Theme.of(context).textTheme.titleMedium)),
-                          Flexible(
-                              child: Text('${_cart.length} รายการ',
-                                  textAlign: TextAlign.end))
-                        ])),
-                    // Cart
-                    Expanded(
-                      child: _cart.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.shopping_cart_outlined,
-                                      size: 64, color: cs.onSurfaceVariant),
-                                  const SizedBox(height: 8),
-                                  Text('ยังไม่มีสินค้าในตะกร้า',
-                                      style: TextStyle(
-                                          color: cs.onSurfaceVariant)),
-                                ],
-                              ),
-                            )
-                          : ListView.builder(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 12),
-                              itemCount: _cart.length,
-                              itemBuilder: (ctx, i) => CartItemTile(
-                                item: _cart[i],
-                                onRemove: () => _removeFromCart(i),
-                                onQtyChanged: (qty) => _updateQty(i, qty),
-                              ),
-                            ),
+                  final basket = PosBasket(
+                    itemCount: _cart.length,
+                    itemBuilder: (ctx, i) => CartItemTile(
+                      item: _cart[i],
+                      onRemove: () => _removeFromCart(i),
+                      onQtyChanged: (qty) => _updateQty(i, qty),
                     ),
                     // Loyalty customer strip (Full/Restaurant). Tap to attach a
                     // customer by phone so the sale accrues points.
-                    if (_loyaltyEnabled)
-                      Material(
-                        color: _loyaltyCustomer != null
-                            ? cs.primary.withValues(alpha: 0.06)
-                            : cs.surface,
-                        child: InkWell(
-                          onTap: _attachCustomer,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              border: Border(
-                                  top: BorderSide(color: cs.outlineVariant)),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.card_giftcard_outlined,
-                                    size: 18, color: cs.primary),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    _loyaltyCustomer != null
-                                        ? '${_loyaltyCustomer!.name} · ${_loyaltyCustomer!.points} แต้ม'
-                                        : 'เพิ่มลูกค้าสะสมแต้ม',
-                                    style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: _loyaltyCustomer != null
-                                            ? FontWeight.w600
-                                            : FontWeight.normal,
-                                        color: cs.onSurface),
-                                  ),
+                    loyalty: _loyaltyEnabled
+                        ? Material(
+                            color: _loyaltyCustomer != null
+                                ? cs.primary.withValues(alpha: 0.06)
+                                : cs.surface,
+                            child: InkWell(
+                              onTap: _attachCustomer,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                      top:
+                                          BorderSide(color: cs.outlineVariant)),
                                 ),
-                                if (_loyaltyCustomer != null)
-                                  GestureDetector(
-                                    onTap: () =>
-                                        setState(() => _loyaltyCustomer = null),
-                                    child: Icon(Icons.close,
-                                        size: 18,
-                                        color: cs.onSurface
-                                            .withValues(alpha: 0.5)),
-                                  )
-                                else
-                                  Icon(Icons.add, size: 18, color: cs.primary),
-                              ],
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.card_giftcard_outlined,
+                                        size: 18, color: cs.primary),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        _loyaltyCustomer != null
+                                            ? '${_loyaltyCustomer!.name} · ${_loyaltyCustomer!.points} แต้ม'
+                                            : 'เพิ่มลูกค้าสะสมแต้ม',
+                                        style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: _loyaltyCustomer != null
+                                                ? FontWeight.w600
+                                                : FontWeight.normal,
+                                            color: cs.onSurface),
+                                      ),
+                                    ),
+                                    if (_loyaltyCustomer != null)
+                                      GestureDetector(
+                                        onTap: () => setState(
+                                            () => _loyaltyCustomer = null),
+                                        child: Icon(Icons.close,
+                                            size: 18,
+                                            color: cs.onSurface
+                                                .withValues(alpha: 0.5)),
+                                      )
+                                    else
+                                      Icon(Icons.add,
+                                          size: 18, color: cs.primary),
+                                  ],
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                      ),
-                    // Summary & checkout
-                    PosCheckoutPanel(
-                      preferenceKey: 'checkout-shortcut:${AuthService.shopId}',
-                      compact: !wide,
-                      canDiscount: StaffAccessService.can('discount'),
-                      canDebt: !AuthService.isStaff,
-                      subtotal: _subtotal,
-                      discount: _discount,
-                      total: _total,
-                      onDiscount: _setDiscount,
-                      onCheckout: () => _checkout(),
-                      onDebt: () => _checkout(isDebt: true),
-                      hasItems: _cart.isNotEmpty,
-                    ),
-                  ]);
+                          )
+                        : null,
+                  );
+                  final checkout = PosCheckoutPanel(
+                    preferenceKey: 'checkout-shortcut:${AuthService.shopId}',
+                    compact: !wide,
+                    horizontalTotal: constraints.maxHeight < 300,
+                    canDiscount: StaffAccessService.can('discount'),
+                    canDebt: !AuthService.isStaff,
+                    subtotal: _subtotal,
+                    discount: _discount,
+                    total: _total,
+                    onDiscount: _setDiscount,
+                    onCheckout: () => _checkout(),
+                    onDebt: () => _checkout(isDebt: true),
+                    hasItems: _cart.isNotEmpty,
+                  );
                   if (wide) {
                     return Row(children: [
                       Expanded(
@@ -811,7 +786,12 @@ class _PosScreenState extends State<PosScreen> {
                       const VerticalDivider(width: 1),
                       SizedBox(
                           width: 380,
-                          child: Material(color: cs.surface, child: basket)),
+                          child: Material(
+                              color: cs.surface,
+                              child: Column(children: [
+                                Expanded(child: basket),
+                                checkout,
+                              ]))),
                     ]);
                   }
                   return MobileSalesWorkspace(
@@ -823,6 +803,7 @@ class _PosScreenState extends State<PosScreen> {
                       SliverFillRemaining(child: _productCatalog()),
                     ]),
                     basket: basket,
+                    checkout: checkout,
                   );
                 }))),
       ]),

@@ -64,12 +64,13 @@ async function createWithPickup({ db, shopRef, orderRef, order: originalOrder, r
       const saved = prior.data();
       if (!order.requestSignature || saved.requestSignature !== order.requestSignature || saved.status !== 'pendingPayment')
         throw Object.assign(Error('ช่วงเวลาหรือออเดอร์เปลี่ยนไป กรุณาตรวจออเดอร์เดิมกับร้าน'),{existingOrder:true});
-      return { pickupLabel: saved.pickupLabel || null, total: saved.total, finalAmount: saved.finalAmount,
+      return { orderNumber: saved.orderNumber || null, pickupLabel: saved.pickupLabel || null, total: saved.total, finalAmount: saved.finalAmount,
         ...(saved.buyGet ? {buyGet:saved.buyGet} : {}),
       ...(saved.bundles ? {bundles:saved.bundles,bundleDiscount:saved.bundleDiscount} : {}),
         ...(saved.coupon ? {coupon:saved.coupon,discount:saved.discount,subtotal:saved.subtotal} : {}),
         promptpayIdSnapshot:saved.promptpayIdSnapshot, promptpayNameSnapshot:saved.promptpayNameSnapshot };
     }
+    const sequence = await require('./order_number').prepare(tx, shopRef, now());
     const settings = (await tx.get(shopRef.collection('settings').doc('shop'))).data() || {};
     if (settings.ordersClosed === true) throw Error('ร้านปิดรับออเดอร์ชั่วคราว');
     const c = config(settings.pickup);
@@ -117,10 +118,11 @@ async function createWithPickup({ db, shopRef, orderRef, order: originalOrder, r
       if (requestedSlot) throw Error('ร้านปิดการนัดรับล่วงหน้า กรุณาเลือกใหม่');
       pickup = { pickupMode: 'asap' };
     }
+    sequence.write();
     if (inventory) inventory.write();
     if (coupon) coupon.write();
-    tx.create(orderRef, { ...order, ...pickup, ...(inventory ? {inventoryReservation:inventory.reservation} : {}) });
-    return { ...pickup, total: order.total, finalAmount: order.finalAmount,
+    tx.create(orderRef, { ...order, ...pickup, orderNumber: sequence.number, ...(inventory ? {inventoryReservation:inventory.reservation} : {}) });
+    return { ...pickup, orderNumber: sequence.number, total: order.total, finalAmount: order.finalAmount,
       ...(order.buyGet ? {buyGet:order.buyGet} : {}),
       ...(order.bundles ? {bundles:order.bundles,bundleDiscount:order.bundleDiscount} : {}),
       ...(order.coupon ? {coupon:order.coupon,discount:order.discount,subtotal:order.subtotal} : {}),

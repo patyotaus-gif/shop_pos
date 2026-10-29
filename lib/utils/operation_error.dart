@@ -14,7 +14,10 @@ String operationError(Object error) {
     return error.message!;
   }
   if (error is FirebaseException) {
-    if (error.code == 'permission-denied' || error.code == 'unauthenticated') {
+    if (error.code == 'unauthenticated') {
+      return 'ยืนยันบัญชีหรือแอพไม่สำเร็จ กรุณาตรวจสอบการเข้าสู่ระบบและเวอร์ชันแอพ หากยังมีปัญหาให้ติดต่อทีมงาน';
+    }
+    if (error.code == 'permission-denied') {
       return 'ไม่มีสิทธิ์ทำรายการ กรุณาตรวจสอบบัญชีที่เข้าสู่ระบบ';
     }
     if (['unavailable', 'deadline-exceeded', 'aborted'].contains(error.code)) {

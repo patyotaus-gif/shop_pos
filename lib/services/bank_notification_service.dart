@@ -7,6 +7,7 @@ import 'package:notification_listener_service/notification_listener_service.dart
 
 import '../models/order.dart';
 import '../utils/bank_notification_parser.dart';
+import '../utils/bank_payment_match.dart';
 import 'auth_service.dart';
 
 /// Bridges Android's NotificationListenerService with our PromptPay order
@@ -20,15 +21,6 @@ class BankNotificationService {
   static bool _initialized = false;
   static Stream<dynamic>? _eventStream;
 
-  /// Window we'll consider a banking notification "fresh enough" to match
-  /// against a pending order. Longer than this and we assume it's history
-  /// being replayed.
-  static const Duration _matchWindow = Duration(minutes: 30);
-
-  /// Tolerance when matching amounts. Banking apps sometimes round to two
-  /// decimals differently (29.95 vs 29.96), so allow 1 satang either way.
-  static const double _amountTolerance = 0.01;
-
   /// Hook the OS notification stream once per process. Safe to call from
   /// main() on every platform — no-ops everywhere except Android.
   static Future<void> init() async {
@@ -39,7 +31,13 @@ class BankNotificationService {
     }
     try {
       _eventStream = NotificationListenerService.notificationsStream;
-      _eventStream!.listen(_onNotification, onError: (Object e, StackTrace st) {
+      _eventStream!.listen((event) async {
+        try {
+          await _onNotification(event);
+        } catch (_) {
+          debugPrint('[BankNotificationService] review hint unavailable');
+        }
+      }, onError: (Object e, StackTrace st) {
         debugPrint('[BankNotificationService] stream error: $e');
       });
     } catch (e) {
@@ -86,38 +84,44 @@ class BankNotificationService {
       text: text,
     );
     if (parsed == null) {
-      debugPrint('[BankNotificationService] no match for $pkg: $title / $text');
       return;
     }
 
-    debugPrint('[BankNotificationService] parsed: $parsed');
-    await _matchAndConfirm(parsed);
+    await _suggestForReview(parsed);
   }
 
-  static Future<void> _matchAndConfirm(BankIncomingTransfer transfer) async {
+  static Future<void> _suggestForReview(BankIncomingTransfer transfer) async {
     final shopId = AuthService.shopId;
-    if (shopId == null) return;
+    if (shopId == null || AuthService.isStaff) return;
 
     final col = FirebaseFirestore.instance
         .collection('shops')
         .doc(shopId)
         .collection('orders');
 
-    final since = DateTime.now().subtract(_matchWindow);
+    final observedAt = DateTime.now();
     final snap = await col
         .where('status', isEqualTo: OrderStatus.pendingPayment.name)
-        .where('createdAt', isGreaterThan: Timestamp.fromDate(since))
         .get();
 
-    // Match by finalAmount within tolerance. We allow only a single
-    // unambiguous match — if two orders coincidentally land on the exact
-    // same final amount (collision in our cents hash), fall back to manual
-    // confirm so the shop owner picks the right one.
+    // Include older pending bills: a delayed transfer must not be silently
+    // assigned to a newer same-amount bill. Every suggestion requires review.
     final matches = snap.docs.where((d) {
       final amt = (d.data()['finalAmount'] as num?)?.toDouble() ??
           (d.data()['total'] as num?)?.toDouble() ??
           0;
-      return (amt - transfer.amount).abs() <= _amountTolerance;
+      final data = d.data();
+      if (data['paymentMethod'] == 'stripe' ||
+          data['paymentMethod'] == 'omise') {
+        return false;
+      }
+      return bankPaymentCandidate(
+          expected: amt,
+          received: transfer.amount,
+          createdAt: (data['createdAt'] as Timestamp?)?.toDate() ??
+              DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+          observedAt: observedAt,
+          transferredAt: transfer.transferredAt);
     }).toList();
 
     if (matches.isEmpty) {
@@ -125,24 +129,27 @@ class BankNotificationService {
           '[BankNotificationService] no pending order at ${transfer.amount}');
       return;
     }
-    if (matches.length > 1) {
-      debugPrint(
-        '[BankNotificationService] ambiguous: ${matches.length} orders at ${transfer.amount} — '
-        'leaving for manual confirm',
-      );
-      return;
+    // Each transaction rechecks state so late hints cannot modify paid bills.
+    for (final match in matches) {
+      await FirebaseFirestore.instance.runTransaction((tx) async {
+        final latest = (await tx.get(match.reference)).data();
+        if (latest == null ||
+            latest['status'] != 'pendingPayment' ||
+            latest['paidAt'] != null ||
+            latest['saleId'] != null) {
+          return;
+        }
+        tx.update(match.reference, {
+          'bankMatchStatus':
+              matches.length > 1 || latest['bankMatchStatus'] == 'ambiguous'
+                  ? 'ambiguous'
+                  : 'awaitingOwner',
+          'bankMatchAt': FieldValue.serverTimestamp(),
+          'bankMatchRef': 'notification:${transfer.bankCode}',
+          'paymentSender': transfer.sender,
+          'autoConfirmed': false,
+        });
+      });
     }
-
-    final orderRef = matches.single.reference;
-    await orderRef.update({
-      'bankMatchStatus': 'awaitingOwner',
-      'bankMatchAt': FieldValue.serverTimestamp(),
-      'bankMatchRef': 'notification:${transfer.bankCode}',
-      'paymentSender': transfer.sender,
-      'autoConfirmed': false,
-    });
-    debugPrint(
-      '[BankNotificationService] matched for owner review ${orderRef.id} via ${transfer.bankCode}',
-    );
   }
 }

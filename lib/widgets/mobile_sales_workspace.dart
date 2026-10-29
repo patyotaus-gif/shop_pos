@@ -7,9 +7,10 @@ class MobileSalesWorkspace extends StatefulWidget {
       {super.key,
       required this.catalog,
       required this.basket,
+      required this.checkout,
       required this.itemCount,
       required this.total});
-  final Widget catalog, basket;
+  final Widget catalog, basket, checkout;
   final num itemCount;
   final double total;
   @override
@@ -18,27 +19,6 @@ class MobileSalesWorkspace extends StatefulWidget {
 
 class _MobileSalesWorkspaceState extends State<MobileSalesWorkspace> {
   bool _cart = false;
-  final _basketScroll = ScrollController();
-
-  @override
-  void dispose() {
-    _basketScroll.dispose();
-    super.dispose();
-  }
-
-  bool _scrollPastBasket(OverscrollNotification notification) {
-    // The cart's ListView otherwise consumes the drag at its end, leaving
-    // checkout below the viewport on short/landscape phones.
-    if (notification.depth > 0 &&
-        notification.metrics.axis == Axis.vertical &&
-        notification.dragDetails != null &&
-        _basketScroll.hasClients) {
-      final position = _basketScroll.position;
-      _basketScroll.jumpTo((position.pixels + notification.overscroll)
-          .clamp(position.minScrollExtent, position.maxScrollExtent));
-    }
-    return false;
-  }
 
   @override
   void didUpdateWidget(covariant MobileSalesWorkspace oldWidget) {
@@ -48,35 +28,26 @@ class _MobileSalesWorkspaceState extends State<MobileSalesWorkspace> {
 
   @override
   Widget build(BuildContext context) => Column(children: [
-        if (_cart)
-          Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
+        Expanded(
+            child: IndexedStack(index: _cart ? 1 : 0, children: [
+          widget.catalog,
+          NestedScrollView(
+            headerSliverBuilder: (context, innerScrolled) => [
+              SliverToBoxAdapter(
+                  child: Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
                   onPressed: () => setState(() => _cart = false),
                   icon: const Icon(Icons.arrow_back),
-                  label: const Text('เลือกสินค้าต่อ'))),
-        Expanded(
-            child: LayoutBuilder(
-                builder: (context, constraints) =>
-                    IndexedStack(index: _cart ? 1 : 0, children: [
-                      widget.catalog,
-                      constraints.maxHeight < 340
-                          ? NotificationListener<OverscrollNotification>(
-                              onNotification: _scrollPastBasket,
-                              child: SingleChildScrollView(
-                                controller: _basketScroll,
-                                child: ScrollConfiguration(
-                                  behavior: ScrollConfiguration.of(context)
-                                      .copyWith(
-                                          physics: const ClampingScrollPhysics(
-                                              parent:
-                                                  AlwaysScrollableScrollPhysics())),
-                                  child: SizedBox(
-                                      height: 480, child: widget.basket),
-                                ),
-                              ))
-                          : widget.basket,
-                    ]))),
+                  label: const Text('เลือกสินค้าต่อ'),
+                ),
+              )),
+            ],
+            body: widget.basket,
+          ),
+        ])),
+        // Checkout belongs to the viewport, never to a taller scrolling cart.
+        if (_cart) widget.checkout,
         if (!_cart)
           SafeArea(
               top: false,
@@ -85,7 +56,10 @@ class _MobileSalesWorkspaceState extends State<MobileSalesWorkspace> {
                   child: SizedBox(
                       width: double.infinity,
                       child: FilledButton.icon(
-                          onPressed: () => setState(() => _cart = true),
+                          onPressed: () {
+                            FocusManager.instance.primaryFocus?.unfocus();
+                            setState(() => _cart = true);
+                          },
                           icon: const Icon(Icons.shopping_cart_outlined),
                           label: Text(
                               'ตะกร้า ${widget.itemCount} หน่วย · ${formatBaht(widget.total)}'))))),

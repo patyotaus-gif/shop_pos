@@ -39,7 +39,7 @@ function handler({db, FieldValue, verifyAppCheck}) {
           releaseCoupon();
           tx.update(ref,{status,cancelReason:'ลูกค้ายืนยันว่ายังไม่ได้โอนและยกเลิก',statusUpdatedAt:FieldValue.serverTimestamp(),statusUpdatedBy:'customer'});
         }
-        return {orderId,status,total:o.total,finalAmount:o.finalAmount ?? o.total,
+        return {orderId,orderNumber:o.orderNumber || null,status,total:o.total,finalAmount:o.finalAmount ?? o.total,
           ...(o.buyGet ? {buyGet:o.buyGet} : {}),
           ...(o.bundles ? {bundles:o.bundles,bundleDiscount:o.bundleDiscount} : {}),
           ...(o.coupon ? {coupon:o.coupon,discount:o.discount,subtotal:o.subtotal} : {}),

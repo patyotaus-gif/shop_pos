@@ -111,6 +111,8 @@ void main() {
                 status == OrderStatus.cancelled) {
               expect(groups.single, OrderQueue.history);
             } else if (pickup == tomorrow &&
+                status != OrderStatus.accepted &&
+                status != OrderStatus.ready &&
                 !bank &&
                 !(slip && status == OrderStatus.pendingPayment)) {
               expect(groups.single, OrderQueue.future);
@@ -125,6 +127,22 @@ void main() {
         }
       }
     }
+  });
+
+  test('starting a scheduled order moves it to work until handover', () {
+    final now = DateTime.utc(2026, 10, 29, 6, 50);
+    final pickup = DateTime.utc(2026, 10, 30, 2);
+    for (final status in [OrderStatus.accepted, OrderStatus.ready]) {
+      final item = order(status, pickup: pickup);
+      expect(isFuturePickup(item, now), isTrue);
+      expect(matchesQueue(item, OrderQueue.preparing, now), isTrue);
+      expect(matchesQueue(item, OrderQueue.future, now), isFalse);
+      expect(orderDueAt(item), pickup);
+    }
+    expect(
+        matchesQueue(order(OrderStatus.completed, pickup: pickup),
+            OrderQueue.history, now),
+        isTrue);
   });
 
   testWidgets(
@@ -168,18 +186,18 @@ void main() {
                       ]),
                       basket: Column(children: [
                         Expanded(child: Text('จำนวน $count')),
-                        PosCheckoutPanel(
-                            compact: true,
-                            subtotal: count * 10,
-                            discount: 0,
-                            total: count * 10,
-                            hasItems: count > 0,
-                            canDebt: false,
-                            canDiscount: false,
-                            onCheckout: () {},
-                            onDebt: () {},
-                            onDiscount: () {})
                       ]),
+                      checkout: PosCheckoutPanel(
+                          compact: true,
+                          subtotal: count * 10,
+                          discount: 0,
+                          total: count * 10,
+                          hasItems: count > 0,
+                          canDebt: false,
+                          canDiscount: false,
+                          onCheckout: () {},
+                          onDebt: () {},
+                          onDiscount: () {}),
                     )))));
     await tester.tap(find.text('น้ำดื่ม'));
     await tester.pump();
@@ -287,24 +305,22 @@ void main() {
           ]),
           basket: Column(children: [
             const Expanded(child: Text('สินค้า 2 ชิ้น')),
-            PosCheckoutPanel(
-                compact: true,
-                subtotal: 100,
-                total: 100,
-                discount: 0,
-                hasItems: true,
-                canDiscount: true,
-                canDebt: true,
-                onCheckout: () {},
-                onDebt: () {},
-                onDiscount: () {})
           ]),
+          checkout: PosCheckoutPanel(
+              compact: true,
+              subtotal: 100,
+              total: 100,
+              discount: 0,
+              hasItems: true,
+              canDiscount: true,
+              canDebt: true,
+              onCheckout: () {},
+              onDebt: () {},
+              onDiscount: () {}),
         ))));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     await tester.tap(find.textContaining('ตะกร้า 2 หน่วย'));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(const ValueKey('checkout-pay')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('checkout-pay')).hitTestable(),
         findsOneWidget);

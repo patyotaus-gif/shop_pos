@@ -91,20 +91,34 @@ class _ProductsScreenState extends State<ProductsScreen> {
         stream: _shop,
         builder: (context, shopSnap) => StreamBuilder<List<Product>>(
           stream: _products,
-          builder: (context, snap) => ProductCatalog(
-            products: snap.data ?? const [],
-            categories: ProductService.categoriesFor(snap.data ?? const []),
-            preferenceKey: _preferenceKey,
-            loading: !snap.hasData && !snap.hasError,
-            hasError: snap.hasError,
-            showInventory: shopSnap.hasData &&
-                Entitlements.canUseInventory(shopSnap.data!.tier),
-            onEdit: (product) => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => ProductFormScreen(product: product))),
-            onReceiveStock: (product) => _showStockDialog(context, product),
-          ),
+          builder: (context, snap) => Column(children: [
+            if (shopSnap.hasData &&
+                Entitlements.canUseInventory(shopSnap.data!.tier))
+              Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                          onPressed: () => openStockReceiveScanner(context),
+                          icon: const Icon(Icons.qr_code_scanner),
+                          label: const Text('สแกนรับสินค้าเข้า')))),
+            Expanded(
+                child: ProductCatalog(
+              products: snap.data ?? const [],
+              categories: ProductService.categoriesFor(snap.data ?? const []),
+              preferenceKey: _preferenceKey,
+              loading: !snap.hasData && !snap.hasError,
+              hasError: snap.hasError,
+              showInventory: shopSnap.hasData &&
+                  Entitlements.canUseInventory(shopSnap.data!.tier),
+              onEdit: (product) => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => ProductFormScreen(product: product))),
+              onReceiveStock: (product) => _showStockDialog(context, product),
+            )),
+          ]),
         ),
       ),
     );

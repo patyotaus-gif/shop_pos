@@ -33,8 +33,13 @@ exports.disableOwnerUnlock = onCall(ownerUnlock.disable);
 exports.staffWorkspace = onCall(staffAccess.workspace);
 exports.staffWork = onCall(require('./staff_work').handler({db:firestoreSdk.getFirestore(),FieldValue:firestoreSdk.FieldValue,HttpsError}));
 exports.staffCheckout = onCall(staffAccess.checkout);
-exports.quoteCounterGifts = onCall({enforceAppCheck:true},staffAccess.quoteGifts);
-exports.counterBundleCatalog = onCall({enforceAppCheck:true},staffAccess.bundleCatalog);
+// POS checkout and promotion management are shared by native clients, including
+// the self-hosted Android APK.
+// Keep App Check in monitoring mode until attestation works for that channel.
+// Each handler still requires Firebase Auth and enforces its shop/staff scope.
+const nativePosOptions = {enforceAppCheck:false};
+exports.quoteCounterGifts = onCall(nativePosOptions,staffAccess.quoteGifts);
+exports.counterBundleCatalog = onCall(nativePosOptions,staffAccess.bundleCatalog);
 const kitchenPrint = require('./kitchen_print').handlers({db:firestoreSdk.getFirestore(),FieldValue:firestoreSdk.FieldValue,HttpsError});
 exports.claimKitchenPrint = onCall(kitchenPrint.claim);
 exports.finishKitchenPrint = onCall(kitchenPrint.finish);
@@ -56,7 +61,7 @@ for (const [name, collection, source] of [
 }
 const tableRecovery = require('./table_recovery').handlers({db:firestoreSdk.getFirestore(),FieldValue:firestoreSdk.FieldValue,HttpsError});
 exports.reconcileRestaurantTable = onCall(tableRecovery.reconcile);
-exports.tablePromotions = onCall({enforceAppCheck:true}, require('./table_promotions').handlers({
+exports.tablePromotions = onCall(nativePosOptions, require('./table_promotions').handlers({
   db:firestoreSdk.getFirestore(),FieldValue:firestoreSdk.FieldValue,HttpsError,
 }));
 const offlineSales = require('./offline_sales').createOfflineSales({
@@ -68,13 +73,13 @@ exports.offlineSync = onCall(offlineSales.sync);
 const orderAccounting = require('./order_accounting').handlers({db:firestoreSdk.getFirestore(), FieldValue:firestoreSdk.FieldValue, HttpsError});
 exports.confirmOrderPayment = onCall(orderAccounting.confirm);
 exports.transitionOrder = onCall(orderAccounting.transition);
-exports.manageCoupon = onCall({enforceAppCheck:true}, require('./coupons').manage({
+exports.manageCoupon = onCall(nativePosOptions, require('./coupons').manage({
   db:firestoreSdk.getFirestore(),FieldValue:firestoreSdk.FieldValue,HttpsError,
 }));
-exports.manageBundle = onCall({enforceAppCheck:true}, require('./bundles').manage({
+exports.manageBundle = onCall(nativePosOptions, require('./bundles').manage({
   db:firestoreSdk.getFirestore(),FieldValue:firestoreSdk.FieldValue,HttpsError,
 }));
-exports.manageBuyGet = onCall({enforceAppCheck:true}, require('./buy_get').manage({
+exports.manageBuyGet = onCall(nativePosOptions, require('./buy_get').manage({
   db:firestoreSdk.getFirestore(),FieldValue:firestoreSdk.FieldValue,HttpsError,
 }));
 const cashAccounting=require('./cash_accounting').handlers({db:firestoreSdk.getFirestore(),FieldValue:firestoreSdk.FieldValue,HttpsError});
@@ -440,14 +445,20 @@ exports.createOrderCheckout = onRequest(
     // สร้าง order doc ก่อน (status: pendingPayment)
     const orderRef = shopRef.collection("orders").doc();
 
-    await orderRef.set({
-      customerName,
-      customerPhone,
-      items:pricedItems,
-      paymentMethod:'stripe',
-      total,
-      status: "pendingPayment",
-      createdAt: firestoreSdk.FieldValue.serverTimestamp(),
+    const orderNumber = await firestoreSdk.getFirestore().runTransaction(async tx => {
+      const sequence = await require('./order_number').prepare(tx, shopRef);
+      sequence.write();
+      tx.create(orderRef, {
+        orderNumber: sequence.number,
+        customerName,
+        customerPhone,
+        items:pricedItems,
+        paymentMethod:'stripe',
+        total,
+        status: "pendingPayment",
+        createdAt: firestoreSdk.FieldValue.serverTimestamp(),
+      });
+      return sequence.number;
     });
 
     // สร้าง Stripe Checkout session
@@ -465,7 +476,7 @@ exports.createOrderCheckout = onRequest(
         quantity: 1,
       })),
       mode: "payment",
-      success_url: `https://pok-pok.app/order/success/?order=${orderRef.id}`,
+      success_url: `https://pok-pok.app/order/success/?order=${orderRef.id}&number=${encodeURIComponent(orderNumber)}`,
       cancel_url: `https://pok-pok.app/order/?shop=${shopId}`,
       metadata: { shopId, type: "order", orderId: orderRef.id },
       client_reference_id: orderRef.id,
@@ -671,18 +682,14 @@ exports.createPromptPayOrder = onRequest(
       ...(req.body.buyGetQuote ? {buyGetQuote:req.body.buyGetQuote} : {}),
       ...(req.body.bundleQuote ? {bundleQuote:req.body.bundleQuote} : {}),
     })).digest('hex');
-    // Create order doc first so its ID seeds the unique cents
+    // Keep the opaque ID for idempotency; a separate display number is assigned
+    // in the order transaction. New orders charge exactly the merchandise total.
     const ordersRef = firestoreSdk.getFirestore()
       .collection("shops").doc(shopId)
       .collection("orders");
     const orderRef = requestId ? ordersRef.doc(`web-${requestId}`) : ordersRef.doc();
 
-    // Unique cents per order: 1..99 satang. The server computes this
-    // once and writes it to Firestore as finalAmount; both app and web
-    // just read that value back, so the cents derivation only needs to
-    // be deterministic per orderId — not identical across languages.
-    const cents = (hashString(orderRef.id) % 99) + 1;
-    const finalAmount = Math.round((total + cents / 100) * 100) / 100;
+    const finalAmount = Math.round(total * 100) / 100;
 
     const orderData = {
       requestSignature,
@@ -718,6 +725,7 @@ exports.createPromptPayOrder = onRequest(
 
     res.json({
       orderId: orderRef.id,
+      orderNumber: pickup.orderNumber || null,
       pickupLabel: pickup.pickupLabel || null,
       total: pickup.total,
       ...(pickup.buyGet ? {buyGet:pickup.buyGet} : {}),

@@ -1,4 +1,5 @@
-import { initPickup, refreshPickup, pickupPayload } from './pickup.js?v=20261013stock';
+import { initPickup, refreshPickup, pickupPayload } from './pickup.js?v=20261029orders';
+import { pickupDescription } from './order-display.mjs';
 // Order form + PromptPay payment + slip verification.
 // Logic moved VERBATIM from the old public/order/index.html inline script —
 // do not "improve" payload/CRC/compression code here.
@@ -160,8 +161,8 @@ function showPaymentScreen({ finalAmount, total, promptpayId, promptpayName, pic
   document.getElementById('paySlipStatus').textContent = !waiting
     ? (pendingOrder.status === 'cancelled' ? 'ยกเลิกออเดอร์แล้ว' : 'ร้านยืนยันรับเงินแล้ว ไม่ต้องโอนซ้ำ')
     : review ? 'ส่งสลิปแล้ว รอร้านตรวจสอบ ไม่ต้องโอนซ้ำ' : '';
-  document.getElementById('payOrderId').textContent = `เลขออเดอร์ ${pendingOrder.orderId}`;
-  document.getElementById('payPickup').textContent = pickupLabel ? `นัดรับ ${pickupLabel} (เวลาประเทศไทย)` : '';
+  document.getElementById('payOrderId').textContent = `เลขออเดอร์ ${pendingOrder.orderNumber || pendingOrder.orderId}`;
+  document.getElementById('payPickup').textContent = pickupDescription(pickupLabel);
   const payload = buildPromptPayPayload(promptpayId, finalAmount);
   const qrEl = document.getElementById('payQrCanvas');
   qrEl.innerHTML = '';  // wipe any previous render
@@ -174,7 +175,7 @@ function showPaymentScreen({ finalAmount, total, promptpayId, promptpayName, pic
   document.getElementById('payAmount').textContent =
     '฿' + Number(finalAmount).toFixed(2);
   const centsNote = (finalAmount > total)
-    ? `ยอดสินค้า ฿${total.toFixed(2)} + เศษ ${Math.round((finalAmount - total) * 100)} สตางค์ (ใช้แยกออเดอร์)`
+    ? `ออเดอร์เดิม: ยอดสินค้า ฿${total.toFixed(2)} + ยอดระบุรายการ ${Math.round((finalAmount - total) * 100)} สตางค์ กรุณาใช้ยอดตาม QR เดิม`
     : '';
   document.getElementById('payCentsNote').textContent = centsNote;
   document.getElementById('payCouponNote').textContent = coupon
@@ -238,7 +239,7 @@ async function uploadSlip(event) {
     document.getElementById('payCancelBtn').hidden=true;
     status.textContent = data.awaitingReview ? 'ส่งสลิปแล้ว รอร้านตรวจยอดเงินเข้าและยืนยัน' : 'กำลังเปิดหน้าออเดอร์...';
     setTimeout(() => {
-      window.location.href = `/order/success/?order=${encodeURIComponent(uploadingOrder.orderId)}${data.awaitingReview ? '&review=1' : ''}${uploadingOrder.pickupLabel ? '&pickup=' + encodeURIComponent(uploadingOrder.pickupLabel) : ''}`;
+      window.location.href = `/order/success/?order=${encodeURIComponent(uploadingOrder.orderId)}&number=${encodeURIComponent(uploadingOrder.orderNumber || uploadingOrder.orderId)}${data.awaitingReview ? '&review=1' : ''}${uploadingOrder.pickupLabel ? '&pickup=' + encodeURIComponent(uploadingOrder.pickupLabel) : ''}`;
     }, 1200);
   } catch (e) {
     status.className = 'err';

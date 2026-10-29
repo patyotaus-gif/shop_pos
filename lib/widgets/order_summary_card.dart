@@ -58,6 +58,9 @@ class _OrderSummaryCardState extends State<OrderSummaryCard> {
           padding: const EdgeInsets.all(16),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text('เลขออเดอร์ ${order.displayNumber}',
+                style: const TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
             if (order.pickupDescription != null)
               Padding(
                   padding: const EdgeInsets.only(bottom: 8),
@@ -148,7 +151,9 @@ class _OrderSummaryCardState extends State<OrderSummaryCard> {
               Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
-                      'พบแจ้งเตือนยอดเงินตรงกัน โปรดตรวจเงินเข้าในแอปธนาคารก่อนยืนยัน',
+                      order.bankMatchAmbiguous
+                          ? 'มีหลายออเดอร์ยอดเดียวกัน รอร้านตรวจสลิปและเงินเข้า ห้ามยืนยันจากยอดหรือเวลาอย่างเดียว'
+                          : 'พบแจ้งเตือนยอดเงินตรงกัน โปรดตรวจเงินเข้าในแอปธนาคารก่อนยืนยัน',
                       style: TextStyle(
                           fontSize: 14,
                           color: OperationalColors.of(

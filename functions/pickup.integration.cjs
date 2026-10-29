@@ -54,12 +54,25 @@ const { slots, createWithPickup, availability } = require('./pickup');
   assert.equal(created.status, 200);
   assert.equal(created.data.pickupLabel, webSlot.label);
   assert.equal(created.data.total, 50);
+  assert.equal(created.data.finalAmount, 50, 'new QR charges exact total');
+  assert.match(created.data.orderNumber, /^\d{8}-002$/);
   assert.deepEqual(created, retried);
   assert.equal((await webShop.collection('orders').get()).size, 2);
+  const sequenceShop = db.doc('shops/number-concurrent');
+  const sequenceNow = Date.parse('2026-10-29T16:59:59Z');
+  const make = id => createWithPickup({db,shopRef:sequenceShop,
+    orderRef:sequenceShop.collection('orders').doc(id),
+    order:{status:'pendingPayment',total:20,finalAmount:20,requestSignature:id},now:()=>sequenceNow});
+  const concurrent = await Promise.all(['1','2','3','4'].map(make));
+  assert.equal(new Set(concurrent.map(o=>o.orderNumber)).size,4);
+  assert.deepEqual(concurrent.map(o=>o.orderNumber).sort(),
+    ['20261029-001','20261029-002','20261029-003','20261029-004']);
+  assert.equal((await make('1')).orderNumber,concurrent[0].orderNumber);
   const env = await initializeTestEnvironment({ projectId: 'demo-pokpok-admin' });
   try {
     const owner = env.authenticatedContext('pickup-owner').firestore();
     await assertFails(setDoc(doc(owner, 'shops/pickup-owner/pickupSlots/control'), { revision: 0 }));
+    await assertFails(setDoc(doc(owner, 'shops/pickup-owner/orderCounters/20261029'), { last: 0 }));
     const guest = env.unauthenticatedContext().firestore();
     await assertFails(setDoc(doc(guest, 'shops/pickup-owner/orders/forged'), { pickupSlot: slot.id }));
   } finally { await env.cleanup(); await deleteApp(app); }

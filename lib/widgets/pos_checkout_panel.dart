@@ -17,11 +17,13 @@ class PosCheckoutPanel extends StatefulWidget {
       required this.canDiscount,
       required this.canDebt,
       this.compact = false,
+      this.horizontalTotal = false,
       this.preferenceKey});
 
   final double subtotal, discount, total;
   final VoidCallback onDiscount, onCheckout, onDebt;
   final bool hasItems, canDiscount, canDebt, compact;
+  final bool horizontalTotal;
   final String? preferenceKey;
 
   @override
@@ -90,18 +92,22 @@ class _PosCheckoutPanelState extends State<PosCheckoutPanel> {
     final cs = Theme.of(context).colorScheme;
     final pinned =
         _pin == 'discount' && canDiscount || _pin == 'debt' && canDebt;
-    final totalLabel = Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('ยอดสุทธิ',
-              style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
-          Text('฿${baht.format(total)}',
-              style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: cs.primary)),
-        ]);
+    final totalTexts = <Widget>[
+      Text('ยอดสุทธิ',
+          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+      Text('฿${baht.format(total)}',
+          style: TextStyle(
+              fontSize: 20, fontWeight: FontWeight.w700, color: cs.primary)),
+    ];
+    final totalLabel = widget.horizontalTotal
+        ? Wrap(
+            spacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: totalTexts)
+        : Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: totalTexts);
     final actions = Wrap(
         alignment: WrapAlignment.end,
         spacing: 4,

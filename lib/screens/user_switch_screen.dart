@@ -25,6 +25,7 @@ class _UserSwitchScreenState extends State<UserSwitchScreen> {
     final code = await showDialog<String>(
         context: context,
         builder: (ctx) => AlertDialog(
+              scrollable: true,
               title: Text('PIN ของ ${staff['name']}'),
               content: TextField(
                   controller: pin,

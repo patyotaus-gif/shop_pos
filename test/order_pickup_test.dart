@@ -14,6 +14,7 @@ void main() {
       'pickupLabel': '08/10/2026 12:00–12:15 น.',
       'pickupMode': 'scheduled',
       'total': 50,
+      'orderNumber': '20261007-001',
       'items': [
         {
           'productName': 'ข้าว',
@@ -31,8 +32,19 @@ void main() {
     expect(order.paidAt, isNull);
     expect(order.total, 50);
     expect(order.pickupDescription, contains('12:00–12:15'));
+    expect(order.pickupDescription,
+        contains('วันรับสินค้า: 08/10/2026\nเวลารับ:'));
+    expect(order.displayNumber, '20261007-001');
     expect(order.items.single.preparationNote, 'ไข่ดาว • ไม่เผ็ด');
     expect(ShopOrder.fromFirestore({'total': 10}, 'old').pickupDescription,
         isNull);
+    final old =
+        ShopOrder.fromFirestore({'total': 20, 'finalAmount': 20.72}, 'web-old');
+    expect(old.finalAmount, 20.72);
+    expect(old.displayNumber, 'web-old');
+    final ambiguous =
+        ShopOrder.fromFirestore({'bankMatchStatus': 'ambiguous'}, 'a');
+    expect(ambiguous.bankMatchPending, isTrue);
+    expect(ambiguous.bankMatchAmbiguous, isTrue);
   });
 }

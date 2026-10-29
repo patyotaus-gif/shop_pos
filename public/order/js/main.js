@@ -4,7 +4,7 @@
 import { shopId, tableParam, takeawayParam, orderContext, apiFetch, escHtml } from './util.js?v=20261013stock';
 import { initCatalog, renderProducts } from './catalog.js?v=20261013stock';
 import { initCartUI } from './cart.js?v=20261013stock';
-import { initPayment, openOrderModal } from './payment.js?v=20261013stock';
+import { initPayment, openOrderModal } from './payment.js?v=20261029orders';
 import { initUpsell, maybeShowUpsell } from './upsell.js?v=20261013stock';
 import { initTableOrder, openTableOrderSheet } from './tableorder.js?v=20261013stock';
 import { initCartPersistence } from './cart-store.js?v=20261013stock';

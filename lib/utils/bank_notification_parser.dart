@@ -17,14 +17,19 @@ class BankIncomingTransfer {
   /// Which banking app produced the notification.
   final String bankCode;
 
+  /// Explicit date/time in the bank message. Unverified; never the arrival time.
+  final DateTime? transferredAt;
+
   const BankIncomingTransfer({
     required this.amount,
     required this.bankCode,
     this.sender,
+    this.transferredAt,
   });
 
   @override
-  String toString() => 'BankIncomingTransfer($amount THB from $sender via $bankCode)';
+  String toString() =>
+      'BankIncomingTransfer($amount THB from $sender via $bankCode)';
 }
 
 class BankNotificationParser {
@@ -38,7 +43,33 @@ class BankNotificationParser {
   }) {
     final parser = _parsers[packageName];
     if (parser == null) return null;
-    return parser(title, text);
+    final parsed = parser(title, text);
+    if (parsed == null) return null;
+    return BankIncomingTransfer(
+        amount: parsed.amount,
+        bankCode: parsed.bankCode,
+        sender: parsed.sender,
+        transferredAt: transferTime('$title $text'));
+  }
+
+  /// Only accept a complete Thai numeric calendar date and time. Missing or
+  /// unfamiliar formats remain unknown rather than guessing a transfer date.
+  static DateTime? transferTime(String text) {
+    final m = RegExp(
+            r'(\d{2})/(\d{2})/(\d{4})\s+(?:เวลา\s*)?(\d{2}):(\d{2})(?::(\d{2}))?')
+        .firstMatch(text);
+    if (m == null) return null;
+    var year = int.parse(m[3]!);
+    if (year >= 2400) year -= 543;
+    final month = int.parse(m[2]!), day = int.parse(m[1]!);
+    final hour = int.parse(m[4]!), minute = int.parse(m[5]!);
+    final second = int.parse(m[6] ?? '0');
+    if (year < 2000 || year > 2200 || hour > 23 || minute > 59 || second > 59) {
+      return null;
+    }
+    final local = DateTime.utc(year, month, day, hour, minute, second);
+    if (local.month != month || local.day != day) return null;
+    return local.subtract(const Duration(hours: 7));
   }
 
   /// Banks the listener actively understands. Other apps' notifications
@@ -78,7 +109,8 @@ class BankNotificationParser {
     final amount = _firstThaiAmount(body);
     if (amount == null) return null;
     final sender = _afterKeyword(body, 'จาก ');
-    return BankIncomingTransfer(amount: amount, bankCode: 'KBANK', sender: sender);
+    return BankIncomingTransfer(
+        amount: amount, bankCode: 'KBANK', sender: sender);
   }
 
   // ───── SCB EASY ─────
@@ -90,7 +122,8 @@ class BankNotificationParser {
     final amount = _firstThaiAmount(body);
     if (amount == null) return null;
     final sender = _afterKeyword(body, 'จาก ');
-    return BankIncomingTransfer(amount: amount, bankCode: 'SCB', sender: sender);
+    return BankIncomingTransfer(
+        amount: amount, bankCode: 'SCB', sender: sender);
   }
 
   // ───── Krungthai NEXT ─────
@@ -100,7 +133,8 @@ class BankNotificationParser {
     final amount = _firstThaiAmount(body);
     if (amount == null) return null;
     final sender = _afterKeyword(body, 'จาก ');
-    return BankIncomingTransfer(amount: amount, bankCode: 'KTB', sender: sender);
+    return BankIncomingTransfer(
+        amount: amount, bankCode: 'KTB', sender: sender);
   }
 
   // ───── Bualuang mBanking (BBL) ─────
@@ -110,7 +144,8 @@ class BankNotificationParser {
     final amount = _firstThaiAmount(body);
     if (amount == null) return null;
     final sender = _afterKeyword(body, 'จาก ');
-    return BankIncomingTransfer(amount: amount, bankCode: 'BBL', sender: sender);
+    return BankIncomingTransfer(
+        amount: amount, bankCode: 'BBL', sender: sender);
   }
 
   // ───── TTB Touch ─────
@@ -120,7 +155,8 @@ class BankNotificationParser {
     final amount = _firstThaiAmount(body);
     if (amount == null) return null;
     final sender = _afterKeyword(body, 'จาก ');
-    return BankIncomingTransfer(amount: amount, bankCode: 'TTB', sender: sender);
+    return BankIncomingTransfer(
+        amount: amount, bankCode: 'TTB', sender: sender);
   }
 
   // ───── Krungsri KMA ─────
@@ -130,7 +166,8 @@ class BankNotificationParser {
     final amount = _firstThaiAmount(body);
     if (amount == null) return null;
     final sender = _afterKeyword(body, 'จาก ');
-    return BankIncomingTransfer(amount: amount, bankCode: 'BAY', sender: sender);
+    return BankIncomingTransfer(
+        amount: amount, bankCode: 'BAY', sender: sender);
   }
 
   // ───────────── Helpers ─────────────
@@ -139,7 +176,8 @@ class BankNotificationParser {
   /// just floating before a space. Handles "30.24", "30.24 บาท",
   /// "30,500.24 บาท".
   static double? _firstThaiAmount(String body) {
-    final r = RegExp(r'([0-9]{1,3}(?:[,\s][0-9]{3})*\.[0-9]{2})\s*(?:บาท|THB)?');
+    final r =
+        RegExp(r'([0-9]{1,3}(?:[,\s][0-9]{3})*\.[0-9]{2})\s*(?:บาท|THB)?');
     final m = r.firstMatch(body);
     if (m == null) return null;
     final raw = m.group(1)!.replaceAll(RegExp(r'[,\s]'), '');

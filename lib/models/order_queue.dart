@@ -31,11 +31,14 @@ bool matchesQueue(ShopOrder order, OrderQueue queue, DateTime now) {
   final needsConfirmation = needsReview ||
       order.status == OrderStatus.pendingPayment ||
       order.status == OrderStatus.paid;
-  final current = active && (!future || needsReview);
+  // Once work starts, the operational queue takes precedence over pickup day.
+  final started =
+      order.status == OrderStatus.accepted || order.status == OrderStatus.ready;
+  final current = active && (!future || needsReview || started);
   return switch (queue) {
     OrderQueue.confirmation => current && needsConfirmation,
     OrderQueue.preparing => current && !needsConfirmation,
-    OrderQueue.future => active && future && !needsReview,
+    OrderQueue.future => active && future && !needsReview && !started,
     OrderQueue.history => !active,
   };
 }

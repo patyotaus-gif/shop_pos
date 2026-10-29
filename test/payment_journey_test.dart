@@ -164,8 +164,7 @@ void main() {
   });
 
   for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
-    testWidgets(
-        'landscape cashier can reach payment by swiping the basket on $platform',
+    testWidgets('landscape cashier sees payment immediately on $platform',
         (tester) async {
       tester.view.physicalSize = const Size(914, 411);
       tester.view.devicePixelRatio = 1;
@@ -194,25 +193,21 @@ void main() {
                             onQtyChanged: (_) {},
                             onRemove: () {}),
                     ])),
-                    PosCheckoutPanel(
-                        compact: true,
-                        subtotal: 100,
-                        discount: 0,
-                        total: 100,
-                        hasItems: true,
-                        canDebt: false,
-                        canDiscount: false,
-                        onCheckout: () {},
-                        onDebt: () {},
-                        onDiscount: () {}),
-                  ])))));
+                  ]),
+                  checkout: PosCheckoutPanel(
+                      compact: true,
+                      subtotal: 100,
+                      discount: 0,
+                      total: 100,
+                      hasItems: true,
+                      canDebt: false,
+                      canDiscount: false,
+                      onCheckout: () {},
+                      onDebt: () {},
+                      onDiscount: () {})))));
       await tester.tap(find.textContaining('ตะกร้า 2 หน่วย'));
       await tester.pumpAndSettle();
-      // Exercise a real drag, not ensureVisible (which can scroll hidden parents).
-      for (var i = 0; i < 3; i++) {
-        await tester.dragFrom(const Offset(450, 340), const Offset(0, -180));
-        await tester.pumpAndSettle();
-      }
+      // Payment must be visible without knowing to scroll an outer basket.
       expect(find.widgetWithText(FilledButton, 'ชำระเงิน').hitTestable(),
           findsOneWidget);
       expect(tester.takeException(), isNull);

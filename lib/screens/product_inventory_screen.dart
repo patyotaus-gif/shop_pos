@@ -8,6 +8,39 @@ import '../services/inventory_service.dart';
 import '../services/shop_database.dart';
 import '../utils/stock_quantity.dart';
 import '../utils/operation_error.dart';
+import 'stock_receive_scan_screen.dart';
+
+Future<void> openStockReceiveScanner(BuildContext context) => Navigator.push<
+        void>(
+    context,
+    MaterialPageRoute(
+        builder: (_) => StockReceiveScanScreen(onCode: (context, code) async {
+              final matches = await ShopDatabase.shop
+                  .collection('products')
+                  .where('barcode', isEqualTo: code)
+                  .limit(2)
+                  .get();
+              if (matches.docs.isEmpty) {
+                throw StateError(
+                    'ไม่พบสินค้า กรุณาตรวจรหัสในช่องบาร์โค้ดของสินค้า');
+              }
+              if (matches.docs.length > 1) {
+                throw StateError(
+                    'รหัสนี้ซ้ำหลายสินค้า ให้เจ้าของร้านแก้รหัสก่อนรับเข้า');
+              }
+              final doc = matches.docs.single;
+              final product = Product.fromFirestore(doc.data(), doc.id);
+              if (product.isRecipeMode) {
+                throw StateError(
+                    'สินค้านี้ใช้สูตร กรุณารับเข้าที่หน้าวัตถุดิบ');
+              }
+              if (!context.mounted) return;
+              await showDialog<void>(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) =>
+                      _StockDialog(product: product, kind: 'receive'));
+            })));
 
 class ProductInventoryScreen extends StatelessWidget {
   const ProductInventoryScreen({super.key, required this.productId});
@@ -31,6 +64,10 @@ class ProductInventoryScreen extends StatelessWidget {
                         Text('สินค้านี้ตัดตามสูตร จัดการสต๊อกที่หน้าวัตถุดิบ'));
               }
               return ListView(padding: const EdgeInsets.all(16), children: [
+                OutlinedButton.icon(
+                    onPressed: () => openStockReceiveScanner(context),
+                    icon: const Icon(Icons.qr_code_scanner),
+                    label: const Text('สแกนรับสินค้าเข้า')),
                 Text(p.name, style: Theme.of(context).textTheme.titleLarge),
                 Text(
                     'SKU ${p.sku.isEmpty ? 'ยังไม่กำหนด' : p.sku} • ${p.unit}'),
