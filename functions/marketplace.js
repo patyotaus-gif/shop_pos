@@ -65,6 +65,10 @@ function handlers({db,FieldValue,HttpsError}) {
       if(!validNumber(min)||min<0||total<min)fail('failed-precondition','ยอดสั่งซื้อต่ำกว่าขั้นต่ำ');
       if(Math.abs(total-expectedTotal)>0.009)fail('failed-precondition','ราคาเปลี่ยน กรุณาโหลดสินค้าใหม่ก่อนสั่ง');
       const order={shopId:uid,supplierId,shopName:String(s.data().name||'ร้านค้า').slice(0,200),supplierName:String(sup.data().name||'').slice(0,200),items:priced,status:'placed',total,takeRate:0,createdAt:FieldValue.serverTimestamp(),requestDigest:digest,schemaVersion:1};
+      // Snapshot the purchasing shop's contact details, not a live lookup from
+      // the supplier portal. Replayed requests retain the original snapshot.
+      order.shopAddress=typeof s.data().address==='string'?s.data().address.trim().slice(0,1000):'';
+      order.shopPhone=typeof s.data().phone==='string'?s.data().phone.trim().slice(0,40):'';
       tx.create(own,order);tx.create(other,order);
       return {orderId,replayed:false};
     });

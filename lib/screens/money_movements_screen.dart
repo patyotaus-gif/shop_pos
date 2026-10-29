@@ -10,10 +10,21 @@ import '../services/cash_movement_service.dart';
 import '../widgets/cash_movement_dialog.dart';
 import '../widgets/cash_reconciliation_dialog.dart';
 import '../utils/operation_error.dart';
+import '../utils/csv_export.dart';
+import '../utils/movement_report_csv.dart';
+import '../services/shop_service.dart';
+import '../services/entitlements.dart';
+import '../widgets/upgrade_prompt.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class MoneyMovementsScreen extends StatefulWidget {
-  const MoneyMovementsScreen({super.key, this.initialMovementId});
+  const MoneyMovementsScreen(
+      {super.key, this.initialMovementId, this.initialDay});
   final String? initialMovementId;
+  final DateTime? initialDay;
   @override
   State<MoneyMovementsScreen> createState() => _MoneyMovementsScreenState();
 }
@@ -25,7 +36,7 @@ class _MoneyMovementsScreenState extends State<MoneyMovementsScreen> {
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
+    final now = widget.initialDay ?? DateTime.now();
     _setDay(DateTime(now.year, now.month, now.day));
     if (widget.initialMovementId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -176,6 +187,67 @@ class _MoneyMovementsScreenState extends State<MoneyMovementsScreen> {
   }
 
   bool _adding = false;
+  bool _exporting = false;
+  Future<void> _exportCsv() async {
+    if (_exporting) return;
+    setState(() => _exporting = true);
+    final day = _day;
+    final shopId = AuthService.shopId;
+    try {
+      final shopInfo = await ShopService.watchCurrentShop().first;
+      if (!mounted) return;
+      if (shopInfo == null) throw StateError('โหลดข้อมูลร้านไม่สำเร็จ');
+      if (!Entitlements.canUseAdvancedReports(shopInfo.tier)) {
+        showUpgradePrompt(context, feature: EntitlementFeature.advancedReports);
+        return;
+      }
+      final shop = FirebaseFirestore.instance.collection('shops').doc(shopId);
+      final snapshot = await shop
+          .collection('moneyMovements')
+          .where('recordedAt', isGreaterThanOrEqualTo: Timestamp.fromDate(day))
+          .where('recordedAt',
+              isLessThan: Timestamp.fromDate(
+                  DateTime(day.year, day.month, day.day + 1)))
+          .orderBy('recordedAt', descending: true)
+          .get(const GetOptions(source: Source.server));
+      final rows = snapshot.docs.map((d) => {...d.data(), 'id': d.id}).toList();
+      final saleIds =
+          rows.map((r) => r['saleId']).whereType<String>().toSet().toList();
+      final sales = <String, Map<String, dynamic>>{};
+      // Bound concurrent reads; never silently turn a failed fetch into a zero.
+      for (var i = 0; i < saleIds.length; i += 10) {
+        final batch = await Future.wait(saleIds.skip(i).take(10).map((id) =>
+            shop
+                .collection('sales')
+                .doc(id)
+                .get(const GetOptions(source: Source.server))));
+        for (final sale in batch) {
+          if (sale.exists) sales[sale.id] = sale.data()!;
+        }
+      }
+      if (!mounted || AuthService.shopId != shopId) return;
+      final csv = buildMovementReportCsv(
+          rows: rows, sales: sales, day: day, generatedAt: DateTime.now());
+      final directory = await getTemporaryDirectory();
+      final file = File(
+          '${directory.path}/money_${DateFormat('yyyy-MM-dd').format(day)}.csv');
+      await file.writeAsBytes([0xEF, 0xBB, 0xBF, ...utf8.encode(csv)]);
+      if (!mounted || AuthService.shopId != shopId) return;
+      final box = context.findRenderObject() as RenderBox?;
+      await Share.shareXFiles([XFile(file.path)],
+          subject: 'รายงานเงินเข้า–ออก',
+          sharePositionOrigin:
+              box == null ? null : box.localToGlobal(Offset.zero) & box.size);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(operationError(error))));
+      }
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
   Future<void> _addMovement() async {
     if (_adding) return;
     setState(() => _adding = true);
@@ -206,6 +278,15 @@ class _MoneyMovementsScreenState extends State<MoneyMovementsScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('เงินเข้า–ออก'), actions: [
+          IconButton(
+              tooltip: 'ส่งออก CSV กระทบยอด',
+              icon: _exporting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.table_chart_outlined),
+              onPressed: _exporting ? null : _exportCsv),
           IconButton(
               tooltip: 'เลือกวัน',
               icon: const Icon(Icons.calendar_month),
@@ -253,8 +334,7 @@ class _MoneyMovementsScreenState extends State<MoneyMovementsScreen> {
                         label: const Text('บันทึกเงินเข้า–ออก'))),
                 Text(DateFormat('dd/MM/yyyy').format(_day),
                     style: Theme.of(context).textTheme.titleLarge),
-                const Text(
-                    'ตามวันที่บันทึกเงิน รวมรับชำระหนี้และคืนเงิน เริ่มเก็บตั้งแต่ระบบบัญชีรุ่นนี้ ยอดขายย้อนหลังดูในรายงานยอดขาย'),
+                const Text(movementReportBasis),
                 ListTile(
                     title: const Text('รับชำระสุทธิทุกวิธีจ่าย'),
                     subtitle: const Text(
@@ -288,26 +368,14 @@ class _MoneyMovementsScreenState extends State<MoneyMovementsScreen> {
       );
 
   Widget _movement(String id, Map<String, dynamic> row) {
-    final title = switch (row['kind']) {
-      'sale' => 'ขายสินค้า',
-      'debtPayment' => 'รับชำระหนี้',
-      'refund' => 'คืนเงิน',
-      'cashIn' => 'เงินสดเข้า',
-      'cashOut' => 'เงินสดออก',
-      _ => 'รายการเงิน'
-    };
-    final method = switch (row['method']) {
-      'cash' => 'เงินสด',
-      'transfer' => 'โอน',
-      'qr' => 'QR',
-      'credit' => 'ขายเชื่อ',
-      _ => 'ออนไลน์'
-    };
+    final title = movementKindLabel(row['kind']);
+    final method = movementMethodLabel(row['method']);
     return ListTile(
       onTap: row['needsReconciliation'] == true ? () => _resolve(id) : null,
       contentPadding: EdgeInsets.zero,
       title: Text('$title · $method'),
-      subtitle: Text('${row['reason'] ?? row['saleId'] ?? ''}'
+      subtitle: Text('${row['reason'] ?? ''}'
+          '${row['saleId'] != null ? '\nบิลอ้างอิง: ${row['saleId']}' : ''}'
           '${row['recordedAt'] is Timestamp ? '\n${DateFormat('dd/MM/yyyy HH:mm').format((row['recordedAt'] as Timestamp).toDate())}' : ''}'
           '${row['needsReconciliation'] == true ? '\nยังไม่ผูกกับรอบขาย · แตะเพื่อตรวจและจัดเข้ารอบ' : ''}'
           '${row['reconciliation'] is Map ? '\nตรวจและจัดเข้ารอบแล้ว: ${row['reconciliation']['reason']}' : ''}'),

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../utils/daily_stream.dart';
+import '../utils/csv_export.dart';
+import '../utils/sales_report_csv.dart';
+import '../utils/operation_error.dart';
 import '../widgets/shop_operation.dart';
 import '../widgets/safe_detail_sheet.dart';
 import '../widgets/refund_reason_dialog.dart';
@@ -34,6 +37,7 @@ class _ReportScreenState extends State<ReportScreen>
   late TabController _tab;
   DateTimeRange? _customRange;
   bool _pickingRange = false;
+  bool _exporting = false;
   int _lastTab = 0;
   late final StreamSubscription<DateTime> _dayChanges;
 
@@ -44,9 +48,8 @@ class _ReportScreenState extends State<ReportScreen>
   @override
   void initState() {
     super.initState();
-    _dayChanges = watchDaily<DateTime>((day) => Stream.value(day))
-        .skip(1)
-        .listen((_) {
+    _dayChanges =
+        watchDaily<DateTime>((day) => Stream.value(day)).skip(1).listen((_) {
       if (mounted) setState(() {});
     });
     _tab = TabController(length: 4, vsync: this);
@@ -122,17 +125,13 @@ class _ReportScreenState extends State<ReportScreen>
     final refunded = allSales.where((s) => s.isRefunded).toList();
 
     // ── Calculations ──
-    final grossRevenue = allSales.fold<double>(0, (a, s) => a + s.total);
-    final refundTotal = refunded.fold<double>(0, (a, s) => a + s.total);
+    final grossRevenue = sumReportMoney(allSales.map((s) => s.total));
+    final refundTotal = sumReportMoney(refunded.map((s) => s.total));
     final netRevenue = grossRevenue - refundTotal;
-    final cogs = active.fold<double>(0,
-        (a, s) => a + s.items.fold(0, (b, i) => b + i.unitCost * i.quantity));
+    final cogs = sumReportMoney(active.map(reportSaleCost));
     final costComplete = active.isNotEmpty &&
         active.every((s) => s.items.every((i) => i.hasKnownCost));
-    final itemRevenue = active.fold<double>(
-        0,
-        (value, s) =>
-            value + s.itemNetRevenue.fold<double>(0, (v, r) => v + r));
+    final itemRevenue = sumReportMoney(active.map(reportItemRevenue));
     final grossProfit = itemRevenue - cogs;
     final margin = itemRevenue > 0 ? grossProfit / itemRevenue * 100 : 0.0;
     final avgPerBill = active.isNotEmpty ? netRevenue / active.length : 0.0;
@@ -336,6 +335,8 @@ class _ReportScreenState extends State<ReportScreen>
         ),
         build: (ctx) => [
           pw.SizedBox(height: 14),
+          pw.Text(salesReportBasis, style: ts(8)),
+          pw.SizedBox(height: 8),
 
           // ── Metric boxes ──
           pw.Row(children: [
@@ -540,8 +541,7 @@ class _ReportScreenState extends State<ReportScreen>
               ...allSales.asMap().entries.map((entry) {
                 final idx = entry.key;
                 final s = entry.value;
-                final cost = s.items
-                    .fold<double>(0, (a, i) => a + i.unitCost * i.quantity);
+                final cost = reportSaleCost(s);
                 final lineCostComplete =
                     s.items.every((item) => item.hasKnownCost);
                 final profit = s.isRefunded
@@ -611,84 +611,23 @@ class _ReportScreenState extends State<ReportScreen>
     final info = await SettingsService.getShopInfo();
     final allSales =
         await SaleService.watchByRange(range.start, range.end).first;
-    final active = allSales.where((s) => !s.isRefunded).toList();
-    final refunded = allSales.where((s) => s.isRefunded).toList();
-
-    final grossRevenue = allSales.fold<double>(0, (a, s) => a + s.total);
-    final refundTotal = refunded.fold<double>(0, (a, s) => a + s.total);
-    final netRevenue = grossRevenue - refundTotal;
-    final cogs = active.fold<double>(0,
-        (a, s) => a + s.items.fold(0, (b, i) => b + i.unitCost * i.quantity));
-    final costComplete = active.isNotEmpty &&
-        active.every((s) => s.items.every((i) => i.hasKnownCost));
-    final itemRevenue = active.fold<double>(
-        0,
-        (value, s) =>
-            value + s.itemNetRevenue.fold<double>(0, (v, r) => v + r));
-    final grossProfit = itemRevenue - cogs;
-    final margin = itemRevenue > 0 ? grossProfit / itemRevenue * 100 : 0.0;
-
-    final buf = StringBuffer();
-
-    // Summary header
-    buf.writeln('รายงานการขาย,${info['name']}');
-    if ((info['taxId'] ?? '').isNotEmpty) {
-      buf.writeln('เลขประจำตัวผู้เสียภาษี,${info['taxId']}');
-    }
-    buf.writeln('ช่วงเวลา,$title');
-    buf.writeln('ตั้งแต่,${_dayFmt.format(range.start)}');
-    buf.writeln('ถึง,${_dayFmt.format(range.end)}');
-    buf.writeln('พิมพ์เมื่อ,${_dateFmt.format(DateTime.now())}');
-    buf.writeln();
-
-    buf.writeln('=== สรุปทางการเงิน ===');
-    buf.writeln('รายได้จากการขายทั้งหมด,${grossRevenue.toStringAsFixed(2)}');
-    buf.writeln('คืนเงิน,${refundTotal.toStringAsFixed(2)}');
-    buf.writeln('รายได้สุทธิ,${netRevenue.toStringAsFixed(2)}');
-    buf.writeln('ต้นทุนสินค้าขาย (COGS),${cogs.toStringAsFixed(2)}');
-    buf.writeln(
-        'กำไรขั้นต้น,${costComplete ? grossProfit.toStringAsFixed(2) : 'ต้นทุนไม่ครบ'}');
-    buf.writeln(
-        'อัตรากำไรขั้นต้น,${costComplete ? margin.toStringAsFixed(2) : 'ต้นทุนไม่ครบ'}');
-    buf.writeln('จำนวนบิลทั้งหมด,${allSales.length}');
-    buf.writeln('บิลปกติ,${active.length}');
-    buf.writeln('บิลคืนเงิน,${refunded.length}');
-    buf.writeln();
-
-    buf.writeln('=== รายการขายทั้งหมด ===');
-    buf.writeln(
-        'ลำดับ,วันที่,ลูกค้า,วิธีชำระเงิน,ช่องทางขาย,รายได้,ต้นทุน,กำไร,ส่วนลด,สถานะ,เหตุผลคืนเงิน');
-
-    var i = 1;
-    for (final s in allSales) {
-      final cost = s.items
-          .fold<double>(0, (a, item) => a + item.unitCost * item.quantity);
-      final lineCostComplete = s.items.every((item) => item.hasKnownCost);
-      final profit = s.isRefunded
-          ? 0.0
-          : s.itemNetRevenue.fold<double>(0, (value, r) => value + r) - cost;
-      final method = s.isDebt ? 'เชื่อ' : s.paymentMethod.label;
-      final status = s.isRefunded ? 'คืนเงิน' : 'ปกติ';
-      buf.writeln(
-        '$i,'
-        '${DateFormat('dd/MM/yyyy HH:mm').format(s.createdAt)},'
-        '"${s.customerName ?? ''}",'
-        '$method,'
-        '${s.salesChannel.label},'
-        '${s.total.toStringAsFixed(2)},'
-        '${cost.toStringAsFixed(2)},'
-        '${lineCostComplete ? profit.toStringAsFixed(2) : 'ต้นทุนไม่ครบ'},'
-        '${s.discount.toStringAsFixed(2)},'
-        '$status,'
-        '"${s.refundReason ?? ''}"',
-      );
-      i++;
-    }
+    final csv = buildSalesReportCsv(
+        sales: allSales,
+        shop: info,
+        title: title,
+        from: range.start,
+        to: range.end,
+        generatedAt: DateTime.now());
 
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/report_${title.replaceAll('/', '-')}.csv');
-    await file.writeAsBytes([0xEF, 0xBB, 0xBF, ...utf8.encode(buf.toString())]);
-    await Share.shareXFiles([XFile(file.path)], subject: 'รายงาน $title');
+    await file.writeAsBytes([0xEF, 0xBB, 0xBF, ...utf8.encode(csv)]);
+    if (!mounted) return;
+    final box = context.findRenderObject() as RenderBox?;
+    await Share.shareXFiles([XFile(file.path)],
+        subject: 'รายงาน $title',
+        sharePositionOrigin:
+            box == null ? null : box.localToGlobal(Offset.zero) & box.size);
   }
 
   @override
@@ -703,9 +642,20 @@ class _ReportScreenState extends State<ReportScreen>
         final tier = snap.data?.tier ?? ShopTier.full;
         final advanced = Entitlements.canUseAdvancedReports(tier);
 
-        void exportOr(VoidCallback doExport) {
+        Future<void> exportOr(Future<void> Function() doExport) async {
+          if (_exporting) return;
           if (advanced) {
-            doExport();
+            setState(() => _exporting = true);
+            try {
+              await doExport();
+            } catch (error) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(operationError(error))));
+              }
+            } finally {
+              if (mounted) setState(() => _exporting = false);
+            }
           } else {
             showUpgradePrompt(context,
                 feature: EntitlementFeature.advancedReports);
@@ -723,19 +673,24 @@ class _ReportScreenState extends State<ReportScreen>
                   onPressed: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (_) => const MoneyMovementsScreen()))),
+                          builder: (_) => MoneyMovementsScreen(
+                              initialDay: _rangeFor(_tab.index).start)))),
               IconButton(
                 icon: Icon(
                     advanced ? Icons.table_chart_outlined : Icons.lock_outline),
                 tooltip: 'Export CSV',
-                onPressed: () => exportOr(() => _exportCsv(_tab.index)),
+                onPressed: _exporting
+                    ? null
+                    : () => exportOr(() => _exportCsv(_tab.index)),
               ),
               IconButton(
                 icon: Icon(advanced
                     ? Icons.picture_as_pdf_outlined
                     : Icons.lock_outline),
                 tooltip: 'Export PDF',
-                onPressed: () => exportOr(() => _exportPdf(_tab.index)),
+                onPressed: _exporting
+                    ? null
+                    : () => exportOr(() => _exportPdf(_tab.index)),
               ),
             ],
             bottom: TabBar(
@@ -828,19 +783,13 @@ class _SalesReportState extends State<_SalesReport> {
         final active = sales.where((s) => !s.isRefunded).toList();
         final refunded = sales.where((s) => s.isRefunded).toList();
 
-        final grossRevenue = sales.fold<double>(0, (a, s) => a + s.total);
-        final refundTotal = refunded.fold<double>(0, (a, s) => a + s.total);
+        final grossRevenue = sumReportMoney(sales.map((s) => s.total));
+        final refundTotal = sumReportMoney(refunded.map((s) => s.total));
         final netRevenue = grossRevenue - refundTotal;
-        final cogs = active.fold<double>(
-            0,
-            (a, s) =>
-                a + s.items.fold(0, (b, i) => b + i.unitCost * i.quantity));
+        final cogs = sumReportMoney(active.map(reportSaleCost));
         final costComplete = active.isNotEmpty &&
             active.every((s) => s.items.every((i) => i.hasKnownCost));
-        final itemRevenue = active.fold<double>(
-            0,
-            (value, s) =>
-                value + s.itemNetRevenue.fold<double>(0, (v, r) => v + r));
+        final itemRevenue = sumReportMoney(active.map(reportItemRevenue));
         final grossProfit = itemRevenue - cogs;
         final margin = itemRevenue > 0 ? grossProfit / itemRevenue * 100 : 0.0;
         final debtTotal = active
@@ -861,6 +810,23 @@ class _SalesReportState extends State<_SalesReport> {
                     },
                     onSelectionChanged: (values) =>
                         setState(() => _history = values.first))),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: TextButton.icon(
+                  icon: const Icon(Icons.info_outline, size: 16),
+                  label: const Text('ยอดตามวันที่ขาย · วิธีนับคืนเงิน'),
+                  onPressed: () => showDialog<void>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                            title: const Text('ฐานรายงานยอดขาย'),
+                            content: const Text(salesReportBasis),
+                            actions: [
+                              TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('ปิด'))
+                            ],
+                          ))),
+            ),
             // ── Summary cards ──
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),

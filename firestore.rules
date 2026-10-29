@@ -293,16 +293,28 @@ service cloud.firestore {
       function isSupplier() {
         return request.auth != null && request.auth.uid == supplierId;
       }
+      function validSupplierProfile(data) {
+        return data.name is string && data.name.size() > 0 && data.name.size() <= 200
+          && data.get('minOrder', 0) is number
+          && data.get('minOrder', 0) >= 0 && data.get('minOrder', 0) <= 1000000000;
+      }
+      function validSupplierProduct(data) {
+        return data.name is string && data.name.size() > 0 && data.name.size() <= 200
+          && data.price is number && data.price >= 0 && data.price <= 1000000000
+          && data.get('moq', 1) is number
+          && data.get('moq', 1) >= 0.001 && data.get('moq', 1) <= 1000000;
+      }
 
       allow read: if request.auth != null;
       // Profile edits by the supplier themselves; create/delete stay
       // admin-only (founder onboarding).
-      allow update: if isSupplier();
+      allow update: if isSupplier() && validSupplierProfile(request.resource.data);
       allow create, delete: if false; // admin SDK only
 
       match /products/{productId} {
         allow read: if request.auth != null;
-        allow write: if isSupplier(); // supplier manages own catalog
+        allow create, update: if isSupplier() && validSupplierProduct(request.resource.data);
+        allow delete: if isSupplier();
       }
 
       // Both copies are server-owned; clients cannot change identities,

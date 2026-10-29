@@ -101,6 +101,19 @@
     .muted-sm { font-size: .76rem; color: var(--text-mid); margin-top: 6px; min-height: 1em; }
     .line-setup { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
     .line-qr { width: 96px; height: 96px; flex-shrink: 0; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+    .who, .p-info > div, .row > div { min-width: 0; overflow-wrap: anywhere; }
+    .p-info { flex: 1; }
+    .p-actions { flex-shrink: 0; }
+    .o-items span { overflow-wrap: anywhere; min-width: 0; }
+    .o-items span:last-child { flex-shrink: 0; margin-left: 12px; }
+    .tabs { position: static; }
+    @media (max-width: 480px) {
+      #catalogList .row, .section-head { flex-wrap: wrap; gap: 12px; }
+      #catalogList .p-info { flex-basis: 100%; }
+      .p-actions { flex-wrap: wrap; }
+      header { gap: 12px; }
+      header .btn-ghost { flex-shrink: 0; }
+    }
   </style>
 </head>
 <body>
@@ -120,6 +133,7 @@
     </div>
     <button class="btn-primary" id="loginBtn">เข้าสู่ระบบ</button>
     <div class="err" id="loginErr"></div>
+    <button class="icon-btn hidden" id="profileRetry">ลองโหลดข้อมูลร้านอีกครั้ง</button>
     <p style="font-size:.72rem;color:var(--text-mid);text-align:center;margin-top:16px;line-height:1.6">
       การเข้าใช้งานถือว่ายอมรับ
       <a href="/terms" target="_blank" rel="noopener" style="color:var(--burgundy)">เงื่อนไขการใช้บริการ</a>
@@ -219,7 +233,8 @@
   }
 
   const $ = (id) => document.getElementById(id);
-  const baht = (n) => new Intl.NumberFormat("th-TH").format(Math.round(n || 0));
+  const baht = (n) => new Intl.NumberFormat("th-TH", {minimumFractionDigits:2, maximumFractionDigits:2}).format(Number.isFinite(n) ? n : 0);
+  const numberInRange = (value, min, max) => value.trim() !== '' && Number.isFinite(Number(value)) && Number(value) >= min && Number(value) <= max;
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
@@ -243,19 +258,39 @@
   }
   $("logoutBtn").addEventListener("click", () => signOut(auth));
 
-  onAuthStateChanged(auth, async (user) => {
+  let sessionVersion = 0;
+  let currentUser = null;
+  async function loadSupplier(user) {
+    const version = ++sessionVersion;
     cleanup();
-    if (!user) { showLogin(); return; }
+    closeModal();
+    currentUser = user;
+    $("profileRetry").classList.add("hidden");
+    if (!user) { uid = null; supplier = null; showLogin(); return; }
     uid = user.uid;
-    const snap = await getDoc(doc(db, "suppliers", uid));
+    $("loginBtn").disabled = true;
+    try {
+    const snap = await getDoc(doc(db, "suppliers", user.uid));
+    if (version !== sessionVersion) return;
     if (!snap.exists()) {
       $("loginErr").textContent = "บัญชีนี้ยังไม่ได้ลงทะเบียนเป็นซัพพลายเออร์";
       await signOut(auth);
       return;
     }
     supplier = { id: uid, ...snap.data() };
+    $("loginErr").textContent = "";
     showApp();
-  });
+    } catch (e) {
+      if (version !== sessionVersion) return;
+      showLogin();
+      $("loginErr").textContent = "เข้าสู่ระบบแล้ว แต่โหลดข้อมูลร้านไม่สำเร็จ กรุณาลองอีกครั้ง";
+      $("profileRetry").classList.remove("hidden");
+    } finally {
+      if (version === sessionVersion) $("loginBtn").disabled = false;
+    }
+  }
+  onAuthStateChanged(auth, loadSupplier);
+  $("profileRetry").onclick = () => { if (currentUser) loadSupplier(currentUser); };
 
   function cleanup() {
     if (unsubProducts) { unsubProducts(); unsubProducts = null; }
@@ -274,6 +309,18 @@
     watchOrders();
     watchProducts();
   }
+  function listError(id, retry) {
+    const el = $(id);
+    el.replaceChildren();
+    const message = document.createElement('p');
+    message.className = 'err';
+    message.textContent = 'โหลดข้อมูลไม่สำเร็จ กรุณาลองอีกครั้ง';
+    const button = document.createElement('button');
+    button.className = 'icon-btn';
+    button.textContent = 'ลองใหม่';
+    button.onclick = retry;
+    el.append(message, button);
+  }
 
   // ── Tabs ──
   document.querySelectorAll(".tab").forEach((t) =>
@@ -287,6 +334,7 @@
 
   // ── Catalog ──
   function watchProducts() {
+    if (unsubProducts) unsubProducts();
     const q = query(collection(db, `suppliers/${uid}/products`), orderBy("name"));
     unsubProducts = onSnapshot(q, (snap) => {
       const el = $("catalogList");
@@ -317,14 +365,22 @@
             </div>
           </div>`;
         card.querySelector("[data-edit]").onclick = () => productModal(d.id, p);
-        card.querySelector("[data-toggle]").onclick = () =>
-          updateDoc(doc(db, `suppliers/${uid}/products/${d.id}`), { available: !avail });
+        card.querySelector("[data-toggle]").onclick = async (event) => {
+          const button = event.currentTarget;
+          button.disabled = true;
+          try { await updateDoc(doc(db, `suppliers/${uid}/products/${d.id}`), { available: !avail }); }
+          catch (e) { alert('เปลี่ยนสถานะไม่สำเร็จ กรุณาลองใหม่หรือตรวจข้อมูลสินค้า'); }
+          finally { button.disabled = false; }
+        };
         card.querySelector("[data-del]").onclick = async () => {
-          if (confirm(`ลบ "${p.name}" ?`)) await deleteDoc(doc(db, `suppliers/${uid}/products/${d.id}`));
+          if (confirm(`ลบ "${p.name}" ?`)) {
+            try { await deleteDoc(doc(db, `suppliers/${uid}/products/${d.id}`)); }
+            catch (e) { alert('ลบสินค้าไม่สำเร็จ กรุณาลองใหม่'); }
+          }
         };
         el.appendChild(card);
       });
-    });
+    }, () => listError('catalogList', watchProducts));
   }
 
   $("addProductBtn").addEventListener("click", () => productModal(null, null));
@@ -407,7 +463,11 @@
     };
     $("m_save").onclick = async () => {
       const name = $("m_name").value.trim();
-      if (!name) return;
+      if (!name || name.length > 200 || !numberInRange($("m_price").value, 0, 1e9) ||
+          !numberInRange($("m_moq").value, 0.001, 1e6)) {
+        $("m_imgstatus").textContent = 'กรอกชื่อสินค้าไม่เกิน 200 ตัวอักษร ราคา 0–1,000,000,000 บาท และขั้นต่ำ 0.001–1,000,000';
+        return;
+      }
       const save = $("m_save");
       save.disabled = true;
 
@@ -420,7 +480,7 @@
       const data = {
         name,
         unit: $("m_unit").value.trim() || "ชิ้น",
-        price: parseFloat($("m_price").value) || 0,
+        price: Number($("m_price").value),
         moq: Number($("m_moq").value),
         description: $("m_desc").value.trim(),
         available: p?.available !== false,
@@ -471,27 +531,39 @@
       </div>
       <div class="switch-row"><span>เปิดแจ้งเตือน LINE</span>
         <input type="checkbox" id="m_linenotify" ${s.lineNotifyEnabled !== false ? "checked" : ""}></div>
+      <div class="err" id="m_error" role="alert"></div>
       <div class="modal-actions">
         <button class="btn-x" id="m_cancel">ยกเลิก</button>
         <button class="btn-save" id="m_save">บันทึก</button>
       </div>`);
     $("m_cancel").onclick = closeModal;
     $("m_save").onclick = async () => {
+      if (!$("m_name").value.trim() || $("m_name").value.trim().length > 200 || !numberInRange($("m_min").value, 0, 1e9)) {
+        $("m_error").textContent = 'กรอกชื่อร้านไม่เกิน 200 ตัวอักษรและยอดขั้นต่ำ 0–1,000,000,000 บาท';
+        return;
+      }
+      const save = $("m_save"), error = $("m_error");
+      save.disabled = true;
+      error.textContent = '';
       const data = {
         name: $("m_name").value.trim() || s.name,
         category: $("m_cat").value.trim(),
         area: $("m_area").value.trim(),
         deliveryDays: $("m_days").value.trim(),
-        minOrder: parseFloat($("m_min").value) || 0,
+        minOrder: Number($("m_min").value),
         active: $("m_active").checked,
         lineUserId: $("m_line").value.trim(),
         lineNotifyEnabled: $("m_linenotify").checked,
       };
+      try {
       await updateDoc(doc(db, "suppliers", uid), data);
       supplier = { ...supplier, ...data };
       $("supName").textContent = supplier.name;
       $("supCat").textContent = supplier.category || "";
       closeModal();
+      } catch (e) {
+        error.textContent = 'บันทึกไม่สำเร็จ กรุณาตรวจการเชื่อมต่อแล้วลองใหม่';
+      } finally { save.disabled = false; }
     };
   }
 
@@ -505,19 +577,21 @@
   };
 
   function watchOrders() {
+    if (unsubOrders) unsubOrders();
     const q = query(collection(db, `suppliers/${uid}/orders`), orderBy("createdAt", "desc"));
     unsubOrders = onSnapshot(q, (snap) => {
       const el = $("ordersList");
       if (snap.empty) { el.innerHTML = '<div class="muted">ยังไม่มีออเดอร์</div>'; return; }
       el.innerHTML = "";
       snap.forEach((d) => el.appendChild(orderCard(d.id, d.data())));
-    });
+    }, () => listError('ordersList', watchOrders));
   }
 
   function orderCard(id, o) {
     const st = STATUS[o.status] || STATUS.placed;
     const items = (Array.isArray(o.items) ? o.items : []).filter(i => i && typeof i === 'object');
-    const total = items.reduce((s, i) => s + (i.price || 0) * (i.quantity || 0), 0);
+    const total = Number.isFinite(o.total) && o.total >= 0 ? o.total :
+      items.reduce((s, i) => s + Math.round((i.price || 0) * (i.quantity || 0) * 100) / 100, 0);
     const when = o.createdAt?.toDate ? o.createdAt.toDate() : null;
     const dateStr = when ? when.toLocaleDateString("th-TH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
 
@@ -529,6 +603,8 @@
           <div class="p-meta">${dateStr}</div></div>
         <span class="badge ${st[1]}">${st[0]}</span>
       </div>
+      <div class="p-meta" style="overflow-wrap:anywhere;white-space:pre-line">ที่อยู่ร้าน (ขณะสั่ง): ${esc(o.shopAddress || 'ไม่มีข้อมูลที่อยู่ในออเดอร์นี้')}
+โทร: ${esc(o.shopPhone || 'ไม่มีข้อมูลเบอร์โทรในออเดอร์นี้')}</div>
       <div class="o-items">
         ${items.map((i) => `<div><span>${esc(i.name)} × ${esc(i.quantity)} ${esc(i.unit || "")}</span><span>฿${baht((i.price || 0) * (i.quantity || 0))}</span></div>`).join("")}
         <div class="o-total"><span>รวม</span><span>฿${baht(total)}</span></div>
@@ -537,12 +613,14 @@
 
     const act = card.querySelector('.o-actions');
     const setStatus = async (status, btn) => {
+      const label = btn.textContent;
       btn.disabled = true; btn.textContent = "…";
       try {
         await httpsCallable(functions, "supplierSetOrderStatus")({ orderId: id, status });
       } catch (e) {
         alert("อัปเดตไม่สำเร็จ: " + (e.message || e));
         btn.disabled = false;
+        btn.textContent = label;
       }
     };
     function addAction(label, status, className) {
