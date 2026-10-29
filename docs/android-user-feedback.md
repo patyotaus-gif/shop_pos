@@ -1,5 +1,13 @@
 # Android pilot feedback — 2026-10-03
 
+## Released 1.2.63+80 — direct order receipt access (2026-10-29)
+
+- Added a visible **พิมพ์ใบเสร็จ** button on paid, accepted, ready and completed order cards, including history, without expanding details. Cancelled orders with a recorded payment timestamp can also open the original receipt. Unpaid orders cannot use this action. Renamed the preparation-ticket action to **ใบงานเตรียมอาหาร / PDF** to distinguish it from the sale receipt.
+- The button opens the existing `OrderSaleScreen` and linked-sale receipt view, retaining Bluetooth/system print/PDF options and existing refund permissions. It does not confirm payment, create a sale or change stock. Historical missing/ambiguous sale links retain the existing load error and retry behavior.
+- Full Flutter **316 tests passed**, including new narrow-phone/large-text tests covering paid and completed cards, independent receipt/kitchen/payment callbacks and unpaid-order exclusion. Targeted Dart analysis clean; release APK build succeeded in 138.6 seconds. Physical printer and install-over-existing acceptance have not been performed.
+- Hosting release succeeded. Full public download verified: `app.pokpok.pos` **1.2.63+80**, 95,854,958 bytes, SHA256 `45154dece33cc34aedeecda74b5baa2fd4b719a8f1ff623e6103905878eda7fa`, original signer SHA256 `f7dc70e0464fed06f8c0d14907ef71a75effb566e41e67d1aa685491dff547eb`. Manifest, actual byte count/hash, package/version/signature and no-cache match. Update remains optional with minimum build 1; build79 APK/manifest backed up and hash-verified. Download: https://pok-pok.app/app/pokpok.apk . Evidence: private `.remember/tmp/release80-*` files.
+- No backend/rules/business-data changes. Held receipt-feed stash remains excluded. iOS source version is prepared, but no IPA/TestFlight build or release was performed here.
+
 ## Released 1.2.62+79 — 2026-10-29
 
 - User authorized release. Android APK and customer ordering web are now live. This supersedes the source-only status of the scan-receive, online order/payment matching, checkout layout, discount, queue grouping, PIN dialog and error-message fixes documented below. The held receipt-feed stash `d16fb71b9218cfe90eadb88c70561dc984feb50e` remains untouched and excluded.

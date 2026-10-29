@@ -14,32 +14,97 @@ import 'package:shop_pos/widgets/pos_checkout_panel.dart';
 import 'package:shop_pos/widgets/cart_item_tile.dart';
 import 'package:shop_pos/widgets/product_image.dart';
 
-ShopOrder exampleOrder({String method = 'promptpay'}) => ShopOrder(
-    id: 'o1',
-    customerName: 'คุณสมศรี ลูกค้านัดรับอาหาร',
-    customerPhone: '0812345678',
-    items: List.generate(
-        4,
-        (i) => OrderItem(
-            productId: '$i',
-            productName: 'ข้าวกะเพราหมูสับไข่ดาวพิเศษ $i',
-            price: 250,
-            quantity: 1,
-            preparationNote: i == 3 ? 'ไม่ใส่ถั่ว' : '')),
-    total: 1000,
-    finalAmount: 1000.91,
-    paymentMethod: method,
-    status: OrderStatus.pendingPayment,
-    createdAt: DateTime(2026, 10, 10, 11),
-    pickupLabel: '10 ต.ค. 12:00–12:30',
-    orderType: 'takeaway',
-    bankMatchPending: true,
-    autoConfirmed: true,
-    slipUrl: 'https://example.test/slip');
+ShopOrder exampleOrder(
+        {String method = 'promptpay',
+        OrderStatus status = OrderStatus.pendingPayment,
+        DateTime? paidAt}) =>
+    ShopOrder(
+        id: 'o1',
+        customerName: 'คุณสมศรี ลูกค้านัดรับอาหาร',
+        customerPhone: '0812345678',
+        items: List.generate(
+            4,
+            (i) => OrderItem(
+                productId: '$i',
+                productName: 'ข้าวกะเพราหมูสับไข่ดาวพิเศษ $i',
+                price: 250,
+                quantity: 1,
+                preparationNote: i == 3 ? 'ไม่ใส่ถั่ว' : '')),
+        total: 1000,
+        finalAmount: 1000.91,
+        paymentMethod: method,
+        status: status,
+        paidAt: paidAt,
+        createdAt: DateTime(2026, 10, 10, 11),
+        pickupLabel: '10 ต.ค. 12:00–12:30',
+        orderType: 'takeaway',
+        bankMatchPending: true,
+        autoConfirmed: true,
+        slipUrl: 'https://example.test/slip');
 
 void main() {
   setUpAll(() => initializeDateFormatting('th_TH'));
   setUp(() => SharedPreferences.setMockInitialValues({}));
+  testWidgets(
+      'paid and completed orders expose receipt without expanding or triggering kitchen/payment',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    var receipts = 0, tickets = 0, payments = 0;
+    for (final status in [
+      OrderStatus.paid,
+      OrderStatus.accepted,
+      OrderStatus.ready,
+      OrderStatus.completed
+    ]) {
+      await tester.pumpWidget(MaterialApp(
+          builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: const TextScaler.linear(2)),
+              child: child!),
+          home: Scaffold(
+              body: ListView(children: [
+            OrderSummaryCard(
+                key: ValueKey(status),
+                order: exampleOrder(status: status),
+                onSlip: () {},
+                onTicket: () => tickets++,
+                onReceipt: () => receipts++,
+                actions: TextButton(
+                    onPressed: () => payments++, child: const Text('รับเงิน')))
+          ]))));
+      await tester.pumpAndSettle();
+      expect(find.text('ใบงานเตรียมอาหาร / PDF'), findsNothing);
+      await tester.ensureVisible(find.text('พิมพ์ใบเสร็จ'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('พิมพ์ใบเสร็จ'));
+      expect(tester.takeException(), isNull);
+    }
+    expect(receipts, 4);
+    expect(tickets, 0);
+    expect(payments, 0);
+  });
+
+  testWidgets(
+      'unpaid and unpaid-cancelled orders cannot open receipt even with callback',
+      (tester) async {
+    for (final status in [OrderStatus.pendingPayment, OrderStatus.cancelled]) {
+      await tester.pumpWidget(MaterialApp(
+          home: Scaffold(
+              body: OrderSummaryCard(
+                  key: ValueKey(status),
+                  order: exampleOrder(status: status),
+                  onSlip: () {},
+                  onTicket: () {},
+                  onReceipt: () {}))));
+      expect(find.text('พิมพ์ใบเสร็จ'), findsNothing);
+    }
+    expect(
+        exampleOrder(status: OrderStatus.cancelled, paidAt: DateTime(2026))
+            .canOpenReceipt,
+        isTrue);
+  });
   testWidgets(
       'order summary keeps evidence and exact amount before confirmation; details and secondary actions remain reachable',
       (tester) async {
@@ -71,8 +136,8 @@ void main() {
       expect(find.text('ไม่ใส่ถั่ว'), findsOneWidget);
       expect(find.text('โทร 0812345678'), findsOneWidget);
       expect(find.text('ยืนยันอัตโนมัติ'), findsOneWidget);
-      await tester.ensureVisible(find.text('ใบงาน / พิมพ์ / PDF'));
-      await tester.tap(find.text('ใบงาน / พิมพ์ / PDF'));
+      await tester.ensureVisible(find.text('ใบงานเตรียมอาหาร / PDF'));
+      await tester.tap(find.text('ใบงานเตรียมอาหาร / PDF'));
       await tester.ensureVisible(find.text('จอครัว / พิมพ์ที่ครัว'));
       await tester.tap(find.text('จอครัว / พิมพ์ที่ครัว'));
       expect(tester.takeException(), isNull);

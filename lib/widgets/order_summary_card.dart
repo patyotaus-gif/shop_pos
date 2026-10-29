@@ -12,6 +12,7 @@ class OrderSummaryCard extends StatefulWidget {
       required this.order,
       required this.onTicket,
       required this.onSlip,
+      this.onReceipt,
       this.onKitchen,
       this.actions,
       this.urgency,
@@ -19,6 +20,7 @@ class OrderSummaryCard extends StatefulWidget {
   final ShopOrder order;
   final VoidCallback onTicket, onSlip;
   final VoidCallback? onKitchen;
+  final VoidCallback? onReceipt;
   final Widget? actions;
   final String? urgency;
   final bool initiallyExpanded;
@@ -166,6 +168,13 @@ class _OrderSummaryCardState extends State<OrderSummaryCard> {
                       onPressed: widget.onSlip,
                       icon: const Icon(Icons.image_outlined),
                       label: const Text('ดูสลิปการโอน'))),
+            if (order.canOpenReceipt && widget.onReceipt != null)
+              Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                      onPressed: widget.onReceipt,
+                      icon: const Icon(Icons.receipt_long_outlined),
+                      label: const Text('พิมพ์ใบเสร็จ'))),
             if (widget.actions != null) ...[
               const SizedBox(height: 10),
               widget.actions!,
@@ -201,7 +210,7 @@ class _OrderSummaryCardState extends State<OrderSummaryCard> {
                 TextButton.icon(
                     onPressed: widget.onTicket,
                     icon: const Icon(Icons.print_outlined),
-                    label: const Text('ใบงาน / พิมพ์ / PDF')),
+                    label: const Text('ใบงานเตรียมอาหาร / PDF')),
                 if (widget.onKitchen != null)
                   TextButton.icon(
                       onPressed: widget.onKitchen,

@@ -261,6 +261,10 @@ class _OrderCard extends StatelessWidget {
         onSlip: () => _showSlip(context, order.slipUrl!),
         onTicket: () => Navigator.of(context).push(MaterialPageRoute<void>(
             builder: (_) => OrderTicketScreen(order: order))),
+        onReceipt: order.canOpenReceipt
+            ? () => Navigator.of(context).push(MaterialPageRoute<void>(
+                builder: (_) => OrderSaleScreen(orderId: order.id)))
+            : null,
         onKitchen: [OrderStatus.paid, OrderStatus.accepted, OrderStatus.ready]
                 .contains(order.status)
             ? () => Navigator.of(context).push(

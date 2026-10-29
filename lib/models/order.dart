@@ -93,6 +93,17 @@ class ShopOrder {
   final DateTime? paidAt;
   final DateTime? statusUpdatedAt;
 
+  /// Legacy paid orders may predate sale links. The receipt screen must still
+  /// resolve an existing sale; this flag never authorizes or creates a payment.
+  bool get canOpenReceipt =>
+      [
+        OrderStatus.paid,
+        OrderStatus.accepted,
+        OrderStatus.ready,
+        OrderStatus.completed
+      ].contains(status) ||
+      (status == OrderStatus.cancelled && paidAt != null);
+
   /// QR-link context tags (display-only): 'takeaway' | 'dineInPrepaid'.
   final String? orderType;
   final String? tableName;
