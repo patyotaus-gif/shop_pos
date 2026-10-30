@@ -4,8 +4,41 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'auth_service.dart';
 import 'auto_print_service.dart';
+import '../utils/recovering_poll.dart';
 
 class StaffAccessService {
+  static Stream<List<Map<String, dynamic>>> watchKitchenOrders() {
+    final uid = AuthService.currentUser?.uid;
+    String? cursor;
+    DateTime? fullReadAt;
+    var pending = <String>[];
+    return recoveringPoll(
+        active: () =>
+            AuthService.isStaff && AuthService.currentUser?.uid == uid,
+        fetch: () async {
+          // Reconcile legacy/backdated imports periodically; normal polls reread
+          // only open orders, newly paid orders and known unfinished paid orders.
+          final full = fullReadAt == null ||
+              DateTime.now().difference(fullReadAt!) >=
+                  const Duration(minutes: 10);
+          final result = await work('read', {
+            'collection': 'kitchenOrders',
+            if (!full && cursor != null) 'kitchenSince': cursor,
+            if (!full) 'kitchenPendingIds': pending,
+          });
+          final rows = (result['records'] as List)
+              .map((r) => firestoreDates(r as Map))
+              .toList();
+          cursor = result['kitchenSince'] as String?;
+          if (full) fullReadAt = DateTime.now();
+          pending = rows
+              .where((r) => r['status'] == 'closed')
+              .map((r) => r['id'] as String)
+              .toList();
+          return rows;
+        });
+  }
+
   static Future<Map<String, dynamic>> work(String action,
           [Map<String, dynamic> data = const {}]) =>
       call('staffWork',
@@ -17,24 +50,26 @@ class StaffAccessService {
           (await work('read', {'collection': collection, 'id': id}))['record']
               as Map);
 
-  static Stream<List<Map<String, dynamic>>> watch(String collection) async* {
+  static Stream<List<Map<String, dynamic>>> watch(String collection) {
     final uid = AuthService.currentUser?.uid;
-    while (AuthService.isStaff && AuthService.currentUser?.uid == uid) {
-      final result = await work('read', {'collection': collection});
-      yield (result['records'] as List)
-          .map((r) => firestoreDates(r as Map))
-          .toList();
-      await Future<void>.delayed(const Duration(seconds: 5));
-    }
+    return recoveringPoll(
+        active: () =>
+            AuthService.isStaff && AuthService.currentUser?.uid == uid,
+        fetch: () async {
+          final result = await work('read', {'collection': collection});
+          return (result['records'] as List)
+              .map((r) => firestoreDates(r as Map))
+              .toList();
+        });
   }
 
   static Stream<Map<String, dynamic>> watchRecord(
-      String collection, String id) async* {
+      String collection, String id) {
     final uid = AuthService.currentUser?.uid;
-    while (AuthService.isStaff && AuthService.currentUser?.uid == uid) {
-      yield await read(collection, id);
-      await Future<void>.delayed(const Duration(seconds: 5));
-    }
+    return recoveringPoll(
+        active: () =>
+            AuthService.isStaff && AuthService.currentUser?.uid == uid,
+        fetch: () => read(collection, id));
   }
 
   static bool can(String permission) =>
@@ -68,11 +103,13 @@ class StaffAccessService {
     return result;
   }
 
-  static Stream<Map<String, dynamic>> watchWorkspace() async* {
-    while (AuthService.isStaff) {
-      yield await workspace();
-      await Future<void>.delayed(const Duration(seconds: 15));
-    }
+  static Stream<Map<String, dynamic>> watchWorkspace() {
+    final uid = AuthService.currentUser?.uid;
+    return recoveringPoll(
+        active: () =>
+            AuthService.isStaff && AuthService.currentUser?.uid == uid,
+        interval: const Duration(seconds: 15),
+        fetch: workspace);
   }
 
   static Map<String, dynamic> firestoreDates(Map raw) {

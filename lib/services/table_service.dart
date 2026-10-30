@@ -110,7 +110,10 @@ class TableService {
 
   // Paid/closed tabs stay reachable in printer mode until their tickets are acknowledged.
   static Stream<List<TableOrder>> watchKitchenOrders() => AuthService.isStaff
-      ? watchOpenOrders()
+      ? StaffAccessService.watchKitchenOrders().map((rows) => rows
+          .map((r) => TableOrder.fromFirestore(r, r['id'] as String))
+          .toList()
+        ..sort((a, b) => a.openedAt.compareTo(b.openedAt)))
       : _tableOrdersCol()
           .where('status', whereIn: ['open', 'closed'])
           .snapshots()
@@ -364,22 +367,8 @@ class TableService {
         });
 
   static Future<void> markItemReady(String orderId, String itemId) =>
-      AuthService.isStaff
-          ? StaffAccessService.work(
-              'ready', {'orderId': orderId, 'itemId': itemId}).then((_) {})
-          : _edit(orderId, (items) {
-              final index = items.indexWhere((i) => i.id == itemId);
-              if (index < 0) {
-                throw StateError('รายการนี้เปลี่ยนไปแล้ว กรุณาตรวจสอบใหม่');
-              }
-              if (items[index].kitchenStatus == KitchenStatus.pending) {
-                throw StateError('รายการนี้ยังไม่ได้ส่งครัว');
-              }
-              final next = [...items];
-              next[index] = next[index].copyWith(
-                  kitchenStatus: KitchenStatus.ready, readyAt: DateTime.now());
-              return next;
-            });
+      StaffAccessService.work('ready', {'orderId': orderId, 'itemId': itemId})
+          .then((_) {});
 
   static String billingSignature(TableOrder order) => jsonEncode(order.items
       .map((i) => {

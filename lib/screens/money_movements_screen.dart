@@ -6,6 +6,8 @@ import '../models/debt.dart';
 import '../services/auth_service.dart';
 import '../services/debt_service.dart';
 import '../widgets/shop_operation.dart';
+import '../widgets/compact_action.dart';
+import '../widgets/content_width.dart';
 import '../services/cash_movement_service.dart';
 import '../widgets/cash_movement_dialog.dart';
 import '../widgets/cash_reconciliation_dialog.dart';
@@ -325,7 +327,8 @@ class _MoneyMovementsScreenState extends State<MoneyMovementsScreen> {
                       0,
                       (value, row) =>
                           value + (row.data()['amountMinor'] as num).toInt());
-              return ListView(padding: const EdgeInsets.all(16), children: [
+              return ContentWidth(
+                  child: ListView(padding: const EdgeInsets.all(16), children: [
                 Align(
                     alignment: Alignment.centerLeft,
                     child: FilledButton.icon(
@@ -355,15 +358,16 @@ class _MoneyMovementsScreenState extends State<MoneyMovementsScreen> {
                                   ? 'กำลังโหลด'
                                   : '฿${_money.format(debts.data!.fold<double>(0, (value, d) => value + d.remaining))}'),
                         )),
-                OutlinedButton.icon(
-                    onPressed: _review,
-                    icon: const Icon(Icons.fact_check_outlined),
-                    label: const Text('ตรวจรายการที่ยอดอาจไม่ตรงกัน')),
+                CompactAction(
+                    child: OutlinedButton.icon(
+                        onPressed: _review,
+                        icon: const Icon(Icons.fact_check_outlined),
+                        label: const Text('ตรวจรายการที่ยอดอาจไม่ตรงกัน'))),
                 const Divider(),
                 if (rows.isEmpty)
                   const Text('ไม่มีรายการเงินที่บันทึกในวันนี้'),
                 for (final row in rows) _movement(row.id, row.data()),
-              ]);
+              ]));
             }),
       );
 

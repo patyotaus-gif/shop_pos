@@ -128,7 +128,12 @@ void main() {
     expect(current.items.single.isGift, true);
     expect(current.items.single.promotionId, 'tea');
     expect(current.items.single.kitchenStatus, KitchenStatus.sent);
-    await TableService.markItemReady('o', 'gift');
+    // Server readiness/authorization is covered by kitchen_chef.integration.cjs.
+    await ref.update({
+      'items': current.items
+          .map((i) => i.copyWith(kitchenStatus: KitchenStatus.ready).toMap())
+          .toList()
+    });
     current = TableOrder.fromFirestore((await ref.get()).data()!, 'o');
     await TableService.cancelOrder(current,
         reason: 'ลูกค้ายกเลิก', consumePrepared: true);

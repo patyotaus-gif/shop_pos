@@ -301,7 +301,10 @@ void main() {
     await TableService.addItem(id, dish);
     await TableService.sendToKitchen(id);
     final first = (await readOrder(id)).items.single;
-    await TableService.markItemReady(id, first.id);
+    // Kitchen readiness is now server-owned; seed its returned snapshot here.
+    await shop.collection('tableOrders').doc(id).update({
+      'items': [first.copyWith(kitchenStatus: KitchenStatus.ready).toMap()],
+    });
     await TableService.addItem(id, dish);
     final items = (await readOrder(id)).items;
     expect(items.length, 2);
@@ -322,7 +325,8 @@ void main() {
     await TableService.setItemQuantity(id, initial[0].id, 0,
         expectedQuantity: 1);
     await expectLater(
-        TableService.markItemReady(id, initial[0].id), throwsStateError);
+        TableService.setItemQuantity(id, initial[0].id, 2, expectedQuantity: 1),
+        throwsStateError);
     expect((await readOrder(id)).items.single.notes, 'หวานน้อย');
   });
   test(

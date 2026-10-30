@@ -42,6 +42,42 @@ function handler({db,FieldValue,HttpsError}){
    return {records:rows.docs.map(d=>{const p=d.data();return clean({id:d.id,name:p.name,stock:p.stock||0,stockRevision:p.stockRevision||0,unit:p.unit||'ชิ้น',isWeighed:p.isWeighed===true,trackLots:p.trackLots===true,stockMode:p.stockMode||'own',stockLots:p.stockLots||[],...(ctx.permissions?.cost?{unitCost:p.costPrice||0}:{})});})};
   }
   if(raw.action==='read'){
+   if(raw.collection==='kitchenOrders'){
+    // Include legacy paid tabs with unfinished food. Page the source rather
+    // than truncating after historical bills; only operational rows cross the boundary.
+    const records=new Map();
+    const readAt=new Date();
+    const since=raw.kitchenSince===undefined?null:new Date(raw.kitchenSince);
+    if(since&&(!Number.isFinite(+since)||since>readAt))fail('เวลาคิวครัวไม่ถูกต้อง');
+    const known=raw.kitchenPendingIds||[];
+    if(!Array.isArray(known)||known.length>500||known.some(id=>!validId(id)))fail('รายการคิวครัวไม่ถูกต้อง');
+    const add=d=>{
+     if(!d.exists){records.delete(d.id);return;}
+     const o=d.data(),items=o.items||[];
+     if((o.status==='open'&&items.some(i=>['sent','ready'].includes(i.kitchenStatus)))||
+        (o.status==='closed'&&items.some(i=>i.kitchenStatus==='sent')))
+      records.set(d.id,{id:d.id,...project('tableOrders',o)});
+     else records.delete(d.id);
+    };
+    let cursor;
+    const base=since?shop.collection('tableOrders').where('status','==','open'):
+      shop.collection('tableOrders').where('status','in',['open','closed']);
+    do {
+     const page=await (cursor?base.startAfter(cursor):base).limit(400).get();
+     page.docs.forEach(add);
+     if(records.size>500)fail('งานครัวค้างเกิน 500 บิล กรุณาให้เจ้าของร้านตรวจสอบ');
+     cursor=page.size===400?page.docs[page.docs.length-1]:null;
+    }while(cursor);
+    if(since){
+     // A short overlap covers timestamp/commit races. Older pending paid bills
+     // are reread by ID, so completion and cancellation remove them promptly.
+     const recent=await shop.collection('tableOrders').where('closedAt','>=',new Date(+since-60000)).get();
+     recent.docs.forEach(add);
+     if(known.length)(await db.getAll(...known.map(id=>shop.collection('tableOrders').doc(id)))).forEach(add);
+    }
+    if(records.size>500)fail('งานครัวค้างเกิน 500 บิล กรุณาให้เจ้าของร้านตรวจสอบ');
+    return {records:[...records.values()],kitchenSince:readAt.toISOString()};
+   }
    if(!Object.hasOwn(fields,raw.collection))throw new HttpsError('permission-denied','ไม่มีสิทธิ์อ่านข้อมูลนี้');
    let q=shop.collection(raw.collection);
    if(['cashSessions','accountingSettings'].includes(raw.collection))await authorize(request,db,HttpsError,'cashSession');
@@ -87,6 +123,20 @@ function handler({db,FieldValue,HttpsError}){
     return {orderId:ref.id};
    }
    const order=(await tx.get(ref)).data();
+   if(raw.action==='ready'){
+    if(!order||!['open','closed'].includes(order.status))fail('บิลนี้ถูกยกเลิกหรือไม่พบรายการ');
+    const items=(order.items||[]).map(i=>({...i}));
+    const item=items.find(i=>i.id===raw.itemId);
+    if(!item)fail('รายการเปลี่ยนแล้ว กรุณาโหลดใหม่');
+    if(item.kitchenStatus==='ready')return {success:true};
+    if(item.kitchenStatus!=='sent')fail('ยังไม่ได้ส่งรายการเข้าครัว');
+    item.kitchenStatus='ready';item.readyAt=new Date();
+    item.readyBy=ctx.actor;item.readyByName=ctx.name;
+    // Only the original food line is updated. A paid table may already host a
+    // new bill; never reopen it or touch its currentOrderId, sale, or stock.
+    tx.update(ref,{items,...audit});
+    return {success:true};
+   }
    if(!order||order.status!=='open')fail('บิลนี้ปิดหรือยกเลิกแล้ว');
    const table=(await tx.get(shop.collection('tables').doc(order.tableId))).data();
    if(table?.currentOrderId!==ref.id)fail('โต๊ะเปลี่ยนบิลแล้ว');

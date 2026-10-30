@@ -1,5 +1,24 @@
 # Android pilot feedback — 2026-10-03
 
+## Released 1.2.65+82 — kitchen workflow and tablet widths (2026-10-30)
+
+- Kitchen tasks survive payment/drawer closing and table reuse. The same server-authorized ready action serves owners and staff, preserves billing/stock/table state, records who prepared the food, and safely handles repeated taps. Staff kitchen reads include legacy paid unfinished work with pagination and incremental polling.
+- Removed the fixed ticket height that overflowed with long table names and enlarged Thai text. Current online/table work is sorted together; ready work and future-day appointments are separate, with a Thai-midnight refresh.
+- Staff read streams recover from transient failures, stop on revoked access, and discard cancelled/old-session responses. The kitchen keeps its stream subscriptions across setting/closing errors, hides stale actions, and offers retry. No automatic transaction retries were added.
+- Includes the pending dashboard, QR, cash closing and money-movement width adjustments documented below. Existing receipt-feed stash remains excluded.
+- Validation: final full Flutter suite **340 passed**. Full analysis passed, with a final kitchen-only check after the settings-recovery adjustment. Node 174 tests plus escalation assertions passed. Staff workflow and dedicated chef Firestore emulator suites passed, including paid unfinished work, reused tables, unchanged financial data, gifts, idempotency, incremental reads and permission revocation. Android release build completed in 332.3 seconds.
+- Deployed Hosting and only `staffWork`; all 85 functions are ACTIVE, with only that function's source hash changed. The unauthenticated production probe was rejected with HTTP 403. No rules or indexes were deployed.
+- Public APK downloaded and verified against the built artifact and manifest: `app.pokpok.pos` **1.2.65+82**, **96,084,334 bytes**, SHA-256 `536df294f628dc6d9183e1296ef6fd40f093954c3446e02c67f3362d593aa781`. Original signing certificate and no-cache headers verified. Optional update; minimum supported build remains 1. Build 81 APK/manifest backed up and hash-checked before staging.
+- Installed over build 81 on the Samsung SM-X900; package manager confirms build 82. App opens with the existing shop session. Visually inspected the owner's empty kitchen and landscape QR page with bounded content and compact copy/share/print buttons. No business transactions or settings were changed during these post-install checks. Chef actions were tested using simulated data/emulators; physical chef login, network outage and printer acceptance were not performed. No iOS IPA/TestFlight release has been performed here.
+
+## Tablet action widths — 2026-10-30 (source only)
+
+- Inspected the installed build 81 on the connected Samsung SM-X900 in landscape. QR copy/share buttons each occupied about half the content area (1,247 physical pixels), while QR print occupied 2,510 pixels. The money-movement review button also stretched across the page.
+- QR actions now use label-sized buttons with wrapping and a 360 logical-pixel maximum. The money-movement review button uses the same existing compact control. Tap targets remain at least 48 logical pixels high.
+- Centered single-column content is capped at 760 logical pixels for QR, 840 for closing/money movements, and 1,040 for the dashboard. Phone pages retain their available width. Sales grids and shared navigation are unchanged.
+- Validation: 17 responsive widget tests passed, including narrow phones, portrait/landscape tablets, enlarged Thai text, scrolling and action callbacks. Targeted analysis of all changed production Dart files passed. These edits have not been built/installed on the tablet or released; physical inspection above describes the previous build.
+- During device inspection the test shop's online-order switch was inadvertently enabled; it was restored to its original disabled state and verified in the device UI. No sales or closing transactions were performed.
+
 ## Released 1.2.64+81 — accounting exports, supplier fixes and LINE contrast (2026-10-30)
 
 - Sales CSV now escapes quotes/commas/newlines and neutralizes formula-like text; net revenue/cost/profit columns reconcile with the summary after refunds. Original amounts, refunded amounts, bill references and refund dates remain available. On-screen/PDF totals share cent rounding with CSV; the sales-date refund basis is explained without changing historical closing snapshots.

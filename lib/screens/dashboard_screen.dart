@@ -11,6 +11,7 @@ import '../services/shop_service.dart';
 import 'cash_session_screen.dart';
 import 'marketplace_home_screen.dart';
 import '../widgets/shop_setup_checklist.dart';
+import '../widgets/content_width.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -38,267 +39,272 @@ class DashboardScreen extends StatelessWidget {
                               child: ShopSetupChecklist(alwaysShow: true))))))
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {},
-        child: ListView(
-          padding: const EdgeInsets.all(12),
-          children: [
-            const ShopSetupChecklist(),
-            // Today summary
-            StreamBuilder<List<Sale>>(
-              stream: SaleService.watchToday(),
-              builder: (ctx, snap) {
-                if (snap.hasError) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Text(
-                        'โหลดสรุปยอดไม่สำเร็จ กรุณาตรวจการเชื่อมต่อ ยอดที่ยังโหลดไม่ได้ไม่ใช่ยอดศูนย์'),
-                  );
-                }
-                if (!snap.hasData) return const LinearProgressIndicator();
-                final sales = (snap.data ?? <Sale>[])
-                    .where((s) => !s.isRefunded)
-                    .toList();
-                final revenue = sales.fold<double>(0, (s, e) => s + e.total);
-                final cashRevenue = sales
-                    .where((s) =>
-                        !s.isDebt && s.paymentMethod == PaymentMethod.cash)
-                    .fold<double>(0, (s, e) => s + e.total);
-                final debtRevenue = sales
-                    .where((s) => s.isDebt)
-                    .fold<double>(0, (s, e) => s + e.total);
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('วันนี้',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        _BigCard(
-                          label: 'ยอดขายสุทธิ',
-                          value: '฿${_baht.format(revenue)}',
-                          icon: Icons.attach_money,
-                          color: Colors.green,
-                        ),
-                        const SizedBox(width: 8),
-                        _BigCard(
-                          label: 'จำนวนบิล',
-                          value: '${sales.length} บิล',
-                          icon: Icons.receipt_long,
-                          color: cs.primary,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        _BigCard(
-                          label: 'ขายรับเงินสด',
-                          value: '฿${_baht.format(cashRevenue)}',
-                          icon: Icons.payments_outlined,
-                          color: Colors.teal,
-                        ),
-                        const SizedBox(width: 8),
-                        _BigCard(
-                          label: 'ขายเชื่อวันนี้',
-                          value: '฿${_baht.format(debtRevenue)}',
-                          icon: Icons.person_outline,
-                          color: Colors.orange,
-                        ),
-                      ],
-                    ),
-                  ],
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // ปิดยอดสิ้นวัน — cash session + Z-report.
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.point_of_sale_outlined),
-                title: const Text('ปิดยอดสิ้นวัน'),
-                subtitle: const Text('เปิด/ปิดรอบ · นับเงินลิ้นชัก · Z-report'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const CashSessionScreen()),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // ปิดรับออเดอร์ — quick toggle for the /order customer web page.
-            // Optimistic write, no confirmation dialog: it's fast-reversible.
-            StreamBuilder<Map<String, dynamic>>(
-              stream: SettingsService.watchSettings(),
-              builder: (context, snap) {
-                final closed = snap.data?['ordersClosed'] == true;
-                return Card(
-                  child: SwitchListTile(
-                    secondary: Icon(
-                      closed ? Icons.storefront_outlined : Icons.storefront,
-                      color: closed ? Colors.red : Colors.green,
-                    ),
-                    title: Text(
-                      closed ? 'ปิดรับออเดอร์ชั่วคราว' : 'เปิดรับออเดอร์อยู่',
-                      style: TextStyle(
-                        color: closed ? Colors.red : Colors.green,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    subtitle: const Text('รับออเดอร์จากลิงก์และ QR ของร้าน'),
-                    value: !closed,
-                    activeThumbColor: Colors.green,
-                    onChanged: (open) =>
-                        SettingsService.saveSettings({'ordersClosed': !open}),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Marketplace entry — B2B "สั่งของ". Lives here rather than the
-            // bottom nav (already at its tab budget) and matches the GTM
-            // plan's controlled marketplace rollout.
-            _MarketplaceCard(),
-            const SizedBox(height: 16),
-
-            // Low stock — inventory tracking is a Lite+ feature; Solo
-            // doesn't track stock at SKU level (see Entitlements.canUseInventory).
-            StreamBuilder<Shop?>(
-              stream: ShopService.watchCurrentShop(),
-              builder: (context, shopSnap) {
-                final tier = shopSnap.data?.tier ?? ShopTier.full;
-                if (!Entitlements.canUseInventory(tier)) {
-                  return const SizedBox.shrink();
-                }
-                return StreamBuilder<List<Product>>(
-                  stream: ProductService.watchLowStock(),
-                  builder: (ctx, snap) {
-                    final products = snap.data ?? [];
-                    if (products.isEmpty) return const SizedBox.shrink();
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.warning_amber,
-                                color: Colors.orange, size: 18),
-                            const SizedBox(width: 4),
-                            Text('สินค้าใกล้หมด (${products.length} รายการ)',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        ...products.map((p) => Card(
-                              margin: const EdgeInsets.symmetric(vertical: 3),
-                              child: ListTile(
-                                dense: true,
-                                leading: const CircleAvatar(
-                                  backgroundColor: Colors.red,
-                                  radius: 16,
-                                  child: Icon(Icons.inventory_2_outlined,
-                                      color: Colors.white, size: 16),
-                                ),
-                                title: Text(p.name),
-                                trailing: Text(
-                                  'เหลือ ${p.stock}',
-                                  style: const TextStyle(
-                                      color: Colors.red,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            )),
-                        const SizedBox(height: 16),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
-
-            // Top selling today
-            StreamBuilder<List<Sale>>(
-              stream: SaleService.watchToday(),
-              builder: (ctx, snap) {
-                final sales = snap.data ?? [];
-                if (sales.isEmpty) return const SizedBox.shrink();
-
-                // Aggregate items
-                final Map<String, _TopItem> topMap = {};
-                for (final sale in sales) {
-                  for (final item in sale.items) {
-                    topMap.update(
-                      item.productId,
-                      (existing) => _TopItem(
-                        name: item.productName,
-                        qty: existing.qty + item.quantity,
-                        revenue: existing.revenue + item.subtotal,
-                      ),
-                      ifAbsent: () => _TopItem(
-                        name: item.productName,
-                        qty: item.quantity,
-                        revenue: item.subtotal,
-                      ),
+      body: ContentWidth(
+        maxWidth: 1040,
+        child: RefreshIndicator(
+          onRefresh: () async {},
+          child: ListView(
+            padding: const EdgeInsets.all(12),
+            children: [
+              const ShopSetupChecklist(),
+              // Today summary
+              StreamBuilder<List<Sale>>(
+                stream: SaleService.watchToday(),
+                builder: (ctx, snap) {
+                  if (snap.hasError) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Text(
+                          'โหลดสรุปยอดไม่สำเร็จ กรุณาตรวจการเชื่อมต่อ ยอดที่ยังโหลดไม่ได้ไม่ใช่ยอดศูนย์'),
                     );
                   }
-                }
+                  if (!snap.hasData) return const LinearProgressIndicator();
+                  final sales = (snap.data ?? <Sale>[])
+                      .where((s) => !s.isRefunded)
+                      .toList();
+                  final revenue = sales.fold<double>(0, (s, e) => s + e.total);
+                  final cashRevenue = sales
+                      .where((s) =>
+                          !s.isDebt && s.paymentMethod == PaymentMethod.cash)
+                      .fold<double>(0, (s, e) => s + e.total);
+                  final debtRevenue = sales
+                      .where((s) => s.isDebt)
+                      .fold<double>(0, (s, e) => s + e.total);
 
-                final topItems = topMap.values.toList()
-                  ..sort((a, b) => b.qty.compareTo(a.qty));
-                final top5 = topItems.take(5).toList();
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('สินค้าขายดีวันนี้',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    ...top5.asMap().entries.map((e) => Card(
-                          margin: const EdgeInsets.symmetric(vertical: 3),
-                          child: ListTile(
-                            dense: true,
-                            leading: CircleAvatar(
-                              backgroundColor: cs.primaryContainer,
-                              radius: 16,
-                              child: Text('${e.key + 1}',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: cs.onPrimaryContainer,
-                                      fontSize: 12)),
-                            ),
-                            title: Text(e.value.name),
-                            trailing: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text('${e.value.qty} ชิ้น',
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.bold)),
-                                Text('฿${_baht.format(e.value.revenue)}',
-                                    style: const TextStyle(
-                                        fontSize: 11, color: Colors.grey)),
-                              ],
-                            ),
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('วันนี้',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          _BigCard(
+                            label: 'ยอดขายสุทธิ',
+                            value: '฿${_baht.format(revenue)}',
+                            icon: Icons.attach_money,
+                            color: Colors.green,
                           ),
-                        )),
-                  ],
-                );
-              },
-            ),
-          ],
+                          const SizedBox(width: 8),
+                          _BigCard(
+                            label: 'จำนวนบิล',
+                            value: '${sales.length} บิล',
+                            icon: Icons.receipt_long,
+                            color: cs.primary,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          _BigCard(
+                            label: 'ขายรับเงินสด',
+                            value: '฿${_baht.format(cashRevenue)}',
+                            icon: Icons.payments_outlined,
+                            color: Colors.teal,
+                          ),
+                          const SizedBox(width: 8),
+                          _BigCard(
+                            label: 'ขายเชื่อวันนี้',
+                            value: '฿${_baht.format(debtRevenue)}',
+                            icon: Icons.person_outline,
+                            color: Colors.orange,
+                          ),
+                        ],
+                      ),
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // ปิดยอดสิ้นวัน — cash session + Z-report.
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.point_of_sale_outlined),
+                  title: const Text('ปิดยอดสิ้นวัน'),
+                  subtitle:
+                      const Text('เปิด/ปิดรอบ · นับเงินลิ้นชัก · Z-report'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const CashSessionScreen()),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // ปิดรับออเดอร์ — quick toggle for the /order customer web page.
+              // Optimistic write, no confirmation dialog: it's fast-reversible.
+              StreamBuilder<Map<String, dynamic>>(
+                stream: SettingsService.watchSettings(),
+                builder: (context, snap) {
+                  final closed = snap.data?['ordersClosed'] == true;
+                  return Card(
+                    child: SwitchListTile(
+                      secondary: Icon(
+                        closed ? Icons.storefront_outlined : Icons.storefront,
+                        color: closed ? Colors.red : Colors.green,
+                      ),
+                      title: Text(
+                        closed ? 'ปิดรับออเดอร์ชั่วคราว' : 'เปิดรับออเดอร์อยู่',
+                        style: TextStyle(
+                          color: closed ? Colors.red : Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: const Text('รับออเดอร์จากลิงก์และ QR ของร้าน'),
+                      value: !closed,
+                      activeThumbColor: Colors.green,
+                      onChanged: (open) =>
+                          SettingsService.saveSettings({'ordersClosed': !open}),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Marketplace entry — B2B "สั่งของ". Lives here rather than the
+              // bottom nav (already at its tab budget) and matches the GTM
+              // plan's controlled marketplace rollout.
+              _MarketplaceCard(),
+              const SizedBox(height: 16),
+
+              // Low stock — inventory tracking is a Lite+ feature; Solo
+              // doesn't track stock at SKU level (see Entitlements.canUseInventory).
+              StreamBuilder<Shop?>(
+                stream: ShopService.watchCurrentShop(),
+                builder: (context, shopSnap) {
+                  final tier = shopSnap.data?.tier ?? ShopTier.full;
+                  if (!Entitlements.canUseInventory(tier)) {
+                    return const SizedBox.shrink();
+                  }
+                  return StreamBuilder<List<Product>>(
+                    stream: ProductService.watchLowStock(),
+                    builder: (ctx, snap) {
+                      final products = snap.data ?? [];
+                      if (products.isEmpty) return const SizedBox.shrink();
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.warning_amber,
+                                  color: Colors.orange, size: 18),
+                              const SizedBox(width: 4),
+                              Text('สินค้าใกล้หมด (${products.length} รายการ)',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ...products.map((p) => Card(
+                                margin: const EdgeInsets.symmetric(vertical: 3),
+                                child: ListTile(
+                                  dense: true,
+                                  leading: const CircleAvatar(
+                                    backgroundColor: Colors.red,
+                                    radius: 16,
+                                    child: Icon(Icons.inventory_2_outlined,
+                                        color: Colors.white, size: 16),
+                                  ),
+                                  title: Text(p.name),
+                                  trailing: Text(
+                                    'เหลือ ${p.stock}',
+                                    style: const TextStyle(
+                                        color: Colors.red,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              )),
+                          const SizedBox(height: 16),
+                        ],
+                      );
+                    },
+                  );
+                },
+              ),
+
+              // Top selling today
+              StreamBuilder<List<Sale>>(
+                stream: SaleService.watchToday(),
+                builder: (ctx, snap) {
+                  final sales = snap.data ?? [];
+                  if (sales.isEmpty) return const SizedBox.shrink();
+
+                  // Aggregate items
+                  final Map<String, _TopItem> topMap = {};
+                  for (final sale in sales) {
+                    for (final item in sale.items) {
+                      topMap.update(
+                        item.productId,
+                        (existing) => _TopItem(
+                          name: item.productName,
+                          qty: existing.qty + item.quantity,
+                          revenue: existing.revenue + item.subtotal,
+                        ),
+                        ifAbsent: () => _TopItem(
+                          name: item.productName,
+                          qty: item.quantity,
+                          revenue: item.subtotal,
+                        ),
+                      );
+                    }
+                  }
+
+                  final topItems = topMap.values.toList()
+                    ..sort((a, b) => b.qty.compareTo(a.qty));
+                  final top5 = topItems.take(5).toList();
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('สินค้าขายดีวันนี้',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      ...top5.asMap().entries.map((e) => Card(
+                            margin: const EdgeInsets.symmetric(vertical: 3),
+                            child: ListTile(
+                              dense: true,
+                              leading: CircleAvatar(
+                                backgroundColor: cs.primaryContainer,
+                                radius: 16,
+                                child: Text('${e.key + 1}',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: cs.onPrimaryContainer,
+                                        fontSize: 12)),
+                              ),
+                              title: Text(e.value.name),
+                              trailing: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text('${e.value.qty} ชิ้น',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold)),
+                                  Text('฿${_baht.format(e.value.revenue)}',
+                                      style: const TextStyle(
+                                          fontSize: 11, color: Colors.grey)),
+                                ],
+                              ),
+                            ),
+                          )),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

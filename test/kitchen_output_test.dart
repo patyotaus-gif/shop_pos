@@ -44,7 +44,9 @@ TableOrder table(String id,
               productName: 'อาหารโต๊ะ$id',
               price: 50,
               quantity: 1,
-              kitchenStatus: KitchenStatus.sent)
+              kitchenStatus: status == TableOrderStatus.closed
+                  ? KitchenStatus.ready
+                  : KitchenStatus.sent)
         ]);
 void main() {
   testWidgets(

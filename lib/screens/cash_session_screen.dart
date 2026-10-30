@@ -9,6 +9,7 @@ import '../services/auth_service.dart';
 import '../services/staff_service.dart';
 import '../utils/zreport_generator.dart';
 import '../widgets/shop_operation.dart';
+import '../widgets/content_width.dart';
 import '../widgets/cash_close_blockers_dialog.dart';
 import '../utils/operation_error.dart';
 import 'money_movements_screen.dart';
@@ -35,7 +36,8 @@ class CashSessionScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           final open = snap.data;
-          return ListView(
+          return ContentWidth(
+              child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
               if (!AuthService.isStaff)
@@ -75,7 +77,7 @@ class CashSessionScreen extends StatelessWidget {
                 },
               ),
             ],
-          );
+          ));
         },
       ),
     );

@@ -1,4 +1,6 @@
 import '../widgets/pickup_settings_card.dart';
+import '../widgets/compact_action.dart';
+import '../widgets/content_width.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -121,153 +123,152 @@ class _OrderQrScreenState extends State<OrderQrScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(_title), centerTitle: true),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          if (_busy) const LinearProgressIndicator(),
-          // ── Takeaway ──
-          Text(
-              _isRetail
-                  ? 'สั่งสินค้าออนไลน์ รับที่ร้าน'
-                  : 'สั่งกลับบ้าน (Takeaway)',
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text('ลูกค้าสแกน → สั่ง + จ่าย PromptPay ล่วงหน้า มารับที่ร้าน',
-              style: TextStyle(
-                  fontSize: 12, color: cs.onSurface.withValues(alpha: .6))),
-          const SizedBox(height: 12),
-          Center(child: _qr(_takeawayUrl, size: 180)),
-          const SizedBox(height: 6),
-          Center(
-            child: Text(
-              (_slug?.isNotEmpty ?? false)
-                  ? 'ลิงก์ร้าน: pok-pok.app/r/$_slug'
-                  : 'ตั้งลิงก์สั้นได้ที่ ตั้งค่า → ลิงก์ร้าน',
-              style: TextStyle(
-                  fontSize: 12, color: cs.onSurface.withValues(alpha: .7)),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.copy, size: 16),
-                label: const Text('คัดลอกลิงก์'),
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: _shareUrl));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('คัดลอกแล้ว')));
-                },
+      body: ContentWidth(
+          maxWidth: 760,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              if (_busy) const LinearProgressIndicator(),
+              // ── Takeaway ──
+              Text(
+                  _isRetail
+                      ? 'สั่งสินค้าออนไลน์ รับที่ร้าน'
+                      : 'สั่งกลับบ้าน (Takeaway)',
+                  style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 4),
+              Text('ลูกค้าสแกน → สั่ง + จ่าย PromptPay ล่วงหน้า มารับที่ร้าน',
+                  style: TextStyle(
+                      fontSize: 12, color: cs.onSurface.withValues(alpha: .6))),
+              const SizedBox(height: 12),
+              Center(child: _qr(_takeawayUrl, size: 180)),
+              const SizedBox(height: 6),
+              Center(
+                child: Text(
+                  (_slug?.isNotEmpty ?? false)
+                      ? 'ลิงก์ร้าน: pok-pok.app/r/$_slug'
+                      : 'ตั้งลิงก์สั้นได้ที่ ตั้งค่า → ลิงก์ร้าน',
+                  style: TextStyle(
+                      fontSize: 12, color: cs.onSurface.withValues(alpha: .7)),
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: FilledButton.icon(
-                icon: const Icon(Icons.share, size: 16),
-                label: const Text('แชร์ลิงก์'),
-                onPressed: () => Share.share(
-                    '${_isRetail ? 'สั่งสินค้า' : 'สั่งอาหาร'}ร้าน$_shopName ออนไลน์ 👉 $_shareUrl'),
-              ),
-            ),
-          ]),
-          const SizedBox(height: 8),
-          FilledButton.icon(
-            onPressed: _busy
-                ? null
-                : () => _exportPdf([
-                      (
-                        label:
-                            _isRetail ? 'สั่งสินค้า รับที่ร้าน' : 'รับกลับบ้าน',
-                        url: _takeawayUrl
-                      )
-                    ]),
-            icon: const Icon(Icons.print_outlined, size: 18),
-            label: const Text('พิมพ์ / ส่งออก PDF'),
-          ),
+              const SizedBox(height: 8),
+              ActionButtons(children: [
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.copy, size: 16),
+                  label: const Text('คัดลอกลิงก์'),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: _shareUrl));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('คัดลอกแล้ว')));
+                  },
+                ),
+                FilledButton.icon(
+                  icon: const Icon(Icons.share, size: 16),
+                  label: const Text('แชร์ลิงก์'),
+                  onPressed: () => Share.share(
+                      '${_isRetail ? 'สั่งสินค้า' : 'สั่งอาหาร'}ร้าน$_shopName ออนไลน์ 👉 $_shareUrl'),
+                ),
+              ]),
+              const SizedBox(height: 8),
+              CompactAction(
+                  child: FilledButton.icon(
+                onPressed: _busy
+                    ? null
+                    : () => _exportPdf([
+                          (
+                            label: _isRetail
+                                ? 'สั่งสินค้า รับที่ร้าน'
+                                : 'รับกลับบ้าน',
+                            url: _takeawayUrl
+                          )
+                        ]),
+                icon: const Icon(Icons.print_outlined, size: 18),
+                label: const Text('พิมพ์ / ส่งออก PDF'),
+              )),
 
-          PickupSettingsCard(initial: _pickupSettings),
-          if (_isRestaurant) ...[
-            const Divider(height: 36),
-            // ── โหมดโต๊ะ ──
-            Text('QR ประจำโต๊ะ',
-                style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              initialValue: _mode,
-              decoration: const InputDecoration(
-                  labelText: 'เมื่อลูกค้าสแกน QR โต๊ะ',
-                  border: OutlineInputBorder(),
-                  isDense: true),
-              items: const [
-                DropdownMenuItem(
-                    value: 'dineIn',
-                    child: Text('สั่งเข้าครัว จ่ายทีหลัง (แนะนำ)')),
-                DropdownMenuItem(
-                    value: 'prepaid',
-                    child: Text('จ่าย PromptPay ก่อน แบบสั่งออนไลน์')),
-              ],
-              onChanged: _busy ? null : (v) => _saveMode(v ?? 'dineIn'),
-            ),
-            if (_mode == 'dineIn')
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                title: const Text('ส่งเข้าครัวอัตโนมัติ'),
-                subtitle: const Text(
-                    'ปิด = รายการจากลูกค้ารอพนักงานกดส่งครัวก่อน (กันสั่งเล่น)'),
-                value: _autoSend,
-                onChanged: _busy ? null : _saveAutoSend,
-              ),
-            const SizedBox(height: 8),
-            StreamBuilder<List<RestaurantTable>>(
-              stream: TableService.watchTables(),
-              builder: (ctx, snap) {
-                final tables = snap.data ?? const <RestaurantTable>[];
-                if (tables.isEmpty) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Text('ยังไม่มีโต๊ะ — เพิ่มได้ที่หน้า "โต๊ะ"',
-                        style: TextStyle(
-                            color: cs.onSurface.withValues(alpha: .5))),
-                  );
-                }
-                return Column(children: [
-                  FilledButton.icon(
-                    onPressed: _busy
-                        ? null
-                        : () => _exportPdf([
-                              for (final t in tables)
-                                (label: t.name, url: _tableUrl(t.id)),
-                            ]),
-                    icon: const Icon(Icons.print_outlined, size: 18),
-                    label: Text('พิมพ์ QR ทุกโต๊ะ (${tables.length})'),
+              PickupSettingsCard(initial: _pickupSettings),
+              if (_isRestaurant) ...[
+                const Divider(height: 36),
+                // ── โหมดโต๊ะ ──
+                Text('QR ประจำโต๊ะ',
+                    style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  initialValue: _mode,
+                  decoration: const InputDecoration(
+                      labelText: 'เมื่อลูกค้าสแกน QR โต๊ะ',
+                      border: OutlineInputBorder(),
+                      isDense: true),
+                  items: const [
+                    DropdownMenuItem(
+                        value: 'dineIn',
+                        child: Text('สั่งเข้าครัว จ่ายทีหลัง (แนะนำ)')),
+                    DropdownMenuItem(
+                        value: 'prepaid',
+                        child: Text('จ่าย PromptPay ก่อน แบบสั่งออนไลน์')),
+                  ],
+                  onChanged: _busy ? null : (v) => _saveMode(v ?? 'dineIn'),
+                ),
+                if (_mode == 'dineIn')
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    title: const Text('ส่งเข้าครัวอัตโนมัติ'),
+                    subtitle: const Text(
+                        'ปิด = รายการจากลูกค้ารอพนักงานกดส่งครัวก่อน (กันสั่งเล่น)'),
+                    value: _autoSend,
+                    onChanged: _busy ? null : _saveAutoSend,
                   ),
-                  const SizedBox(height: 8),
-                  for (final t in tables)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: SizedBox(
-                          width: 56,
-                          height: 56,
-                          child: _qr(_tableUrl(t.id), size: 56)),
-                      title: Text(t.name),
-                      subtitle: t.section != null ? Text(t.section!) : null,
-                      trailing: IconButton(
-                        icon: const Icon(Icons.print_outlined, size: 20),
-                        tooltip: 'พิมพ์โต๊ะนี้',
+                const SizedBox(height: 8),
+                StreamBuilder<List<RestaurantTable>>(
+                  stream: TableService.watchTables(),
+                  builder: (ctx, snap) {
+                    final tables = snap.data ?? const <RestaurantTable>[];
+                    if (tables.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Text('ยังไม่มีโต๊ะ — เพิ่มได้ที่หน้า "โต๊ะ"',
+                            style: TextStyle(
+                                color: cs.onSurface.withValues(alpha: .5))),
+                      );
+                    }
+                    return Column(children: [
+                      FilledButton.icon(
                         onPressed: _busy
                             ? null
-                            : () => _exportPdf(
-                                [(label: t.name, url: _tableUrl(t.id))]),
+                            : () => _exportPdf([
+                                  for (final t in tables)
+                                    (label: t.name, url: _tableUrl(t.id)),
+                                ]),
+                        icon: const Icon(Icons.print_outlined, size: 18),
+                        label: Text('พิมพ์ QR ทุกโต๊ะ (${tables.length})'),
                       ),
-                    ),
-                ]);
-              },
-            ),
-          ],
-          const SizedBox(height: 24),
-        ],
-      ),
+                      const SizedBox(height: 8),
+                      for (final t in tables)
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: SizedBox(
+                              width: 56,
+                              height: 56,
+                              child: _qr(_tableUrl(t.id), size: 56)),
+                          title: Text(t.name),
+                          subtitle: t.section != null ? Text(t.section!) : null,
+                          trailing: IconButton(
+                            icon: const Icon(Icons.print_outlined, size: 20),
+                            tooltip: 'พิมพ์โต๊ะนี้',
+                            onPressed: _busy
+                                ? null
+                                : () => _exportPdf(
+                                    [(label: t.name, url: _tableUrl(t.id))]),
+                          ),
+                        ),
+                    ]);
+                  },
+                ),
+              ],
+              const SizedBox(height: 24),
+            ],
+          )),
     );
   }
 }
