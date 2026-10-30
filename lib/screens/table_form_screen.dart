@@ -1,3 +1,5 @@
+import '../widgets/compact_action.dart';
+import '../widgets/content_width.dart';
 import 'package:flutter/material.dart';
 
 import '../models/restaurant_table.dart';
@@ -111,59 +113,63 @@ class _TableFormScreenState extends State<TableFormScreen> {
             ),
         ],
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            TextFormField(
-              controller: _name,
-              decoration: const InputDecoration(
-                labelText: 'ชื่อ/เลขโต๊ะ *',
-                hintText: 'เช่น 1, A2, Bar-3',
-                prefixIcon: Icon(Icons.tag),
-                border: OutlineInputBorder(),
-              ),
-              validator: (v) =>
-                  v == null || v.trim().isEmpty ? 'กรุณากรอกชื่อโต๊ะ' : null,
+      body: ContentWidth(
+          maxWidth: 640,
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                TextFormField(
+                  controller: _name,
+                  decoration: const InputDecoration(
+                    labelText: 'ชื่อ/เลขโต๊ะ *',
+                    hintText: 'เช่น 1, A2, Bar-3',
+                    prefixIcon: Icon(Icons.tag),
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (v) => v == null || v.trim().isEmpty
+                      ? 'กรุณากรอกชื่อโต๊ะ'
+                      : null,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _capacity,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'จำนวนที่นั่ง',
+                    prefixIcon: Icon(Icons.person_outline),
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (v) {
+                    final n = int.tryParse(v ?? '');
+                    if (n == null || n <= 0) return 'ใส่ตัวเลขมากกว่า 0';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _section,
+                  decoration: const InputDecoration(
+                    labelText: 'โซน (ไม่บังคับ)',
+                    hintText: 'เช่น ในร้าน, ระเบียง, Bar',
+                    prefixIcon: Icon(Icons.place_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                CompactAction(
+                    child: FilledButton(
+                  onPressed: _saving ? null : _save,
+                  style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(52)),
+                  child: _saving
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Text(widget._isEdit ? 'บันทึก' : 'เพิ่มโต๊ะ'),
+                )),
+              ],
             ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _capacity,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'จำนวนที่นั่ง',
-                prefixIcon: Icon(Icons.person_outline),
-                border: OutlineInputBorder(),
-              ),
-              validator: (v) {
-                final n = int.tryParse(v ?? '');
-                if (n == null || n <= 0) return 'ใส่ตัวเลขมากกว่า 0';
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _section,
-              decoration: const InputDecoration(
-                labelText: 'โซน (ไม่บังคับ)',
-                hintText: 'เช่น ในร้าน, ระเบียง, Bar',
-                prefixIcon: Icon(Icons.place_outlined),
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: _saving ? null : _save,
-              style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(52)),
-              child: _saving
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : Text(widget._isEdit ? 'บันทึก' : 'เพิ่มโต๊ะ'),
-            ),
-          ],
-        ),
-      ),
+          )),
     );
   }
 }

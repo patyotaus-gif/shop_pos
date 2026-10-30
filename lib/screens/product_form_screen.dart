@@ -1,3 +1,5 @@
+import '../widgets/compact_action.dart';
+import '../widgets/content_width.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../widgets/unit_cost_calculator.dart';
@@ -536,390 +538,400 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
             ),
         ],
       ),
-      body: _scanning
-          ? SizedBox(
-              height: 300,
-              child: MobileScanner(
-                onDetect: (capture) {
-                  final code = capture.barcodes.firstOrNull?.rawValue;
-                  if (code != null) {
-                    setState(() {
-                      _barcode.text = code;
-                      _scanning = false;
-                    });
-                    _lookupBarcode();
-                  }
-                },
-              ),
-            )
-          : Form(
-              key: _formKey,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  // รูปสินค้า
-                  GestureDetector(
-                    onTap: _showImageSourceSheet,
-                    child: Container(
-                      height: 160,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: _imageFile != null
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child:
-                                  Image.file(_imageFile!, fit: BoxFit.contain),
-                            )
-                          : const Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.add_photo_alternate_outlined,
-                                    size: 40, color: Colors.grey),
-                                SizedBox(height: 8),
-                                Text('เพิ่มรูปสินค้า',
-                                    style: TextStyle(color: Colors.grey)),
-                              ],
-                            ),
-                    ),
-                  ),
-                  if (_imageFile != null) ...[
-                    const SizedBox(height: 8),
-                    SwitchListTile(
-                      value: _removeBackground,
-                      onChanged: (v) => setState(() => _removeBackground = v),
-                      title: const Text('ตัดพื้นหลังออก'),
-                      subtitle: const Text('เหมาะกับรูปที่มีพื้นหลังสีเรียบ'),
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                  // Barcode
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _barcode,
-                          decoration: InputDecoration(
-                            labelText: 'Barcode',
-                            border: const OutlineInputBorder(),
-                            suffixIcon: _lookingUp
-                                ? const Padding(
-                                    padding: EdgeInsets.all(12),
-                                    child: SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2),
-                                    ),
-                                  )
-                                : IconButton(
-                                    icon: const Icon(Icons.search),
-                                    onPressed: _lookupBarcode,
-                                  ),
-                          ),
-                          onEditingComplete: _lookupBarcode,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton.filled(
-                        icon: const Icon(Icons.barcode_reader),
-                        tooltip: 'สแกนบาร์โค้ด',
-                        onPressed: () => setState(() => _scanning = true),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _name,
-                    decoration: const InputDecoration(
-                      labelText: 'ชื่อสินค้า *',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (v) =>
-                        v!.trim().isEmpty ? 'กรุณากรอกชื่อสินค้า' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  StreamBuilder<List<Product>>(
-                    stream: _products,
-                    builder: (context, snapshot) => ProductCategoryField(
-                      initialValue: _category,
-                      categories: ProductService.categoriesFor(
-                          snapshot.data ?? const []),
-                      onChanged: (value) => _category = value,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _price,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'ราคาขาย *',
-                            prefixText: '฿',
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (v) {
-                            if (v!.isEmpty) return 'กรุณากรอกราคา';
-                            if (double.tryParse(v) == null) {
-                              return 'ราคาไม่ถูกต้อง';
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _costPrice,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'ราคาต้นทุน',
-                            prefixText: '฿',
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  if (_stockMode != 'recipe')
-                    Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton.icon(
-                            icon: const Icon(Icons.calculate_outlined),
-                            label: const Text('ช่วยคำนวณต้นทุนต่อหน่วย'),
-                            onPressed: () async {
-                              final cost =
-                                  await showUnitCostCalculator(context);
-                              if (cost != null && mounted) {
-                                setState(() =>
-                                    _costPrice.text = cost.toStringAsFixed(2));
-                              }
-                            })),
-                  const SizedBox(height: 16),
-                  // ── โหมดสต็อก + สูตรวัตถุดิบ (Restaurant) ──
-                  StreamBuilder<Shop?>(
-                    stream: ShopService.watchCurrentShop(),
-                    builder: (context, snap) {
-                      if (snap.data == null ||
-                          !Entitlements.canUseRecipes(
-                              snap.data!.tier, snap.data!.shopType)) {
-                        return const SizedBox.shrink();
+      body: ContentWidth(
+          maxWidth: 720,
+          child: _scanning
+              ? SizedBox(
+                  height: 300,
+                  child: MobileScanner(
+                    onDetect: (capture) {
+                      final code = capture.barcodes.firstOrNull?.rawValue;
+                      if (code != null) {
+                        setState(() {
+                          _barcode.text = code;
+                          _scanning = false;
+                        });
+                        _lookupBarcode();
                       }
-                      return _buildRecipeSection(context);
                     },
                   ),
-                  if (_stockMode == 'count') _inventoryFields(),
-                  if (_stockMode == 'count') const SizedBox(height: 16),
-                  if (_stockMode == 'count')
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _stock,
-                            readOnly: _isEdit,
-                            keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true),
-                            decoration: InputDecoration(
-                              labelText: _isEdit
-                                  ? 'สต๊อกขณะเปิดหน้า'
-                                  : 'สต๊อกเริ่มต้น *',
-                              border: const OutlineInputBorder(),
-                            ),
-                            validator: (v) {
-                              if (v!.isEmpty) return 'กรุณากรอกสต็อก';
-                              final q = num.tryParse(v);
-                              if (q == null ||
-                                  !validStockQuantity(q,
-                                      weight: _weighed, zero: true)) {
-                                return 'ตรวจจำนวน/ทศนิยม';
-                              }
-                              return null;
-                            },
+                )
+              : Form(
+                  key: _formKey,
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      // รูปสินค้า
+                      GestureDetector(
+                        onTap: _showImageSourceSheet,
+                        child: Container(
+                          height: 160,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade300),
                           ),
+                          child: _imageFile != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image.file(_imageFile!,
+                                      fit: BoxFit.contain),
+                                )
+                              : const Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.add_photo_alternate_outlined,
+                                        size: 40, color: Colors.grey),
+                                    SizedBox(height: 8),
+                                    Text('เพิ่มรูปสินค้า',
+                                        style: TextStyle(color: Colors.grey)),
+                                  ],
+                                ),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          // Low-stock threshold is part of inventory
-                          // tracking — Solo tier doesn't include that, so
-                          // we disable the field and surface the upgrade
-                          // ask inline. Tap the lock icon for the modal.
-                          child: StreamBuilder<Shop?>(
-                            stream: ShopService.watchCurrentShop(),
-                            builder: (context, snap) {
-                              final tier = snap.data?.tier ?? ShopTier.full;
-                              final enabled =
-                                  Entitlements.canUseInventory(tier);
-                              return TextFormField(
-                                controller: _lowStock,
+                      ),
+                      if (_imageFile != null) ...[
+                        const SizedBox(height: 8),
+                        SwitchListTile(
+                          value: _removeBackground,
+                          onChanged: (v) =>
+                              setState(() => _removeBackground = v),
+                          title: const Text('ตัดพื้นหลังออก'),
+                          subtitle:
+                              const Text('เหมาะกับรูปที่มีพื้นหลังสีเรียบ'),
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      // Barcode
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _barcode,
+                              decoration: InputDecoration(
+                                labelText: 'Barcode',
+                                border: const OutlineInputBorder(),
+                                suffixIcon: _lookingUp
+                                    ? const Padding(
+                                        padding: EdgeInsets.all(12),
+                                        child: SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2),
+                                        ),
+                                      )
+                                    : IconButton(
+                                        icon: const Icon(Icons.search),
+                                        onPressed: _lookupBarcode,
+                                      ),
+                              ),
+                              onEditingComplete: _lookupBarcode,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton.filled(
+                            icon: const Icon(Icons.barcode_reader),
+                            tooltip: 'สแกนบาร์โค้ด',
+                            onPressed: () => setState(() => _scanning = true),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _name,
+                        decoration: const InputDecoration(
+                          labelText: 'ชื่อสินค้า *',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (v) =>
+                            v!.trim().isEmpty ? 'กรุณากรอกชื่อสินค้า' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      StreamBuilder<List<Product>>(
+                        stream: _products,
+                        builder: (context, snapshot) => ProductCategoryField(
+                          initialValue: _category,
+                          categories: ProductService.categoriesFor(
+                              snapshot.data ?? const []),
+                          onChanged: (value) => _category = value,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _price,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'ราคาขาย *',
+                                prefixText: '฿',
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (v) {
+                                if (v!.isEmpty) return 'กรุณากรอกราคา';
+                                if (double.tryParse(v) == null) {
+                                  return 'ราคาไม่ถูกต้อง';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _costPrice,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'ราคาต้นทุน',
+                                prefixText: '฿',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      if (_stockMode != 'recipe')
+                        Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton.icon(
+                                icon: const Icon(Icons.calculate_outlined),
+                                label: const Text('ช่วยคำนวณต้นทุนต่อหน่วย'),
+                                onPressed: () async {
+                                  final cost =
+                                      await showUnitCostCalculator(context);
+                                  if (cost != null && mounted) {
+                                    setState(() => _costPrice.text =
+                                        cost.toStringAsFixed(2));
+                                  }
+                                })),
+                      const SizedBox(height: 16),
+                      // ── โหมดสต็อก + สูตรวัตถุดิบ (Restaurant) ──
+                      StreamBuilder<Shop?>(
+                        stream: ShopService.watchCurrentShop(),
+                        builder: (context, snap) {
+                          if (snap.data == null ||
+                              !Entitlements.canUseRecipes(
+                                  snap.data!.tier, snap.data!.shopType)) {
+                            return const SizedBox.shrink();
+                          }
+                          return _buildRecipeSection(context);
+                        },
+                      ),
+                      if (_stockMode == 'count') _inventoryFields(),
+                      if (_stockMode == 'count') const SizedBox(height: 16),
+                      if (_stockMode == 'count')
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _stock,
+                                readOnly: _isEdit,
                                 keyboardType:
                                     const TextInputType.numberWithOptions(
                                         decimal: true),
-                                validator: (value) {
-                                  final q = num.tryParse(value ?? '');
-                                  return q == null ||
-                                          !validStockQuantity(q,
-                                              weight: _weighed, zero: true)
-                                      ? 'ตรวจจำนวน'
-                                      : null;
-                                },
-                                enabled: enabled,
                                 decoration: InputDecoration(
-                                  labelText: 'แจ้งเตือนเมื่อเหลือ',
+                                  labelText: _isEdit
+                                      ? 'สต๊อกขณะเปิดหน้า'
+                                      : 'สต๊อกเริ่มต้น *',
                                   border: const OutlineInputBorder(),
-                                  helperText: enabled
-                                      ? null
-                                      : 'ใช้ได้ในแผน Lite ขึ้นไป',
-                                  suffixIcon: enabled
-                                      ? null
-                                      : IconButton(
-                                          icon: const Icon(Icons.lock_outline,
-                                              size: 18),
-                                          onPressed: () => showUpgradePrompt(
-                                            context,
-                                            feature:
-                                                EntitlementFeature.inventory,
-                                          ),
-                                        ),
                                 ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  const SizedBox(height: 8),
-                  if (_isEdit && _stockMode == 'count')
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.inventory_2_outlined),
-                      label: const Text('รับเข้า / ตรวจนับ / ประวัติสต๊อก'),
-                      onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => ProductInventoryScreen(
-                                  productId: _productId))),
-                    ),
-                  SwitchListTile(
-                    value: _isPinned,
-                    onChanged: (v) => setState(() => _isPinned = v),
-                    title: const Text('ปักหมุดในหน้าขาย'),
-                    subtitle: const Text('แสดงในปุ่มลัดหน้า POS'),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  // Restaurant-only: pick which modifier groups (size,
-                  // spice level, add-ons) attach to this product. Hidden
-                  // for retail shops where modifiers are irrelevant.
-                  StreamBuilder<Shop?>(
-                    stream: ShopService.watchCurrentShop(),
-                    builder: (context, shopSnap) {
-                      if (shopSnap.data?.shopType != ShopType.restaurant) {
-                        return const SizedBox.shrink();
-                      }
-                      return StreamBuilder<List<ModifierGroup>>(
-                        stream: ModifierService.watchAll(),
-                        builder: (context, groupSnap) {
-                          final groups = groupSnap.data ?? const [];
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text('ตัวเลือกเสริม (Add-on)',
-                                        style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w600,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary)),
-                                  ),
-                                  TextButton.icon(
-                                    icon: const Icon(Icons.tune_outlined,
-                                        size: 16),
-                                    label: const Text('จัดการกลุ่ม'),
-                                    onPressed: () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) =>
-                                              const ModifierGroupsScreen()),
+                                validator: (v) {
+                                  if (v!.isEmpty) return 'กรุณากรอกสต็อก';
+                                  final q = num.tryParse(v);
+                                  if (q == null ||
+                                      !validStockQuantity(q,
+                                          weight: _weighed, zero: true)) {
+                                    return 'ตรวจจำนวน/ทศนิยม';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              // Low-stock threshold is part of inventory
+                              // tracking — Solo tier doesn't include that, so
+                              // we disable the field and surface the upgrade
+                              // ask inline. Tap the lock icon for the modal.
+                              child: StreamBuilder<Shop?>(
+                                stream: ShopService.watchCurrentShop(),
+                                builder: (context, snap) {
+                                  final tier = snap.data?.tier ?? ShopTier.full;
+                                  final enabled =
+                                      Entitlements.canUseInventory(tier);
+                                  return TextFormField(
+                                    controller: _lowStock,
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(
+                                            decimal: true),
+                                    validator: (value) {
+                                      final q = num.tryParse(value ?? '');
+                                      return q == null ||
+                                              !validStockQuantity(q,
+                                                  weight: _weighed, zero: true)
+                                          ? 'ตรวจจำนวน'
+                                          : null;
+                                    },
+                                    enabled: enabled,
+                                    decoration: InputDecoration(
+                                      labelText: 'แจ้งเตือนเมื่อเหลือ',
+                                      border: const OutlineInputBorder(),
+                                      helperText: enabled
+                                          ? null
+                                          : 'ใช้ได้ในแผน Lite ขึ้นไป',
+                                      suffixIcon: enabled
+                                          ? null
+                                          : IconButton(
+                                              icon: const Icon(
+                                                  Icons.lock_outline,
+                                                  size: 18),
+                                              onPressed: () =>
+                                                  showUpgradePrompt(
+                                                context,
+                                                feature: EntitlementFeature
+                                                    .inventory,
+                                              ),
+                                            ),
                                     ),
-                                  ),
-                                ],
+                                  );
+                                },
                               ),
-                              Text(
-                                'เลือกกลุ่มที่ลูกค้าจะปรับได้ตอนสั่ง เช่น ระดับความเผ็ด/เพิ่มไข่',
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.6)),
-                              ),
-                              const SizedBox(height: 8),
-                              if (groups.isEmpty)
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(8),
+                            ),
+                          ],
+                        ),
+                      const SizedBox(height: 8),
+                      if (_isEdit && _stockMode == 'count')
+                        CompactAction(
+                            child: OutlinedButton.icon(
+                          icon: const Icon(Icons.inventory_2_outlined),
+                          label: const Text('รับเข้า / ตรวจนับ / ประวัติสต๊อก'),
+                          onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => ProductInventoryScreen(
+                                      productId: _productId))),
+                        )),
+                      SwitchListTile(
+                        value: _isPinned,
+                        onChanged: (v) => setState(() => _isPinned = v),
+                        title: const Text('ปักหมุดในหน้าขาย'),
+                        subtitle: const Text('แสดงในปุ่มลัดหน้า POS'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      // Restaurant-only: pick which modifier groups (size,
+                      // spice level, add-ons) attach to this product. Hidden
+                      // for retail shops where modifiers are irrelevant.
+                      StreamBuilder<Shop?>(
+                        stream: ShopService.watchCurrentShop(),
+                        builder: (context, shopSnap) {
+                          if (shopSnap.data?.shopType != ShopType.restaurant) {
+                            return const SizedBox.shrink();
+                          }
+                          return StreamBuilder<List<ModifierGroup>>(
+                            stream: ModifierService.watchAll(),
+                            builder: (context, groupSnap) {
+                              final groups = groupSnap.data ?? const [];
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text('ตัวเลือกเสริม (Add-on)',
+                                            style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .primary)),
+                                      ),
+                                      TextButton.icon(
+                                        icon: const Icon(Icons.tune_outlined,
+                                            size: 16),
+                                        label: const Text('จัดการกลุ่ม'),
+                                        onPressed: () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (_) =>
+                                                  const ModifierGroupsScreen()),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  child: Text(
-                                    'ยังไม่มีกลุ่ม — แตะ "จัดการกลุ่ม" ด้านบนเพื่อสร้าง เช่น "ระดับความเผ็ด"',
+                                  Text(
+                                    'เลือกกลุ่มที่ลูกค้าจะปรับได้ตอนสั่ง เช่น ระดับความเผ็ด/เพิ่มไข่',
                                     style: TextStyle(
-                                        fontSize: 12,
+                                        fontSize: 11,
                                         color: Theme.of(context)
                                             .colorScheme
                                             .onSurface
-                                            .withValues(alpha: 0.7)),
+                                            .withValues(alpha: 0.6)),
                                   ),
-                                )
-                              else
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 4,
-                                  children: groups.map((g) {
-                                    final sel =
-                                        _modifierGroupIds.contains(g.id);
-                                    return FilterChip(
-                                      label: Text(g.name),
-                                      selected: sel,
-                                      onSelected: (v) => setState(() {
-                                        if (v) {
-                                          _modifierGroupIds.add(g.id);
-                                        } else {
-                                          _modifierGroupIds.remove(g.id);
-                                        }
-                                      }),
-                                    );
-                                  }).toList(),
-                                ),
-                            ],
+                                  const SizedBox(height: 8),
+                                  if (groups.isEmpty)
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .surfaceContainerHighest,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        'ยังไม่มีกลุ่ม — แตะ "จัดการกลุ่ม" ด้านบนเพื่อสร้าง เช่น "ระดับความเผ็ด"',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withValues(alpha: 0.7)),
+                                      ),
+                                    )
+                                  else
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 4,
+                                      children: groups.map((g) {
+                                        final sel =
+                                            _modifierGroupIds.contains(g.id);
+                                        return FilterChip(
+                                          label: Text(g.name),
+                                          selected: sel,
+                                          onSelected: (v) => setState(() {
+                                            if (v) {
+                                              _modifierGroupIds.add(g.id);
+                                            } else {
+                                              _modifierGroupIds.remove(g.id);
+                                            }
+                                          }),
+                                        );
+                                      }).toList(),
+                                    ),
+                                ],
+                              );
+                            },
                           );
                         },
-                      );
-                    },
+                      ),
+                      const SizedBox(height: 16),
+                      CompactAction(
+                          child: FilledButton(
+                        onPressed: _saving ? null : _save,
+                        style: FilledButton.styleFrom(
+                            minimumSize: const Size.fromHeight(52)),
+                        child: _saving
+                            ? const CircularProgressIndicator(
+                                color: Colors.white)
+                            : Text(_isEdit ? 'บันทึก' : 'เพิ่มสินค้า'),
+                      )),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: _saving ? null : _save,
-                    style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(52)),
-                    child: _saving
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : Text(_isEdit ? 'บันทึก' : 'เพิ่มสินค้า'),
-                  ),
-                ],
-              ),
-            ),
+                )),
     );
   }
 }

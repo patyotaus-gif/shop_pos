@@ -1,3 +1,4 @@
+import '../widgets/content_width.dart';
 import 'package:flutter/material.dart';
 
 import '../models/modifier_group.dart';
@@ -15,46 +16,48 @@ class ModifierGroupsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
           title: const Text('ตัวเลือกเสริม (Add-on)'), centerTitle: true),
-      body: StreamBuilder<List<ModifierGroup>>(
-        stream: ModifierService.watchAll(),
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final groups = snap.data ?? const [];
-          if (groups.isEmpty) {
-            return _EmptyState(onAdd: () => _add(context));
-          }
-          final cs = Theme.of(context).colorScheme;
-          return Column(
-            children: [
-              Container(
-                width: double.infinity,
-                color: cs.primary.withValues(alpha: 0.06),
-                padding: const EdgeInsets.all(12),
-                child: Text(
-                  'สร้างกลุ่ม เช่น "ระดับความเผ็ด" หรือ "เพิ่มไข่" (ตั้งราคา +/− '
-                  'ต่อตัวเลือกได้) แล้วไปผูกกับเมนูในหน้าแก้สินค้า',
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: cs.onSurface.withValues(alpha: 0.7)),
-                ),
-              ),
-              Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: groups.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (_, i) => _GroupTile(
-                    group: groups[i],
-                    onTap: () => _edit(context, groups[i]),
+      body: ContentWidth(
+          maxWidth: 1040,
+          child: StreamBuilder<List<ModifierGroup>>(
+            stream: ModifierService.watchAll(),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final groups = snap.data ?? const [];
+              if (groups.isEmpty) {
+                return _EmptyState(onAdd: () => _add(context));
+              }
+              final cs = Theme.of(context).colorScheme;
+              return Column(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    color: cs.primary.withValues(alpha: 0.06),
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      'สร้างกลุ่ม เช่น "ระดับความเผ็ด" หรือ "เพิ่มไข่" (ตั้งราคา +/− '
+                      'ต่อตัวเลือกได้) แล้วไปผูกกับเมนูในหน้าแก้สินค้า',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: cs.onSurface.withValues(alpha: 0.7)),
+                    ),
                   ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+                  Expanded(
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: groups.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (_, i) => _GroupTile(
+                        group: groups[i],
+                        onTap: () => _edit(context, groups[i]),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          )),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _add(context),
         icon: const Icon(Icons.add),
@@ -101,8 +104,7 @@ class _GroupTile extends StatelessWidget {
               style:
                   const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
           const SizedBox(width: 8),
-          if (group.required)
-            _Chip(label: 'จำเป็น', color: cs.primary),
+          if (group.required) _Chip(label: 'จำเป็น', color: cs.primary),
           const SizedBox(width: 4),
           _Chip(
             label: group.multiSelect ? 'เลือกหลายอัน' : 'เลือก 1',
@@ -135,8 +137,8 @@ class _Chip extends StatelessWidget {
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(label,
-          style:
-              TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600)),
+          style: TextStyle(
+              fontSize: 10, color: color, fontWeight: FontWeight.w600)),
     );
   }
 }

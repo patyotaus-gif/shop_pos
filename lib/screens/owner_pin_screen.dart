@@ -1,3 +1,5 @@
+import '../widgets/compact_action.dart';
+import '../widgets/content_width.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -79,36 +81,43 @@ class _OwnerPinScreenState extends State<OwnerPinScreen> {
           appBar: AppBar(
               title:
                   Text(widget.setup ? 'ตั้ง PIN เจ้าของ' : 'เข้าโหมดเจ้าของ')),
-          body: SafeArea(
-              child: ListView(padding: const EdgeInsets.all(24), children: [
-            Text(widget.setup
-                ? 'ใช้ PIN นี้กลับเข้าโหมดเจ้าของบนเครื่องนี้ อายุ 90 วัน ต้องตั้งค่าหลังล็อกอินด้วยอีเมล / Google / Apple ภายใน 10 นาที'
-                : 'กรอก PIN เจ้าของที่ตั้งไว้บนเครื่องนี้'),
-            if (widget.setup)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Text(
-                    'ตั้ง PIN ต่างจากพนักงานและเก็บเป็นความลับ ใครรู้ PIN นี้และใช้เครื่องนี้จะเข้าถึงสิทธิ์เจ้าของได้'),
-              ),
-            const SizedBox(height: 20),
-            _field(_pin, 'PIN เจ้าของ 6–8 หลัก'),
-            if (widget.setup) _field(_confirm, 'ยืนยัน PIN เจ้าของ'),
-            if (_error != null)
-              Text(_error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
-            const SizedBox(height: 16),
-            FilledButton(
-                onPressed: _busy ? null : _submit,
-                child: Text(_busy
-                    ? 'กำลังตรวจสอบ…'
-                    : widget.setup
-                        ? 'บันทึก PIN'
-                        : 'เข้าโหมดเจ้าของ')),
-            if (!widget.setup)
-              TextButton(
-                  onPressed: _busy ? null : () => Navigator.pop(context, false),
-                  child: const Text('ลืม PIN / ใช้บัญชีเจ้าของแทน')),
-          ])),
+          body: ContentWidth(
+              maxWidth: 520,
+              child: SafeArea(
+                  child: ListView(padding: const EdgeInsets.all(24), children: [
+                Text(widget.setup
+                    ? 'ใช้ PIN นี้กลับเข้าโหมดเจ้าของบนเครื่องนี้ อายุ 90 วัน ต้องตั้งค่าหลังล็อกอินด้วยอีเมล / Google / Apple ภายใน 10 นาที'
+                    : 'กรอก PIN เจ้าของที่ตั้งไว้บนเครื่องนี้'),
+                if (widget.setup)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Text(
+                        'ตั้ง PIN ต่างจากพนักงานและเก็บเป็นความลับ ใครรู้ PIN นี้และใช้เครื่องนี้จะเข้าถึงสิทธิ์เจ้าของได้'),
+                  ),
+                const SizedBox(height: 20),
+                _field(_pin, 'PIN เจ้าของ 6–8 หลัก'),
+                if (widget.setup) _field(_confirm, 'ยืนยัน PIN เจ้าของ'),
+                if (_error != null)
+                  Text(_error!,
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.error)),
+                const SizedBox(height: 16),
+                CompactAction(
+                    child: FilledButton(
+                        onPressed: _busy ? null : _submit,
+                        child: Text(_busy
+                            ? 'กำลังตรวจสอบ…'
+                            : widget.setup
+                                ? 'บันทึก PIN'
+                                : 'เข้าโหมดเจ้าของ'))),
+                if (!widget.setup)
+                  CompactAction(
+                      child: TextButton(
+                          onPressed: _busy
+                              ? null
+                              : () => Navigator.pop(context, false),
+                          child: const Text('ลืม PIN / ใช้บัญชีเจ้าของแทน'))),
+              ]))),
         ),
       );
 }

@@ -1,3 +1,4 @@
+import '../widgets/content_width.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
@@ -52,144 +53,152 @@ class _BundlesScreenState extends State<BundlesScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('ชุดสินค้า')),
-        body: AuthService.isStaff
-            ? const Center(child: Text('เฉพาะเจ้าของร้าน'))
-            : StreamBuilder<List<Product>>(
-                stream: _products,
-                builder: (context, products) => StreamBuilder<
-                        DocumentSnapshot<Map<String, dynamic>>>(
-                    stream: _configs,
-                    builder: (context, configs) {
-                      if (products.hasError || configs.hasError) {
-                        return const Center(
-                            child: Text('โหลดไม่สำเร็จ กรุณาเปิดหน้านี้ใหม่'));
-                      }
-                      if (!products.hasData || !configs.hasData) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      final bundles =
-                          ((configs.data!.data()?['bundles'] as List?) ?? [])
+        body: ContentWidth(
+            maxWidth: 1040,
+            child: AuthService.isStaff
+                ? const Center(child: Text('เฉพาะเจ้าของร้าน'))
+                : StreamBuilder<List<Product>>(
+                    stream: _products,
+                    builder: (context, products) => StreamBuilder<
+                            DocumentSnapshot<Map<String, dynamic>>>(
+                        stream: _configs,
+                        builder: (context, configs) {
+                          if (products.hasError || configs.hasError) {
+                            return const Center(
+                                child:
+                                    Text('โหลดไม่สำเร็จ กรุณาเปิดหน้านี้ใหม่'));
+                          }
+                          if (!products.hasData || !configs.hasData) {
+                            return const Center(
+                                child: CircularProgressIndicator());
+                          }
+                          final bundles = ((configs.data!.data()?['bundles']
+                                      as List?) ??
+                                  [])
                               .map((b) => Map<String, dynamic>.from(b as Map))
                               .toList();
-                      return ListView(
-                          padding: const EdgeInsets.all(16),
-                          children: [
-                            const Text(
-                                'เลือกสินค้าครบชุด ระบบลดให้เป็นราคาชุดอัตโนมัติก่อนชำระเงิน ทั้งเคาน์เตอร์และลิงก์สั่งสินค้า\n'
-                                'ใช้ได้ขณะออนไลน์ บิลโต๊ะคำนวณส่วนลดอัตโนมัติ\n'
-                                'สินค้าแต่ละชนิดอยู่ได้ในชุดที่เปิดใช้เพียงชุดเดียว และต้องไม่มีตัวเลือกเสริม\n'
-                                'ใช้ร่วมกับซื้อแถมได้ คูปองและส่วนลดท้ายบิลคิดต่อจากราคาชุด หากซื้อแยกถูกกว่าจะใช้ราคาที่ถูกกว่า'),
-                            const SizedBox(height: 12),
-                            Align(
-                                alignment: Alignment.centerLeft,
-                                child: FilledButton.icon(
-                                    onPressed: _busy
-                                        ? null
-                                        : () => _edit(products.data!),
-                                    icon: const Icon(Icons.add),
-                                    label: const Text('สร้างชุดสินค้า'))),
-                            if (bundles.isEmpty)
-                              const Padding(
-                                  padding: EdgeInsets.all(24),
-                                  child: Text(
-                                      'ยังไม่มีชุดสินค้า เช่น กาแฟ + ขนม ราคาพิเศษ')),
-                            for (final b in bundles)
-                              Card(
-                                  child: Padding(
-                                      padding: const EdgeInsets.all(12),
-                                      child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(b['name'] as String,
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .titleMedium),
-                                            for (final c
-                                                in b['components'] as List)
-                                              Text(
-                                                  '${c['productName'] ?? c['productId']} × ${c['quantity']}'),
-                                            Text(
-                                                'ราคาชุด ${((b['priceMinor'] as num) / 100).toStringAsFixed(2)} บาท • สูงสุด ${b['maxSets']} ชุดต่อบิล'),
-                                            Builder(builder: (_) {
-                                              final until = (b['endsAt']
-                                                      as Timestamp)
-                                                  .toDate()
-                                                  .toUtc()
-                                                  .add(
-                                                      const Duration(hours: 7));
-                                              return Text(
-                                                  'ถึง ${until.day}/${until.month}/${until.year} สิ้นวัน (เวลาไทย)');
-                                            }),
-                                            SwitchListTile(
-                                                contentPadding: EdgeInsets.zero,
-                                                title: Text(
-                                                    (b['endsAt'] as Timestamp)
+                          return ListView(
+                              padding: const EdgeInsets.all(16),
+                              children: [
+                                const Text(
+                                    'เลือกสินค้าครบชุด ระบบลดให้เป็นราคาชุดอัตโนมัติก่อนชำระเงิน ทั้งเคาน์เตอร์และลิงก์สั่งสินค้า\n'
+                                    'ใช้ได้ขณะออนไลน์ บิลโต๊ะคำนวณส่วนลดอัตโนมัติ\n'
+                                    'สินค้าแต่ละชนิดอยู่ได้ในชุดที่เปิดใช้เพียงชุดเดียว และต้องไม่มีตัวเลือกเสริม\n'
+                                    'ใช้ร่วมกับซื้อแถมได้ คูปองและส่วนลดท้ายบิลคิดต่อจากราคาชุด หากซื้อแยกถูกกว่าจะใช้ราคาที่ถูกกว่า'),
+                                const SizedBox(height: 12),
+                                Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: FilledButton.icon(
+                                        onPressed: _busy
+                                            ? null
+                                            : () => _edit(products.data!),
+                                        icon: const Icon(Icons.add),
+                                        label: const Text('สร้างชุดสินค้า'))),
+                                if (bundles.isEmpty)
+                                  const Padding(
+                                      padding: EdgeInsets.all(24),
+                                      child: Text(
+                                          'ยังไม่มีชุดสินค้า เช่น กาแฟ + ขนม ราคาพิเศษ')),
+                                for (final b in bundles)
+                                  Card(
+                                      child: Padding(
+                                          padding: const EdgeInsets.all(12),
+                                          child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(b['name'] as String,
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .titleMedium),
+                                                for (final c
+                                                    in b['components'] as List)
+                                                  Text(
+                                                      '${c['productName'] ?? c['productId']} × ${c['quantity']}'),
+                                                Text(
+                                                    'ราคาชุด ${((b['priceMinor'] as num) / 100).toStringAsFixed(2)} บาท • สูงสุด ${b['maxSets']} ชุดต่อบิล'),
+                                                Builder(builder: (_) {
+                                                  final until =
+                                                      (b['endsAt'] as Timestamp)
+                                                          .toDate()
+                                                          .toUtc()
+                                                          .add(const Duration(
+                                                              hours: 7));
+                                                  return Text(
+                                                      'ถึง ${until.day}/${until.month}/${until.year} สิ้นวัน (เวลาไทย)');
+                                                }),
+                                                SwitchListTile(
+                                                    contentPadding:
+                                                        EdgeInsets.zero,
+                                                    title: Text((b['endsAt']
+                                                                as Timestamp)
                                                             .toDate()
                                                             .isBefore(
                                                                 DateTime.now())
                                                         ? 'หมดอายุ'
                                                         : 'เปิดใช้งาน'),
-                                                value: b['active'] == true &&
-                                                    (b['endsAt'] as Timestamp)
-                                                        .toDate()
-                                                        .isAfter(
-                                                            DateTime.now()),
-                                                onChanged: _busy
-                                                    ? null
-                                                    : (v) => _change({
-                                                          'action': 'toggle',
-                                                          'id': b['id'],
-                                                          'active': v
-                                                        })),
-                                            Wrap(spacing: 8, children: [
-                                              OutlinedButton(
-                                                  onPressed: _busy
-                                                      ? null
-                                                      : () => _edit(
-                                                          products.data!, b),
-                                                  child: const Text('แก้ไข')),
-                                              TextButton(
-                                                  onPressed: _busy
-                                                      ? null
-                                                      : () async {
-                                                          final confirmed = await showDialog<
-                                                                  bool>(
-                                                              context: context,
-                                                              builder: (context) =>
-                                                                  AlertDialog(
-                                                                      title: Text(
-                                                                          'ลบชุด ${b['name']}?'),
-                                                                      content:
-                                                                          const Text(
-                                                                              'ประวัติการขายเดิมยังคงอยู่'),
-                                                                      actions: [
-                                                                        TextButton(
-                                                                            onPressed: () => Navigator.pop(context,
-                                                                                false),
-                                                                            child:
-                                                                                const Text('กลับ')),
-                                                                        FilledButton(
-                                                                            onPressed: () => Navigator.pop(context,
-                                                                                true),
-                                                                            child:
-                                                                                const Text('ลบชุด'))
-                                                                      ]));
-                                                          if (confirmed ==
-                                                                  true &&
-                                                              mounted) {
-                                                            await _change({
+                                                    value: b['active'] ==
+                                                            true &&
+                                                        (b['endsAt']
+                                                                as Timestamp)
+                                                            .toDate()
+                                                            .isAfter(
+                                                                DateTime.now()),
+                                                    onChanged: _busy
+                                                        ? null
+                                                        : (v) => _change({
                                                               'action':
-                                                                  'delete',
-                                                              'id': b['id']
-                                                            });
-                                                          }
-                                                        },
-                                                  child: const Text('ลบชุด')),
-                                            ]),
-                                          ]))),
-                          ]);
-                    })),
+                                                                  'toggle',
+                                                              'id': b['id'],
+                                                              'active': v
+                                                            })),
+                                                Wrap(spacing: 8, children: [
+                                                  OutlinedButton(
+                                                      onPressed: _busy
+                                                          ? null
+                                                          : () => _edit(
+                                                              products.data!,
+                                                              b),
+                                                      child:
+                                                          const Text('แก้ไข')),
+                                                  TextButton(
+                                                      onPressed: _busy
+                                                          ? null
+                                                          : () async {
+                                                              final confirmed = await showDialog<
+                                                                      bool>(
+                                                                  context:
+                                                                      context,
+                                                                  builder: (context) =>
+                                                                      AlertDialog(
+                                                                          title: Text(
+                                                                              'ลบชุด ${b['name']}?'),
+                                                                          content:
+                                                                              const Text('ประวัติการขายเดิมยังคงอยู่'),
+                                                                          actions: [
+                                                                            TextButton(
+                                                                                onPressed: () => Navigator.pop(context, false),
+                                                                                child: const Text('กลับ')),
+                                                                            FilledButton(
+                                                                                onPressed: () => Navigator.pop(context, true),
+                                                                                child: const Text('ลบชุด'))
+                                                                          ]));
+                                                              if (confirmed ==
+                                                                      true &&
+                                                                  mounted) {
+                                                                await _change({
+                                                                  'action':
+                                                                      'delete',
+                                                                  'id': b['id']
+                                                                });
+                                                              }
+                                                            },
+                                                      child:
+                                                          const Text('ลบชุด')),
+                                                ]),
+                                              ]))),
+                              ]);
+                        }))),
       );
 }
 

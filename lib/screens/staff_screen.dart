@@ -1,3 +1,4 @@
+import '../widgets/content_width.dart';
 import 'package:flutter/material.dart';
 import '../widgets/compact_action.dart';
 
@@ -20,64 +21,67 @@ class StaffScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('พนักงาน'), centerTitle: true),
-      body: StreamBuilder<List<StaffMember>>(
-        stream: StaffService.watchAll(),
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final staff = snap.data ?? const [];
+      body: ContentWidth(
+          maxWidth: 1040,
+          child: StreamBuilder<List<StaffMember>>(
+            stream: StaffService.watchAll(),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final staff = snap.data ?? const [];
 
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline,
-                        size: 16,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.6)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        cap < 0
-                            ? 'เพิ่มพนักงานได้ไม่จำกัด · พนักงานเลือกตัวเองด้วย PIN ตอนขาย'
-                            : 'แผนนี้รองรับ $cap คน (รวมเจ้าของ) · พนักงานใช้ PIN เข้าโหมดขายแบบจำกัดสิทธิ์',
-                        style: TextStyle(
-                            fontSize: 12,
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline,
+                            size: 16,
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
                                 .withValues(alpha: 0.6)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: staff.isEmpty
-                    ? Center(
-                        child: Text('ยังไม่มีพนักงานเพิ่ม',
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            cap < 0
+                                ? 'เพิ่มพนักงานได้ไม่จำกัด · พนักงานเลือกตัวเองด้วย PIN ตอนขาย'
+                                : 'แผนนี้รองรับ $cap คน (รวมเจ้าของ) · พนักงานใช้ PIN เข้าโหมดขายแบบจำกัดสิทธิ์',
                             style: TextStyle(
+                                fontSize: 12,
                                 color: Theme.of(context)
                                     .colorScheme
                                     .onSurface
-                                    .withValues(alpha: 0.5))),
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: staff.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
-                        itemBuilder: (_, i) => _StaffTile(staff: staff[i]),
-                      ),
-              ),
-            ],
-          );
-        },
-      ),
+                                    .withValues(alpha: 0.6)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: staff.isEmpty
+                        ? Center(
+                            child: Text('ยังไม่มีพนักงานเพิ่ม',
+                                style: TextStyle(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.5))),
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            itemCount: staff.length,
+                            separatorBuilder: (_, __) =>
+                                const Divider(height: 1),
+                            itemBuilder: (_, i) => _StaffTile(staff: staff[i]),
+                          ),
+                  ),
+                ],
+              );
+            },
+          )),
       floatingActionButton: StreamBuilder<List<StaffMember>>(
         stream: StaffService.watchAll(),
         builder: (context, snap) {

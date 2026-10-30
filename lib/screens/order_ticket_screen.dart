@@ -56,6 +56,7 @@ class OrderTicketScreen extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('ใบงานออเดอร์ / นัดรับ')),
         body: PdfPreview(
+            maxPageWidth: 560,
             build: _build,
             pdfFileName: 'order_${order.id}.pdf',
             canChangePageFormat: false,

@@ -1,3 +1,5 @@
+import '../widgets/compact_action.dart';
+import '../widgets/content_width.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -232,7 +234,8 @@ class _SupplierCatalogScreenState extends State<SupplierCatalogScreen> {
               ],
               const SizedBox(height: 20),
               if (p.available)
-                FilledButton.icon(
+                CompactAction(
+                    child: FilledButton.icon(
                   onPressed: () {
                     final current = _cart[p.id] ?? 0;
                     _setQty(p, current == 0 ? p.moq : current + 1);
@@ -247,7 +250,7 @@ class _SupplierCatalogScreenState extends State<SupplierCatalogScreen> {
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                ),
+                )),
             ],
           ),
         );
@@ -325,28 +328,31 @@ class _SupplierCatalogScreenState extends State<SupplierCatalogScreen> {
         title: Text(widget.supplier.name),
         centerTitle: true,
       ),
-      body: StreamBuilder<List<SupplierProduct>>(
-        stream: MarketplaceService.watchCatalog(widget.supplier.id),
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final products = snap.data ?? const [];
-          // One-shot reorder reconciliation once the catalog is in hand.
-          if (!_reconciled && widget.initialItems != null) {
-            _reconciled = true;
-            WidgetsBinding.instance
-                .addPostFrameCallback((_) => _reconcile(products));
-          }
-          if (products.isEmpty) {
-            return Center(
-              child: Text('ยังไม่มีสินค้าในแคตตาล็อก',
-                  style: TextStyle(color: cs.onSurface.withValues(alpha: 0.5))),
-            );
-          }
-          return _buildGroupedList(products, cs);
-        },
-      ),
+      body: ContentWidth(
+          maxWidth: 1040,
+          child: StreamBuilder<List<SupplierProduct>>(
+            stream: MarketplaceService.watchCatalog(widget.supplier.id),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final products = snap.data ?? const [];
+              // One-shot reorder reconciliation once the catalog is in hand.
+              if (!_reconciled && widget.initialItems != null) {
+                _reconciled = true;
+                WidgetsBinding.instance
+                    .addPostFrameCallback((_) => _reconcile(products));
+              }
+              if (products.isEmpty) {
+                return Center(
+                  child: Text('ยังไม่มีสินค้าในแคตตาล็อก',
+                      style: TextStyle(
+                          color: cs.onSurface.withValues(alpha: 0.5))),
+                );
+              }
+              return _buildGroupedList(products, cs);
+            },
+          )),
       bottomSheet: _cart.isEmpty
           ? null
           : _CartBar(
@@ -567,7 +573,10 @@ class _CartBar extends StatelessWidget {
                   style: TextStyle(fontSize: 12, color: cs.error),
                 ),
               ),
-            Row(
+            Wrap(
+              spacing: 16,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -583,8 +592,7 @@ class _CartBar extends StatelessWidget {
                             color: cs.primary)),
                   ],
                 ),
-                const SizedBox(width: 16),
-                Expanded(
+                CompactAction(
                   child: FilledButton(
                     onPressed: (placing || !meetsMinimum) ? null : onPlace,
                     style: FilledButton.styleFrom(

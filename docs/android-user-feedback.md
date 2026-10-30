@@ -1,5 +1,12 @@
 # Android pilot feedback — 2026-10-03
 
+## Released 1.2.66+83 — detailed sizing review (2026-10-30)
+
+- Bounded receipt/ticket previews, responsive document tools, single-column form/list/report widths and compact actions across the affected screens. Physical paper size and document generation remain unchanged.
+- Full Flutter suite: 348 passed; analyzer clean; final document/action checks: 13 passed. Installed `1.2.65-ui-review` (82) on SM-X900 and visually checked receipt portrait/landscape/footer plus product-form keyboard/save reachability without creating transactions.
+- Published Android 1.2.66+83 through Firebase Hosting. Public manifest and full APK download match the build: 96,100,718 bytes, SHA-256 `9a404ffd040f74a9f97871a08502494ba2a9adc48a8f71cdb9e08fcf1ac73221`; original signing certificate retained and no-cache headers verified. Build 82 APK/manifest backed up and hash-checked. Optional update; minimum supported build remains 1. No backend/rules deployment or iOS TestFlight release was performed.
+- Final release build completed in 116.8 seconds. ADB reports no connected devices at release time, so final build 83 installation is outstanding; physical UI acceptance above used the local candidate. See [UI sizing audit](ui-sizing-audit-2026-10-30.md) for scope, limits and device evidence. Held receipt-feed changes remain excluded.
+
 ## Released 1.2.65+82 — kitchen workflow and tablet widths (2026-10-30)
 
 - Kitchen tasks survive payment/drawer closing and table reuse. The same server-authorized ready action serves owners and staff, preserves billing/stock/table state, records who prepared the food, and safely handles repeated taps. Staff kitchen reads include legacy paid unfinished work with pagination and incremental polling.

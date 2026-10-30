@@ -1,3 +1,5 @@
+import '../widgets/content_width.dart';
+import '../widgets/compact_action.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -146,127 +148,137 @@ class _AutoPrintScreenState extends State<AutoPrintScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('พิมพ์อัตโนมัติ')),
-        body: SafeArea(
-            child: ListView(padding: const EdgeInsets.all(16), children: [
-          const Text(
-              'ใช้เครื่องหลักหนึ่งเครื่องต่อร้าน รับงานจากหน้าร้านและออนไลน์ '
-              'เริ่มเก็บงานใหม่หลังเปิดโหมดนี้ งานที่รับไว้แล้วจะยังอยู่ในคิวเมื่อหยุดหรือเน็ตหลุด'),
-          const SizedBox(height: 12),
-          StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-              stream: _configuration,
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return const Text(
-                      'โหลดสถานะเครื่องหลักไม่ได้ ตรวจอินเทอร์เน็ตแล้วลองใหม่');
-                }
-                final c = snapshot.data?.data();
-                return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(c?['enabled'] == true
-                          ? 'เครื่องหลักของร้าน: ${c?['deviceName'] ?? ''}'
-                          : 'ร้านยังไม่ได้เปิดพิมพ์อัตโนมัติ'),
-                      if (c?['enabled'] == true &&
-                          DateTime.now().millisecondsSinceEpoch -
-                                  ((c?['heartbeatAtMs'] as num?)?.toInt() ??
-                                      0) >
-                              120000)
-                        const Text(
-                            'เครื่องหลักขาดการติดต่อ เปิดโหมดใหม่บนเครื่องหลักเพื่อรับคิวต่อ'),
-                      if (c?['activeJob'] is String)
-                        StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                          stream: AutoPrintService.jobs(_shopId)
-                              .doc(c!['activeJob'] as String)
-                              .snapshots(),
-                          builder: (context, job) => job.data?.data() == null
-                              ? const SizedBox.shrink()
-                              : _job(job.data!.id, job.data!.data()!),
-                        ),
-                      if (c?['enabled'] == true)
-                        TextButton(
-                            onPressed: _busy
-                                ? null
-                                : () => _run(AutoPrintService.stopShop),
-                            child: const Text('ปิดพิมพ์อัตโนมัติของร้าน')),
+        body: ContentWidth(
+            maxWidth: 840,
+            child: SafeArea(
+                child: ListView(padding: const EdgeInsets.all(16), children: [
+              const Text(
+                  'ใช้เครื่องหลักหนึ่งเครื่องต่อร้าน รับงานจากหน้าร้านและออนไลน์ '
+                  'เริ่มเก็บงานใหม่หลังเปิดโหมดนี้ งานที่รับไว้แล้วจะยังอยู่ในคิวเมื่อหยุดหรือเน็ตหลุด'),
+              const SizedBox(height: 12),
+              StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                  stream: _configuration,
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return const Text(
+                          'โหลดสถานะเครื่องหลักไม่ได้ ตรวจอินเทอร์เน็ตแล้วลองใหม่');
+                    }
+                    final c = snapshot.data?.data();
+                    return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(c?['enabled'] == true
+                              ? 'เครื่องหลักของร้าน: ${c?['deviceName'] ?? ''}'
+                              : 'ร้านยังไม่ได้เปิดพิมพ์อัตโนมัติ'),
+                          if (c?['enabled'] == true &&
+                              DateTime.now().millisecondsSinceEpoch -
+                                      ((c?['heartbeatAtMs'] as num?)?.toInt() ??
+                                          0) >
+                                  120000)
+                            const Text(
+                                'เครื่องหลักขาดการติดต่อ เปิดโหมดใหม่บนเครื่องหลักเพื่อรับคิวต่อ'),
+                          if (c?['activeJob'] is String)
+                            StreamBuilder<
+                                DocumentSnapshot<Map<String, dynamic>>>(
+                              stream: AutoPrintService.jobs(_shopId)
+                                  .doc(c!['activeJob'] as String)
+                                  .snapshots(),
+                              builder: (context, job) =>
+                                  job.data?.data() == null
+                                      ? const SizedBox.shrink()
+                                      : _job(job.data!.id, job.data!.data()!),
+                            ),
+                          if (c?['enabled'] == true)
+                            TextButton(
+                                onPressed: _busy
+                                    ? null
+                                    : () => _run(AutoPrintService.stopShop),
+                                child: const Text('ปิดพิมพ์อัตโนมัติของร้าน')),
+                        ]);
+                  }),
+              const Divider(),
+              if (BluetoothPrinterService.supported) ...[
+                Text(_status),
+                Text('เครื่องพิมพ์: ${_printer ?? 'ยังไม่ได้เลือก'}'),
+                CompactAction(
+                    child: OutlinedButton.icon(
+                        onPressed: _busy || _running
+                            ? null
+                            : () async {
+                                await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) =>
+                                            const BluetoothPrinterScreen()));
+                                await _refresh();
+                              },
+                        icon: const Icon(Icons.bluetooth),
+                        label: const Text('เลือกเครื่อง / พิมพ์ทดสอบ'))),
+                SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('ใบงานครัว'),
+                    subtitle: const Text(
+                        'โต๊ะเมื่อส่งครัว • ออนไลน์เมื่อยืนยันรับงานหรือรับเงิน • ซื้อกลับหน้าเคาน์เตอร์หลังรับเงิน'),
+                    value: _kitchen,
+                    onChanged: _busy || _running
+                        ? null
+                        : (v) => setState(() => _kitchen = v)),
+                SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('ใบเสร็จเมื่อรับเงินแล้ว'),
+                    subtitle: const Text(
+                        'ทุกช่องทาง ไม่พิมพ์ใบเสร็จรับเงินสำหรับบิลเครดิต'),
+                    value: _receipts,
+                    onChanged: _busy || _running
+                        ? null
+                        : (v) => setState(() => _receipts = v)),
+                CompactAction(
+                    child: FilledButton.icon(
+                        onPressed: _busy
+                            ? null
+                            : () => _run(_running
+                                ? AutoPrintService.stopLocal
+                                : () => AutoPrintService.start(
+                                    kitchen: _kitchen, receipts: _receipts)),
+                        icon: Icon(_running ? Icons.pause : Icons.print),
+                        label: Text(_running
+                            ? 'พักเครื่องนี้ (เก็บงานเข้าคิวต่อ)'
+                            : 'เปิดเครื่องนี้เป็นเครื่องหลัก'))),
+                const Text(
+                    'ขณะเปิดโหมดนี้มีการแจ้งเตือนสถานะและใช้แบตเตอรี่เพิ่ม '
+                    'หลังรีสตาร์ทมือถือหรือบังคับปิดแอพ ให้เปิดโหมดใหม่ หากเปลี่ยนเครื่องหลักให้หยุดเครื่องเดิมก่อน'),
+              ] else
+                const Text(
+                    'ดูคิวและตรวจงานได้จากเครื่องนี้ ใช้ Android ที่จับคู่เครื่องพิมพ์แล้วเป็นเครื่องหลัก'),
+              if (_busy) const LinearProgressIndicator(),
+              if (_error != null)
+                Text(_error!,
+                    style:
+                        TextStyle(color: Theme.of(context).colorScheme.error)),
+              const SizedBox(height: 20),
+              Text('งานล่าสุด 50 รายการ',
+                  style: Theme.of(context).textTheme.titleMedium),
+              const Text('“ส่งข้อมูลแล้ว” ยังไม่ใช่การยืนยันว่ากระดาษออกครบ '
+                  'หากงานค้างกำลังส่ง ให้รอ 5 นาทีก่อนตรวจผลหรือสั่งพิมพ์ซ้ำ'),
+              StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: _jobs,
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return const Text('โหลดคิวไม่ได้ กรุณาลองใหม่');
+                    }
+                    if (!snapshot.hasData) {
+                      return const LinearProgressIndicator();
+                    }
+                    if (snapshot.data!.docs.isEmpty) {
+                      return const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Text('ยังไม่มีงานพิมพ์อัตโนมัติ'));
+                    }
+                    return Column(children: [
+                      for (final doc in snapshot.data!.docs)
+                        _job(doc.id, doc.data())
                     ]);
-              }),
-          const Divider(),
-          if (BluetoothPrinterService.supported) ...[
-            Text(_status),
-            Text('เครื่องพิมพ์: ${_printer ?? 'ยังไม่ได้เลือก'}'),
-            OutlinedButton.icon(
-                onPressed: _busy || _running
-                    ? null
-                    : () async {
-                        await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) =>
-                                    const BluetoothPrinterScreen()));
-                        await _refresh();
-                      },
-                icon: const Icon(Icons.bluetooth),
-                label: const Text('เลือกเครื่อง / พิมพ์ทดสอบ')),
-            SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('ใบงานครัว'),
-                subtitle: const Text(
-                    'โต๊ะเมื่อส่งครัว • ออนไลน์เมื่อยืนยันรับงานหรือรับเงิน • ซื้อกลับหน้าเคาน์เตอร์หลังรับเงิน'),
-                value: _kitchen,
-                onChanged: _busy || _running
-                    ? null
-                    : (v) => setState(() => _kitchen = v)),
-            SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('ใบเสร็จเมื่อรับเงินแล้ว'),
-                subtitle: const Text(
-                    'ทุกช่องทาง ไม่พิมพ์ใบเสร็จรับเงินสำหรับบิลเครดิต'),
-                value: _receipts,
-                onChanged: _busy || _running
-                    ? null
-                    : (v) => setState(() => _receipts = v)),
-            FilledButton.icon(
-                onPressed: _busy
-                    ? null
-                    : () => _run(_running
-                        ? AutoPrintService.stopLocal
-                        : () => AutoPrintService.start(
-                            kitchen: _kitchen, receipts: _receipts)),
-                icon: Icon(_running ? Icons.pause : Icons.print),
-                label: Text(_running
-                    ? 'พักเครื่องนี้ (เก็บงานเข้าคิวต่อ)'
-                    : 'เปิดเครื่องนี้เป็นเครื่องหลัก')),
-            const Text('ขณะเปิดโหมดนี้มีการแจ้งเตือนสถานะและใช้แบตเตอรี่เพิ่ม '
-                'หลังรีสตาร์ทมือถือหรือบังคับปิดแอพ ให้เปิดโหมดใหม่ หากเปลี่ยนเครื่องหลักให้หยุดเครื่องเดิมก่อน'),
-          ] else
-            const Text(
-                'ดูคิวและตรวจงานได้จากเครื่องนี้ ใช้ Android ที่จับคู่เครื่องพิมพ์แล้วเป็นเครื่องหลัก'),
-          if (_busy) const LinearProgressIndicator(),
-          if (_error != null)
-            Text(_error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error)),
-          const SizedBox(height: 20),
-          Text('งานล่าสุด 50 รายการ',
-              style: Theme.of(context).textTheme.titleMedium),
-          const Text('“ส่งข้อมูลแล้ว” ยังไม่ใช่การยืนยันว่ากระดาษออกครบ '
-              'หากงานค้างกำลังส่ง ให้รอ 5 นาทีก่อนตรวจผลหรือสั่งพิมพ์ซ้ำ'),
-          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: _jobs,
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return const Text('โหลดคิวไม่ได้ กรุณาลองใหม่');
-                }
-                if (!snapshot.hasData) return const LinearProgressIndicator();
-                if (snapshot.data!.docs.isEmpty) {
-                  return const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Text('ยังไม่มีงานพิมพ์อัตโนมัติ'));
-                }
-                return Column(children: [
-                  for (final doc in snapshot.data!.docs)
-                    _job(doc.id, doc.data())
-                ]);
-              }),
-        ])),
+                  }),
+            ]))),
       );
 }

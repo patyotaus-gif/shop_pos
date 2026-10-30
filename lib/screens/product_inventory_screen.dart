@@ -1,3 +1,5 @@
+import '../widgets/compact_action.dart';
+import '../widgets/content_width.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -48,120 +50,127 @@ class ProductInventoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('จัดการสต๊อก')),
-        body: StreamBuilder<Product?>(
-            stream: InventoryService.watchProduct(productId),
-            builder: (context, snap) {
-              if (snap.hasError) {
-                return const Center(child: Text('โหลดสินค้าไม่สำเร็จ'));
-              }
-              if (!snap.hasData) {
-                return const Center(child: Text('กำลังโหลด หรือไม่พบสินค้า'));
-              }
-              final p = snap.data!;
-              if (p.isRecipeMode) {
-                return const Center(
-                    child:
-                        Text('สินค้านี้ตัดตามสูตร จัดการสต๊อกที่หน้าวัตถุดิบ'));
-              }
-              return ListView(padding: const EdgeInsets.all(16), children: [
-                OutlinedButton.icon(
-                    onPressed: () => openStockReceiveScanner(context),
-                    icon: const Icon(Icons.qr_code_scanner),
-                    label: const Text('สแกนรับสินค้าเข้า')),
-                Text(p.name, style: Theme.of(context).textTheme.titleLarge),
-                Text(
-                    'SKU ${p.sku.isEmpty ? 'ยังไม่กำหนด' : p.sku} • ${p.unit}'),
-                if (p.storageLocation.isNotEmpty)
-                  Text('จัดเก็บ: ${p.storageLocation}'),
-                const SizedBox(height: 12),
-                StreamBuilder<num>(
-                    stream: InventoryService.watchReserved(productId),
-                    builder: (context, held) {
-                      if (!held.hasData) {
-                        return Text(held.hasError
-                            ? 'โหลดจำนวนจองไม่สำเร็จ'
-                            : 'กำลังตรวจจำนวนจอง');
-                      }
-                      final available =
-                          (p.saleable - held.data!).clamp(0, double.infinity);
-                      return Wrap(spacing: 8, runSpacing: 8, children: [
-                        Chip(
-                            label: Text(
-                                'คงเหลือ ${stockText(p.stock)} ${p.unit}')),
-                        Chip(
-                            label: Text('จองออนไลน์ ${stockText(held.data!)}')),
-                        Chip(label: Text('พร้อมขาย ${stockText(available)}')),
-                        if (p.stock > p.saleable)
-                          Chip(
-                              label: Text(
-                                  'หมดอายุ ${stockText(p.stock - p.saleable)}')),
-                      ]);
-                    }),
-                const SizedBox(height: 12),
-                Wrap(spacing: 8, runSpacing: 8, children: [
-                  for (final entry in const {
-                    'receive': 'รับสินค้าเข้า',
-                    'count': 'ตรวจนับ',
-                    'waste': 'ของเสีย / ตัดออก'
-                  }.entries)
-                    OutlinedButton(
-                        onPressed: () => showDialog<void>(
-                            context: context,
-                            builder: (_) =>
-                                _StockDialog(product: p, kind: entry.key)),
-                        child: Text(entry.value)),
-                ]),
-                if (p.trackLots) ...[
-                  const SizedBox(height: 16),
-                  Text('ล็อตสินค้า',
-                      style: Theme.of(context).textTheme.titleMedium),
-                  for (final lot in p.stockLots)
-                    ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(
-                            '${lot['number']} • ${stockText(lot['quantity'] as num)} ${p.unit}'),
-                        subtitle: Text(
-                            'หมดอายุ ${lot['expiresOn']}${(lot['expiresOn'] as String).compareTo(stockToday()) < 0 ? ' • ห้ามขาย' : ''}')),
-                ],
-                const Divider(height: 32),
-                Text('ประวัติสต๊อกล่าสุด 100 รายการ',
-                    style: Theme.of(context).textTheme.titleMedium),
-                const Text(
-                    'เริ่มเก็บเมื่อใช้งานระบบสต๊อกรุ่นนี้ รายการเก่ายังอยู่ในประวัติการขาย'),
-                StreamBuilder<List<Map<String, dynamic>>>(
-                    stream: InventoryService.history(productId),
-                    builder: (context, history) {
-                      if (history.hasError) {
-                        return const Text('โหลดประวัติไม่สำเร็จ');
-                      }
-                      if (!history.hasData) {
-                        return const LinearProgressIndicator();
-                      }
-                      if (history.data!.isEmpty) {
-                        return const Padding(
-                            padding: EdgeInsets.all(16),
-                            child: Text('ยังไม่มีรายการ'));
-                      }
-                      return Column(children: [
-                        for (final row in history.data!)
-                          ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: Text('${const {
-                                    'opening': 'ยอดเริ่มต้น',
-                                    'receive': 'รับเข้า',
-                                    'count': 'ตรวจนับ',
-                                    'waste': 'ของเสีย',
-                                    'sale': 'ขาย',
-                                    'refund': 'คืนสินค้า'
-                                  }[row['kind']] ?? row['kind']} ${stockText(row['delta'] as num)} ${row['unit'] ?? ''}'),
-                              subtitle: Text(
-                                  '${row['reason'] ?? ''}${row['lot'] is Map ? '\nล็อต ${(row['lot'] as Map)['number']}' : ''}${(row['documentNumber'] as String? ?? '').isNotEmpty ? '\nเอกสาร ${row['documentNumber']}' : ''}\n${row['createdAt'] is Timestamp ? (row['createdAt'] as Timestamp).toDate().toLocal().toString().split('.').first : 'กำลังบันทึก'}${row['referenceId'] != null ? '\nอ้างอิง ${row['referenceId']}' : ''}'),
-                              trailing: Text(
-                                  'เหลือ ${stockText(row['after'] as num)}'))
-                      ]);
-                    }),
-              ]);
-            }),
+        body: ContentWidth(
+            maxWidth: 840,
+            child: StreamBuilder<Product?>(
+                stream: InventoryService.watchProduct(productId),
+                builder: (context, snap) {
+                  if (snap.hasError) {
+                    return const Center(child: Text('โหลดสินค้าไม่สำเร็จ'));
+                  }
+                  if (!snap.hasData) {
+                    return const Center(
+                        child: Text('กำลังโหลด หรือไม่พบสินค้า'));
+                  }
+                  final p = snap.data!;
+                  if (p.isRecipeMode) {
+                    return const Center(
+                        child: Text(
+                            'สินค้านี้ตัดตามสูตร จัดการสต๊อกที่หน้าวัตถุดิบ'));
+                  }
+                  return ListView(padding: const EdgeInsets.all(16), children: [
+                    CompactAction(
+                        child: OutlinedButton.icon(
+                            onPressed: () => openStockReceiveScanner(context),
+                            icon: const Icon(Icons.qr_code_scanner),
+                            label: const Text('สแกนรับสินค้าเข้า'))),
+                    Text(p.name, style: Theme.of(context).textTheme.titleLarge),
+                    Text(
+                        'SKU ${p.sku.isEmpty ? 'ยังไม่กำหนด' : p.sku} • ${p.unit}'),
+                    if (p.storageLocation.isNotEmpty)
+                      Text('จัดเก็บ: ${p.storageLocation}'),
+                    const SizedBox(height: 12),
+                    StreamBuilder<num>(
+                        stream: InventoryService.watchReserved(productId),
+                        builder: (context, held) {
+                          if (!held.hasData) {
+                            return Text(held.hasError
+                                ? 'โหลดจำนวนจองไม่สำเร็จ'
+                                : 'กำลังตรวจจำนวนจอง');
+                          }
+                          final available = (p.saleable - held.data!)
+                              .clamp(0, double.infinity);
+                          return Wrap(spacing: 8, runSpacing: 8, children: [
+                            Chip(
+                                label: Text(
+                                    'คงเหลือ ${stockText(p.stock)} ${p.unit}')),
+                            Chip(
+                                label: Text(
+                                    'จองออนไลน์ ${stockText(held.data!)}')),
+                            Chip(
+                                label:
+                                    Text('พร้อมขาย ${stockText(available)}')),
+                            if (p.stock > p.saleable)
+                              Chip(
+                                  label: Text(
+                                      'หมดอายุ ${stockText(p.stock - p.saleable)}')),
+                          ]);
+                        }),
+                    const SizedBox(height: 12),
+                    Wrap(spacing: 8, runSpacing: 8, children: [
+                      for (final entry in const {
+                        'receive': 'รับสินค้าเข้า',
+                        'count': 'ตรวจนับ',
+                        'waste': 'ของเสีย / ตัดออก'
+                      }.entries)
+                        OutlinedButton(
+                            onPressed: () => showDialog<void>(
+                                context: context,
+                                builder: (_) =>
+                                    _StockDialog(product: p, kind: entry.key)),
+                            child: Text(entry.value)),
+                    ]),
+                    if (p.trackLots) ...[
+                      const SizedBox(height: 16),
+                      Text('ล็อตสินค้า',
+                          style: Theme.of(context).textTheme.titleMedium),
+                      for (final lot in p.stockLots)
+                        ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(
+                                '${lot['number']} • ${stockText(lot['quantity'] as num)} ${p.unit}'),
+                            subtitle: Text(
+                                'หมดอายุ ${lot['expiresOn']}${(lot['expiresOn'] as String).compareTo(stockToday()) < 0 ? ' • ห้ามขาย' : ''}')),
+                    ],
+                    const Divider(height: 32),
+                    Text('ประวัติสต๊อกล่าสุด 100 รายการ',
+                        style: Theme.of(context).textTheme.titleMedium),
+                    const Text(
+                        'เริ่มเก็บเมื่อใช้งานระบบสต๊อกรุ่นนี้ รายการเก่ายังอยู่ในประวัติการขาย'),
+                    StreamBuilder<List<Map<String, dynamic>>>(
+                        stream: InventoryService.history(productId),
+                        builder: (context, history) {
+                          if (history.hasError) {
+                            return const Text('โหลดประวัติไม่สำเร็จ');
+                          }
+                          if (!history.hasData) {
+                            return const LinearProgressIndicator();
+                          }
+                          if (history.data!.isEmpty) {
+                            return const Padding(
+                                padding: EdgeInsets.all(16),
+                                child: Text('ยังไม่มีรายการ'));
+                          }
+                          return Column(children: [
+                            for (final row in history.data!)
+                              ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text('${const {
+                                        'opening': 'ยอดเริ่มต้น',
+                                        'receive': 'รับเข้า',
+                                        'count': 'ตรวจนับ',
+                                        'waste': 'ของเสีย',
+                                        'sale': 'ขาย',
+                                        'refund': 'คืนสินค้า'
+                                      }[row['kind']] ?? row['kind']} ${stockText(row['delta'] as num)} ${row['unit'] ?? ''}'),
+                                  subtitle: Text(
+                                      '${row['reason'] ?? ''}${row['lot'] is Map ? '\nล็อต ${(row['lot'] as Map)['number']}' : ''}${(row['documentNumber'] as String? ?? '').isNotEmpty ? '\nเอกสาร ${row['documentNumber']}' : ''}\n${row['createdAt'] is Timestamp ? (row['createdAt'] as Timestamp).toDate().toLocal().toString().split('.').first : 'กำลังบันทึก'}${row['referenceId'] != null ? '\nอ้างอิง ${row['referenceId']}' : ''}'),
+                                  trailing: Text(
+                                      'เหลือ ${stockText(row['after'] as num)}'))
+                          ]);
+                        }),
+                  ]);
+                })),
       );
 }
 

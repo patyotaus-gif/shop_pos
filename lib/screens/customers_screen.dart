@@ -1,3 +1,4 @@
+import '../widgets/content_width.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -24,90 +25,93 @@ class _CustomersScreenState extends State<CustomersScreen> {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('ลูกค้าสะสมแต้ม'), centerTitle: true),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-            child: TextField(
-              decoration: const InputDecoration(
-                hintText: 'ค้นหาชื่อ / เบอร์โทร',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
-                isDense: true,
+      body: ContentWidth(
+          maxWidth: 1040,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                child: TextField(
+                  decoration: const InputDecoration(
+                    hintText: 'ค้นหาชื่อ / เบอร์โทร',
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  onChanged: (v) =>
+                      setState(() => _query = v.trim().toLowerCase()),
+                ),
               ),
-              onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
-            ),
-          ),
-          Expanded(
-            child: StreamBuilder<List<Customer>>(
-              stream: CustomerService.watchAll(),
-              builder: (context, snap) {
-                if (snap.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                var customers = snap.data ?? const <Customer>[];
-                if (_query.isNotEmpty) {
-                  customers = customers
-                      .where((c) =>
-                          c.name.toLowerCase().contains(_query) ||
-                          c.phone.contains(_query))
-                      .toList();
-                }
-                if (customers.isEmpty) {
-                  return Center(
-                    child: Text(
-                      _query.isEmpty
-                          ? 'ยังไม่มีลูกค้า — เพิ่มได้ตอนขาย หรือกดปุ่ม +'
-                          : 'ไม่พบลูกค้า',
-                      style: TextStyle(
-                          color: cs.onSurface.withValues(alpha: 0.5)),
-                    ),
-                  );
-                }
-                return ListView.separated(
-                  itemCount: customers.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (_, i) {
-                    final c = customers[i];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: cs.primary.withValues(alpha: 0.12),
+              Expanded(
+                child: StreamBuilder<List<Customer>>(
+                  stream: CustomerService.watchAll(),
+                  builder: (context, snap) {
+                    if (snap.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    var customers = snap.data ?? const <Customer>[];
+                    if (_query.isNotEmpty) {
+                      customers = customers
+                          .where((c) =>
+                              c.name.toLowerCase().contains(_query) ||
+                              c.phone.contains(_query))
+                          .toList();
+                    }
+                    if (customers.isEmpty) {
+                      return Center(
                         child: Text(
-                          c.name.isNotEmpty ? c.name.characters.first : '?',
+                          _query.isEmpty
+                              ? 'ยังไม่มีลูกค้า — เพิ่มได้ตอนขาย หรือกดปุ่ม +'
+                              : 'ไม่พบลูกค้า',
                           style: TextStyle(
-                              color: cs.primary,
-                              fontWeight: FontWeight.w700),
+                              color: cs.onSurface.withValues(alpha: 0.5)),
                         ),
-                      ),
-                      title: Text(c.name,
-                          style:
-                              const TextStyle(fontWeight: FontWeight.w600)),
-                      subtitle: Text(
-                          '${c.phone} · ใช้จ่ายรวม ฿${_baht.format(c.totalSpent)}'),
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text('${c.points}',
+                      );
+                    }
+                    return ListView.separated(
+                      itemCount: customers.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (_, i) {
+                        final c = customers[i];
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: cs.primary.withValues(alpha: 0.12),
+                            child: Text(
+                              c.name.isNotEmpty ? c.name.characters.first : '?',
                               style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                  color: cs.primary)),
-                          Text('แต้ม',
-                              style: TextStyle(
-                                  fontSize: 10,
-                                  color: cs.onSurface
-                                      .withValues(alpha: 0.5))),
-                        ],
-                      ),
+                                  color: cs.primary,
+                                  fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                          title: Text(c.name,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w600)),
+                          subtitle: Text(
+                              '${c.phone} · ใช้จ่ายรวม ฿${_baht.format(c.totalSpent)}'),
+                          trailing: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text('${c.points}',
+                                  style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                      color: cs.primary)),
+                              Text('แต้ม',
+                                  style: TextStyle(
+                                      fontSize: 10,
+                                      color:
+                                          cs.onSurface.withValues(alpha: 0.5))),
+                            ],
+                          ),
+                        );
+                      },
                     );
                   },
-                );
-              },
-            ),
-          ),
-        ],
-      ),
+                ),
+              ),
+            ],
+          )),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _addCustomer,
         icon: const Icon(Icons.person_add_alt),
@@ -155,8 +159,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
       ),
     );
     if (ok == true && phoneCtrl.text.trim().isNotEmpty) {
-      await CustomerService.ensure(
-          phone: phoneCtrl.text, name: nameCtrl.text);
+      await CustomerService.ensure(phone: phoneCtrl.text, name: nameCtrl.text);
     }
   }
 }

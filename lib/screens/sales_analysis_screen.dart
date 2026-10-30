@@ -1,3 +1,4 @@
+import '../widgets/content_width.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
@@ -427,48 +428,51 @@ class _SalesAnalysisScreenState extends State<SalesAnalysisScreen> {
               Tab(text: 'บิลต้นทาง'),
               Tab(text: 'บริบท')
             ])),
-        body: Column(children: [
-          Wrap(spacing: 8, children: [
-            for (final d in [7, 30, 90])
-              ChoiceChip(
-                  label: Text('$d วัน'),
-                  selected: _days == d,
-                  onSelected: _busy
-                      ? null
-                      : (_) {
-                          setState(() {
-                            _days = d;
-                            _report = null;
-                          });
-                          _load();
-                        })
-          ]),
-          if (_busy) const LinearProgressIndicator(),
-          if (_error != null)
-            Padding(
-                padding: const EdgeInsets.all(12),
-                child: Text(
-                    '$_error${_report != null ? '\nกำลังแสดงรายงานเดิม' : ''}')),
-          if (_report != null)
-            Padding(
-                padding: const EdgeInsets.all(8),
-                child: Text(
-                    'ดึงข้อมูล ${_report!['generatedAt']} · เขตเวลา ${_report!['timeZone']}',
-                    style: Theme.of(context).textTheme.bodySmall)),
-          Expanded(
-              child: _report == null
-                  ? Center(
-                      child: _busy
-                          ? const Text('กำลังรวบรวมบิลจากระบบ...')
-                          : TextButton(
-                              onPressed: _load, child: const Text('ลองใหม่')))
-                  : TabBarView(children: [
-                      _overview(_report!),
-                      _products(_report!),
-                      _time(_report!),
-                      _sources(_report!),
-                      _context(_report!)
-                    ])),
-        ]),
+        body: ContentWidth(
+            maxWidth: 1200,
+            child: Column(children: [
+              Wrap(spacing: 8, children: [
+                for (final d in [7, 30, 90])
+                  ChoiceChip(
+                      label: Text('$d วัน'),
+                      selected: _days == d,
+                      onSelected: _busy
+                          ? null
+                          : (_) {
+                              setState(() {
+                                _days = d;
+                                _report = null;
+                              });
+                              _load();
+                            })
+              ]),
+              if (_busy) const LinearProgressIndicator(),
+              if (_error != null)
+                Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                        '$_error${_report != null ? '\nกำลังแสดงรายงานเดิม' : ''}')),
+              if (_report != null)
+                Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(
+                        'ดึงข้อมูล ${_report!['generatedAt']} · เขตเวลา ${_report!['timeZone']}',
+                        style: Theme.of(context).textTheme.bodySmall)),
+              Expanded(
+                  child: _report == null
+                      ? Center(
+                          child: _busy
+                              ? const Text('กำลังรวบรวมบิลจากระบบ...')
+                              : TextButton(
+                                  onPressed: _load,
+                                  child: const Text('ลองใหม่')))
+                      : TabBarView(children: [
+                          _overview(_report!),
+                          _products(_report!),
+                          _time(_report!),
+                          _sources(_report!),
+                          _context(_report!)
+                        ])),
+            ])),
       ));
 }

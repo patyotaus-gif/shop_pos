@@ -1,3 +1,4 @@
+import '../widgets/content_width.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../utils/daily_stream.dart';
@@ -708,18 +709,20 @@ class _ReportScreenState extends State<ReportScreen>
               ],
             ),
           ),
-          body: TabBarView(
-            controller: _tab,
-            children: List.generate(
-              4,
-              (i) => _SalesReport(
-                rangeBuilder: () => _rangeFor(i),
-                baht: _baht,
-                dateFormat: _dateFmt,
-                advanced: advanced,
-              ),
-            ),
-          ),
+          body: ContentWidth(
+              maxWidth: 1200,
+              child: TabBarView(
+                controller: _tab,
+                children: List.generate(
+                  4,
+                  (i) => _SalesReport(
+                    rangeBuilder: () => _rangeFor(i),
+                    baht: _baht,
+                    dateFormat: _dateFmt,
+                    advanced: advanced,
+                  ),
+                ),
+              )),
         );
       },
     );

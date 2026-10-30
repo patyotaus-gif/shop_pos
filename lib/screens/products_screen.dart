@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/compact_action.dart';
 import '../models/product.dart';
 import '../models/shop.dart';
 import '../services/entitlements.dart';
@@ -97,8 +98,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
               Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: SizedBox(
-                      width: double.infinity,
+                  child: CompactAction(
                       child: OutlinedButton.icon(
                           onPressed: () => openStockReceiveScanner(context),
                           icon: const Icon(Icons.qr_code_scanner),

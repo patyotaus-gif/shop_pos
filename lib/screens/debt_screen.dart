@@ -1,3 +1,4 @@
+import '../widgets/content_width.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/shop_operation.dart';
 import 'package:flutter/material.dart';
@@ -16,68 +17,71 @@ class DebtScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('ลูกค้าเครดิต'), centerTitle: true),
-      body: StreamBuilder<List<Debt>>(
-        stream: DebtService.watchUnpaid(),
-        builder: (ctx, snap) {
-          if (snap.hasError) {
-            return const Center(child: Text('โหลดข้อมูลไม่สำเร็จ'));
-          }
-          if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final debts = snap.data!;
-          final totalDebt = debts.fold<double>(0, (s, e) => s + e.remaining);
+      body: ContentWidth(
+          maxWidth: 1040,
+          child: StreamBuilder<List<Debt>>(
+            stream: DebtService.watchUnpaid(),
+            builder: (ctx, snap) {
+              if (snap.hasError) {
+                return const Center(child: Text('โหลดข้อมูลไม่สำเร็จ'));
+              }
+              if (!snap.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final debts = snap.data!;
+              final totalDebt =
+                  debts.fold<double>(0, (s, e) => s + e.remaining);
 
-          if (debts.isEmpty) {
-            return const Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+              if (debts.isEmpty) {
+                return const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle_outline,
+                          size: 64, color: Colors.green),
+                      SizedBox(height: 8),
+                      Text('ไม่มีรายการค้างชำระ'),
+                    ],
+                  ),
+                );
+              }
+
+              return Column(
                 children: [
-                  Icon(Icons.check_circle_outline,
-                      size: 64, color: Colors.green),
-                  SizedBox(height: 8),
-                  Text('ไม่มีรายการค้างชำระ'),
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('ยอดค้างชำระรวม',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 16)),
+                        Text('฿${_baht.format(totalDebt)}',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                color: Colors.orange)),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      itemCount: debts.length,
+                      itemBuilder: (ctx, i) => _DebtTile(debt: debts[i]),
+                    ),
+                  ),
                 ],
-              ),
-            );
-          }
-
-          return Column(
-            children: [
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.all(12),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.orange.shade200),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('ยอดค้างชำระรวม',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16)),
-                    Text('฿${_baht.format(totalDebt)}',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                            color: Colors.orange)),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  itemCount: debts.length,
-                  itemBuilder: (ctx, i) => _DebtTile(debt: debts[i]),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+              );
+            },
+          )),
     );
   }
 }

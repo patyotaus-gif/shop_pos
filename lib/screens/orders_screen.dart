@@ -1,3 +1,4 @@
+import '../widgets/content_width.dart';
 import 'dart:async';
 import '../models/order_queue.dart';
 import 'order_sale_screen.dart';
@@ -75,64 +76,67 @@ class _OrdersScreenState extends State<OrdersScreen> {
           ),
         ],
       ),
-      body: StreamBuilder<List<ShopOrder>>(
-        stream: _orders,
-        builder: (context, snap) {
-          if (snap.hasError) {
-            return Center(
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Text('โหลดออเดอร์ไม่สำเร็จ กรุณาตรวจการเชื่อมต่อ'),
-              TextButton.icon(
-                  onPressed: _retry,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('ลองใหม่')),
-            ]));
-          }
-          if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final now = DateTime.now();
-          final all = snap.data!;
-          final orders = all
-              .where((o) => matchesQueue(o, _filter, now))
-              .toList()
-            ..sort((a, b) => _filter == OrderQueue.history
-                ? b.createdAt.compareTo(a.createdAt)
-                : orderDueAt(a).compareTo(orderDueAt(b)));
-          return Column(children: [
-            if (AuthService.isStaff && _filter == OrderQueue.history)
-              const Padding(
-                  padding: EdgeInsets.all(8),
-                  child: Text('ประวัติจาก 100 ออเดอร์ล่าสุดของร้าน')),
-            SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.all(8),
-                child: Row(children: [
-                  for (final f in OrderQueue.values)
-                    Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: _FilterChip(
-                            label: f.label,
-                            count: all
-                                .where((o) => matchesQueue(o, f, now))
-                                .length,
-                            selected: _filter == f,
-                            onTap: () => setState(() => _filter = f))),
-                ])),
-            Divider(height: 1, color: cs.outlineVariant),
-            Expanded(
-                child: orders.isEmpty
-                    ? Center(child: Text('ไม่มีออเดอร์ในหมวด ${_filter.label}'))
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(12),
-                        itemCount: orders.length,
-                        itemBuilder: (_, i) => _OrderCard(
-                            key: ValueKey(orders[i].id),
-                            order: orders[i],
-                            urgency: pickupUrgency(orders[i], now)))),
-          ]);
-        },
-      ),
+      body: ContentWidth(
+          maxWidth: 1040,
+          child: StreamBuilder<List<ShopOrder>>(
+            stream: _orders,
+            builder: (context, snap) {
+              if (snap.hasError) {
+                return Center(
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  const Text('โหลดออเดอร์ไม่สำเร็จ กรุณาตรวจการเชื่อมต่อ'),
+                  TextButton.icon(
+                      onPressed: _retry,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('ลองใหม่')),
+                ]));
+              }
+              if (!snap.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final now = DateTime.now();
+              final all = snap.data!;
+              final orders = all
+                  .where((o) => matchesQueue(o, _filter, now))
+                  .toList()
+                ..sort((a, b) => _filter == OrderQueue.history
+                    ? b.createdAt.compareTo(a.createdAt)
+                    : orderDueAt(a).compareTo(orderDueAt(b)));
+              return Column(children: [
+                if (AuthService.isStaff && _filter == OrderQueue.history)
+                  const Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Text('ประวัติจาก 100 ออเดอร์ล่าสุดของร้าน')),
+                SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.all(8),
+                    child: Row(children: [
+                      for (final f in OrderQueue.values)
+                        Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: _FilterChip(
+                                label: f.label,
+                                count: all
+                                    .where((o) => matchesQueue(o, f, now))
+                                    .length,
+                                selected: _filter == f,
+                                onTap: () => setState(() => _filter = f))),
+                    ])),
+                Divider(height: 1, color: cs.outlineVariant),
+                Expanded(
+                    child: orders.isEmpty
+                        ? Center(
+                            child: Text('ไม่มีออเดอร์ในหมวด ${_filter.label}'))
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(12),
+                            itemCount: orders.length,
+                            itemBuilder: (_, i) => _OrderCard(
+                                key: ValueKey(orders[i].id),
+                                order: orders[i],
+                                urgency: pickupUrgency(orders[i], now)))),
+              ]);
+            },
+          )),
     );
   }
 }
@@ -442,22 +446,25 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(title: const Text('รายละเอียดออเดอร์')),
-      body: StreamBuilder(
-          stream: _stream,
-          builder: (context, snap) {
-            if (snap.hasError) {
-              return Center(
-                  child: TextButton(
-                      onPressed: () => setState(() => _stream = _watch()),
-                      child: const Text('โหลดไม่ได้ · ลองใหม่')));
-            }
-            if (!snap.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            return ListView(padding: const EdgeInsets.all(12), children: [
-              _OrderCard(
-                  expanded: true,
-                  order: ShopOrder.fromFirestore(snap.data!, widget.orderId)),
-            ]);
-          }));
+      body: ContentWidth(
+          maxWidth: 1040,
+          child: StreamBuilder(
+              stream: _stream,
+              builder: (context, snap) {
+                if (snap.hasError) {
+                  return Center(
+                      child: TextButton(
+                          onPressed: () => setState(() => _stream = _watch()),
+                          child: const Text('โหลดไม่ได้ · ลองใหม่')));
+                }
+                if (!snap.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                return ListView(padding: const EdgeInsets.all(12), children: [
+                  _OrderCard(
+                      expanded: true,
+                      order:
+                          ShopOrder.fromFirestore(snap.data!, widget.orderId)),
+                ]);
+              })));
 }

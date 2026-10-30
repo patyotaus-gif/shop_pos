@@ -1,3 +1,4 @@
+import '../widgets/content_width.dart';
 import '../widgets/compact_action.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -57,20 +58,22 @@ class SubscriptionScreen extends StatelessWidget {
               ),
             ],
           ),
-          body: SafeArea(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-              children: [
-                _StatusBanner(shop: shop),
-                const SizedBox(height: 20),
-                const _RenewOnWebCard(),
-                const SizedBox(height: 16),
-                _MarketplaceFootnote(),
-                const SizedBox(height: 20),
-                const AppVersionText(),
-              ],
-            ),
-          ),
+          body: ContentWidth(
+              maxWidth: 760,
+              child: SafeArea(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                  children: [
+                    _StatusBanner(shop: shop),
+                    const SizedBox(height: 20),
+                    const _RenewOnWebCard(),
+                    const SizedBox(height: 16),
+                    _MarketplaceFootnote(),
+                    const SizedBox(height: 20),
+                    const AppVersionText(),
+                  ],
+                ),
+              )),
         );
       },
     );

@@ -1,3 +1,4 @@
+import '../widgets/content_width.dart';
 import '../widgets/compact_action.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -27,12 +28,14 @@ class MarketplaceHomeScreen extends StatelessWidget {
             ],
           ),
         ),
-        body: const TabBarView(
-          children: [
-            _SuppliersTab(),
-            _MyOrdersTab(),
-          ],
-        ),
+        body: ContentWidth(
+            maxWidth: 1040,
+            child: const TabBarView(
+              children: [
+                _SuppliersTab(),
+                _MyOrdersTab(),
+              ],
+            )),
       ),
     );
   }

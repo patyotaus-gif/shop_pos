@@ -51,6 +51,7 @@ void main() {
     expect(tester.widget<PdfPreview>(find.byType(PdfPreview)).initialPageFormat,
         ReceiptGenerator.slip58);
     final slipPreview = tester.widget<PdfPreview>(find.byType(PdfPreview));
+    expect(slipPreview.maxPageWidth, 360);
     expect(slipPreview.dynamicLayout, isFalse);
     final slip = await tester
         .runAsync(() async => slipPreview.build(ReceiptGenerator.slip58));
@@ -75,6 +76,7 @@ void main() {
           entry.value);
       expect(find.textContaining('ยอดรวม ฿25.00'), findsOneWidget);
       final preview = tester.widget<PdfPreview>(find.byType(PdfPreview));
+      expect(preview.maxPageWidth, entry.key == 'A4' ? 720 : 480);
       final selected =
           await tester.runAsync(() async => preview.build(entry.value));
       expect(identical(selected, slip), isFalse,

@@ -1,3 +1,5 @@
+import '../widgets/compact_action.dart';
+import '../widgets/content_width.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:intl/intl.dart';
@@ -137,90 +139,95 @@ class _StaffInventoryScreenState extends State<StaffInventoryScreen> {
             onPressed: _busy ? null : () => _load(reset: true),
             icon: const Icon(Icons.refresh))
       ]),
-      body: SafeArea(
-          top: false,
-          child: Column(children: [
-            Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(children: [
-                  if (widget.api.can('stockReceive'))
-                    SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                            onPressed: _busy ? null : _scanReceive,
-                            icon: const Icon(Icons.qr_code_scanner),
-                            label: const Text('สแกนรับสินค้าเข้า'))),
-                  DropdownButtonFormField<String>(
-                      initialValue: _mode,
-                      key: ValueKey(_mode),
-                      isExpanded: true,
-                      decoration: const InputDecoration(labelText: 'ค้นหาด้วย'),
-                      items: const [
-                        DropdownMenuItem(
-                            value: 'name',
-                            child: Text('ชื่อสินค้า (ขึ้นต้นด้วย)')),
-                        DropdownMenuItem(
-                            value: 'barcode', child: Text('บาร์โค้ด')),
-                        DropdownMenuItem(value: 'sku', child: Text('SKU'))
-                      ],
-                      onChanged:
-                          _busy ? null : (v) => setState(() => _mode = v!)),
-                  const SizedBox(height: 8),
-                  Row(children: [
-                    Expanded(
-                        child: TextField(
-                            controller: _search,
-                            maxLength: 150,
-                            textInputAction: TextInputAction.search,
-                            decoration: InputDecoration(
-                                labelText: 'ค้นหาสินค้า',
-                                counterText: '',
-                                suffixIcon: IconButton(
-                                    tooltip: 'ค้นหา',
-                                    onPressed:
-                                        _busy ? null : () => _load(reset: true),
-                                    icon: const Icon(Icons.search))),
-                            onSubmitted: (_) => _load(reset: true))),
-                    IconButton(
-                        tooltip: 'สแกน QR / บาร์โค้ดเพื่อค้นหา',
-                        onPressed: _busy ? null : _scan,
-                        icon: const Icon(Icons.barcode_reader))
-                  ]),
+      body: ContentWidth(
+          maxWidth: 1040,
+          child: SafeArea(
+              top: false,
+              child: Column(children: [
+                Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(children: [
+                      if (widget.api.can('stockReceive'))
+                        CompactAction(
+                            child: OutlinedButton.icon(
+                                onPressed: _busy ? null : _scanReceive,
+                                icon: const Icon(Icons.qr_code_scanner),
+                                label: const Text('สแกนรับสินค้าเข้า'))),
+                      DropdownButtonFormField<String>(
+                          initialValue: _mode,
+                          key: ValueKey(_mode),
+                          isExpanded: true,
+                          decoration:
+                              const InputDecoration(labelText: 'ค้นหาด้วย'),
+                          items: const [
+                            DropdownMenuItem(
+                                value: 'name',
+                                child: Text('ชื่อสินค้า (ขึ้นต้นด้วย)')),
+                            DropdownMenuItem(
+                                value: 'barcode', child: Text('บาร์โค้ด')),
+                            DropdownMenuItem(value: 'sku', child: Text('SKU'))
+                          ],
+                          onChanged:
+                              _busy ? null : (v) => setState(() => _mode = v!)),
+                      const SizedBox(height: 8),
+                      Row(children: [
+                        Expanded(
+                            child: TextField(
+                                controller: _search,
+                                maxLength: 150,
+                                textInputAction: TextInputAction.search,
+                                decoration: InputDecoration(
+                                    labelText: 'ค้นหาสินค้า',
+                                    counterText: '',
+                                    suffixIcon: IconButton(
+                                        tooltip: 'ค้นหา',
+                                        onPressed: _busy
+                                            ? null
+                                            : () => _load(reset: true),
+                                        icon: const Icon(Icons.search))),
+                                onSubmitted: (_) => _load(reset: true))),
+                        IconButton(
+                            tooltip: 'สแกน QR / บาร์โค้ดเพื่อค้นหา',
+                            onPressed: _busy ? null : _scan,
+                            icon: const Icon(Icons.barcode_reader))
+                      ]),
+                    ])),
+                if (_busy) const LinearProgressIndicator(),
+                Expanded(
+                    child: ListView(children: [
+                  if (_error != null)
+                    ListTile(
+                        title: Text(_error!),
+                        trailing: IconButton(
+                            tooltip: 'ลองใหม่',
+                            onPressed: _busy
+                                ? null
+                                : () => _load(reset: _rows.isEmpty),
+                            icon: const Icon(Icons.refresh))),
+                  if (!_busy && _error == null && _rows.isEmpty)
+                    const ListTile(title: Text('ไม่พบสินค้า')),
+                  for (final p in _rows)
+                    ListTile(
+                        title: Text('${p['name']}'),
+                        subtitle: Text(
+                            'คงเหลือ ${stockText(p['stock'] as num)} ${p['unit']} · ราคาขาย ฿${(p['price'] as num).toStringAsFixed(2)}\nบาร์โค้ด: ${p['barcode'] == '' ? '-' : p['barcode']}'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () async {
+                          await Navigator.push<void>(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => StaffInventoryDetailScreen(
+                                      productId: p['id'] as String,
+                                      api: widget.api)));
+                          if (mounted) await _load(reset: true);
+                        }),
+                  if (_cursor != null)
+                    CompactAction(
+                        child: TextButton(
+                            onPressed: _busy ? null : () => _load(),
+                            child: const Text('โหลดสินค้าเพิ่มเติม'))),
                 ])),
-            if (_busy) const LinearProgressIndicator(),
-            Expanded(
-                child: ListView(children: [
-              if (_error != null)
-                ListTile(
-                    title: Text(_error!),
-                    trailing: IconButton(
-                        tooltip: 'ลองใหม่',
-                        onPressed:
-                            _busy ? null : () => _load(reset: _rows.isEmpty),
-                        icon: const Icon(Icons.refresh))),
-              if (!_busy && _error == null && _rows.isEmpty)
-                const ListTile(title: Text('ไม่พบสินค้า')),
-              for (final p in _rows)
-                ListTile(
-                    title: Text('${p['name']}'),
-                    subtitle: Text(
-                        'คงเหลือ ${stockText(p['stock'] as num)} ${p['unit']} · ราคาขาย ฿${(p['price'] as num).toStringAsFixed(2)}\nบาร์โค้ด: ${p['barcode'] == '' ? '-' : p['barcode']}'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () async {
-                      await Navigator.push<void>(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => StaffInventoryDetailScreen(
-                                  productId: p['id'] as String,
-                                  api: widget.api)));
-                      if (mounted) await _load(reset: true);
-                    }),
-              if (_cursor != null)
-                TextButton(
-                    onPressed: _busy ? null : () => _load(),
-                    child: const Text('โหลดสินค้าเพิ่มเติม')),
-            ])),
-          ])));
+              ]))));
 }
 
 class StaffInventoryDetailScreen extends StatefulWidget {
@@ -288,57 +295,60 @@ class _StaffInventoryDetailScreenState
               onPressed: _busy ? null : _load,
               icon: const Icon(Icons.refresh))
         ]),
-        body: SafeArea(
-            top: false,
-            child: ListView(padding: const EdgeInsets.all(16), children: [
-              if (_busy) const LinearProgressIndicator(),
-              if (_error != null) Text(_error!),
-              if (p != null) ...[
-                Text('${p['name']}',
-                    style: Theme.of(context).textTheme.titleLarge),
-                Text(
-                    'SKU: ${p['sku'] == '' ? '-' : p['sku']}\nบาร์โค้ด: ${p['barcode'] == '' ? '-' : p['barcode']}'),
-                Text(
-                    'ราคาขาย ฿${(p['price'] as num).toStringAsFixed(2)} / ${p['unit']}'),
-                if (p.containsKey('unitCost'))
-                  Text(
-                      'ต้นทุน ฿${(p['unitCost'] as num).toStringAsFixed(2)} / ${p['unit']}'),
-                const SizedBox(height: 12),
-                Text(
-                    'คงเหลือ ${stockText(p['stock'] as num)} ${p['unit']} · จองออนไลน์ ${stockText(p['reserved'] as num)} · พร้อมขาย ${stockText(p['available'] as num)}'),
-                const SizedBox(height: 12),
-                if (p['stockMode'] == 'recipe')
-                  const Text('สินค้านี้ใช้สูตร ให้เจ้าของร้านจัดการที่วัตถุดิบ')
-                else
-                  Wrap(spacing: 8, runSpacing: 8, children: [
-                    for (final e in _actions.entries)
-                      if (widget.api.can(_permissions[e.key]!))
-                        OutlinedButton(
-                            onPressed: _busy || _error != null
-                                ? null
-                                : () => _adjust(e.key),
-                            child: Text(e.value))
-                  ]),
-                if (p['trackLots'] == true) ...[
-                  const SizedBox(height: 16),
-                  Text('ล็อตสินค้า',
-                      style: Theme.of(context).textTheme.titleMedium),
-                  for (final lot in p['stockLots'] as List)
-                    ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(
-                            '${lot['number']} · ${stockText(lot['quantity'] as num)} ${p['unit']}'),
-                        subtitle: Text('หมดอายุ ${lot['expiresOn']}')),
-                ],
-                if (widget.api.can('stockHistory')) ...[
-                  const Divider(height: 32),
-                  StaffStockHistory(
-                      key: ValueKey(_revision),
-                      productId: widget.productId,
-                      api: widget.api)
-                ],
-              ],
-            ])));
+        body: ContentWidth(
+            maxWidth: 1040,
+            child: SafeArea(
+                top: false,
+                child: ListView(padding: const EdgeInsets.all(16), children: [
+                  if (_busy) const LinearProgressIndicator(),
+                  if (_error != null) Text(_error!),
+                  if (p != null) ...[
+                    Text('${p['name']}',
+                        style: Theme.of(context).textTheme.titleLarge),
+                    Text(
+                        'SKU: ${p['sku'] == '' ? '-' : p['sku']}\nบาร์โค้ด: ${p['barcode'] == '' ? '-' : p['barcode']}'),
+                    Text(
+                        'ราคาขาย ฿${(p['price'] as num).toStringAsFixed(2)} / ${p['unit']}'),
+                    if (p.containsKey('unitCost'))
+                      Text(
+                          'ต้นทุน ฿${(p['unitCost'] as num).toStringAsFixed(2)} / ${p['unit']}'),
+                    const SizedBox(height: 12),
+                    Text(
+                        'คงเหลือ ${stockText(p['stock'] as num)} ${p['unit']} · จองออนไลน์ ${stockText(p['reserved'] as num)} · พร้อมขาย ${stockText(p['available'] as num)}'),
+                    const SizedBox(height: 12),
+                    if (p['stockMode'] == 'recipe')
+                      const Text(
+                          'สินค้านี้ใช้สูตร ให้เจ้าของร้านจัดการที่วัตถุดิบ')
+                    else
+                      Wrap(spacing: 8, runSpacing: 8, children: [
+                        for (final e in _actions.entries)
+                          if (widget.api.can(_permissions[e.key]!))
+                            OutlinedButton(
+                                onPressed: _busy || _error != null
+                                    ? null
+                                    : () => _adjust(e.key),
+                                child: Text(e.value))
+                      ]),
+                    if (p['trackLots'] == true) ...[
+                      const SizedBox(height: 16),
+                      Text('ล็อตสินค้า',
+                          style: Theme.of(context).textTheme.titleMedium),
+                      for (final lot in p['stockLots'] as List)
+                        ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(
+                                '${lot['number']} · ${stockText(lot['quantity'] as num)} ${p['unit']}'),
+                            subtitle: Text('หมดอายุ ${lot['expiresOn']}')),
+                    ],
+                    if (widget.api.can('stockHistory')) ...[
+                      const Divider(height: 32),
+                      StaffStockHistory(
+                          key: ValueKey(_revision),
+                          productId: widget.productId,
+                          api: widget.api)
+                    ],
+                  ],
+                ]))));
   }
 }
 

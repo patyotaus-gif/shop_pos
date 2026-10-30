@@ -1,3 +1,4 @@
+import '../widgets/content_width.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -14,57 +15,59 @@ class IngredientsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('วัตถุดิบ'), centerTitle: true),
-      body: StreamBuilder<List<Ingredient>>(
-        stream: IngredientService.watchAll(),
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final list = snap.data ?? const [];
-          if (list.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  'ยังไม่มีวัตถุดิบ\n\nเพิ่มวัตถุดิบ (เช่น เส้น, ไข่, น้ำมัน) '
-                  'แล้วไปผูก "สูตร" ในหน้าแก้เมนู — ขายแล้วระบบตัดสต็อกให้อัตโนมัติ',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.5)),
-                ),
-              ),
-            );
-          }
-          final cs = Theme.of(context).colorScheme;
-          return Column(
-            children: [
-              Container(
-                width: double.infinity,
-                color: cs.primary.withValues(alpha: 0.06),
-                padding: const EdgeInsets.all(12),
-                child: Text(
-                  'ขายเมนูที่มีสูตร → ตัดวัตถุดิบอัตโนมัติ · สต็อกติดลบได้ '
-                  '(การขายไม่ถูกบล็อก — ติดลบ = ควรนับใหม่)',
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: cs.onSurface.withValues(alpha: 0.7)),
-                ),
-              ),
-              Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: list.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (_, i) => _IngredientTile(ing: list[i]),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+      body: ContentWidth(
+          maxWidth: 1040,
+          child: StreamBuilder<List<Ingredient>>(
+            stream: IngredientService.watchAll(),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final list = snap.data ?? const [];
+              if (list.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      'ยังไม่มีวัตถุดิบ\n\nเพิ่มวัตถุดิบ (เช่น เส้น, ไข่, น้ำมัน) '
+                      'แล้วไปผูก "สูตร" ในหน้าแก้เมนู — ขายแล้วระบบตัดสต็อกให้อัตโนมัติ',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.5)),
+                    ),
+                  ),
+                );
+              }
+              final cs = Theme.of(context).colorScheme;
+              return Column(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    color: cs.primary.withValues(alpha: 0.06),
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      'ขายเมนูที่มีสูตร → ตัดวัตถุดิบอัตโนมัติ · สต็อกติดลบได้ '
+                      '(การขายไม่ถูกบล็อก — ติดลบ = ควรนับใหม่)',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: cs.onSurface.withValues(alpha: 0.7)),
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: list.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (_, i) => _IngredientTile(ing: list[i]),
+                    ),
+                  ),
+                ],
+              );
+            },
+          )),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showEditDialog(context),
         icon: const Icon(Icons.add),
@@ -89,10 +92,9 @@ class _IngredientTile extends StatelessWidget {
             ? const Color(0xFFB45309)
             : cs.onSurface;
     return ListTile(
-      title: Text(ing.name,
-          style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text(
-          'ต้นทุนเฉลี่ย ฿${_num.format(ing.avgCost)}/${ing.unit}'
+      title:
+          Text(ing.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+      subtitle: Text('ต้นทุนเฉลี่ย ฿${_num.format(ing.avgCost)}/${ing.unit}'
           '${ing.lowStockThreshold > 0 ? ' · เตือนที่ ${_num.format(ing.lowStockThreshold)}' : ''}'),
       leading: ing.isNegative
           ? const Icon(Icons.error_outline, color: Colors.red)
@@ -130,8 +132,7 @@ void _showActionsSheet(BuildContext context, Ingredient ing) {
           ListTile(
             title: Text(ing.name,
                 style: const TextStyle(fontWeight: FontWeight.w700)),
-            subtitle: Text(
-                'คงเหลือ ${_num.format(ing.stock)} ${ing.unit} · '
+            subtitle: Text('คงเหลือ ${_num.format(ing.stock)} ${ing.unit} · '
                 '฿${_num.format(ing.avgCost)}/${ing.unit}'),
           ),
           ListTile(
@@ -161,8 +162,8 @@ void _showActionsSheet(BuildContext context, Ingredient ing) {
           ),
           ListTile(
             leading: const Icon(Icons.delete_outline, color: Colors.red),
-            title: const Text('ลบวัตถุดิบ',
-                style: TextStyle(color: Colors.red)),
+            title:
+                const Text('ลบวัตถุดิบ', style: TextStyle(color: Colors.red)),
             onTap: () async {
               Navigator.pop(ctx);
               final ok = await showDialog<bool>(
@@ -233,9 +234,8 @@ void _showEditDialog(BuildContext context, {Ingredient? ing}) {
         FilledButton(
           onPressed: () async {
             if (name.text.trim().isEmpty || unit.text.trim().isEmpty) return;
-            final t = double.tryParse(
-                    threshold.text.trim().replaceAll(',', '')) ??
-                0;
+            final t =
+                double.tryParse(threshold.text.trim().replaceAll(',', '')) ?? 0;
             if (ing == null) {
               await IngredientService.add(Ingredient(
                 id: '',
@@ -277,8 +277,7 @@ void _showReceiveDialog(BuildContext context, Ingredient ing) {
           TextField(
             controller: qty,
             autofocus: true,
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: InputDecoration(
                 labelText: 'จำนวนที่รับ (${ing.unit})',
                 border: const OutlineInputBorder()),
@@ -286,8 +285,7 @@ void _showReceiveDialog(BuildContext context, Ingredient ing) {
           const SizedBox(height: 12),
           TextField(
             controller: price,
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: const InputDecoration(
                 labelText: 'ราคารวมที่จ่าย (บาท)',
                 prefixText: '฿',
@@ -301,11 +299,9 @@ void _showReceiveDialog(BuildContext context, Ingredient ing) {
         FilledButton(
           onPressed: () async {
             final q = double.tryParse(qty.text.trim().replaceAll(',', ''));
-            final p =
-                double.tryParse(price.text.trim().replaceAll(',', ''));
+            final p = double.tryParse(price.text.trim().replaceAll(',', ''));
             if (q == null || q <= 0 || p == null || p < 0) return;
-            await IngredientService.receiveStock(ing,
-                qty: q, totalPrice: p);
+            await IngredientService.receiveStock(ing, qty: q, totalPrice: p);
             if (ctx.mounted) Navigator.pop(ctx);
           },
           child: const Text('รับเข้า'),
@@ -328,8 +324,7 @@ void _showAdjustDialog(BuildContext context, Ingredient ing) {
           TextField(
             controller: stock,
             autofocus: true,
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: InputDecoration(
                 labelText: 'จำนวนที่นับได้จริง (${ing.unit})',
                 border: const OutlineInputBorder()),
@@ -348,8 +343,7 @@ void _showAdjustDialog(BuildContext context, Ingredient ing) {
             onPressed: () => Navigator.pop(ctx), child: const Text('ยกเลิก')),
         FilledButton(
           onPressed: () async {
-            final s =
-                double.tryParse(stock.text.trim().replaceAll(',', ''));
+            final s = double.tryParse(stock.text.trim().replaceAll(',', ''));
             if (s == null) return;
             await IngredientService.adjustStock(ing,
                 newStock: s, note: note.text.trim());

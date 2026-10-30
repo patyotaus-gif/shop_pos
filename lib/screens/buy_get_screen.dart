@@ -1,3 +1,4 @@
+import '../widgets/content_width.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
@@ -44,112 +45,122 @@ class _BuyGetScreenState extends State<BuyGetScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('ซื้อแถม')),
-        body: AuthService.isStaff
-            ? const Center(child: Text('เฉพาะเจ้าของร้าน'))
-            : StreamBuilder<List<Product>>(
-                stream: _products,
-                builder: (context, products) => StreamBuilder<
-                        QuerySnapshot<Map<String, dynamic>>>(
-                    stream: _promotions,
-                    builder: (context, promos) {
-                      if (products.hasError || promos.hasError) {
-                        return const Center(
-                            child: Text('โหลดไม่สำเร็จ กรุณาเปิดหน้านี้ใหม่'));
-                      }
-                      if (!products.hasData || !promos.hasData) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      final configs = {
-                        for (final doc in promos.data!.docs) doc.id: doc.data()
-                      };
-                      final all = products.data!;
-                      final filtered = all
-                          .where((p) => p.name.toLowerCase().contains(_query));
-                      return ListView(
-                          padding: const EdgeInsets.all(16),
-                          children: [
-                            const Text(
-                                'ซื้อครบ รับของแถมที่เคาน์เตอร์ บิลโต๊ะ และลิงก์สั่งสินค้า\n'
-                                '1 โปรต่อสินค้าที่ซื้อ • บิลโต๊ะเพิ่มของแถมอัตโนมัติและส่งพร้อมอาหาร ใช้ร่วมกับชุดสินค้าและคูปองได้\n'
-                                'ต้องเชื่อมอินเทอร์เน็ต\n'
-                                'ของแถมไม่สะสมสิทธิ์ต่อ และตัดสต็อก/วัตถุดิบตามจริง หากของไม่พอต้องปรับตะกร้าก่อนสั่ง'),
-                            const SizedBox(height: 12),
-                            TextField(
-                                decoration: const InputDecoration(
-                                    labelText: 'ค้นหาสินค้าที่ต้องซื้อ',
-                                    prefixIcon: Icon(Icons.search)),
-                                onChanged: (value) => setState(
-                                    () => _query = value.trim().toLowerCase())),
-                            const SizedBox(height: 12),
-                            if (all.isEmpty)
-                              const Text('เพิ่มสินค้าก่อนตั้งโปรซื้อแถม'),
-                            for (final product in filtered)
-                              Builder(builder: (context) {
-                                final c = configs[product.id];
-                                final until =
-                                    (c?['endsAt'] as Timestamp?)?.toDate();
-                                final expired = until != null &&
-                                    !until.isAfter(DateTime.now());
-                                final thai = until
-                                    ?.toUtc()
-                                    .add(const Duration(hours: 7));
-                                return Card(
-                                    child: Padding(
-                                        padding: const EdgeInsets.all(12),
-                                        child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(product.name,
-                                                  style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold)),
-                                              if (c != null) ...[
-                                                Text(
-                                                    'ซื้อ ${c['buyQuantity']} แถม ${c['giftName']} ${c['giftQuantity']} ชิ้น'),
-                                                Text(
-                                                    'สูงสุด ${c['maxSets']} ชุดต่อออเดอร์'),
-                                                if (thai != null)
-                                                  Text(
-                                                      'ถึง ${thai.day}/${thai.month}/${thai.year} สิ้นวัน (เวลาไทย)'),
-                                                SwitchListTile(
-                                                    contentPadding:
-                                                        EdgeInsets.zero,
-                                                    title: Text(expired
-                                                        ? 'หมดอายุ'
-                                                        : c['active'] == true
-                                                            ? 'เปิดใช้งาน'
-                                                            : 'ปิดใช้งาน'),
-                                                    value:
-                                                        c['active'] == true &&
+        body: ContentWidth(
+            maxWidth: 1040,
+            child: AuthService.isStaff
+                ? const Center(child: Text('เฉพาะเจ้าของร้าน'))
+                : StreamBuilder<List<Product>>(
+                    stream: _products,
+                    builder: (context, products) => StreamBuilder<
+                            QuerySnapshot<Map<String, dynamic>>>(
+                        stream: _promotions,
+                        builder: (context, promos) {
+                          if (products.hasError || promos.hasError) {
+                            return const Center(
+                                child:
+                                    Text('โหลดไม่สำเร็จ กรุณาเปิดหน้านี้ใหม่'));
+                          }
+                          if (!products.hasData || !promos.hasData) {
+                            return const Center(
+                                child: CircularProgressIndicator());
+                          }
+                          final configs = {
+                            for (final doc in promos.data!.docs)
+                              doc.id: doc.data()
+                          };
+                          final all = products.data!;
+                          final filtered = all.where(
+                              (p) => p.name.toLowerCase().contains(_query));
+                          return ListView(
+                              padding: const EdgeInsets.all(16),
+                              children: [
+                                const Text(
+                                    'ซื้อครบ รับของแถมที่เคาน์เตอร์ บิลโต๊ะ และลิงก์สั่งสินค้า\n'
+                                    '1 โปรต่อสินค้าที่ซื้อ • บิลโต๊ะเพิ่มของแถมอัตโนมัติและส่งพร้อมอาหาร ใช้ร่วมกับชุดสินค้าและคูปองได้\n'
+                                    'ต้องเชื่อมอินเทอร์เน็ต\n'
+                                    'ของแถมไม่สะสมสิทธิ์ต่อ และตัดสต็อก/วัตถุดิบตามจริง หากของไม่พอต้องปรับตะกร้าก่อนสั่ง'),
+                                const SizedBox(height: 12),
+                                TextField(
+                                    decoration: const InputDecoration(
+                                        labelText: 'ค้นหาสินค้าที่ต้องซื้อ',
+                                        prefixIcon: Icon(Icons.search)),
+                                    onChanged: (value) => setState(() =>
+                                        _query = value.trim().toLowerCase())),
+                                const SizedBox(height: 12),
+                                if (all.isEmpty)
+                                  const Text('เพิ่มสินค้าก่อนตั้งโปรซื้อแถม'),
+                                for (final product in filtered)
+                                  Builder(builder: (context) {
+                                    final c = configs[product.id];
+                                    final until =
+                                        (c?['endsAt'] as Timestamp?)?.toDate();
+                                    final expired = until != null &&
+                                        !until.isAfter(DateTime.now());
+                                    final thai = until
+                                        ?.toUtc()
+                                        .add(const Duration(hours: 7));
+                                    return Card(
+                                        child: Padding(
+                                            padding: const EdgeInsets.all(12),
+                                            child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(product.name,
+                                                      style: const TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold)),
+                                                  if (c != null) ...[
+                                                    Text(
+                                                        'ซื้อ ${c['buyQuantity']} แถม ${c['giftName']} ${c['giftQuantity']} ชิ้น'),
+                                                    Text(
+                                                        'สูงสุด ${c['maxSets']} ชุดต่อออเดอร์'),
+                                                    if (thai != null)
+                                                      Text(
+                                                          'ถึง ${thai.day}/${thai.month}/${thai.year} สิ้นวัน (เวลาไทย)'),
+                                                    SwitchListTile(
+                                                        contentPadding:
+                                                            EdgeInsets.zero,
+                                                        title: Text(expired
+                                                            ? 'หมดอายุ'
+                                                            : c['active'] ==
+                                                                    true
+                                                                ? 'เปิดใช้งาน'
+                                                                : 'ปิดใช้งาน'),
+                                                        value: c['active'] ==
+                                                                true &&
                                                             !expired,
-                                                    onChanged: expired ||
-                                                            _busy.contains(
-                                                                product.id)
-                                                        ? null
-                                                        : (value) => _toggle(
-                                                            product.id, value)),
-                                              ],
-                                              OutlinedButton.icon(
-                                                  icon: const Icon(
-                                                      Icons.card_giftcard),
-                                                  label: Text(c == null
-                                                      ? 'ตั้งโปรซื้อแถม'
-                                                      : 'แก้ไขโปรซื้อแถม'),
-                                                  onPressed: () => showDialog(
-                                                      context: context,
-                                                      barrierDismissible: false,
-                                                      builder: (_) =>
-                                                          BuyGetEditor(
-                                                              product: product,
-                                                              products: all,
-                                                              initial: c,
-                                                              onSave:
-                                                                  _manage))),
-                                            ])));
-                              }),
-                          ]);
-                    })),
+                                                        onChanged: expired ||
+                                                                _busy.contains(
+                                                                    product.id)
+                                                            ? null
+                                                            : (value) =>
+                                                                _toggle(
+                                                                    product.id,
+                                                                    value)),
+                                                  ],
+                                                  OutlinedButton.icon(
+                                                      icon: const Icon(
+                                                          Icons.card_giftcard),
+                                                      label: Text(c == null
+                                                          ? 'ตั้งโปรซื้อแถม'
+                                                          : 'แก้ไขโปรซื้อแถม'),
+                                                      onPressed: () => showDialog(
+                                                          context: context,
+                                                          barrierDismissible:
+                                                              false,
+                                                          builder: (_) =>
+                                                              BuyGetEditor(
+                                                                  product:
+                                                                      product,
+                                                                  products: all,
+                                                                  initial: c,
+                                                                  onSave:
+                                                                      _manage))),
+                                                ])));
+                                  }),
+                              ]);
+                        }))),
       );
 }
 

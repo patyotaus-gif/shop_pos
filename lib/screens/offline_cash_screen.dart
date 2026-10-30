@@ -1,3 +1,4 @@
+import '../widgets/content_width.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -106,43 +107,47 @@ class _OfflineEntryState extends State<OfflineEntryScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(title: const Text('ขายเงินสดออฟไลน์')),
-      body: ListView(padding: const EdgeInsets.all(20), children: [
-        const Text(
-            'เตรียมข้อมูลขณะมีเน็ต ใช้ขายเงินสดได้ 12 ชั่วโมงตามราคาที่เตรียมไว้ บิลเก็บในเครื่องและส่งอัตโนมัติเมื่อเชื่อมต่อได้ ห้ามล้างข้อมูลหรือถอนแอปขณะมีบิลค้าง'),
-        if (widget.allowPrepare)
-          FilledButton.icon(
-              onPressed: _busy ? null : () => _open(),
-              icon: const Icon(Icons.download),
-              label: const Text('เตรียมข้อมูลและตั้ง PIN (ใช้อินเทอร์เน็ต)')),
-        if (_busy) const LinearProgressIndicator(),
-        if (_error != null)
-          Text(_error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error)),
-        FutureBuilder<List<Map<String, Object?>>>(
-            future: _profiles,
-            builder: (context, snap) {
-              if (snap.hasError) return Text(operationError(snap.error!));
-              if (!snap.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snap.data!.isEmpty) {
-                return const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text(
-                        'ยังไม่ได้เตรียมข้อมูล เข้าสู่ระบบแล้วเปิดเมนูขายออฟไลน์จากหน้าขายก่อน'));
-              }
-              return Column(
-                  children: snap.data!.reversed.map((p) {
-                final data = jsonDecode(p['data'] as String);
-                return ListTile(
-                    leading: const Icon(Icons.lock_outline),
-                    title: Text(p['label'] as String),
-                    subtitle: Text(
-                        'ขายได้ถึง ${DateTime.parse(data['expiresAt']).toLocal()}'),
-                    onTap: _busy ? null : () => _open(p));
-              }).toList());
-            }),
-      ]));
+      body: ContentWidth(
+          maxWidth: 840,
+          child: ListView(padding: const EdgeInsets.all(20), children: [
+            const Text(
+                'เตรียมข้อมูลขณะมีเน็ต ใช้ขายเงินสดได้ 12 ชั่วโมงตามราคาที่เตรียมไว้ บิลเก็บในเครื่องและส่งอัตโนมัติเมื่อเชื่อมต่อได้ ห้ามล้างข้อมูลหรือถอนแอปขณะมีบิลค้าง'),
+            if (widget.allowPrepare)
+              CompactAction(
+                  child: FilledButton.icon(
+                      onPressed: _busy ? null : () => _open(),
+                      icon: const Icon(Icons.download),
+                      label: const Text(
+                          'เตรียมข้อมูลและตั้ง PIN (ใช้อินเทอร์เน็ต)'))),
+            if (_busy) const LinearProgressIndicator(),
+            if (_error != null)
+              Text(_error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            FutureBuilder<List<Map<String, Object?>>>(
+                future: _profiles,
+                builder: (context, snap) {
+                  if (snap.hasError) return Text(operationError(snap.error!));
+                  if (!snap.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snap.data!.isEmpty) {
+                    return const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text(
+                            'ยังไม่ได้เตรียมข้อมูล เข้าสู่ระบบแล้วเปิดเมนูขายออฟไลน์จากหน้าขายก่อน'));
+                  }
+                  return Column(
+                      children: snap.data!.reversed.map((p) {
+                    final data = jsonDecode(p['data'] as String);
+                    return ListTile(
+                        leading: const Icon(Icons.lock_outline),
+                        title: Text(p['label'] as String),
+                        subtitle: Text(
+                            'ขายได้ถึง ${DateTime.parse(data['expiresAt']).toLocal()}'),
+                        onTap: _busy ? null : () => _open(p));
+                  }).toList());
+                }),
+          ])));
 }
 
 class OfflineCashScreen extends StatefulWidget {
@@ -387,70 +392,74 @@ class _OfflineCashState extends State<OfflineCashScreen>
                       icon: const Icon(Icons.sync),
                       tooltip: 'ลองซิงก์')
                 ]),
-            body: Column(children: [
-              Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Text(expired
-                      ? 'สิทธิ์ขายหมดอายุแล้ว ยังดูและซิงก์บิลเก่าได้'
-                      : 'ราคา ณ ตอนเตรียมข้อมูล · รอส่ง ${_bills.where((r) => r['status'] == 'pending').length} บิล · ต้องตรวจสอบ ${_bills.where((r) => r['status'] == 'review' || (r['message'] as String).isNotEmpty).length} บิล')),
-              if (_error != null)
-                Text(_error!,
-                    style:
-                        TextStyle(color: Theme.of(context).colorScheme.error)),
-              Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: TextField(
-                      onChanged: (v) => setState(() => _search = v),
-                      decoration: const InputDecoration(
-                          labelText: 'ค้นหาสินค้าหรือบาร์โค้ด',
-                          prefixIcon: Icon(Icons.search)))),
-              Expanded(
-                  child: SaleProductGrid(
-                      itemCount: products.length,
-                      itemBuilder: (context, i) {
-                        final p = products[i];
-                        return SaleProductCard(
-                            product: p,
-                            showPromotion: false,
-                            onTap: _busy || expired ? null : () => _add(p));
-                      })),
-              const Divider(),
-              SizedBox(
-                  height: 140,
-                  child: ListView(
-                      children: _cart
-                          .asMap()
-                          .entries
-                          .map((e) => ListTile(
-                              dense: true,
-                              title: Text(
-                                  '${e.value.product.name} × ${e.value.quantity}'),
-                              subtitle: Text(
-                                  '฿${OfflineService.lineTotal(e.value).toStringAsFixed(2)}'),
-                              trailing: IconButton(
-                                  icon: const Icon(Icons.remove_circle_outline),
-                                  onPressed: _busy
-                                      ? null
-                                      : () => setState(
-                                          () => _cart.removeAt(e.key)))))
-                          .toList())),
-              SafeArea(
-                  top: false,
-                  child: Padding(
+            body: ContentWidth(
+                maxWidth: 840,
+                child: Column(children: [
+                  Padding(
                       padding: const EdgeInsets.all(12),
-                      child: ActionButtons(children: [
-                        TextButton(
-                            onPressed: _busy
-                                ? null
-                                : () => setState(() => _cart.clear()),
-                            child: const Text('ล้างตะกร้า')),
-                        FilledButton(
-                            onPressed:
-                                _busy || expired || _cart.isEmpty ? null : _pay,
-                            child: Text(_busy
-                                ? 'กำลังบันทึก…'
-                                : 'รับเงินสด ฿${_total.toStringAsFixed(2)}'))
-                      ]))),
-            ])));
+                      child: Text(expired
+                          ? 'สิทธิ์ขายหมดอายุแล้ว ยังดูและซิงก์บิลเก่าได้'
+                          : 'ราคา ณ ตอนเตรียมข้อมูล · รอส่ง ${_bills.where((r) => r['status'] == 'pending').length} บิล · ต้องตรวจสอบ ${_bills.where((r) => r['status'] == 'review' || (r['message'] as String).isNotEmpty).length} บิล')),
+                  if (_error != null)
+                    Text(_error!,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.error)),
+                  Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: TextField(
+                          onChanged: (v) => setState(() => _search = v),
+                          decoration: const InputDecoration(
+                              labelText: 'ค้นหาสินค้าหรือบาร์โค้ด',
+                              prefixIcon: Icon(Icons.search)))),
+                  Expanded(
+                      child: SaleProductGrid(
+                          itemCount: products.length,
+                          itemBuilder: (context, i) {
+                            final p = products[i];
+                            return SaleProductCard(
+                                product: p,
+                                showPromotion: false,
+                                onTap: _busy || expired ? null : () => _add(p));
+                          })),
+                  const Divider(),
+                  SizedBox(
+                      height: 140,
+                      child: ListView(
+                          children: _cart
+                              .asMap()
+                              .entries
+                              .map((e) => ListTile(
+                                  dense: true,
+                                  title: Text(
+                                      '${e.value.product.name} × ${e.value.quantity}'),
+                                  subtitle: Text(
+                                      '฿${OfflineService.lineTotal(e.value).toStringAsFixed(2)}'),
+                                  trailing: IconButton(
+                                      icon: const Icon(
+                                          Icons.remove_circle_outline),
+                                      onPressed: _busy
+                                          ? null
+                                          : () => setState(
+                                              () => _cart.removeAt(e.key)))))
+                              .toList())),
+                  SafeArea(
+                      top: false,
+                      child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: ActionButtons(children: [
+                            TextButton(
+                                onPressed: _busy
+                                    ? null
+                                    : () => setState(() => _cart.clear()),
+                                child: const Text('ล้างตะกร้า')),
+                            FilledButton(
+                                onPressed: _busy || expired || _cart.isEmpty
+                                    ? null
+                                    : _pay,
+                                child: Text(_busy
+                                    ? 'กำลังบันทึก…'
+                                    : 'รับเงินสด ฿${_total.toStringAsFixed(2)}'))
+                          ]))),
+                ]))));
   }
 }

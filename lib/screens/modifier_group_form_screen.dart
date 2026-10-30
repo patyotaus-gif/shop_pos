@@ -1,3 +1,5 @@
+import '../widgets/compact_action.dart';
+import '../widgets/content_width.dart';
 import 'package:flutter/material.dart';
 
 import '../models/ingredient.dart';
@@ -231,74 +233,77 @@ class _ModifierGroupFormScreenState extends State<ModifierGroupFormScreen> {
             ),
         ],
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            TextFormField(
-              controller: _name,
-              decoration: const InputDecoration(
-                labelText: 'ชื่อกลุ่ม *',
-                hintText: 'เช่น ระดับเผ็ด, ขนาด, เพิ่มเติม',
-                prefixIcon: Icon(Icons.label_outline),
-                border: OutlineInputBorder(),
-              ),
-              validator: (v) =>
-                  v == null || v.trim().isEmpty ? 'กรุณากรอกชื่อกลุ่ม' : null,
+      body: ContentWidth(
+          maxWidth: 760,
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                TextFormField(
+                  controller: _name,
+                  decoration: const InputDecoration(
+                    labelText: 'ชื่อกลุ่ม *',
+                    hintText: 'เช่น ระดับเผ็ด, ขนาด, เพิ่มเติม',
+                    prefixIcon: Icon(Icons.label_outline),
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (v) => v == null || v.trim().isEmpty
+                      ? 'กรุณากรอกชื่อกลุ่ม'
+                      : null,
+                ),
+                const SizedBox(height: 16),
+                SwitchListTile(
+                  value: _required,
+                  onChanged: (v) => setState(() => _required = v),
+                  title: const Text('จำเป็นต้องเลือก'),
+                  subtitle: const Text('ลูกค้าต้องเลือกก่อนเพิ่มลงตะกร้า'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+                SwitchListTile(
+                  value: _multiSelect,
+                  onChanged: (v) => setState(() => _multiSelect = v),
+                  title: const Text('เลือกได้หลายอัน'),
+                  subtitle: Text(_multiSelect
+                      ? 'Checkbox — เลือกได้หลายตัวเลือก'
+                      : 'Radio — เลือกได้แค่ 1 ตัวเลือก'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+                const SizedBox(height: 8),
+                const Divider(),
+                const SizedBox(height: 8),
+                Text('ตัวเลือก',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: cs.primary, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                for (var i = 0; i < _options.length; i++) ...[
+                  _OptionRow(
+                    draft: _options[i],
+                    onUsage: () => _editUsage(_options[i]),
+                    onRemove:
+                        _options.length > 1 ? () => _removeOptionRow(i) : null,
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                CompactAction(
+                    child: OutlinedButton.icon(
+                  onPressed: _addOptionRow,
+                  icon: const Icon(Icons.add),
+                  label: const Text('เพิ่มตัวเลือก'),
+                )),
+                const SizedBox(height: 24),
+                CompactAction(
+                    child: FilledButton(
+                  onPressed: _saving ? null : _save,
+                  style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(52)),
+                  child: _saving
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Text(widget._isEdit ? 'บันทึก' : 'สร้างกลุ่ม'),
+                )),
+              ],
             ),
-            const SizedBox(height: 16),
-            SwitchListTile(
-              value: _required,
-              onChanged: (v) => setState(() => _required = v),
-              title: const Text('จำเป็นต้องเลือก'),
-              subtitle: const Text('ลูกค้าต้องเลือกก่อนเพิ่มลงตะกร้า'),
-              contentPadding: EdgeInsets.zero,
-            ),
-            SwitchListTile(
-              value: _multiSelect,
-              onChanged: (v) => setState(() => _multiSelect = v),
-              title: const Text('เลือกได้หลายอัน'),
-              subtitle: Text(_multiSelect
-                  ? 'Checkbox — เลือกได้หลายตัวเลือก'
-                  : 'Radio — เลือกได้แค่ 1 ตัวเลือก'),
-              contentPadding: EdgeInsets.zero,
-            ),
-            const SizedBox(height: 8),
-            const Divider(),
-            const SizedBox(height: 8),
-            Text('ตัวเลือก',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleSmall
-                    ?.copyWith(color: cs.primary, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            for (var i = 0; i < _options.length; i++) ...[
-              _OptionRow(
-                draft: _options[i],
-                onUsage: () => _editUsage(_options[i]),
-                onRemove:
-                    _options.length > 1 ? () => _removeOptionRow(i) : null,
-              ),
-              const SizedBox(height: 8),
-            ],
-            OutlinedButton.icon(
-              onPressed: _addOptionRow,
-              icon: const Icon(Icons.add),
-              label: const Text('เพิ่มตัวเลือก'),
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: _saving ? null : _save,
-              style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(52)),
-              child: _saving
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : Text(widget._isEdit ? 'บันทึก' : 'สร้างกลุ่ม'),
-            ),
-          ],
-        ),
-      ),
+          )),
     );
   }
 }

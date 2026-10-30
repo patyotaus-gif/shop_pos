@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/product.dart';
 import 'product_image.dart';
 import 'sale_product_grid.dart';
+import 'content_width.dart';
 
 enum ProductCatalogLayout { list, grid }
 
@@ -117,15 +118,17 @@ class _ProductCatalogState extends State<ProductCatalog> {
     return Column(children: [
       Padding(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-          child: TextField(
-            controller: _search,
-            onChanged: (_) => setState(() {}),
-            decoration: const InputDecoration(
-                hintText: 'ค้นหาสินค้า...',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
-                isDense: true),
-          )),
+          child: ContentWidth(
+              maxWidth: 1040,
+              child: TextField(
+                controller: _search,
+                onChanged: (_) => setState(() {}),
+                decoration: const InputDecoration(
+                    hintText: 'ค้นหาสินค้า...',
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(),
+                    isDense: true),
+              ))),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Align(
@@ -222,20 +225,24 @@ class _ProductCatalogState extends State<ProductCatalog> {
                                   );
                                 },
                               ))
-                          : ListView.builder(
-                              key: const PageStorageKey('products-list'),
-                              padding: const EdgeInsets.fromLTRB(12, 4, 12, 88),
-                              itemCount: products.length,
-                              itemBuilder: (context, i) => _ProductListRow(
-                                product: products[i],
-                                showInventory: widget.showInventory,
-                                onEdit: () => widget.onEdit(products[i]),
-                                onReceiveStock: widget.showInventory &&
-                                        widget.onReceiveStock != null
-                                    ? () => widget.onReceiveStock!(products[i])
-                                    : null,
-                              ),
-                            )),
+                          : ContentWidth(
+                              maxWidth: 1040,
+                              child: ListView.builder(
+                                key: const PageStorageKey('products-list'),
+                                padding:
+                                    const EdgeInsets.fromLTRB(12, 4, 12, 88),
+                                itemCount: products.length,
+                                itemBuilder: (context, i) => _ProductListRow(
+                                  product: products[i],
+                                  showInventory: widget.showInventory,
+                                  onEdit: () => widget.onEdit(products[i]),
+                                  onReceiveStock: widget.showInventory &&
+                                          widget.onReceiveStock != null
+                                      ? () =>
+                                          widget.onReceiveStock!(products[i])
+                                      : null,
+                                ),
+                              ))),
     ]);
   }
 }

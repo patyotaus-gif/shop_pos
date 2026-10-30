@@ -1,3 +1,4 @@
+import '../widgets/content_width.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
@@ -55,95 +56,105 @@ class _CouponsScreenState extends State<CouponsScreen> {
                     context: context,
                     barrierDismissible: false,
                     builder: (_) => CouponEditor(onSave: _manage))),
-        body: AuthService.isStaff
-            ? const Center(child: Text('เฉพาะเจ้าของร้าน'))
-            : Column(children: [
-                const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text(
-                        'ใช้ในลิงก์สั่งสินค้าและบิลโต๊ะ • 1 โค้ดต่อบิล\nคิดส่วนลดหลังราคาโปรและชุดสินค้า ยอดหลังลดขั้นต่ำ 20 บาท\nออนไลน์จองสิทธิ์เมื่อสร้างออเดอร์ ยกเลิกก่อนชำระจึงคืนสิทธิ์ ส่วนบิลโต๊ะใช้สิทธิ์เมื่อปิดบิลสำเร็จ คืนเงินหลังชำระไม่คืนสิทธิ์')),
-                Expanded(
-                    child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                        stream: _coupons,
-                        builder: (context, snap) {
-                          if (snap.hasError) {
-                            return const Center(
-                                child: Text(
-                                    'โหลดคูปองไม่สำเร็จ กรุณาเปิดหน้านี้ใหม่'));
-                          }
-                          if (!snap.hasData) {
-                            return const Center(
-                                child: CircularProgressIndicator());
-                          }
-                          if (snap.data!.docs.isEmpty) {
-                            return const Center(
-                                child: Text(
-                                    'ยังไม่มีโค้ดส่วนลด แตะสร้างโค้ดเพื่อเริ่มต้น'));
-                          }
-                          return ListView(
-                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
-                              children: snap.data!.docs.map((doc) {
-                                final c = doc.data(),
-                                    until = (c['endsAt'] as Timestamp).toDate();
-                                final expired = !until.isAfter(DateTime.now());
-                                final code = doc.id;
-                                // Coupon cut-off dates are entered and displayed in Thailand time.
-                                final date =
-                                    until.toUtc().add(const Duration(hours: 7));
-                                return Card(
-                                    child: Padding(
-                                        padding: const EdgeInsets.all(12),
-                                        child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(code,
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .titleLarge),
-                                              Text(c['kind'] == 'percent'
-                                                  ? 'ลด ${c['value']}%'
-                                                  : 'ลด ฿${((c['value'] as num) / 100).toStringAsFixed(2)}'),
-                                              Text(
-                                                  'ซื้อขั้นต่ำ ฿${((c['minSubtotalMinor'] as num) / 100).toStringAsFixed(2)}'),
-                                              Text(
-                                                  'ใช้/จองแล้ว ${c['claimed']} จาก ${c['maxUses']} สิทธิ์'),
-                                              Text(
-                                                  'สิ้นสุด ${date.day}/${date.month}/${date.year} สิ้นวัน (เวลาไทย)'),
-                                              if (expired)
-                                                const Text('หมดอายุแล้ว'),
-                                              SwitchListTile(
-                                                  contentPadding:
-                                                      EdgeInsets.zero,
-                                                  title: const Text(
-                                                      'เปิดให้ใช้โค้ด'),
-                                                  value: c['active'] == true,
-                                                  onChanged: expired ||
-                                                          _busy.contains(code)
-                                                      ? null
-                                                      : (active) => _toggle(
-                                                          code, active)),
-                                              TextButton.icon(
-                                                  icon: const Icon(Icons.copy),
-                                                  label:
-                                                      const Text('คัดลอกโค้ด'),
-                                                  onPressed: () async {
-                                                    await Clipboard.setData(
-                                                        ClipboardData(
-                                                            text: code));
-                                                    if (context.mounted) {
-                                                      ScaffoldMessenger.of(
-                                                              context)
-                                                          .showSnackBar(
-                                                              const SnackBar(
-                                                                  content: Text(
-                                                                      'คัดลอกโค้ดแล้ว')));
-                                                    }
-                                                  }),
-                                            ])));
-                              }).toList());
-                        })),
-              ]),
+        body: ContentWidth(
+            maxWidth: 1040,
+            child: AuthService.isStaff
+                ? const Center(child: Text('เฉพาะเจ้าของร้าน'))
+                : Column(children: [
+                    const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text(
+                            'ใช้ในลิงก์สั่งสินค้าและบิลโต๊ะ • 1 โค้ดต่อบิล\nคิดส่วนลดหลังราคาโปรและชุดสินค้า ยอดหลังลดขั้นต่ำ 20 บาท\nออนไลน์จองสิทธิ์เมื่อสร้างออเดอร์ ยกเลิกก่อนชำระจึงคืนสิทธิ์ ส่วนบิลโต๊ะใช้สิทธิ์เมื่อปิดบิลสำเร็จ คืนเงินหลังชำระไม่คืนสิทธิ์')),
+                    Expanded(
+                        child: StreamBuilder<
+                                QuerySnapshot<Map<String, dynamic>>>(
+                            stream: _coupons,
+                            builder: (context, snap) {
+                              if (snap.hasError) {
+                                return const Center(
+                                    child: Text(
+                                        'โหลดคูปองไม่สำเร็จ กรุณาเปิดหน้านี้ใหม่'));
+                              }
+                              if (!snap.hasData) {
+                                return const Center(
+                                    child: CircularProgressIndicator());
+                              }
+                              if (snap.data!.docs.isEmpty) {
+                                return const Center(
+                                    child: Text(
+                                        'ยังไม่มีโค้ดส่วนลด แตะสร้างโค้ดเพื่อเริ่มต้น'));
+                              }
+                              return ListView(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(16, 0, 16, 96),
+                                  children: snap.data!.docs.map((doc) {
+                                    final c = doc.data(),
+                                        until =
+                                            (c['endsAt'] as Timestamp).toDate();
+                                    final expired =
+                                        !until.isAfter(DateTime.now());
+                                    final code = doc.id;
+                                    // Coupon cut-off dates are entered and displayed in Thailand time.
+                                    final date = until
+                                        .toUtc()
+                                        .add(const Duration(hours: 7));
+                                    return Card(
+                                        child: Padding(
+                                            padding: const EdgeInsets.all(12),
+                                            child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(code,
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .titleLarge),
+                                                  Text(c['kind'] == 'percent'
+                                                      ? 'ลด ${c['value']}%'
+                                                      : 'ลด ฿${((c['value'] as num) / 100).toStringAsFixed(2)}'),
+                                                  Text(
+                                                      'ซื้อขั้นต่ำ ฿${((c['minSubtotalMinor'] as num) / 100).toStringAsFixed(2)}'),
+                                                  Text(
+                                                      'ใช้/จองแล้ว ${c['claimed']} จาก ${c['maxUses']} สิทธิ์'),
+                                                  Text(
+                                                      'สิ้นสุด ${date.day}/${date.month}/${date.year} สิ้นวัน (เวลาไทย)'),
+                                                  if (expired)
+                                                    const Text('หมดอายุแล้ว'),
+                                                  SwitchListTile(
+                                                      contentPadding:
+                                                          EdgeInsets.zero,
+                                                      title: const Text(
+                                                          'เปิดให้ใช้โค้ด'),
+                                                      value:
+                                                          c['active'] == true,
+                                                      onChanged: expired ||
+                                                              _busy.contains(
+                                                                  code)
+                                                          ? null
+                                                          : (active) => _toggle(
+                                                              code, active)),
+                                                  TextButton.icon(
+                                                      icon: const Icon(
+                                                          Icons.copy),
+                                                      label: const Text(
+                                                          'คัดลอกโค้ด'),
+                                                      onPressed: () async {
+                                                        await Clipboard.setData(
+                                                            ClipboardData(
+                                                                text: code));
+                                                        if (context.mounted) {
+                                                          ScaffoldMessenger.of(
+                                                                  context)
+                                                              .showSnackBar(
+                                                                  const SnackBar(
+                                                                      content: Text(
+                                                                          'คัดลอกโค้ดแล้ว')));
+                                                        }
+                                                      }),
+                                                ])));
+                                  }).toList());
+                            })),
+                  ])),
       );
 }
 

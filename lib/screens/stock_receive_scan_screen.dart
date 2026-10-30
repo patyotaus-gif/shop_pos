@@ -1,3 +1,5 @@
+import '../widgets/compact_action.dart';
+import '../widgets/content_width.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../utils/operation_error.dart';
@@ -64,38 +66,44 @@ class _StockReceiveScanScreenState extends State<StockReceiveScanScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(title: const Text('สแกนรับสินค้าเข้า')),
-      body: SafeArea(
-          child: ListView(padding: const EdgeInsets.all(16), children: [
-        const Text('สแกน QR หรือบาร์โค้ดสินค้า แล้วตรวจจำนวนก่อนบันทึกรับเข้า'),
-        const SizedBox(height: 12),
-        OutlinedButton.icon(
-            onPressed: _busy ? null : () => _open(camera: true),
-            icon: const Icon(Icons.qr_code_scanner),
-            label: const Text('เปิดกล้องสแกน')),
-        const SizedBox(height: 12),
-        TextField(
-            controller: _code,
-            focusNode: _focus,
-            enabled: !_busy,
-            maxLength: 150,
-            textInputAction: TextInputAction.search,
-            decoration: const InputDecoration(
-                labelText: 'รหัส QR / บาร์โค้ดสินค้า',
-                helperText: 'พิมพ์รหัส หรือใช้เครื่องสแกนแล้วกด Enter'),
-            onSubmitted: (_) => _open()),
-        FilledButton(
-            onPressed: _busy ? null : () => _open(),
-            child: Text(_busy ? 'กำลังทำรายการ…' : 'ค้นหาเพื่อรับสินค้าเข้า')),
-        const SizedBox(height: 12),
-        const Text('รหัสต้องตรงกับช่องบาร์โค้ดที่บันทึกไว้ในสินค้า '
-            'สแกนอย่างเดียวยังไม่เพิ่มสต๊อก'),
-        if (_error != null)
-          Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Text(_error!,
-                  style:
-                      TextStyle(color: Theme.of(context).colorScheme.error))),
-      ])));
+      body: ContentWidth(
+          maxWidth: 760,
+          child: SafeArea(
+              child: ListView(padding: const EdgeInsets.all(16), children: [
+            const Text(
+                'สแกน QR หรือบาร์โค้ดสินค้า แล้วตรวจจำนวนก่อนบันทึกรับเข้า'),
+            const SizedBox(height: 12),
+            CompactAction(
+                child: OutlinedButton.icon(
+                    onPressed: _busy ? null : () => _open(camera: true),
+                    icon: const Icon(Icons.qr_code_scanner),
+                    label: const Text('เปิดกล้องสแกน'))),
+            const SizedBox(height: 12),
+            TextField(
+                controller: _code,
+                focusNode: _focus,
+                enabled: !_busy,
+                maxLength: 150,
+                textInputAction: TextInputAction.search,
+                decoration: const InputDecoration(
+                    labelText: 'รหัส QR / บาร์โค้ดสินค้า',
+                    helperText: 'พิมพ์รหัส หรือใช้เครื่องสแกนแล้วกด Enter'),
+                onSubmitted: (_) => _open()),
+            CompactAction(
+                child: FilledButton(
+                    onPressed: _busy ? null : () => _open(),
+                    child: Text(
+                        _busy ? 'กำลังทำรายการ…' : 'ค้นหาเพื่อรับสินค้าเข้า'))),
+            const SizedBox(height: 12),
+            const Text('รหัสต้องตรงกับช่องบาร์โค้ดที่บันทึกไว้ในสินค้า '
+                'สแกนอย่างเดียวยังไม่เพิ่มสต๊อก'),
+            if (_error != null)
+              Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(_error!,
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.error))),
+          ]))));
 }
 
 class InventoryCodeScanner extends StatefulWidget {
@@ -109,18 +117,21 @@ class _InventoryCodeScannerState extends State<InventoryCodeScanner> {
   @override
   Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(title: const Text('สแกน QR / บาร์โค้ดสินค้า')),
-      body: SafeArea(
-          child: MobileScanner(
-              errorBuilder: (context, error) => const Center(
-                  child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Text('เปิดกล้องไม่สำเร็จ กรุณาตรวจสิทธิ์กล้อง '
-                          'หรือกลับไปกรอกรหัสสินค้า'))),
-              onDetect: (capture) {
-                final value = capture.barcodes.firstOrNull?.rawValue?.trim();
-                if (!_done && value != null && value.isNotEmpty) {
-                  _done = true;
-                  Navigator.pop(context, value);
-                }
-              })));
+      body: ContentWidth(
+          maxWidth: 760,
+          child: SafeArea(
+              child: MobileScanner(
+                  errorBuilder: (context, error) => const Center(
+                      child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Text('เปิดกล้องไม่สำเร็จ กรุณาตรวจสิทธิ์กล้อง '
+                              'หรือกลับไปกรอกรหัสสินค้า'))),
+                  onDetect: (capture) {
+                    final value =
+                        capture.barcodes.firstOrNull?.rawValue?.trim();
+                    if (!_done && value != null && value.isNotEmpty) {
+                      _done = true;
+                      Navigator.pop(context, value);
+                    }
+                  }))));
 }

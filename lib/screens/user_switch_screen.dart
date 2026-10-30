@@ -1,3 +1,4 @@
+import '../widgets/content_width.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/staff_access_service.dart';
@@ -96,53 +97,56 @@ class _UserSwitchScreenState extends State<UserSwitchScreen> {
       canPop: !_busy,
       child: Scaffold(
         appBar: AppBar(title: const Text('เลือกผู้ใช้งาน')),
-        body: ListView(padding: const EdgeInsets.all(20), children: [
-          const OfflineEntryButton(),
-          const Text(
-              'เลือกผู้ใช้งาน เจ้าของร้านจัดการข้อมูลและกำหนดสิทธิ์เพิ่มเติมให้พนักงานได้'),
-          const SizedBox(height: 16),
-          ListTile(
-              leading: const Icon(Icons.admin_panel_settings_outlined),
-              title: const Text('เจ้าของร้าน'),
-              subtitle: const Text(
-                  'ใช้ PIN เจ้าของที่ตั้งไว้บนเครื่องนี้ หรือบัญชี อีเมล / Google / Apple'),
-              onTap: _busy ? null : _owner),
-          const Divider(),
-          if (_busy) const LinearProgressIndicator(),
-          if (_error != null)
-            Text(_error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error)),
-          FutureBuilder<Map<String, dynamic>>(
-              future: _staff,
-              builder: (context, snap) {
-                if (snap.hasError) {
-                  return Column(children: [
-                    Text(operationError(snap.error!)),
-                    TextButton(
-                        onPressed: () => setState(() => _staff = _load()),
-                        child: const Text('ลองใหม่'))
-                  ]);
-                }
-                if (!snap.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final staff = snap.data!['staff'] as List;
-                if (staff.isEmpty) {
-                  return const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Text(
-                          'ยังไม่มีพนักงาน เพิ่มได้ที่ ตั้งค่า → พนักงาน ในบัญชีเจ้าของร้าน'));
-                }
-                return Column(
-                    children: staff
-                        .map((s) => ListTile(
-                            leading: const Icon(Icons.person_outline),
-                            title: Text(s['name'] as String),
-                            subtitle:
-                                const Text('พนักงานขาย · ใช้ PIN เข้าใช้งาน'),
-                            onTap: _busy ? null : () => _select(s as Map)))
-                        .toList());
-              }),
-        ]),
+        body: ContentWidth(
+            maxWidth: 640,
+            child: ListView(padding: const EdgeInsets.all(20), children: [
+              const OfflineEntryButton(),
+              const Text(
+                  'เลือกผู้ใช้งาน เจ้าของร้านจัดการข้อมูลและกำหนดสิทธิ์เพิ่มเติมให้พนักงานได้'),
+              const SizedBox(height: 16),
+              ListTile(
+                  leading: const Icon(Icons.admin_panel_settings_outlined),
+                  title: const Text('เจ้าของร้าน'),
+                  subtitle: const Text(
+                      'ใช้ PIN เจ้าของที่ตั้งไว้บนเครื่องนี้ หรือบัญชี อีเมล / Google / Apple'),
+                  onTap: _busy ? null : _owner),
+              const Divider(),
+              if (_busy) const LinearProgressIndicator(),
+              if (_error != null)
+                Text(_error!,
+                    style:
+                        TextStyle(color: Theme.of(context).colorScheme.error)),
+              FutureBuilder<Map<String, dynamic>>(
+                  future: _staff,
+                  builder: (context, snap) {
+                    if (snap.hasError) {
+                      return Column(children: [
+                        Text(operationError(snap.error!)),
+                        TextButton(
+                            onPressed: () => setState(() => _staff = _load()),
+                            child: const Text('ลองใหม่'))
+                      ]);
+                    }
+                    if (!snap.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    final staff = snap.data!['staff'] as List;
+                    if (staff.isEmpty) {
+                      return const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Text(
+                              'ยังไม่มีพนักงาน เพิ่มได้ที่ ตั้งค่า → พนักงาน ในบัญชีเจ้าของร้าน'));
+                    }
+                    return Column(
+                        children: staff
+                            .map((s) => ListTile(
+                                leading: const Icon(Icons.person_outline),
+                                title: Text(s['name'] as String),
+                                subtitle: const Text(
+                                    'พนักงานขาย · ใช้ PIN เข้าใช้งาน'),
+                                onTap: _busy ? null : () => _select(s as Map)))
+                            .toList());
+                  }),
+            ])),
       ));
 }
