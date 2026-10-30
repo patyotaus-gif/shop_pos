@@ -64,7 +64,7 @@ async function createWithPickup({ db, shopRef, orderRef, order: originalOrder, r
       const saved = prior.data();
       if (!order.requestSignature || saved.requestSignature !== order.requestSignature || saved.status !== 'pendingPayment')
         throw Object.assign(Error('ช่วงเวลาหรือออเดอร์เปลี่ยนไป กรุณาตรวจออเดอร์เดิมกับร้าน'),{existingOrder:true});
-      return { orderNumber: saved.orderNumber || null, pickupLabel: saved.pickupLabel || null, total: saved.total, finalAmount: saved.finalAmount,
+      return { ...require('./round_queue').fields(saved), tableName:saved.tableName || null, orderNumber: saved.orderNumber || null, pickupLabel: saved.pickupLabel || null, total: saved.total, finalAmount: saved.finalAmount,
         ...(saved.buyGet ? {buyGet:saved.buyGet} : {}),
       ...(saved.bundles ? {bundles:saved.bundles,bundleDiscount:saved.bundleDiscount} : {}),
         ...(saved.coupon ? {coupon:saved.coupon,discount:saved.discount,subtotal:saved.subtotal} : {}),
@@ -93,7 +93,7 @@ async function createWithPickup({ db, shopRef, orderRef, order: originalOrder, r
       catch (_) { throw Object.assign(Error('ชุดสินค้า: ราคาเปลี่ยน กรุณาตรวจชุดสินค้าอีกครั้ง'),{bundleError:true}); }
     }
     const inventory = order.items?.length ? await require('./order_inventory').reserve(tx, shopRef, order.items) : null;
-    let pickup = {};
+    let pickup = {}, writeSlot=()=>{};
     if (order.tableId || order.orderType === 'dineInPrepaid') {
       if (requestedSlot) throw Error('เวลานัดรับใช้สำหรับออเดอร์รับกลับบ้านเท่านั้น');
       if (!order.tableId || order.orderType !== 'dineInPrepaid' || settings.tableOrderMode !== 'prepaid')
@@ -113,16 +113,20 @@ async function createWithPickup({ db, shopRef, orderRef, order: originalOrder, r
       if (existing.size > 2000 || overlapping(existing.docs, slot) >= c.capacity) throw Error('ช่วงเวลานี้เต็มแล้ว กรุณาเลือกช่วงอื่น');
       pickup = { pickupMode: pickupMode === 'asap' ? 'asap' : 'scheduled', pickupSlot: slot.id,
         pickupStartAt: new Date(slot.start), pickupEndAt: new Date(slot.end), pickupLabel: slot.label, pickupTimezone: 'Asia/Bangkok' };
-      tx.set(lock, { revision: Number(previous.data()?.revision || 0) + 1 });
+      writeSlot=()=>tx.set(lock, { revision: Number(previous.data()?.revision || 0) + 1 });
     } else {
       if (requestedSlot) throw Error('ร้านปิดการนัดรับล่วงหน้า กรุณาเลือกใหม่');
       pickup = { pickupMode: 'asap' };
     }
+    const queue = await require('./round_queue').prepare(tx, shopRef,
+      require('./round_queue').onlineChannel({...order,...pickup},now()));
+    writeSlot();
     sequence.write();
+    queue.write();
     if (inventory) inventory.write();
     if (coupon) coupon.write();
-    tx.create(orderRef, { ...order, ...pickup, orderNumber: sequence.number, ...(inventory ? {inventoryReservation:inventory.reservation} : {}) });
-    return { ...pickup, orderNumber: sequence.number, total: order.total, finalAmount: order.finalAmount,
+    tx.create(orderRef, { ...order, ...pickup, ...queue.fields, orderNumber: sequence.number, ...(inventory ? {inventoryReservation:inventory.reservation} : {}) });
+    return { ...pickup, ...queue.fields, tableName:order.tableName || null, orderNumber: sequence.number, total: order.total, finalAmount: order.finalAmount,
       ...(order.buyGet ? {buyGet:order.buyGet} : {}),
       ...(order.bundles ? {bundles:order.bundles,bundleDiscount:order.bundleDiscount} : {}),
       ...(order.coupon ? {coupon:order.coupon,discount:order.discount,subtotal:order.subtotal} : {}),

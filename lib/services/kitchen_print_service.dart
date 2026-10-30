@@ -43,7 +43,11 @@ class KitchenPrintService {
                 pw.Text('สำเนา / พิมพ์ซ้ำ — ตรวจใบเดิมก่อนทำอาหาร'),
               pw.Text('ใบงานครัว • ${job['title']}',
                   style: const pw.TextStyle(fontSize: 16)),
-              pw.Text('เลขงาน ${job['jobId']}'),
+              if ((job['queueLabel'] ?? '').toString().isNotEmpty)
+                pw.Text('${job['queueLabel']}',
+                    style: const pw.TextStyle(fontSize: 18)),
+              pw.Text(
+                  'อ้างอิง ${job['orderNumber']?.toString().isNotEmpty == true ? job['orderNumber'] : job['jobId']}'),
               if ('${job['pickupLabel']}'.isNotEmpty)
                 pw.Text('นัดรับ ${job['pickupLabel']} (เวลาไทย)'),
               if ('${job['customerName']}'.isNotEmpty)
@@ -82,7 +86,11 @@ class KitchenPrintService {
       await line('สำเนา / พิมพ์ซ้ำ — ตรวจใบเดิมก่อนทำอาหาร');
     }
     await line('ใบงานครัว • ${job['title'] ?? ''}', size: 14);
-    await line('เลขงาน ${job['jobId'] ?? ''}');
+    if ((job['queueLabel'] ?? '').toString().isNotEmpty) {
+      await line('${job['queueLabel']}', size: 18);
+    }
+    await line(
+        'อ้างอิง ${job['orderNumber']?.toString().isNotEmpty == true ? job['orderNumber'] : job['jobId'] ?? ''}');
     if ((job['pickupLabel'] ?? '').toString().isNotEmpty) {
       await line('นัดรับ ${job['pickupLabel']} (เวลาไทย)');
     }

@@ -210,6 +210,8 @@ function createStaffAccess({db, auth, FieldValue, Timestamp, now=()=>new Date()}
         paymentMethod,...(salesChannel?{salesChannel}:{}),isDebt:false,isRefunded:false,createdAt:Timestamp.fromDate(now()),staffName:member.data().name,staffId:ctx.user.token.staffId,
         staffUid:ctx.user.uid,requestDigest:digest,receiptNo:`S-${day}-${String(seq).padStart(3,'0')}`};
       const context=await ledgerContext(tx,ctx.ref);
+      const queue=await require('./round_queue').prepare(tx,ctx.ref,salesChannel==='takeaway'?'takeaway':null,{context});
+      Object.assign(sale,queue.fields);
       const receiptSettings=await tx.get(ctx.ref.collection('settings').doc('shop'));
       sale.receiptProfile=require('./receipt_profile').receiptProfile(receiptSettings.data());
       sale.accountingVersion=1;
@@ -218,6 +220,7 @@ function createStaffAccess({db, auth, FieldValue, Timestamp, now=()=>new Date()}
       sale.stockDeducted=Object.fromEntries([...quantities].filter(([id])=>products.get(id).stockMode!=='recipe'));
       const allocations=new Map([...quantities].filter(([id])=>products.get(id).stockMode!=='recipe').map(([id,q])=>[id,stock.allocate(products.get(id),stock.round(q))]));
       sale.stockLotsDeducted=Object.fromEntries([...allocations].map(([id,a])=>[id,a.used]));
+      queue.write();
       tx.set(ref,sale);tx.set(counter,{day,seq});
       for(const u of ingredientUpdates)tx.update(u.ref,{stock:FieldValue.increment(-u.qty)});
       writeMovement(tx,ctx.ref,context,'sale-'+ref.id,{...saleMovement(sale,ctx.user.uid),saleId:ref.id},FieldValue);

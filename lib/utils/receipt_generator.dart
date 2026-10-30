@@ -186,15 +186,22 @@ class ReceiptGenerator {
       pw.SizedBox(height: 8),
       await text('เลขที่เอกสาร: ${documentNumber(sale)}',
           style: pw.TextStyle(fontSize: 8 * fontScale)),
+      if (sale.queue != null && sale.tableName?.trim().isNotEmpty != true)
+        pw.Center(
+            child: await text(sale.queue!.label,
+                textAlign: pw.TextAlign.center,
+                style: pw.TextStyle(
+                    fontSize: 16 * fontScale, fontWeight: pw.FontWeight.bold))),
       await text('วันที่ขาย: ${saleDate(sale.createdAt)}',
           style: pw.TextStyle(fontSize: 8 * fontScale)),
       if (sale.staffName?.trim().isNotEmpty == true)
         await text('พนักงานขาย: ${sale.staffName}',
             style: pw.TextStyle(fontSize: 8 * fontScale)),
-      if (sale.tableName != null)
+      if (sale.tableName?.trim().isNotEmpty == true)
         pw.Center(
           child: await text('โต๊ะ ${sale.tableName}',
-              style: pw.TextStyle(fontSize: 9 * fontScale)),
+              style: pw.TextStyle(
+                  fontSize: 16 * fontScale, fontWeight: pw.FontWeight.bold)),
         ),
       pw.Divider(),
       for (final item in sale.items)

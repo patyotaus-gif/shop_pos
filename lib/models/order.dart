@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'round_queue.dart';
 
 enum OrderStatus { pendingPayment, paid, accepted, ready, completed, cancelled }
 
@@ -54,6 +55,10 @@ class OrderItem {
 class ShopOrder {
   final String id;
   final String? orderNumber;
+  final RoundQueue? queue;
+  String get displayLabel => tableName?.isNotEmpty == true
+      ? 'โต๊ะ $tableName'
+      : queue?.label ?? 'เลขออเดอร์ $displayNumber';
   String get displayNumber => orderNumber ?? id;
   final String customerName;
   final String customerPhone;
@@ -128,6 +133,7 @@ class ShopOrder {
   const ShopOrder({
     required this.id,
     this.orderNumber,
+    this.queue,
     required this.customerName,
     required this.customerPhone,
     required this.items,
@@ -159,6 +165,7 @@ class ShopOrder {
       ShopOrder(
         id: id,
         orderNumber: data['orderNumber'] as String?,
+        queue: RoundQueue.fromMap(data),
         customerName: data['customerName'] ?? '',
         customerPhone: data['customerPhone'] ?? '',
         items: (data['items'] as List<dynamic>? ?? [])

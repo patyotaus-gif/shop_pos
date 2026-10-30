@@ -124,6 +124,10 @@ class _SaleReceiptScreenState extends State<SaleReceiptScreen> {
             final paper = _paper;
             return DocumentWorkspace(
                 controls: [
+                  if (sale.queue != null)
+                    Text(sale.queue!.label,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.titleLarge),
                   Padding(
                       padding: const EdgeInsets.all(12),
                       child: Text(

@@ -60,8 +60,11 @@ class _OrderSummaryCardState extends State<OrderSummaryCard> {
           padding: const EdgeInsets.all(16),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Text('เลขออเดอร์ ${order.displayNumber}',
+            Text(order.displayLabel,
                 style: const TextStyle(fontWeight: FontWeight.w700)),
+            if (order.queue != null || order.tableName?.isNotEmpty == true)
+              Text('อ้างอิง ${order.displayNumber}',
+                  style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: 8),
             if (order.pickupDescription != null)
               Padding(

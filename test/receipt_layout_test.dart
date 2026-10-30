@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pdf/pdf.dart';
 import 'package:shop_pos/models/receipt_profile.dart';
 import 'package:shop_pos/models/sale.dart';
+import 'package:shop_pos/models/round_queue.dart';
 import 'package:shop_pos/models/order_modifier.dart';
 import 'package:shop_pos/utils/receipt_generator.dart';
 
@@ -28,6 +29,7 @@ Sale sample(
         bool longName = false}) =>
     Sale(
         id: 'legacy-document-123',
+        queue: const RoundQueue('001', 'takeaway', 'fixture-round'),
         receiptNo: receiptNo,
         createdAt: DateTime(2026, 10, 10, 14, 36, 54),
         items: [

@@ -25,11 +25,22 @@ function handlers({db,FieldValue,HttpsError,now=()=>Date.now()}) {
         const all=linesFor(source,o), printed=prior.printedKeys || [];
         const lines=reprint===true ? all : all.filter(i=>!printed.includes(i.key));
         if(!lines.length) return {alreadyPrinted:true};
+        const queue=await require('./round_queue').prepare(tx,shop,
+          source==='online' && !o.tableName && o.orderType!=='dineInPrepaid' &&
+          (['accepted','ready'].includes(o.status)||(o.status==='paid' && require('./round_queue').onlineChannel(o))) ? 'online':null,{existing:o});
+        const saleRef=validId(o.saleId)?shop.collection('sales').doc(o.saleId):null;
+        const sale=queue.fields.queueNumber && saleRef ? await tx.get(saleRef):null;
+        Object.assign(o,queue.fields);
         const attempt=randomUUID(), data={source,orderId,attempt,reprint:reprint===true || prior.status==='needsReview',status:'printing',startedAtMs:now(),
+          ...require('./round_queue').fields(o),queueLabel:require('./round_queue').label(o)||'',orderNumber:o.orderNumber||'',
           printedKeys:printed,lines,title:source==='table'||o.tableName?`โต๊ะ ${o.tableName}`:'รับกลับบ้าน',
           pickupLabel:o.pickupLabel || '',customerName:o.customerName || '',updatedAt:FieldValue.serverTimestamp()};
+        queue.write();
+        if(source==='online' && queue.fields.queueNumber)tx.update(shop.collection('orders').doc(orderId),queue.fields);
+        if(sale?.exists && sale.data().orderId===orderId)tx.update(saleRef,queue.fields);
         tx.set(job,data);
-        return {jobId:job.id,attempt,reprint:data.reprint,lines,title:data.title,pickupLabel:data.pickupLabel,customerName:data.customerName};
+        return {jobId:job.id,attempt,reprint:data.reprint,lines,title:data.title,pickupLabel:data.pickupLabel,customerName:data.customerName,
+          queueLabel:data.queueLabel,orderNumber:data.orderNumber};
       });
     },
     finish:async request=>{

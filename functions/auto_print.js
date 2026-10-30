@@ -6,6 +6,10 @@ const {owner, validId} = require('./order_accounting');
 const {linesFor} = require('./kitchen_print');
 const hash = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const ready = order => ['paid', 'accepted', 'ready', 'completed'].includes(order?.status);
+// Use stored assignment, not today's clock: an ASAP slot tomorrow must still
+// produce its first job when accepted tomorrow, even though the date changed.
+const kitchenReady = order => ready(order) && !(order.status === 'paid' && !order.tableName &&
+  (order.pickupMode === 'scheduled' || (order.pickupStartAt && !require('./round_queue').fields(order).queueNumber)));
 function candidates(source, before, after, sourceId) {
   if (!after) return [];
   if (source === 'sale') {
@@ -15,15 +19,16 @@ function candidates(source, before, after, sourceId) {
     if (!after.orderId && !after.tableName && ['takeaway', 'lineMan', 'grab', 'otherDelivery'].includes(after.salesChannel)) {
       const lines = linesFor('sale', after);
       if (lines.length) jobs.unshift({id: `counter-${sourceId}`, kind: 'kitchen', source, sourceId,
-        lines, title: 'หน้าร้าน • รับกลับบ้าน / เดลิเวอรี', customerName: after.customerName || '', pickupLabel: ''});
+        lines, queueLabel: require('./round_queue').label(after)||'', orderNumber:after.receiptNo||'', title: 'หน้าร้าน • รับกลับบ้าน / เดลิเวอรี', customerName: after.customerName || '', pickupLabel: ''});
     }
     return jobs;
   }
-  if (source === 'table' ? after.status !== 'open' : !ready(after)) return [];
-  const previous = new Set((source === 'table' || ready(before) ? linesFor(source, before || {}) : []).map(l => l.key));
+  if (source === 'table' ? after.status !== 'open' : !kitchenReady(after)) return [];
+  const previous = new Set((source === 'table' || kitchenReady(before) ? linesFor(source, before || {}) : []).map(l => l.key));
   const lines = linesFor(source, after).filter(l => !previous.has(l.key));
   if (!lines.length) return [];
   return [{id: `kitchen-${hash([source, sourceId, lines.map(l => l.key)])}`, kind: 'kitchen', source, sourceId, lines,
+    queueLabel:require('./round_queue').label(after)||'',orderNumber:after.orderNumber||'',
     title: after.tableName ? `โต๊ะ ${after.tableName}` : 'รับกลับบ้าน / ออนไลน์',
     customerName: after.customerName || '', pickupLabel: after.pickupLabel || ''}];
 }
@@ -145,7 +150,8 @@ function handlers({db, FieldValue, HttpsError, now = () => Date.now()}) {
         if (kr) tx.set(kr, {...k, status: 'printing', source: j.source, orderId: j.sourceId,
           attempt, startedAtMs: now(), lines, reprint: j.reprint === true,
           printedKeys: k.printedKeys || [], updatedAt: FieldValue.serverTimestamp()});
-        return {...j, lines, jobId: jr.id, attempt};
+        return {...j, lines, jobId: jr.id, attempt,
+          queueLabel:require('./round_queue').label(order)||j.queueLabel||'',orderNumber:order.orderNumber||order.receiptNo||j.orderNumber||''};
       });
     },
     finish: async request => {

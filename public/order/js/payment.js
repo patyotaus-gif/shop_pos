@@ -1,5 +1,5 @@
 import { initPickup, refreshPickup, pickupPayload } from './pickup.js?v=20261029orders';
-import { pickupDescription } from './order-display.mjs';
+import { pickupDescription, orderLabel } from './order-display.mjs';
 // Order form + PromptPay payment + slip verification.
 // Logic moved VERBATIM from the old public/order/index.html inline script —
 // do not "improve" payload/CRC/compression code here.
@@ -161,7 +161,7 @@ function showPaymentScreen({ finalAmount, total, promptpayId, promptpayName, pic
   document.getElementById('paySlipStatus').textContent = !waiting
     ? (pendingOrder.status === 'cancelled' ? 'ยกเลิกออเดอร์แล้ว' : 'ร้านยืนยันรับเงินแล้ว ไม่ต้องโอนซ้ำ')
     : review ? 'ส่งสลิปแล้ว รอร้านตรวจสอบ ไม่ต้องโอนซ้ำ' : '';
-  document.getElementById('payOrderId').textContent = `เลขออเดอร์ ${pendingOrder.orderNumber || pendingOrder.orderId}`;
+  document.getElementById('payOrderId').textContent = orderLabel(pendingOrder);
   document.getElementById('payPickup').textContent = pickupDescription(pickupLabel);
   const payload = buildPromptPayPayload(promptpayId, finalAmount);
   const qrEl = document.getElementById('payQrCanvas');
@@ -239,7 +239,7 @@ async function uploadSlip(event) {
     document.getElementById('payCancelBtn').hidden=true;
     status.textContent = data.awaitingReview ? 'ส่งสลิปแล้ว รอร้านตรวจยอดเงินเข้าและยืนยัน' : 'กำลังเปิดหน้าออเดอร์...';
     setTimeout(() => {
-      window.location.href = `/order/success/?order=${encodeURIComponent(uploadingOrder.orderId)}&number=${encodeURIComponent(uploadingOrder.orderNumber || uploadingOrder.orderId)}${data.awaitingReview ? '&review=1' : ''}${uploadingOrder.pickupLabel ? '&pickup=' + encodeURIComponent(uploadingOrder.pickupLabel) : ''}`;
+      window.location.href = `/order/success/?order=${encodeURIComponent(uploadingOrder.orderId)}&number=${encodeURIComponent(uploadingOrder.orderNumber || uploadingOrder.orderId)}&queue=${encodeURIComponent(orderLabel(uploadingOrder))}${data.awaitingReview ? '&review=1' : ''}${uploadingOrder.pickupLabel ? '&pickup=' + encodeURIComponent(uploadingOrder.pickupLabel) : ''}`;
     }, 1200);
   } catch (e) {
     status.className = 'err';

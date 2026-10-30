@@ -1,6 +1,7 @@
 import '../utils/stock_quantity.dart';
 import '../utils/daily_stream.dart';
 import 'inventory_service.dart';
+import 'round_queue_service.dart';
 import 'dart:async';
 import 'ingredient_checkout.dart';
 import 'buy_get_service.dart';
@@ -286,6 +287,9 @@ class SaleService {
           : shop.collection('customers').doc(loyaltyCustomerId);
       final customer = customerRef == null ? null : await tx.get(customerRef);
       final control = await MoneyLedger.read(tx, shop);
+      final queue = draft.salesChannel == SalesChannel.takeaway
+          ? await RoundQueueService.prepare(tx, shop, control, draft.createdAt)
+          : null;
       final ingredientUsage = await IngredientCheckout.read(
           tx, shop, draft.items, reservationData['ingredients'] as Map? ?? {},
           strictStock: draft.bundles.isNotEmpty);
@@ -294,6 +298,10 @@ class SaleService {
           (counter.data()?['seq'] as num? ?? 0).toInt());
       final payload = {
         ...draft.toFirestore(),
+        // Discard any caller-provided queue; only this transaction allocates it.
+        'queueNumber': queue?.number,
+        'queueChannel': queue?.channel,
+        'queueSessionId': queue?.sessionId,
         'receiptProfile':
             ReceiptProfile.fromSettings(receiptSettings.data() ?? {}).toMap(),
         'receiptNo': formatReceiptNo(next.day, next.seq),
@@ -308,6 +316,7 @@ class SaleService {
           'loyaltyPointsAwarded': CustomerService.pointsFor(draft.total),
       };
       tx.set(saleRef, payload);
+      RoundQueueService.write(tx, shop, queue);
       IngredientCheckout.write(tx, shop, ingredientUsage);
       for (final entry in counted.entries) {
         final p = stockProducts[entry.key]!;

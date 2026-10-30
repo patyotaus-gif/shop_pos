@@ -70,9 +70,11 @@ async function confirmOrder({db,FieldValue,shopId,orderId,actor,paymentRef,strip
     }
     const release=await require('./order_inventory').prepareRelease(tx,shop,order);
     const context=await ledgerContext(tx,shop);
+    const queue=await require('./round_queue').prepare(tx,shop,
+      require('./round_queue').onlineChannel(order),{existing:order,context});
     const receiptSettings=await tx.get(shop.collection('settings').doc('shop'));
     const now=FieldValue.serverTimestamp();
-    const sale={...(staffName?{staffName}:{}),...(staffId?{staffId}:{}),items:order.items.map(i=>({...i,subtotal:minor(i.price*i.quantity)/100})),total:amount/100,
+    const sale={...queue.fields,...(order.tableName?{tableName:order.tableName}:{}),...(staffName?{staffName}:{}),...(staffId?{staffId}:{}),items:order.items.map(i=>({...i,subtotal:minor(i.price*i.quantity)/100})),total:amount/100,
       discount:(bundleCut+(order.coupon?.discountMinor||0))/100,
       ...(order.bundles ? {bundles:order.bundles,bundleDiscount:bundleCut/100} : {}),
       ...(order.coupon ? {coupon:order.coupon} : {}),
@@ -87,11 +89,12 @@ async function confirmOrder({db,FieldValue,shopId,orderId,actor,paymentRef,strip
       ...(order.inventoryReservation?{ingredientsDeducted:true,ingredientUsage:Object.fromEntries(ingredientUpdates.map(u=>[u.ref.id,u.qty]))}:{}),
       ...(stripeSession?{stripePaymentIntentId:stripeSession.payment_intent||null}:{}),
       ...(omise?{paymentProvider:'omise',omiseChargeId:omise.chargeId,omiseMerchantId:omise.merchantId}:{})};
+    queue.write();
     tx.create(saleRef,sale);
     release();
     for(const u of updates)stock.write(tx,u.ref,u.product,u.allocation,{id:'sale-'+saleRef.id,referenceId:saleRef.id,actor},FieldValue);
     for(const u of ingredientUpdates)tx.update(u.ref,{stock:FieldValue.increment(-u.qty)});
-    tx.update(orderRef,{status:'paid',paidAt:now,saleId:saleRef.id,paymentRef:omise?.chargeId||paymentRef||null,
+    tx.update(orderRef,{...queue.fields,status:'paid',paidAt:now,saleId:saleRef.id,paymentRef:omise?.chargeId||paymentRef||null,
       confirmedBy:actor,...(stripeSession?{stripeSessionId:stripeSession.id}:{autoConfirmed:!!omise})});
     writeMovement(tx,shop,context,'sale-'+saleRef.id,{...saleMovement(sale,actor),saleId:saleRef.id,orderId},FieldValue);
     return {saleId:saleRef.id,alreadyRecorded:false};
@@ -121,13 +124,20 @@ function handlers({db,FieldValue,HttpsError}) {
           if(requiresGatewayVerification(old))throw new HttpsError('failed-precondition','ต้องตรวจสอบสถานะชำระเงินออนไลน์ก่อนยกเลิก');
           if(typeof reason!=='string'||!reason.trim())throw new HttpsError('invalid-argument','กรุณาระบุเหตุผลยกเลิก');
         } else if(next[old.status]!==status)throw new HttpsError('failed-precondition','สถานะออเดอร์เปลี่ยนแล้ว');
+        const shop=db.collection('shops').doc(shopId);
+        const queue=await require('./round_queue').prepare(tx,shop,
+          ['accepted','ready'].includes(status) && !old.tableName && old.orderType!=='dineInPrepaid' ? 'online':null,{existing:old});
+        const saleRef=validId(old.saleId)?shop.collection('sales').doc(old.saleId):null;
+        const sale=queue.fields.queueNumber && saleRef ? await tx.get(saleRef):null;
         if(status==='cancelled'){
           const release=await require('./order_inventory').prepareRelease(tx,db.collection('shops').doc(shopId),old);
           const releaseCoupon=await require('./coupons').prepareRelease(tx,db.collection('shops').doc(shopId),old);
           release();
           releaseCoupon();
         }
-        tx.update(ref,{status,statusUpdatedAt:FieldValue.serverTimestamp(),statusUpdatedBy:request.auth.uid,
+        queue.write();
+        if(sale?.exists && sale.data().orderId===orderId)tx.update(saleRef,queue.fields);
+        tx.update(ref,{...queue.fields,status,statusUpdatedAt:FieldValue.serverTimestamp(),statusUpdatedBy:request.auth.uid,
           ...(status==='cancelled'?{cancelReason:reason.trim().slice(0,500)}:{})});
         return {success:true};
       });

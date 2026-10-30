@@ -445,10 +445,13 @@ exports.createOrderCheckout = onRequest(
     // สร้าง order doc ก่อน (status: pendingPayment)
     const orderRef = shopRef.collection("orders").doc();
 
-    const orderNumber = await firestoreSdk.getFirestore().runTransaction(async tx => {
+    const {orderNumber, queueLabel} = await firestoreSdk.getFirestore().runTransaction(async tx => {
       const sequence = await require('./order_number').prepare(tx, shopRef);
+      const queue = await require('./round_queue').prepare(tx, shopRef, 'online');
       sequence.write();
+      queue.write();
       tx.create(orderRef, {
+        ...queue.fields,
         orderNumber: sequence.number,
         customerName,
         customerPhone,
@@ -458,7 +461,7 @@ exports.createOrderCheckout = onRequest(
         status: "pendingPayment",
         createdAt: firestoreSdk.FieldValue.serverTimestamp(),
       });
-      return sequence.number;
+      return {orderNumber:sequence.number,queueLabel:require('./round_queue').label(queue.fields)||''};
     });
 
     // สร้าง Stripe Checkout session
@@ -476,7 +479,7 @@ exports.createOrderCheckout = onRequest(
         quantity: 1,
       })),
       mode: "payment",
-      success_url: `https://pok-pok.app/order/success/?order=${orderRef.id}&number=${encodeURIComponent(orderNumber)}`,
+      success_url: `https://pok-pok.app/order/success/?order=${orderRef.id}&number=${encodeURIComponent(orderNumber)}&queue=${encodeURIComponent(queueLabel)}`,
       cancel_url: `https://pok-pok.app/order/?shop=${shopId}`,
       metadata: { shopId, type: "order", orderId: orderRef.id },
       client_reference_id: orderRef.id,
@@ -726,6 +729,8 @@ exports.createPromptPayOrder = onRequest(
     res.json({
       orderId: orderRef.id,
       orderNumber: pickup.orderNumber || null,
+      ...require('./round_queue').fields(pickup),
+      tableName: pickup.tableName || null,
       pickupLabel: pickup.pickupLabel || null,
       total: pickup.total,
       ...(pickup.buyGet ? {buyGet:pickup.buyGet} : {}),

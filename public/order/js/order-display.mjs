@@ -12,3 +12,11 @@ export function pickupDays(slots) {
 export function slotsForDate(slots, date) {
   return slots.filter(s => pickupParts(s.label).date === date);
 }
+export function orderLabel(order) {
+  if (order.tableName) return `โต๊ะ ${order.tableName}`;
+  if (order.queueSessionId && /^\d{3,}$/.test(order.queueNumber || '') &&
+      ['online','takeaway'].includes(order.queueChannel)) {
+    return `${order.queueChannel === 'online' ? 'ออนไลน์' : 'กลับบ้าน'} ${order.queueNumber}`;
+  }
+  return `เลขออเดอร์ ${order.orderNumber || order.orderId || ''}`;
+}

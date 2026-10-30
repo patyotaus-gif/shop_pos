@@ -438,7 +438,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
                   ? 'ออนไลน์ • รับกลับบ้าน'
                   : 'ออนไลน์ • โต๊ะ ${o.tableName}',
               style: const TextStyle(fontWeight: FontWeight.bold)),
-          Text('เลขออเดอร์ ${o.displayNumber}'),
+          Text(o.displayLabel),
           Text('${o.customerName} • ${o.status.label}'),
           Text(
               'รับออเดอร์ ${DateFormat('dd/MM/yyyy HH:mm').format(o.createdAt.toLocal())} น.'),

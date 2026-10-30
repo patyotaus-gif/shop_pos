@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'order_modifier.dart';
 import 'receipt_profile.dart';
+import 'round_queue.dart';
 
 enum PaymentMethod { cash, transfer, qr, online }
 
@@ -153,6 +154,7 @@ class Sale {
   /// Per-day receipt number (YYMMDD-NNN) assigned at checkout. Null for
   /// online-order sales (digital, not printed at a till) and legacy sales.
   final String? receiptNo;
+  final RoundQueue? queue;
   final List<String> offlineReview;
 
   /// Restaurant table this bill closed from (null for retail/takeaway).
@@ -183,6 +185,7 @@ class Sale {
     this.splitCount = 1,
     this.staffName,
     this.receiptNo,
+    this.queue,
     this.offlineReview = const [],
     this.tableName,
     this.receiptProfile,
@@ -282,6 +285,7 @@ class Sale {
         splitCount: (data['splitCount'] ?? 1) as int,
         staffName: data['staffName'] as String?,
         receiptNo: data['receiptNo'] as String?,
+        queue: RoundQueue.fromMap(data),
         offlineReview:
             List<String>.from(data['offlineReview'] as List? ?? const []),
         tableName: data['tableName'] as String?,
@@ -312,6 +316,7 @@ class Sale {
         if (splitCount > 1) 'splitCount': splitCount,
         if (staffName != null) 'staffName': staffName,
         if (receiptNo != null) 'receiptNo': receiptNo,
+        ...?queue?.toMap(),
         if (tableName != null) 'tableName': tableName,
         if (receiptProfile != null) 'receiptProfile': receiptProfile!.toMap(),
       };
