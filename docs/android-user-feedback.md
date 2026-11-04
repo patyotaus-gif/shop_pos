@@ -1,5 +1,12 @@
 # Android pilot feedback — 2026-10-03
 
+## Website developer footer — 2026-11-04
+
+- Replaced the tall white PEXON card with the existing transparent source PNG. An SVG viewport frames the visible artwork without changing the original file; CSS renders its alpha silhouette in white for contrast against the dark footer. No glow, shadow or logo distortion is added.
+- The developer mark is 104 px wide, with its label above and centered on phones; desktop uses a compact horizontal arrangement. Removed duplicate privacy/terms links from the bottom row, retaining the Help links. The stylesheet URL is versioned for cache refresh.
+- Landing-page and footer browser checks passed at 320/390/768/1440 widths, including one privacy link and one terms link per footer, no overflow and existing navigation behavior. Mobile/desktop footer screenshots were visually inspected. This is a website-only change; Android remains 1.2.70+87.
+- Published through Hosting and verified public HTML/CSS/transparent PNG byte-for-byte; the app update manifest remains unchanged. Mobile and desktop footer previews are archived in the November 4 Drive App Assets folder; original source logos are preserved.
+
 ## Released 1.2.70+87 — rounded Android launcher icon (2026-11-04)
 
 - Fixed the square white border reported on the Android home screen. The previous launcher used only an opaque square PNG. Added an Android adaptive icon with a white background and a separate transparent mortar/pestle foreground, allowing the launcher to apply its own rounded/circular mask. The source artwork is preserved; the white square and inset plate are omitted from this Android foreground.

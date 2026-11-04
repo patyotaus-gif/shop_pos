@@ -180,10 +180,8 @@
     @media (max-width: 600px) { nav { height: 68px; padding: 0 5%; gap: 12px; } .logo { font-size: 24px; } .nav-end { gap: 6px; } .btn-ruby { font-size: 12px; padding: 7px 12px; } .mobile-nav { top: 68px; } main > section { padding: 48px 0; } .hero { grid-template-columns: 1fr; gap: 32px; } h1 { font-size: clamp(36px, 9vw, 48px); margin: 16px 0; } .hero-desc { font-size: 16px; } .hero-ctas { gap: 18px; } .btn-lg { padding: 12px 18px; font-size: 15px; } .hero-visual { margin: 0 18px; padding-top: 25px; } .hero-visual img { width: 195px; } .hero-visual figcaption { font-size: 11px; } .margin-note { right: -10px; top: 34px; } .shop-strip { gap: 8px 20px; font-size: 12px; padding: 16px 0; } .shop-strip span:first-child { flex-basis: 100%; } .section-intro { grid-template-columns: 1fr; gap: 5px; margin-bottom: 25px; } .shop-stories { grid-template-columns: 1fr; } .shop-story, .shop-story + .shop-story { padding: 25px 0; border-left: 0; } .shop-story + .shop-story { border-top: 2px solid var(--wine); } .shop-story h3 { font-size: 26px; } main > .online { grid-template-columns: 1fr; padding: 44px 7%; gap: 32px !important; } .order-shot img { width: 195px; } .marketplace { grid-template-columns: 1fr; gap: 15px; } .how-steps { grid-template-columns: 1fr; gap: 20px; } .how-step { display: grid; grid-template-columns: 35px 1fr; gap: 10px; } .how-step-title { margin-top: 0; } .pricing-cards { grid-template-columns: 1fr 1fr; } .p-card { padding: 23px 12px; } .p-amt { font-size: 27px; } .p-plan { font-size: 16px; } .p-list { font-size: 12px; } .p-btn { font-size: 13px; } .download-guides { grid-template-columns: 1fr; gap: 24px; } .footer-top { grid-template-columns: 1fr 1fr; gap: 30px 20px; } .footer-brand { grid-column: 1 / -1; } .footer-col a { overflow-wrap: anywhere; } }
     @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { animation: none !important; transition: none !important; } }
 @media (max-width: 600px) { .pricing-cards { grid-template-columns: 1fr; } .p-card + .p-card { border-left: 0; border-top: 1px solid var(--line); } }
-      .developer-brand { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-    .developer-brand img { object-fit:contain; border-radius:8px; }
   </style>
-  <link rel="stylesheet" href="/brand.css?v=86">
+  <link rel="stylesheet" href="/brand.css?v=20261104-footer">
 </head>
 <body>
 <a class="skip-link" href="#main">ข้ามไปเนื้อหา</a>
@@ -441,12 +439,14 @@
     </div>
   </div>
   <div class="footer-bottom">
-    <div class="developer-brand"><span>พัฒนาโดย PEXON INNOVATION</span><img src="/brand/pexon-white.png" width="120" height="170" alt="PEXON INNOVATION" loading="lazy" /></div>
-    <span>© 2026 Pokpok. สงวนลิขสิทธิ์ทุกประการ</span>
-    <div style="display:flex;gap:20px;">
-      <a href="/privacy">นโยบายความเป็นส่วนตัว</a>
-      <a href="/terms">เงื่อนไขการใช้บริการ</a>
+    <div class="developer-brand">
+      <span>พัฒนาโดย</span>
+      <!-- Frame the visible artwork; the supplied transparent PNG stays intact. -->
+      <svg class="developer-logo" viewBox="254 688 1624 1720" width="104" height="110" role="img" aria-label="PEXON INNOVATION">
+        <image href="/brand/pexon-transparent.png" width="2121" height="3000" />
+      </svg>
     </div>
+    <span>© 2026 Pokpok. สงวนลิขสิทธิ์ทุกประการ</span>
   </div>
 </footer>
 
