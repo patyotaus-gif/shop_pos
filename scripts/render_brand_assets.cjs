@@ -19,6 +19,21 @@ const root = path.resolve(__dirname, '..');
     const background = svg.slice(svg.indexOf('</defs>') + 7, svg.indexOf('<!-- Upright handle -->'));
     const pestle = svg.slice(svg.indexOf('<!-- Upright handle -->'), svg.indexOf('<!-- Pan bowl -->'));
     const bowl = svg.slice(svg.indexOf('<!-- Pan bowl -->'), svg.lastIndexOf('</svg>'));
+    // Android launchers apply their own mask to adaptive icons. Never put the
+    // square white canvas or the inset rounded plate in the foreground layer.
+    // Center the mark (source y=176..786) and keep it inside the 66/108 safe circle.
+    fs.mkdirSync(path.join(root, 'assets/brand/android'), {recursive: true});
+    const mark = pestle + bowl;
+    const androidLayers = {
+      'launcher-foreground': `<g transform="translate(512 512) scale(.9) translate(-512 -481)">${mark}</g>`,
+      // Older launchers use the PNG directly, so its outer corners must be clear.
+      'launcher-legacy': `<rect width="1024" height="1024" rx="224" fill="#FFFFFF"/>${mark}`,
+    };
+    await page.setViewportSize({width: 1024, height: 1024});
+    for (const [name, shapes] of Object.entries(androidLayers)) {
+      await page.setContent(`<style>html,body{margin:0;background:transparent}svg{display:block}</style><svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">${defs}${shapes}</svg>`);
+      await page.screenshot({path: path.join(root, `assets/brand/android/${name}.png`), omitBackground: true});
+    }
     fs.mkdirSync(path.join(root, 'assets/icon/splash'), {recursive: true});
     await page.setViewportSize({width: 1024, height: 1024});
     for (const [name, shapes] of Object.entries({background, pestle, bowl})) {

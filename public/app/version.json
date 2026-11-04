@@ -1,10 +1,10 @@
 {
-  "version": "1.2.69",
-  "build": 86,
+  "version": "1.2.70",
+  "build": 87,
   "url": "https://pok-pok.app/app/pokpok.apk",
   "minSupportedBuild": 1,
   "mandatory": false,
-  "notes": "ปรับหน้าเปิดแอพเป็นโลโก้ Pokpok ขยับสากตำครก พร้อมรองรับการตั้งค่าลดการเคลื่อนไหวของเครื่อง",
-  "sha256": "24094041850c0bad07adea1019972242326ca5ee56136da444cab3d54227ba03",
-  "sizeBytes": 97211262
+  "notes": "แก้ขอบไอคอนแอพ Android ให้โค้งตามรูปแบบหน้าจอหลักของเครื่อง พร้อมรองรับไอคอนแบบวงกลมและรุ่นเก่า",
+  "sha256": "f5a4d725ccd9cf871f085ec904ffb0635afa086dc055349b44542c2e72412bfb",
+  "sizeBytes": 97244459
 }

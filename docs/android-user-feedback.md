@@ -1,5 +1,14 @@
 # Android pilot feedback — 2026-10-03
 
+## Released 1.2.70+87 — rounded Android launcher icon (2026-11-04)
+
+- Fixed the square white border reported on the Android home screen. The previous launcher used only an opaque square PNG. Added an Android adaptive icon with a white background and a separate transparent mortar/pestle foreground, allowing the launcher to apply its own rounded/circular mask. The source artwork is preserved; the white square and inset plate are omitted from this Android foreground.
+- The renderer centers the foreground inside Android's 66/108 circular safe zone; generator inset is explicitly zero because the asset already includes this padding. A separate rounded white legacy icon has transparent outer corners for launchers that use the PNG directly. Regenerated all five Android densities. Existing iOS, website and animated splash images remain byte-identical.
+- Visual previews checked rounded, circular and legacy forms. Pixel checks passed for the adaptive safe zone and transparent corners in all five legacy densities. Reference: [Android adaptive icon guidance](https://developer.android.com/develop/ui/compose/system/icon_design_adaptive).
+- Android `:app:processReleaseResources` passed (1m 32s), including resource linking of the adaptive XML and foreground/background references. `git diff --check` passed.
+- Release APK 1.2.70+87 built in 136.9 seconds. Original signing certificate verified; the packaged `anydpi-v26` icon contains the adaptive foreground/background and zero inset. Installed over build 86 on Samsung SM-X900; package manager confirms version 87. Visually inspected the real Samsung Launcher app drawer: the icon has the same rounded outer shape as neighboring apps, with no square white corners. Tapping it opens the existing shop session and table screen without logging in. No transactions or shop settings were changed. Private before/after evidence: `.remember/tmp/release87-icon-before.png`, `release87-icon-after.png`, and `release87-app-after.png`.
+- Published Android build 87 through Hosting. Public manifest and complete APK download match the built artifact: **97,244,459 bytes**, SHA-256 `f5a4d725ccd9cf871f085ec904ffb0635afa086dc055349b44542c2e72412bfb`; no-cache headers verified. Build 86 APK/manifest backed up and hash-checked. Optional update, minimum supported build 1. No backend/rules or iOS/TestFlight release. Held receipt-feed changes remain excluded.
+
 ## Released 1.2.69+86 — pounding splash and current website screenshots (2026-11-04)
 
 - The new Pokpok artwork now pounds twice per two-second loop, following the old splash rhythm: only the pestle lifts and strikes, while the bowl briefly compresses at impact. Original gradient artwork is rasterized into background/pestle/bowl layers by `scripts/render_brand_assets.cjs`; the icon frame stays still. Loading dots continue below it. System reduced-motion settings show the original static icon and stop the loop.
