@@ -927,6 +927,7 @@ async function _lineReply(token, replyToken, messages) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ replyToken, messages }),
+    signal: AbortSignal.timeout(10000),
   });
   return res.ok;
 }
@@ -943,6 +944,18 @@ function _verifyLineSignature(secret, rawBody, signature) {
 // ────────────────────────────────────────────────
 // LINE Webhook — รับ events จาก LINE platform
 // ────────────────────────────────────────────────
+const lineHandover = require('./line_handover').handlers({
+  db: firestoreSdk.getFirestore(), assertFounder, HttpsError,
+  profile: async userId => {
+    const response = await fetch(`https://api.line.me/v2/bot/profile/${userId}`, {
+      headers: {Authorization: `Bearer ${lineChannelAccessToken.value()}`},
+      signal: AbortSignal.timeout(3000),
+    });
+    return response.ok ? (await response.json()).displayName : null;
+  },
+});
+exports.adminLineChats = onCall(lineHandover.list);
+exports.adminLineChatMode = onCall(lineHandover.setMode);
 exports.lineWebhook = onRequest(
   {
     secrets: [lineChannelAccessToken, lineChannelSecret, geminiApiKey],
@@ -963,6 +976,18 @@ exports.lineWebhook = onRequest(
       const userId = event.source?.userId;
       if (!userId) continue;
 
+      if (event.type === 'message') {
+        const ticket = await lineHandover.receive(event);
+        if (ticket.action === 'ignore') continue;
+        if (ticket.action === 'ack') {
+          await lineHandover.replyIfCurrent(ticket, () => _lineReply(token, event.replyToken, [{
+            type: 'text', text: 'หยุดการตอบอัตโนมัติในแชทนี้แล้วค่ะ\n\nพิมพ์รายละเอียดที่ต้องการติดต่อทีมงานไว้ได้เลยค่ะ',
+          }]));
+          continue;
+        }
+        event.supportTicket = ticket;
+      }
+
       // เมื่อ user follow bot → ส่งข้อความต้อนรับ
       if (event.type === "follow") {
         await _lineReply(token, event.replyToken, [{
@@ -981,9 +1006,9 @@ exports.lineWebhook = onRequest(
         const text = event.message.text.trim().toLowerCase();
         if (text.startsWith('connect:')) {
           const connected = await lineLink.consume({ text: event.message.text.trim(), userId, sourceType: event.source?.type });
-          await _lineReply(token, event.replyToken, [{ type: 'text', text: connected
+          await lineHandover.replyIfCurrent(event.supportTicket, () => _lineReply(token, event.replyToken, [{ type: 'text', text: connected
             ? 'เชื่อม LINE กับร้านสำเร็จแล้ว กลับแอป Pokpok เพื่อใช้งานต่อได้'
-            : 'เชื่อมไม่สำเร็จ รหัสหมดอายุหรือถูกใช้แล้ว กรุณากดเชื่อม LINE ใหม่ในแอป Pokpok' }]);
+            : 'เชื่อมไม่สำเร็จ รหัสหมดอายุหรือถูกใช้แล้ว กรุณากดเชื่อม LINE ใหม่ในแอป Pokpok' }]));
           continue;
         }
 
@@ -998,7 +1023,7 @@ exports.lineWebhook = onRequest(
         const idKeywords =
           ["id", "ไอดี", "รหัส", "userid", "user id", "myid", "my id"];
         if (idKeywords.includes(text)) {
-          await _lineReply(token, event.replyToken, [{
+          await lineHandover.replyIfCurrent(event.supportTicket, () => _lineReply(token, event.replyToken, [{
             type: "text",
             text:
               `LINE User ID ของคุณ:\n${userId}\n\n` +
@@ -1006,7 +1031,7 @@ exports.lineWebhook = onRequest(
               "• แอป Pokpok → ตั้งค่า → การแจ้งเตือน LINE (ร้านค้า)\n" +
               "• พอร์ทัลซัพพลายเออร์ → แก้ไขร้าน (ซัพพลายเออร์)\n" +
               "เพื่อรับแจ้งเตือนออเดอร์ใหม่ผ่าน LINE"
-          }]);
+          }]));
           continue;
         }
 
@@ -1015,7 +1040,8 @@ exports.lineWebhook = onRequest(
         const aiText = await _lineAiReply(
           geminiApiKey.value(), userId, event.message.text
         );
-        await _lineReply(token, event.replyToken, [{ type: "text", text: aiText }]);
+        await lineHandover.replyIfCurrent(event.supportTicket,
+          () => _lineReply(token, event.replyToken, [{ type: "text", text: aiText }]));
       }
     }
 

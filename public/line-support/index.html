@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow"><title>ดูแลแชท LINE • Pokpok</title>
+  <style>
+    :root{font-family:system-ui,sans-serif;color:#302526;background:#f7f5f1}*{box-sizing:border-box}
+    body{margin:0}main{max-width:920px;margin:auto;padding:24px 16px}h1{font-size:24px}h2{font-size:18px;margin:0}
+    button,input,select{font:inherit;border:1px solid #b6aaa5;border-radius:10px;padding:10px 14px;min-height:44px}
+    button{cursor:pointer;background:white;color:#781c2b}button:disabled{opacity:.5;cursor:wait}.primary{background:#781c2b;color:white}
+    input,select{max-width:100%;background:white;color:#302526}input{width:100%}label{display:block;margin:12px 0 6px}
+    .panel,article{background:white;border:1px solid #dfd6d0;border-radius:16px;padding:20px;margin:16px 0}
+    .row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.row.between{justify-content:space-between}.actions{margin-top:16px}
+    .note,.meta{color:#665752;font-size:14px;line-height:1.7}.badge{padding:5px 10px;border-radius:20px;background:#eee8e3;font-size:13px}
+    .waiting{background:#fff0ca}.human{background:#e4f2ea}.preview{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}
+    .id{font-family:monospace;font-size:12px;overflow-wrap:anywhere}#status{white-space:pre-line;line-height:1.6}#login{max-width:440px}
+    .filters{display:grid;grid-template-columns:1fr auto;gap:12px}.warning{color:#8b4018}a{color:#781c2b}
+    [hidden]{display:none!important}@media(max-width:480px){.filters{grid-template-columns:1fr}article{padding:16px}h1{font-size:22px}}
+  </style>
+</head>
+<body><main>
+  <div class="row between"><h1>ดูแลแชท LINE</h1><button id="logout" hidden>ออกจากระบบ</button></div>
+  <p class="note">สำหรับผู้ดูแล Pokpok • กดรับช่วงแชทก่อนตอบลูกค้าใน LINE Official Account Manager</p>
+  <section id="login" class="panel">
+    <h2>เข้าสู่ระบบผู้ดูแล</h2>
+    <form id="loginForm"><label for="email">อีเมล</label><input id="email" type="email" autocomplete="username" required>
+      <label for="password">รหัสผ่าน</label><input id="password" type="password" autocomplete="current-password" required>
+      <div class="row actions"><button class="primary" type="submit">เข้าสู่ระบบ</button><button id="googleLogin" type="button">ใช้บัญชี Google</button></div>
+    </form>
+  </section>
+  <p id="status" role="status" aria-live="polite"></p>
+  <section id="workspace" hidden>
+    <div class="panel note">
+      ลูกค้าพิมพ์ “ขอคุยกับเจ้าหน้าที่” หรือ “ไม่เอาบอท” → บอทหยุดตอบและขึ้นสถานะรอเจ้าหน้าที่<br>
+      กด “รับช่วงแชท” → ตอบลูกค้าใน LINE OA ได้ เมื่อดูแลเสร็จค่อยกด “จบการดูแล / เปิดบอท”<br>
+      <strong>LINE OA ไม่ส่งสถานะการพิมพ์ของเจ้าหน้าที่มาที่หน้านี้ ต้องกดรับช่วงก่อนตอบทุกครั้ง</strong>
+      <br>บอทจะไม่เปิดเองตามเวลา ข้อความตอบกลับอัตโนมัติที่ตั้งไว้ใน LINE OA ต้องปิดแยกต่างหาก
+    </div>
+    <div class="row between"><a href="https://manager.line.biz/" target="_blank" rel="noopener noreferrer">เปิด LINE Official Account Manager</a><button id="refresh">รีเฟรชรายการ</button></div>
+    <p class="note">แสดงแชทที่มีข้อความเข้าหลังเปิดใช้ระบบนี้ พร้อมข้อความล่าสุด ไม่ใช่ประวัติแชททั้งหมด อัปเดตรายการล่าสุดทุก 15 วินาที</p>
+    <div class="filters"><input id="search" aria-label="ค้นหาแชท" placeholder="ค้นหาชื่อ ข้อความล่าสุด หรือ LINE User ID">
+      <select id="filter" aria-label="สถานะแชท"><option value="all">ทุกสถานะ</option><option value="waiting">รอเจ้าหน้าที่</option><option value="human">เจ้าหน้าที่ดูแล</option><option value="bot">บอทตอบอยู่</option></select></div>
+    <div id="chats"></div><button id="more" hidden>โหลดแชทก่อนหน้า</button>
+  </section>
+  <noscript>กรุณาเปิด JavaScript เพื่อใช้งานหน้าดูแลแชท</noscript>
+</main><script type="module" src="./support.js?v=20261105"></script></body></html>
