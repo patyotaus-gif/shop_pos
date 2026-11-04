@@ -1,5 +1,13 @@
 # Android pilot feedback — 2026-10-03
 
+## LINE support writing style — 2026-11-05 (Australia/Sydney)
+
+- Revised the LINE-only instructions for concise, natural Thai using consistent polite endings, short paragraphs and blank lines; request plain text without Markdown, emojis, decorative punctuation or unsolicited sales links. Target 2–4 sentences / 500 characters and at most three numbered steps; these are model instructions, not enforced UI typography or a hard truncation rule.
+- Ask one focused question when context is missing. Do not invent account data, menus, tutorials, resolution claims or support response times. Describe lack of shop-data access as a limitation of the assistant rather than the Pokpok app. Refer pricing questions to the current subscription page rather than quoting stale hardcoded prices.
+- Human-contact requests identify the assistant as automated and invite the user to leave their issue in chat. No automated human assignment, notification or bot-pause workflow was added. Quota/error replies also avoid casual wording and unsupported promises of a callback.
+- Live Gemini probes covered greeting, printer trouble, a human-contact request, pricing, private shop sales and an ambiguous follow-up. All six final replies were Thai plain text, 91–261 characters, without emoji or Markdown; inspected for relevance and paragraph spacing. The shop-sales response did not fabricate figures. Syntax and mocked request/reply/failure checks passed. No messages were sent to customer LINE accounts.
+- Published only `lineWebhook`; verified ACTIVE revision `linewebhook-00019-yan` and a signed empty-event request returning HTTP 200 / `status: ok`. No mobile update or typography change is required; LINE controls the chat font. Actual delivery through a customer conversation was not exercised.
+
 ## LINE Gemini 3.5 Flash-Lite released — 2026-11-05 (Australia/Sydney)
 
 - Prepared the LINE free-text bot to use `gemini-3.5-flash-lite` through a separate `LINE_AI_MODEL` constant. The in-app sales assistant retains its existing model. Removed the LINE request's deprecated temperature parameter per Google's migration guide: https://aistudio.google.com/docs/whats-new-gemini-3.6 . Existing connection commands, daily limit and fallback remain unchanged.
