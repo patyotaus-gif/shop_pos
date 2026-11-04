@@ -1,10 +1,10 @@
 {
-  "version": "1.2.68",
-  "build": 85,
+  "version": "1.2.69",
+  "build": 86,
   "url": "https://pok-pok.app/app/pokpok.apk",
   "minSupportedBuild": 1,
   "mandatory": false,
-  "notes": "ปรับโลโก้ Pokpok ใหม่บนไอคอนแอพ หน้าเปิดแอพ ล็อกอิน เมนู และ QR พร้อมเพิ่มข้อมูลผู้พัฒนา PEXON INNOVATION",
-  "sha256": "8dcc597b3b4a835352b8084cf915083d37618493a3ae135b9ec360a885c9bcb7",
-  "sizeBytes": 97120101
+  "notes": "ปรับหน้าเปิดแอพเป็นโลโก้ Pokpok ขยับสากตำครก พร้อมรองรับการตั้งค่าลดการเคลื่อนไหวของเครื่อง",
+  "sha256": "24094041850c0bad07adea1019972242326ca5ee56136da444cab3d54227ba03",
+  "sizeBytes": 97211262
 }

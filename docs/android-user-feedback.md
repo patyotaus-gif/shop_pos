@@ -1,5 +1,14 @@
 # Android pilot feedback — 2026-10-03
 
+## Released 1.2.69+86 — pounding splash and current website screenshots (2026-11-04)
+
+- The new Pokpok artwork now pounds twice per two-second loop, following the old splash rhythm: only the pestle lifts and strikes, while the bowl briefly compresses at impact. Original gradient artwork is rasterized into background/pestle/bowl layers by `scripts/render_brand_assets.cjs`; the icon frame stays still. Loading dots continue below it. System reduced-motion settings show the original static icon and stop the loop.
+- Installed the signed release on Samsung SM-X900 (ADB confirms 1.2.69 / 86). Native startup captures show the raised pestle and its strike into the bowl. The existing shop session opens normally. Captured the actual overview and preparing-order screens from this installed build and replaced both landing-page screenshots with versioned, unmodified 2960×1848 PNGs. Captions identify test-shop data; both images link to their full resolution. Legacy test orders remain legacy records in the screenshot.
+- Adapted the website image frames to tablet proportions and stacked the hero on smaller screens. Browser checks passed at 320/390/768/1440 widths, including no overflow, menu keyboard behavior, plan selection and no-JavaScript fallback; desktop/mobile previews were visually inspected. Versioned the stylesheet URL to prevent older cached phone-image sizing.
+- Targeted Dart analysis passed. Android release build completed in 164.3 seconds; package/version, original signing certificate and all three packaged splash-layer hashes verified. Public manifest and complete APK download match the release: **97,211,262 bytes**, SHA-256 `24094041850c0bad07adea1019972242326ca5ee56136da444cab3d54227ba03`; no-cache headers verified. Build 85 APK/manifest backed up before staging.
+- Public website verification: the landing HTML, tablet stylesheet and both new screenshots match local files byte-for-byte after Hosting deployment.
+- Optional Android update; minimum supported build remains 1. Hosting only; no backend/rules deployment. No business transactions or shop settings were changed during capture. Temporary device rotation settings were restored (accelerometer rotation 1, user rotation 0). No iOS IPA/TestFlight release was performed. Held receipt-feed changes remain excluded. Private evidence: `.remember/tmp/release86-*`.
+
 ## Released 1.2.68+85 — updated brand assets (2026-11-04)
 
 - Imported the design team's November 3 Drive assets: Pokpok icon `17uKLmNQzHPMbppDdeSiqEntIU8WyPhPU`, PEXON transparent `198ETreBd7qPl-T7pJDWxa6wf5uThSXAQ`, and PEXON white `1VJGfSsco5ifWzR3kyacO9HVsGrcplaZi`. User confirmed that Pokpok remains the app identity and PEXON INNOVATION identifies the developer. Original source files are retained under `assets/brand`.

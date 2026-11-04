@@ -36,7 +36,7 @@ import 'services/order_service.dart';
 import 'services/shop_service.dart';
 import 'services/theme_service.dart';
 import 'theme/pokpok_theme.dart';
-import 'widgets/pokpok_brand.dart';
+import 'widgets/pounding_pokpok_mark.dart';
 import 'services/update_service.dart';
 import 'widgets/subscription_gate.dart';
 import 'widgets/update_prompt.dart';
@@ -244,7 +244,7 @@ class _PokpokSplash extends StatefulWidget {
 
 class _PokpokSplashState extends State<_PokpokSplash>
     with TickerProviderStateMixin {
-  late final AnimationController _loop; // 2s loading-dot loop
+  late final AnimationController _loop; // Shared logo and loading-dot loop
   late final AnimationController _intro; // one-shot wordmark fade-in
 
   @override
@@ -268,9 +268,21 @@ class _PokpokSplashState extends State<_PokpokSplash>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _loop.stop();
+      _intro.value = 1;
+    } else if (!_loop.isAnimating) {
+      _loop.repeat();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     const burgundy = Color(0xFF7A1F2B);
     const cream = Color(0xFFF5F1EC);
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
 
     return Scaffold(
       backgroundColor: burgundy,
@@ -283,7 +295,15 @@ class _PokpokSplashState extends State<_PokpokSplash>
                 SizedBox(
                   width: 200,
                   height: 200,
-                  child: const PokpokMark(size: 200),
+                  child: AnimatedBuilder(
+                    animation: _loop,
+                    builder: (_, __) => RepaintBoundary(
+                      child: PoundingPokpokMark(
+                        progress: _loop.value,
+                        reduceMotion: reduceMotion,
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 22),
                 FadeTransition(
@@ -326,9 +346,12 @@ class _PokpokSplashState extends State<_PokpokSplash>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(3, (i) {
                   final phase = (_loop.value + i * 0.12) % 1.0;
-                  final o = (0.25 +
-                          0.75 * (0.5 + 0.5 * math.sin(phase * 2 * math.pi)))
-                      .clamp(0.0, 1.0);
+                  final o = reduceMotion
+                      ? 0.65
+                      : (0.25 +
+                              0.75 *
+                                  (0.5 + 0.5 * math.sin(phase * 2 * math.pi)))
+                          .clamp(0.0, 1.0);
                   return Container(
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     width: 8,
