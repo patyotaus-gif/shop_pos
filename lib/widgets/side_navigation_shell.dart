@@ -1,3 +1,4 @@
+import 'pokpok_brand.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -170,12 +171,20 @@ class _SideNavigationShellState extends State<SideNavigationShell> {
                                       child: Padding(
                                           padding:
                                               const EdgeInsets.only(left: 16),
-                                          child: Text('pokpok',
-                                              style: TextStyle(
-                                                  color: colors.primary,
-                                                  fontSize: 23,
-                                                  fontWeight:
-                                                      FontWeight.w700)))),
+                                          child: Row(children: [
+                                            const PokpokMark(size: 28),
+                                            const SizedBox(width: 6),
+                                            Flexible(
+                                                child: Text('pokpok',
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: TextStyle(
+                                                        color: colors.primary,
+                                                        fontSize: 20,
+                                                        fontWeight:
+                                                            FontWeight.w700))),
+                                          ]))),
                                 Expanded(
                                     flex: expanded ? 0 : 1,
                                     child: IconButton(

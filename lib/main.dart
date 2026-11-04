@@ -36,6 +36,7 @@ import 'services/order_service.dart';
 import 'services/shop_service.dart';
 import 'services/theme_service.dart';
 import 'theme/pokpok_theme.dart';
+import 'widgets/pokpok_brand.dart';
 import 'services/update_service.dart';
 import 'widgets/subscription_gate.dart';
 import 'widgets/update_prompt.dart';
@@ -76,8 +77,8 @@ void main() async {
   // blocked on an await before runApp ever runs.
   runApp(const _BootingApp());
 
-  // Hold the splash for a minimum beat so the mortar-pounding animation
-  // plays in full even on fast cold starts. Init runs concurrently
+  // Hold the splash for a minimum beat so the brand remains visible
+  // even on fast cold starts. Init runs concurrently
   // underneath; we wait on whichever finishes last.
   final minSplash = Future<void>.delayed(const Duration(seconds: 3));
 
@@ -243,7 +244,7 @@ class _PokpokSplash extends StatefulWidget {
 
 class _PokpokSplashState extends State<_PokpokSplash>
     with TickerProviderStateMixin {
-  late final AnimationController _loop; // 2s mortar-pounding loop
+  late final AnimationController _loop; // 2s loading-dot loop
   late final AnimationController _intro; // one-shot wordmark fade-in
 
   @override
@@ -282,11 +283,7 @@ class _PokpokSplashState extends State<_PokpokSplash>
                 SizedBox(
                   width: 200,
                   height: 200,
-                  child: AnimatedBuilder(
-                    animation: _loop,
-                    builder: (_, __) =>
-                        CustomPaint(painter: _SplashMarkPainter(_loop.value)),
-                  ),
+                  child: const PokpokMark(size: 200),
                 ),
                 const SizedBox(height: 22),
                 FadeTransition(
@@ -349,100 +346,6 @@ class _PokpokSplashState extends State<_PokpokSplash>
       ),
     );
   }
-}
-
-/// Animated splash mark — a cream mortar + pestle on burgundy. The pestle
-/// pounds twice into the bowl per 2s loop, the bowl squashes on impact and
-/// two ripples pulse out. Geometry + keyframes ported from the
-/// pokpok-splash reference (200×200 viewport).
-class _SplashMarkPainter extends CustomPainter {
-  const _SplashMarkPainter(this.t);
-
-  /// Loop progress 0..1.
-  final double t;
-
-  /// Piecewise-linear keyframe sampler — [stops] ascending in 0..1.
-  static double _kf(double t, List<double> stops, List<double> values) {
-    if (t <= stops.first) return values.first;
-    if (t >= stops.last) return values.last;
-    for (var i = 0; i < stops.length - 1; i++) {
-      if (t <= stops[i + 1]) {
-        final f = (t - stops[i]) / (stops[i + 1] - stops[i]);
-        return values[i] + (values[i + 1] - values[i]) * f;
-      }
-    }
-    return values.last;
-  }
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const cream = Color(0xFFF5F1EC);
-    canvas.scale(size.width / 200);
-    final fill = Paint()..color = cream;
-
-    // ── Ripple (two pulses per loop, behind the bowl) ──
-    final rScale =
-        _kf(t, [0, .16, .30, .35, .45, 1.0], [.35, .35, 1.5, .35, 1.4, 1.4]);
-    final rOpacity =
-        _kf(t, [0, .16, .20, .30, .35, .45, 1.0], [0, 0, .5, 0, .45, 0, 0]);
-    if (rOpacity > 0.01) {
-      canvas.drawCircle(
-        const Offset(100, 120),
-        26 * rScale,
-        Paint()
-          ..color = cream.withValues(alpha: rOpacity.clamp(0.0, 1.0))
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3,
-      );
-    }
-
-    // ── Bowl (squashes around its base on each impact) ──
-    final bScaleX =
-        _kf(t, [0, .10, .19, .25, .35, .40, 1.0], [1, 1, 1.04, 1, 1.025, 1, 1]);
-    final bScaleY =
-        _kf(t, [0, .10, .19, .25, .35, .40, 1.0], [1, 1, .94, 1, .97, 1, 1]);
-    canvas.save();
-    canvas.translate(100, 162);
-    canvas.scale(bScaleX, bScaleY);
-    canvas.translate(-100, -162);
-    canvas.drawArc(
-      Rect.fromCenter(center: const Offset(100, 120), width: 90, height: 84),
-      0,
-      math.pi,
-      true,
-      fill,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-          const Rect.fromLTWH(88, 166, 24, 5), const Radius.circular(2.5)),
-      fill,
-    );
-    canvas.drawLine(
-      const Offset(72, 166),
-      const Offset(128, 166),
-      Paint()
-        ..color = cream
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 4
-        ..strokeCap = StrokeCap.round,
-    );
-    canvas.restore();
-
-    // ── Pestle (pounds vertically into the bowl) ──
-    final dy = _kf(t, [0, .10, .19, .26, .35, .41, .48, .70, 1.0],
-        [-52, -52, 0, -22, 0, -9, 0, 0, -52]);
-    canvas.save();
-    canvas.translate(0, dy);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-          const Rect.fromLTWH(92, 52, 16, 68), const Radius.circular(8)),
-      fill,
-    );
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _SplashMarkPainter old) => old.t != t;
 }
 
 class MainShell extends StatefulWidget {

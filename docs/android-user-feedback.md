@@ -1,5 +1,14 @@
 # Android pilot feedback — 2026-10-03
 
+## Released 1.2.68+85 — updated brand assets (2026-11-04)
+
+- Imported the design team's November 3 Drive assets: Pokpok icon `17uKLmNQzHPMbppDdeSiqEntIU8WyPhPU`, PEXON transparent `198ETreBd7qPl-T7pJDWxa6wf5uThSXAQ`, and PEXON white `1VJGfSsco5ifWzR3kyacO9HVsGrcplaZi`. User confirmed that Pokpok remains the app identity and PEXON INNOVATION identifies the developer. Original source files are retained under `assets/brand`.
+- Replaced app launcher icons for Android/iOS, login/splash/sidebar branding, the shared QR logo asset, website/customer-order marks, favicon, blog and portal branding. Added developer information accessible from login/settings and the website footer. Refreshed brand variants and the logo preview page. Merchant-uploaded logos remain merchant content.
+- Raster assets are rendered directly from the supplied SVG using `scripts/render_brand_assets.cjs`; compatible vector variants use `scripts/generate_brand_variants.cjs`. Platform launcher sizes are generated with the project's existing flutter_launcher_icons configuration.
+- Validation: targeted Dart analysis passed; six existing navigation/payment layout tests passed. Landing page browser checks passed at 320/390/768/1440 widths, with no horizontal overflow. Release APK built in 247.4 seconds; package/version and original signing certificate verified. The packaged Pokpok/PEXON images match source hashes.
+- Published Android **1.2.68+85** and Hosting. Public manifest and complete APK download verified against the build: **97,120,101 bytes**, SHA-256 `8dcc597b3b4a835352b8084cf915083d37618493a3ae135b9ec360a885c9bcb7`; no-cache headers verified. All 16 changed public pages/assets match local files byte-for-byte. Build 84 APK/manifest backed up and hash-checked. Optional update, minimum supported build remains 1. No backend/rules deployment.
+- ADB reports no connected devices, so physical installation/acceptance remains outstanding. iOS source icons are updated, but no IPA/TestFlight release was performed. Held receipt-feed changes remain excluded. Private release evidence is in `.remember/tmp/release85-*`.
+
 ## Released 1.2.67+84 — round-scoped queue numbers (2026-10-30)
 
 - New queue display metadata is separate from financial receipt numbers and the existing daily online reference. Open cash sessions own two independent counters: online 001… and counter takeaway 001…. Midnight does not reset them; a new session ID does. Owner checkout and staff checkout share the same takeaway counter. Dine-in displays the table name, with existing receipt/order references retained to distinguish different visits.

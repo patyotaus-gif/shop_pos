@@ -1,3 +1,4 @@
+import '../widgets/pokpok_brand.dart';
 import 'owner_pin_screen.dart';
 import '../widgets/line_notification_settings.dart';
 import '../widgets/line_link_card.dart';
@@ -709,6 +710,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 20),
                       const AppVersionText(),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const PokpokMark(size: 36),
+                        title: const Text('เกี่ยวกับ Pokpok'),
+                        subtitle: const Text('PEXON INNOVATION'),
+                        onTap: () => showPokpokAbout(context),
+                      ),
                       const SizedBox(height: 8),
                       // Plan — current tier + trial/billing status, with a tap
                       // target that opens the full SubscriptionScreen for

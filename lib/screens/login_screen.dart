@@ -1,3 +1,4 @@
+import '../widgets/pokpok_brand.dart';
 import '../widgets/compact_action.dart';
 import 'package:flutter/material.dart';
 import 'offline_cash_screen.dart';
@@ -126,15 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const OfflineEntryButton(),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: Image.asset(
-                        'assets/icon/icon.png',
-                        width: 88,
-                        height: 88,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
+                    const PokpokMark(size: 88),
                     const SizedBox(height: 14),
                     Text(
                       'pokpok',
@@ -285,6 +278,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 20),
                     const AppVersionText(),
+                    TextButton(
+                      onPressed: () => showPokpokAbout(context),
+                      child: const Text('เกี่ยวกับ Pokpok'),
+                    ),
                   ],
                 ),
               ),
