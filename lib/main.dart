@@ -37,6 +37,7 @@ import 'services/shop_service.dart';
 import 'services/theme_service.dart';
 import 'theme/pokpok_theme.dart';
 import 'widgets/pounding_pokpok_mark.dart';
+import 'widgets/pokpok_brand.dart';
 import 'services/update_service.dart';
 import 'widgets/subscription_gate.dart';
 import 'widgets/update_prompt.dart';
@@ -294,7 +295,7 @@ class _PokpokSplashState extends State<_PokpokSplash>
               children: [
                 SizedBox(
                   width: 200,
-                  height: 200,
+                  height: 168,
                   child: AnimatedBuilder(
                     animation: _loop,
                     builder: (_, __) => RepaintBoundary(
@@ -305,21 +306,13 @@ class _PokpokSplashState extends State<_PokpokSplash>
                     ),
                   ),
                 ),
-                const SizedBox(height: 22),
+                const SizedBox(height: 12),
                 FadeTransition(
                   opacity:
                       CurvedAnimation(parent: _intro, curve: Curves.easeOut),
                   child: Column(
                     children: [
-                      const Text(
-                        'pokpok',
-                        style: TextStyle(
-                          fontSize: 38,
-                          fontWeight: FontWeight.w300,
-                          color: cream,
-                          letterSpacing: 1,
-                        ),
-                      ),
+                      const PokpokWordmark(width: 160, color: Colors.white),
                       const SizedBox(height: 5),
                       Text(
                         'POINT OF SALE',

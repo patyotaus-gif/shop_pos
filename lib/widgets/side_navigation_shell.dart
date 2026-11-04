@@ -174,16 +174,9 @@ class _SideNavigationShellState extends State<SideNavigationShell> {
                                           child: Row(children: [
                                             const PokpokMark(size: 28),
                                             const SizedBox(width: 6),
-                                            Flexible(
-                                                child: Text('pokpok',
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    style: TextStyle(
-                                                        color: colors.primary,
-                                                        fontSize: 20,
-                                                        fontWeight:
-                                                            FontWeight.w700))),
+                                            const Flexible(
+                                                child:
+                                                    PokpokWordmark(width: 96)),
                                           ]))),
                                 Expanded(
                                     flex: expanded ? 0 : 1,

@@ -1,6 +1,6 @@
 name: shop_pos
 description: Mobile POS for convenience stores
-version: 1.2.70+87
+version: 1.2.71+88
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -97,6 +97,7 @@ flutter:
     - assets/icon/splash/
     - assets/auth/
     - assets/brand/source/pexon-white.png
+    - assets/brand/pokpok-wordmark.png
 
   # Brand font — IBM Plex Sans Thai, matching the pok-pok.app website.
   # Bundled (not google_fonts) so the POS renders the brand face offline.

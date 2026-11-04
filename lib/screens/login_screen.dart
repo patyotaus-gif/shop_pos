@@ -129,15 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const OfflineEntryButton(),
                     const PokpokMark(size: 88),
                     const SizedBox(height: 14),
-                    Text(
-                      'pokpok',
-                      style:
-                          Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.w300,
-                                color: cs.primary,
-                                letterSpacing: 1,
-                              ),
-                    ),
+                    const PokpokWordmark(width: 140),
                     const SizedBox(height: 4),
                     Text(
                       'เข้าสู่ระบบเพื่อใช้งาน',

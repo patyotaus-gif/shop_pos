@@ -1,5 +1,21 @@
 # Android pilot feedback — 2026-10-03
 
+## Released 1.2.71+88 — transparent white splash and official wordmark (2026-11-05)
+
+- Removed the splash's white tile, inset plate and shadow. Separate transparent white mortar/pestle layers retain the original geometry, handle cutout and two-strike animation; the static reduced-motion state uses the same white artwork. Cropped layout space below the artwork and reduced the wordmark gap to 12 logical pixels. Android launcher icons are unchanged.
+- `scripts/render_splash_mark.cjs` derives only the new splash layers from the preserved SVG. Verified white-only pixels, transparent corners and handle cutout. Flutter-rendered strike/static previews were visually checked; targeted analysis and 6 widget checks passed. Website checks cover 8 pages at 320/390/768/1440 widths. No USB devices were available, so physical-device verification was not performed.
+- Built and published signed Android **1.2.71+88** (97,286,255 bytes), SHA-256 `88605e109fd91f5cb4c7dfb895e197e4d4219c3a675491304ff1c0da4f4b6ac5`. Original release certificate verified; APK version and packaged white splash/wordmark images match local assets. Downloaded the complete public APK and verified its size/hash plus manifest and no-cache headers. Optional update; minimum supported build remains 1. Build 87 APK and manifest backed up and hash-checked locally.
+- Published Hosting with the wordmark changes below; 10 live website files match local artifacts. No backend/rules changes or iOS/TestFlight release. Receipt-feed changes previously held remain excluded.
+- Updated the existing [Drive splash preview](https://drive.google.com/file/d/1UEc3ULYJL6714kq7tnCYOaUV-7_HkPmJ/view), preserving its link, and uploaded white mortar/pestle PNG assets into 03_App Assets. Read-back metadata verified names, sizes and parent folder.
+
+## Official Pokpok wordmark — 2026-11-05 (included in 1.2.71+88)
+
+- Replaced font-rendered brand lettering with the team's `pokpok_wordmark.svg`, Drive file `1O4cKsP8OxPerui3TwG2-uwoyCGXvYp3z` in 03_App Assets. Preserved the original SVG byte-for-byte under `assets/brand/source/`; its paths contain no external resources or font dependencies. `scripts/render_wordmark.cjs` copies the canonical web SVG and produces a transparent 1011×274 PNG for Flutter without adding a runtime dependency.
+- Added reusable `PokpokWordmark` for login, the animated splash and expanded navigation sidebar. Original burgundy on light surfaces, white on dark surfaces; splash remains white and retains the existing mortar/pestle animation. Widths are bounded at 140/160/96 logical pixels respectively. Ordinary product-name text, accessibility labels, shop logos and the PEXON company identity remain separate.
+- Updated website navigation/footer, all three blog headers, order-page attribution, payment sandbox branding and product-card preview. Added shared `/brand/wordmark.css`, responsive sizes and a light/dark example in `public/logo-preview.html`. The local standalone splash preview also uses the new lettering.
+- Validation: targeted Flutter analysis reports no issues; all 5 existing navigation tests pass (rotation, collapse, cart preservation, small landscape and accessibility). Landing-page checks pass at 320/390/768/1440 widths. Visual audit of 8 pages at all 4 widths confirms loaded images, accessible labels, preserved proportions and no logo/action overlap in the landing header. Inspected mobile header/footer, light/dark examples and animated-splash preview. No physical-device or iOS build validation in this change.
+- Initially prepared locally; subsequently published to Hosting and Android 1.2.71+88 together with the transparent splash described above. iOS/TestFlight has not been released.
+
 ## LINE human handover — 2026-11-05 (Australia/Sydney)
 
 - Added persistent per-user `bot`, `waiting`, and `human` states. Explicit requests such as “ขอคุยกับเจ้าหน้าที่”, “ขอคุยกับคน” or “ไม่เอาบอท” pause the bot and trigger one acknowledgement. Subsequent messages (including ID/connection commands) stay silent until an operator re-enables the bot. Order push notifications are independent of this conversational pause.

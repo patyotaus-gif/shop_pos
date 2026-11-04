@@ -1,0 +1,16 @@
+/* Canonical lettering: keep the SVG's proportions, with no font dependency. */
+.pokpok-wordmark {
+  display: inline-block;
+  width: 112px;
+  height: auto;
+  max-width: 100%;
+  object-fit: contain;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.pokpok-wordmark--white { filter: brightness(0) invert(1); }
+.pokpok-wordmark--small { width: 88px; }
+.pokpok-wordmark--large { width: 180px; }
+@media (max-width: 600px) {
+  nav .logo > .pokpok-wordmark { width: 96px; }
+}

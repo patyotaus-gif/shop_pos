@@ -1,5 +1,26 @@
 import 'package:flutter/material.dart';
 
+/// Official lettering supplied as vector artwork, not a device font.
+class PokpokWordmark extends StatelessWidget {
+  const PokpokWordmark({super.key, this.width = 120, this.color});
+
+  final double width;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) => Image.asset(
+        'assets/brand/pokpok-wordmark.png',
+        width: width,
+        fit: BoxFit.contain,
+        color: color ??
+            (Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : null),
+        colorBlendMode: BlendMode.srcIn,
+        semanticLabel: 'Pokpok',
+      );
+}
+
 /// The product icon supplied by the design team, rendered from the source SVG.
 class PokpokMark extends StatelessWidget {
   const PokpokMark({super.key, this.size = 40});
