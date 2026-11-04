@@ -1,5 +1,13 @@
 # Android pilot feedback — 2026-10-03
 
+## LINE Gemini 3.5 Flash-Lite released — 2026-11-05 (Australia/Sydney)
+
+- Prepared the LINE free-text bot to use `gemini-3.5-flash-lite` through a separate `LINE_AI_MODEL` constant. The in-app sales assistant retains its existing model. Removed the LINE request's deprecated temperature parameter per Google's migration guide: https://aistudio.google.com/docs/whats-new-gemini-3.6 . Existing connection commands, daily limit and fallback remain unchanged.
+- Syntax validation, mocked request/reply/error-path checks and all eight LINE link/delivery tests passed. No customer messages were sent during testing.
+- A real generateContent probe using the project's existing secret returned HTTP 402 / RESOURCE_EXHAUSTED: prepayment credits depleted. The key was kept in process memory and not printed or written to the probe file. This response does not establish successful access to the requested model.
+- On November 5 (Australia/Sydney), retry returned HTTP 200 with `modelVersion: gemini-3.5-flash-lite` and a complete Thai response. Live probes using the actual LINE system prompt and request helper answered a restaurant-feature question in Thai and directed a private shop-sales question to the app without inventing sales figures.
+- Deployed only `functions:lineWebhook` to `shop-pos-89294` / `asia-southeast1`. Cloud Functions confirms ACTIVE revision `linewebhook-00018-piv`, updated `2026-11-04T13:09:13.969331180Z` (November 5 Sydney time). A correctly signed empty-event webhook request returned HTTP 200 / `status: ok`, without sending a customer message. End-to-end chat delivery was not exercised with a real LINE user. No mobile app update is required; the in-app assistant and other functions were not redeployed.
+
 ## Website developer footer — 2026-11-04
 
 - Replaced the tall white PEXON card with the existing transparent source PNG. An SVG viewport frames the visible artwork without changing the original file; CSS renders its alpha silhouette in white for contrast against the dark footer. No glow, shadow or logo distortion is added.

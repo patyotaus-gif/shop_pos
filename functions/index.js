@@ -1038,7 +1038,7 @@ exports.sendLineMessage = onCall(
 );
 
 // ────────────────────────────────────────────────
-// AI chat proxy → Google Gemini Flash 8B
+// In-app AI chat proxy → Google Gemini
 // ────────────────────────────────────────────────
 // Why a proxy instead of calling Gemini from the client?
 //   1. Shop owners never see / manage an API key — frictionless setup.
@@ -1050,8 +1050,7 @@ exports.sendLineMessage = onCall(
 // Request:  { history: [{role:'user'|'assistant', content:string}], shopContext?: string }
 // Response: { reply: string, usage: { dailyCount: number, dailyLimit: number } }
 const AI_DAILY_LIMIT_PER_SHOP = 100;
-// Google retired the 1.5 line in 2026; 2.5 Flash Lite is the current
-// equivalent — same price tier, better Thai output, current SDK support.
+// Keep the in-app assistant independent from LINE model migrations.
 const AI_MODEL = "gemini-2.5-flash-lite";
 
 const salesAssistant = require('./sales_assistant').handlers({
@@ -1068,6 +1067,7 @@ exports.recordProductAnalytics = onDocumentUpdated('shops/{shopId}/products/{pro
 // (free, unmetered) reply token, so the only cost is Gemini — bounded by a
 // per-LINE-user daily cap since the webhook is a public endpoint.
 const LINE_AI_DAILY_LIMIT = 40;
+const LINE_AI_MODEL = "gemini-3.5-flash-lite";
 const LINE_BOT_SYSTEM_PROMPT =
   "คุณเป็นผู้ช่วยตอบแชท LINE ของ Pokpok — ระบบ POS ขายหน้าร้าน จัดการสต็อก " +
   "และรับออเดอร์ออนไลน์ สำหรับร้านค้าปลีกและร้านอาหารในไทย\n" +
@@ -1085,14 +1085,15 @@ async function _geminiText(apiKey, systemPrompt, userText) {
   try {
     const url =
       "https://generativelanguage.googleapis.com/v1beta/models/" +
-      AI_MODEL + ":generateContent?key=" + apiKey;
+      LINE_AI_MODEL + ":generateContent?key=" + apiKey;
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: systemPrompt }] },
         contents: [{ role: "user", parts: [{ text: String(userText || "") }] }],
-        generationConfig: { maxOutputTokens: 512, temperature: 0.6 },
+        // Gemini 3.5 Flash-Lite no longer uses sampling parameters.
+        generationConfig: { maxOutputTokens: 512 },
       }),
     });
     if (!res.ok) {
