@@ -88,6 +88,7 @@ main > .online { width: 100%; }
 @media (max-width: 600px) {
   .footer-bottom { flex-direction: column; gap: 24px; text-align: center; }
   .developer-brand { flex-direction: column; gap: 12px; }
+  .developer-logo { width: 72px; }
   main > section { padding-block: 48px; }
   .hero-visual { margin: 0; border-radius: 20px; padding-inline: 10px; }
   .hero-visual img { width: 100%; }
