@@ -1,0 +1,32 @@
+name: script-tests
+
+# Fixture regression tests for the shipped gate scripts (plan item C6). The rule they enforce
+# is references/testing.md §3c — a gate must be ABLE to fail: each gate gets a
+# planted-violation fixture it must FAIL on and a clean fixture it must PASS on, so a change
+# that silently blinds a gate (the classic leakage-guard regression risk) goes red here
+# instead of shipping. Runs scripts/tests/test-scripts.sh — the same script a maintainer runs
+# locally (stock-bash-3.2-compatible, no docker, no network).
+#
+# REQUIRED status check since 2026-07-04 (promoted from green-optional on the maintainer's
+# explicit call — promotion to required is never a default).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  script-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false   # lint job never pushes; do not leave the token in .git/config
+      - name: Run gate-script fixture tests
+        run: |
+          set -euo pipefail
+          bash scripts/tests/test-scripts.sh

@@ -1,0 +1,17 @@
+# The private environment profile — created from my-environment.template.md, never committed.
+references/my-environment.md
+
+# The private per-user literal denylist — created from leakage-denylist.local.template, never committed.
+references/leakage-denylist.local
+
+# macOS / editor / Python junk
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+
+# Mermaid render-check scratch output (from scripts/render-diagrams.sh)
+*.svg
+
+# Eval-run output (from scripts/run-evals.py) — curate a keeper into evals/baselines/
+evals/results/

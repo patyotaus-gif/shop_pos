@@ -1,0 +1,35 @@
+name: plugin-validate
+
+# Validate the Claude Code plugin + marketplace manifests (.claude-plugin/plugin.json and
+# .claude-plugin/marketplace.json) with the official validator. A manifest that fails to parse
+# breaks `/plugin marketplace add` for every user — a broken deliverable, like a failing test —
+# so the manifests are gated the same way the Mermaid diagrams (docs-render) and CITATION.cff
+# (citation-validate) are. `--strict` promotes validator warnings (e.g. a misspelled manifest
+# field) to failures.
+#
+# Supply chain: the CLI is version-pinned and fetched via npx from the npm registry, which
+# integrity-checks the tarball against its registry metadata. This is a version pin, not a
+# committed hash-lock (no lockfile in this repo for a CI-only tool); the validator runs no
+# repo-controlled code beyond parsing JSON/frontmatter. Bump the pin deliberately (SKILL.md
+# "stay current, not just pinned").
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  plugin-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false   # lint job never pushes; do not leave the token in .git/config
+      - name: Validate plugin + marketplace manifests
+        run: |
+          set -euo pipefail
+          npx --yes @anthropic-ai/claude-code@2.1.197 plugin validate . --strict

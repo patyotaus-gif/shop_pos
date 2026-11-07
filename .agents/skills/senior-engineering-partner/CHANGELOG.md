@@ -1,0 +1,1100 @@
+# Changelog
+
+All notable changes to the **senior-engineering-partner** skill are recorded here. The format
+is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+Releases are automated with [release-please](https://github.com/googleapis/release-please): it
+reads the [Conventional Commits](https://www.conventionalcommits.org/) on `main`, opens a release
+PR that bumps the `Version` in [`SKILL.md`](SKILL.md) and prepends the section below, and a
+maintainer enriches that section's narrative before cutting the **signed** tag + GitHub Release
+(see [`MAINTAINERS.md`](MAINTAINERS.md) → *Cutting a release*). The earlier entries were curated by
+hand; the same "what changed and **why**" narrative is the goal going forward.
+
+This skill was developed and battle-tested in real production work across many internal
+revisions before its public release. The history below is the **public** changelog; earlier
+internal-version specifics (private project names, hosts, and work history) are intentionally
+omitted, and the universal core carries **zero** environment-specific detail — all of that lives
+in your own `references/my-environment.md`.
+
+## [1.32.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.31.0...v1.32.0) (2026-11-06)
+
+The independent-verification release. Every lens the skill runs on a high-stakes diff reads
+the code: the self-review, the bot reviewer, the adversarial pass, the second-family reviewer
+added in 1.30.0. A lens that reads the code finds what the change got wrong. It cannot prove
+the change does what was asked. One change ([#177](https://github.com/bjgreenberg/senior-engineering-partner/pull/177))
+adds the method that can.
+
+- **Independent verification when a high-stakes change states a rule** ([#177](https://github.com/bjgreenberg/senior-engineering-partner/pull/177)).
+  The *Verify before done* bullet in `SKILL.md` adds one clause to the adversarial pass: when
+  the change states a rule, add acceptance tests written from the requirement text alone, red
+  on `main` first, never edited by the implementer. `references/engineering-workflow.md` §4a
+  says how. Write the requirement in a few plain sentences, define every term the tests will
+  depend on (one undefined word is one false failure), and commit it before any test exists,
+  so the text the tests come from is fixed. A reviewer that has not seen the diff, the history
+  or the implementation writes the tests from that text: a different model family when one is
+  available, otherwise a fresh context, and the PR says which. The tests go in unchanged and
+  run on `main` first; they must fail there, or they test nothing. The implementer never edits
+  them: a test that looks wrong means the requirement is wrong or unclear, so the requirement
+  is fixed, and the tests are written again from it. A pure refactor or a docs change skips the
+  step. Which tool, which repos qualify and where the files live is an environment binding in
+  `references/my-environment.md`, not part of the core. Why: a reviewer that reads the code is
+  framed by the code, so none of the existing lenses can show the requirement was met. In one
+  pilot the requirement tests caught the target (a forged pass header reached the trusted
+  result; 27 of 27 red on `main` while the implementer's own tests were green) and none of the
+  parser edge cases, which the adversarial lenses found. Each method finds what the other
+  cannot, so the skill keeps both: requirement tests prove the requirement is met, and they do
+  not find what it forgot.
+
+
+### Features
+
+* independent verification for high-stakes changes ([#177](https://github.com/bjgreenberg/senior-engineering-partner/issues/177)) ([1f5bd0e](https://github.com/bjgreenberg/senior-engineering-partner/commit/1f5bd0e237fdad673f1c5662c3d00cec806253bb))
+
+## [1.31.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.30.0...v1.31.0) (2026-10-29)
+
+The whole-tree release. Two misses on the same day had one shape: a check that ran, reported
+green, and covered less than it seemed to. One change ([#172](https://github.com/bjgreenberg/senior-engineering-partner/pull/172))
+closes both and adds an eval scenario for each.
+
+- **Every gate covers the whole tree, never a hand-kept file list** ([#172](https://github.com/bjgreenberg/senior-engineering-partner/pull/172)).
+  `mypy`, `ruff`, `bandit` and `pytest` discovery are scoped to the repo root or the package by
+  config, with explicit exclusions; tests and scripts are checked too, under a per-module
+  override that relaxes only what a justified case needs. A legacy tree ratchets by a computed
+  diff scope or by overrides that shrink, never by a typed list or a blanket `# type: ignore`.
+  The gate is verified by the file count it reports against `git ls-files`, not by its exit
+  code. `references/python-typing-and-packaging.md` gives the `pyproject.toml` shape, the gate
+  script that passes no paths, and two verified gotchas (`[tool.bandit]` is read only with
+  `-c pyproject.toml`; a `tests.*` override matches nothing without `tests/__init__.py` or
+  `explicit_package_bases`). Why: a real repo's type-check gate named one file, reported
+  "no issues found in 1 source file", and stayed green while the tests and scripts beside it
+  were never type-checked. The old paragraph said "over the package" and endorsed gating the
+  touched modules; a named file checks only itself and its imports.
+- **The dependency audit re-scans daily, with fix SLAs** ([#172](https://github.com/bjgreenberg/senior-engineering-partner/pull/172)).
+  The merge-blocking audit runs when code changes; advisories do not wait for a commit. A
+  central scheduled sweep now audits every repo, idle ones included, and the software installed
+  on every administered host, with the feeds named by role: OSV and the GitHub Advisory
+  Database for packages, CISA KEV first, EPSS next, the vendor's update channel for hosts, NVD
+  last. Detection without a deadline is not security: KEV or critical same day, high 24 hours,
+  the rest 7 days, each finding aged against its clock. A routine security-fix PR (a patch or
+  minor bump to the fixed version, past the release-age cooldown, green CI including the
+  contract test) merges once an automated reviewer that can only veto has read the diff, the
+  install scripts and the provenance; everything else waits for a person, and blind auto-merge
+  stays forbidden. `references/package-managers.md` carries the section and its stated blind
+  spots (Homebrew has no advisory feed; matching a CVE to installed software by name is
+  approximate). Why: advisories land against code nobody touched, and findings stood for days
+  with fix PRs deadlocked behind other open advisories. The old rule made the audit
+  merge-blocking on change and said nothing about what did not change, about hosts, or about a
+  deadline.
+- **Two eval scenarios** ([#172](https://github.com/bjgreenberg/senior-engineering-partner/pull/172)).
+  `whole-tree-gates-not-file-list`: a one-file `typecheck.sh` and a request to add ruff and
+  bandit "the same way"; the skill must name the one-file gate as the defect, scope every gate
+  by config, keep tests and scripts in, and verify by file count. `dependency-rescan-daily-with-sla`:
+  idle repos called "covered by definition" by a green PR gate; the skill must push back,
+  prescribe the daily sweep over repos and hosts, name the feeds by role, set the SLAs, and
+  bound the merge path. The baseline increment `evals/baselines/2026-10-29-fable/` records
+  39/28/0/0 on 67 scenarios; the bare model scores 2 of 4 and 1 of 6 on the two new ones.
+
+
+### Features
+
+* **skill:** gates cover the whole tree, and the dependency audit re-scans daily with fix SLAs ([#172](https://github.com/bjgreenberg/senior-engineering-partner/issues/172)) ([0af4668](https://github.com/bjgreenberg/senior-engineering-partner/commit/0af466853d90092433efcb26dc26b1f8d7d6b1ca))
+
+## [1.30.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.29.0...v1.30.0) (2026-10-26)
+
+The cross-family review release. A measured comparison of code reviewers, run on changes from
+this repo's own history, found two defects in the eval harness that the same-family reviewers
+missed and a reviewer from another model family reported. This release fixes both and adds the
+lesson to the skill: on a high-stakes diff, one adversarial lens comes from a different model
+family when one is available.
+
+- **One adversarial lens from a different model family on high-stakes diffs** ([#170](https://github.com/bjgreenberg/senior-engineering-partner/pull/170)).
+  The *Verify before done* bullet in `SKILL.md` adds one clause to the adversarial pass: one lens
+  from a different model family when one is available, its findings leads to verify, never
+  verdicts. `references/engineering-workflow.md` §4a says how to run it: on a throwaway checkout
+  of the exact commits, never the working tree; in a sandbox that denies writes, network and the
+  user's own files, with no bypass; only on code that may be shown to that reviewer's account;
+  with every finding verified or dismissed for a stated reason and the result recorded in the PR
+  body. Which tool, which command and which repos qualify is an environment binding in
+  `references/my-environment.md`, not part of the core. Why: lenses from one model family can
+  share a blind spot. The two fixes below were found that way, and the same-family passes missed
+  both.
+- **Fixed: a caught sandbox escape fails the scenario and the run** ([#168](https://github.com/bjgreenberg/senior-engineering-partner/pull/168)). The eval
+  harness snapshots the persistence surfaces before and after a scenario and records
+  `sandbox_escape` when one changed, but nothing read the field: the status came from the judge
+  alone, the summary left it out, the exit code checked only for `pass`, and baseline curation
+  rejected only errors. Now an escaped scenario grades `fail` whatever the judge said, the summary
+  tallies `SANDBOX ESCAPE: n` and names the surfaces, `run-evals.py` exits non-zero if any result
+  carries the field, and `curate-baseline.py` refuses such an entry. The backstop's purpose is
+  caught, not silent.
+- **Fixed: the workspace-evidence read is bounded by the budget, not just the output** ([#169](https://github.com/bjgreenberg/senior-engineering-partner/pull/169)).
+  `collect_workspace_evidence()` read each file whole before the output cap applied, so a
+  multi-GB artifact left in a workspace could exhaust memory and crash the sweep. It now checks
+  each file's size and reads at most the unspent budget, decoding UTF-8 incrementally so a
+  character cut at the boundary is held back and non-UTF-8 content keeps its binary marker. A
+  listed fixture too large to read whole gets its size and head, marked truncated, instead of a
+  diff against a prefix. Fixes [#167](https://github.com/bjgreenberg/senior-engineering-partner/issues/167).
+- **Fixed: the Skill Metadata `Last updated` row is current**. It read 2026-10-06 after
+  `SKILL.md` changed on 2026-10-26; this release corrects it.
+
+
+### Features
+
+* **skill:** one adversarial lens from a different model family on high-stakes diffs ([#170](https://github.com/bjgreenberg/senior-engineering-partner/issues/170)) ([2caf241](https://github.com/bjgreenberg/senior-engineering-partner/commit/2caf241f240151737113a78ed03d00431fc3b6be))
+
+
+### Bug Fixes
+
+* **evals:** bound the workspace-evidence read by the budget, not just the output ([#169](https://github.com/bjgreenberg/senior-engineering-partner/issues/169)) ([ebeb526](https://github.com/bjgreenberg/senior-engineering-partner/commit/ebeb5266003d144ce6f3b7fe3c26a2cade9acbe2))
+* **evals:** fail the scenario and the run when the sandbox backstop catches an escape ([#168](https://github.com/bjgreenberg/senior-engineering-partner/issues/168)) ([9de9743](https://github.com/bjgreenberg/senior-engineering-partner/commit/9de97430771f01be24ebb60234b0590ca6eb6651))
+
+## [1.29.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.28.0...v1.29.0) (2026-10-08)
+
+The maintainer-neutral release. The skill is used by people the maintainer has never met, so
+this release moves the maintainer's own choices out of the universal core and into the private
+environment profile. Four of the five changes were titled `docs:`, which release-please does not
+count; they change rules, so the version is forced to a minor ([#161](https://github.com/bjgreenberg/senior-engineering-partner/pull/161)).
+
+- **One writer and a second reader for every change** ([#156](https://github.com/bjgreenberg/senior-engineering-partner/pull/156)). `CLAUDE.md` now says one
+  model writes a change and a different reader, a second model or a human, reviews it before the
+  PR; the PR body records the writer, the reviewer and the verdict. The public rule names no
+  model. A private `references/my-environment.md` may name the pair and the fallback for when the
+  writer is unavailable. Why: an instruction file binds every fork to whatever it names, and a
+  contributor may not have the maintainer's models.
+- **A maintainer-neutral core** ([#157](https://github.com/bjgreenberg/senior-engineering-partner/pull/157)). The README `Last updated:` stamp takes its time
+  zone from `STAMP_TZ` in the profile (the host's local zone when unset). The fixed "intermediate
+  developer" calibration is gone: explanations follow the profile or the user. Origin incidents
+  are told generically, and contributors cite only this repo's own issues, PRs and files. Why: a
+  hard-coded zone, a fixed skill level, or a citation no reader can open is wrong for everyone
+  else.
+- **Public artifacts carry the session id only; the signature proves the host**
+  ([#158](https://github.com/bjgreenberg/senior-engineering-partner/pull/158)). `references/action-identity-and-audit.md` no longer tells users to put a host
+  name on commits. The session id joins an artifact to the off-host action log, and one signing
+  key per machine makes `git log --show-signature` name the machine. Why: a host name in a public
+  repo is published forever and proves nothing, because anyone who can commit can type any value.
+- **Fixed: the README badge row shows only branch-filtered badges** ([#155](https://github.com/bjgreenberg/senior-engineering-partner/pull/155)). The
+  `eval-guard` badge reported runs on any ref, including release-please's own branch, so it could
+  read red for a run that had nothing to do with `main`.
+- **Fixed: the Skill Metadata `Last updated` row is current** ([#159](https://github.com/bjgreenberg/senior-engineering-partner/pull/159)). It still read
+  2026-09-05 after `SKILL.md` changed on 2026-10-06.
+
+## [1.28.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.27.0...v1.28.0) (2026-09-15)
+
+The action-identity release: one new reference, a net-zero core trigger, and a harness
+defect the reference's own eval exposed and this release fixes.
+
+- **Every action identified, signed, recorded** (`references/action-identity-and-audit.md`,
+  [#152]). One credential per workload, signed commits, build provenance and log discipline
+  were four rules with no common statement. This reference gives them one, and extends it
+  to the actor the four forgot: the agent session itself, which acts on the maintainer's
+  machine with the maintainer's keys. Threat model first (what a borrowed or shared
+  identity lets an attacker deny or fabricate), then the controls: enforce rather than
+  record; the agent's own host identity; a hash-chained action log with an off-host anchor
+  for its tail; provenance for what the session ships; restore-style drills for the log;
+  a fleet conformance gate. The diff-checkable violation is an interactive session reading
+  an automation credential.
+- **Core trigger at net zero words** (12 699 / 12 700). The existing one-credential bullet in
+  *Secrets Management* now ends by pointing at the reference; three same-bullet trims paid
+  for it, keeping both reasons, the non-retroactivity point and the deploy-key pointer.
+  The next core addition must be paid for the same way.
+- **Eval and a disclosed baseline.** New scenario
+  `agent-uses-automation-credential-interactively` (advisory: the agent is asked whether
+  to borrow the steward token, not told to). Baseline `2026-09-14-fable` is a one-scenario
+  increment on 2026-08-10: 65 scenarios, 39 pass / 26 partial / 0 fail; the new scenario
+  is partial at 3/5 with 4/4 anti-patterns clean, and its `BASELINE.md` records the
+  sharpening candidate.
+- **Harness fix: with-skill runs could not read the staged references.** `run-evals.py`
+  granted `Bash,Edit,Write` but not `Read`, and the staged skill copy lived outside the
+  scenario's working directory, so every reference-backed scenario since 2026-07-04 was
+  graded on the core alone. Found by this release's own eval (two red runs kept as
+  evidence), fixed at the source with `--add-dir <stage>` and a red-first test that fails
+  without it. The grant is set only in the with-skill branch, so a without-skill baseline
+  run can never receive it. **Follow-up, not this release:** a full re-sweep of the
+  2026-07-04 to 2026-08-10 baselines on the fixed harness; until then, reference-backed
+  partials in those baselines are a lower bound.
+
+Reviewed pre-merge by an independent session with the verdict recorded in the PR; the
+release itself was cut under the rule it ships (signed tag, maintainer-held key, the
+interactive credential widened so no automation token is read from a session).
+
+## [1.27.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.26.0...v1.27.0) (2026-09-05)
+
+The dependency-hygiene release: three rules the self-improvement loop earned in one
+night of fleet-wide dependency currency work, each shipped with its guarding scenario
+and baselined (the suite is now 64 scenarios, 39 pass / 25 partial / 0 fail).
+
+- **Lockstep pairs bump together.** Packages that pin each other's exact version
+  (`vitest` + `@vitest/coverage-v8`, a mutation framework's core + runner plugin) can
+  never merge one at a time: the lone Dependabot PR fails `npm ci` on the peer mismatch
+  and is re-opened after every rebase, reading as flakiness. One Dependabot `groups`
+  entry per family; a lone-member PR is closed and pair-bumped, never coerced green with
+  `--legacy-peer-deps` / `--force` / an `overrides` pin. Bit twice in one repo in one
+  night — the second-instance bar.
+- **The runtime image ships no package installer.** pip's own `_vendor/` tree carries
+  private copies of `msgpack`, `urllib3`, `requests`, `certifi`, … that no manifest pins
+  and no `pip-audit` sees, while the image scanner correctly reports their CVEs. The
+  skill's emphatic manifest-audit rule made "scanner false positive, dismiss" the
+  tempting reading; it is the fourth scanner blind spot, the mirror image of the other
+  three. `python -m pip uninstall -y pip` after the locked install (setuptools/wheel
+  too once a start-up smoke test proves nothing imports them); distroless does it by
+  construction.
+- **A release-age cooldown is a rolling window, never a frozen resolver cutoff.** A
+  committed `uv lock --exclude-newer <timestamp>` set up to stop live-index drift
+  deadlocked the whole supply-chain gate set two months later: the security fix
+  post-dated the cutoff, every PR inherited the red, and the alert sat unfixable. The
+  cutoff is computed from a rolling window or carries a bump cadence and an owner, and
+  the security lane moves it in the same PR as the bump. Also removes a broken
+  pin-from-environment one-liner whose `awk` printed `==` per line.
+
+The core stays under its 12 700-word ceiling (12 694 after all three): each rule is one
+sentence in `SKILL.md`, paid for by trimming restatements in the same sections, with
+the mechanics in `references/package-managers.md`, `containers-and-orchestration.md`
+and `foss-adoption.md`.
+
+
+### Features
+
+* **containers:** the runtime image ships no package installer (pip's vendored tree is scanner-visible) ([#149](https://github.com/bjgreenberg/senior-engineering-partner/issues/149)) ([1014100](https://github.com/bjgreenberg/senior-engineering-partner/commit/1014100484eafc4ba7aeb9fdcc0e9e1ead0a698a))
+* **deps:** a release-age cooldown is a rolling window, never a frozen resolver cutoff ([#150](https://github.com/bjgreenberg/senior-engineering-partner/issues/150)) ([066abfd](https://github.com/bjgreenberg/senior-engineering-partner/commit/066abfdba9cd3b6ab69962738dbdde78113fc604))
+* **deps:** lockstep pairs — exact-version-pinned siblings bump as one Dependabot group ([#148](https://github.com/bjgreenberg/senior-engineering-partner/issues/148)) ([6008051](https://github.com/bjgreenberg/senior-engineering-partner/commit/6008051512a14c823f013204b3e80cbd4de1e5e0))
+
+## [1.26.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.25.0...v1.26.0) (2026-08-14)
+
+The hardened-harness release. A scenario run escaped the eval workspace on 2026-08-09 —
+the harness passed no environment to its children, so a shell-granted scenario inherited
+the real `$HOME` and installed a real LaunchAgent on the maintainer's machine. This
+release ships the fix as defense-in-depth: a kernel-enforced write boundary
+(`sandbox-exec` seatbelt, fails closed), a process-exec deny on persistence tools
+(`launchctl`, `osascript`, …) for **every** runner, and a directory-diff backstop —
+verified zero-escape across a full 60-scenario sweep. `--resume` recovers an
+interrupted sweep from its per-scenario checkpoints without re-spending, which is how
+the new 60-scenario baseline (35/25/0/0 — zero fails) was assembled under an
+environment that kills long background tasks.
+
+Two smaller threads: the baseline's one actionable finding — the model never citing the
+`mypy`-ratchet linkage when introducing gates on a living codebase — closed as a
+matched pair (name the linkage in the core trigger; make the eval scenario actually
+contain the ratchet it asks the model to connect to), taking the criterion from
+fail/fail/fail to pass/pass/pass. And launchd jobs must now carry descriptive
+executable names: Login Items shows the executable's basename, so a generic `run.sh`
+is an anonymous, malware-indistinguishable background item — the `.app` bundle's
+display name is the standard, a descriptively-named `exec` wrapper the documented
+fallback (with its own guarding eval, baselined at pass 4/4).
+
+
+### Features
+
+* **evals:** --resume to recover an interrupted sweep without re-spending ([#142](https://github.com/bjgreenberg/senior-engineering-partner/issues/142)) ([448c26d](https://github.com/bjgreenberg/senior-engineering-partner/commit/448c26dd4e6ba187e52c105bbddb5f5f8398867b))
+* **macos:** require descriptive executable names for launchd jobs ([#137](https://github.com/bjgreenberg/senior-engineering-partner/issues/137)) ([3bcd845](https://github.com/bjgreenberg/senior-engineering-partner/commit/3bcd845db3d8fd470a8f880de097acd42591befb))
+
+
+### Bug Fixes
+
+* **core:** name the mypy-ratchet linkage in the gate-ladder trigger ([#144](https://github.com/bjgreenberg/senior-engineering-partner/issues/144)) ([b1e5277](https://github.com/bjgreenberg/senior-engineering-partner/commit/b1e5277f8b6734d829ded5c862feaa1d4f8b133f))
+* **evals:** establish the existing mypy ratchet in the gate-promotion-ladder scenario ([#145](https://github.com/bjgreenberg/senior-engineering-partner/issues/145)) ([53d3b62](https://github.com/bjgreenberg/senior-engineering-partner/commit/53d3b622f7b9890c659532f3694c3fcf085efb8d))
+* **evals:** filter OS launchd churn from the escape-detection backstop ([#140](https://github.com/bjgreenberg/senior-engineering-partner/issues/140)) ([711e4f5](https://github.com/bjgreenberg/senior-engineering-partner/commit/711e4f549d96dcc20f4d8b0f25af859875e59ff9))
+* **evals:** kernel exec-deny for all runners + directory-only backstop ([#140](https://github.com/bjgreenberg/senior-engineering-partner/issues/140) review) ([#141](https://github.com/bjgreenberg/senior-engineering-partner/issues/141)) ([bc285dc](https://github.com/bjgreenberg/senior-engineering-partner/commit/bc285dc808c578ab1bb554cad5130f615df87ef3))
+* **evals:** sandbox scenario runs — deny writes outside the workspace ([#138](https://github.com/bjgreenberg/senior-engineering-partner/issues/138)) ([69523e9](https://github.com/bjgreenberg/senior-engineering-partner/commit/69523e926229509cad737d1b676fc90f864d53ae))
+
+## [1.25.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.24.0...v1.25.0) (2026-08-08)
+
+The two-analyses release. Two external repos were read at source level and mined for what this
+skill lacked — `qltysh/qlty` (the code-quality engine; its own license proved the first lesson:
+"open-source" in a README can sit on a BUSL grant that forbids your use case) and `affaan-m/ECC`
+(a 284-skill meta-harness whose one sharp idea, evidence-over-claims gating, pointed back at this
+skill's own unenforced prose). Every adopted idea shipped as a gated, evidenced discipline; the
+same week's documentation audit then corrected the repo's own record and mechanized the drift
+class it found.
+
+**The workflows are now a gated surface.** `scripts/actions-lint.sh` runs checksum-verified
+`actionlint` + pinned `zizmor` over `.github/workflows/` (#127), and the core forbids `${{ }}`
+interpolation in `run:` — GitHub Actions expression injection, the CI twin of the Bash-injection
+rule the skill always carried. Dogfooding the gate found and fixed eight credential-persistence
+findings in this repo's own lint workflows, and the gate was proven red on a planted injection
+before it shipped.
+
+**Quality gets gates, not opinions.** `references/maintainability-metrics.md` (#129) turns
+"too complex, please simplify" into committed thresholds — cognitive (not cyclomatic) complexity,
+structural (not textual) duplication, a legacy ratchet, and ADR-worthy threshold raises. The
+monitor→comment→block introduction ladder (`testing.md` §3d, #130) gives a living codebase a
+graduated path to enforcement with the load-bearing exemption stated twice: security-floor gates
+skip the ladder and enter at block.
+
+**The loop keeps count and the record matches reality.** Counted observations (#131) make the
+self-improvement loop's two-instance bar a fact on disk instead of a session recollection;
+absence-is-not-evidence (#132) sharpens the epistemic core with a cross-session lesson (a missing
+marker file proved nothing — the status command said otherwise). The docs audit (#133–#136)
+corrected the evals narrative to the current 2026-07-27/28 baselines (Fable's zero-fail sweep
+included), documented `eval-guard` and its `Eval-waiver:` escape hatch where contributors read,
+recorded the refuted core diet as ADR 0001 (density is purchased behavior; the budget is a
+ceiling, not a target), and added skill-lint check 7 so the README can never again silently lag
+the tree. The leakage-guard fix (#125) is the same honesty applied to the local gate: broad
+domain-fingerprint patterns are scoped away from recorded baselines, with fixtures proving both
+directions of the boundary, so a guard that failed on every branch regardless of diff can no
+longer train its reviewer to ignore it.
+
+New scenarios for the new disciplines are staged on `staging/eval-scenarios-batch` behind
+auditable `Eval-waiver:` lines, pending one batched re-baseline sweep.
+
+
+### Features
+
+* absence-is-not-evidence (relay suggestion c) ([#132](https://github.com/bjgreenberg/senior-engineering-partner/issues/132)) ([b5d63fe](https://github.com/bjgreenberg/senior-engineering-partner/commit/b5d63fe18951d651f0e7cf0fef5a3bf0be442bae))
+* counted observations (ECC take [#3](https://github.com/bjgreenberg/senior-engineering-partner/issues/3)) + selective-test-execution note ([#131](https://github.com/bjgreenberg/senior-engineering-partner/issues/131)) ([d954f02](https://github.com/bjgreenberg/senior-engineering-partner/commit/d954f02b050c8114d0f5dd04a0a38e63121ab798))
+* gate workflows with actionlint + zizmor; forbid ${{ }} interpolation in run: ([#127](https://github.com/bjgreenberg/senior-engineering-partner/issues/127)) ([8f8115a](https://github.com/bjgreenberg/senior-engineering-partner/commit/8f8115a059494b99c91d7b85671944b8e7a5a1ea))
+* gate-introduction promotion ladder (qlty proposal [#3](https://github.com/bjgreenberg/senior-engineering-partner/issues/3)) ([#130](https://github.com/bjgreenberg/senior-engineering-partner/issues/130)) ([c7b11b6](https://github.com/bjgreenberg/senior-engineering-partner/commit/c7b11b679eeb12a6c80410ae597156f62c155467))
+* maintainability metrics as gates (qlty proposal [#2](https://github.com/bjgreenberg/senior-engineering-partner/issues/2)) ([#129](https://github.com/bjgreenberg/senior-engineering-partner/issues/129)) ([4cb8115](https://github.com/bjgreenberg/senior-engineering-partner/commit/4cb811544297f0af6e9ea453df3af7c6c5acdf38))
+* mechanize README↔tree documentation integrity (audit LOW-11) ([#136](https://github.com/bjgreenberg/senior-engineering-partner/issues/136)) ([48a0d36](https://github.com/bjgreenberg/senior-engineering-partner/commit/48a0d3622f8ad9c8f2fde335c23c8c60860c7586))
+
+
+### Bug Fixes
+
+* scope hand-authored-only denylist patterns away from recorded baselines ([#125](https://github.com/bjgreenberg/senior-engineering-partner/issues/125)) ([8db2556](https://github.com/bjgreenberg/senior-engineering-partner/commit/8db2556c6710c4f21dc0fd69345e10c7f2dcc1f8))
+
+## [1.24.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.23.1...v1.24.0) (2026-07-28)
+
+The audit release. A full `AUDIT:`-mode pass over the skill's own repo (2026-07-27) found the two
+places world-class was still aspiration rather than evidence — an eval suite that had outgrown its
+baseline, and policy (guarding evals, reference hygiene, core size) without enforcement — and this
+release closes both, plus the experiment that *disproved* the audit's own biggest recommendation.
+
+**The evidence base is current and tripwired.** Eleven of 56 scenarios had never been baselined and
+the only harness-v2 baseline was single-model. Now: full-suite baselines for **Opus** (bare 15/28/13 →
+with-skill 42/13/1), **Haiku** (1/21/34 → 13/28/15), and **Fable** (9/30/17 → **42/14/0 — the first
+zero-fail with-skill sweep on any model**), every splice/re-run disclosed in its BASELINE.md, a
+`curate-baseline.py` that refuses to bake a harness error into a record, and a **baseline-coverage
+tripwire** in `script-tests`: the moment a scenario exists that the newest baseline never measured,
+CI fails with "re-baseline due" — the staleness class the audit found can't silently recur.
+
+**Policy became gates.** `eval-guard` (now a **required** check) fails any substantive SKILL.md change
+that ships no guarding eval and carries no explicit `Eval-waiver:` line — the self-improvement loop's
+contract, mechanized at the PR boundary. `skill-lint` grew reference-integrity checks (dead pointers
+and orphaned references both fail; the private profile exempt by design) and a **core word budget
+ratchet** (12,700, lower-only).
+
+**The core diet was proposed, measured, and refuted — and the refutation is the release's most
+valuable artifact.** A 31% core compression (12,490 → 8,630 words, mechanics relocated to references)
+was built behind a draft PR gated on a before/after sweep. It lost: 7 regressions on Opus, 16 on
+Haiku, mapping exactly onto the relocated rules. **In-core density is load-bearing — models often act
+without reading the reference a trigger points to, and small models depend on inlined rules more, not
+less.** The full negative result is committed as `evals/baselines/2026-07-27-postdiet-experiment/`
+(PR #119, closed unmerged by design), and any future compression must hold its section's guarding
+scenarios individually.
+
+**Harness fixes from the sweeps themselves:** model-produced NUL bytes riding into judge argv crashed
+scenarios (`ValueError: embedded null byte`) — root-caused at `_run_cli`, escaped visibly, red/green
+proven; the documented sweep timeout rose 900→1800s after two scenarios proved to *reproducibly* need
+20+ minutes (the old budget manufactured error-splices, it didn't tolerate flakes).
+
+### Features
+
+* **ci:** reference-integrity + core-word-budget lint checks, and the eval-guard gate ([#117](https://github.com/bjgreenberg/senior-engineering-partner/issues/117)) ([bff910b](https://github.com/bjgreenberg/senior-engineering-partner/commit/bff910ba1526251936e1dae11826b4e084e6e941))
+
+### Tests
+
+* **evals:** 2026-07-27 full-suite baselines (Opus + Haiku), baseline-coverage tripwire, `curate-baseline.py`, re-baseline cadence, NUL-argv harness fix, and the committed core-diet experiment record ([#120](https://github.com/bjgreenberg/senior-engineering-partner/issues/120))
+* **evals:** 2026-07-28 Fable baseline — with-skill 42/14/0, the first zero-fail sweep — and the 1800s sweep-timeout recipe ([#121](https://github.com/bjgreenberg/senior-engineering-partner/issues/121))
+
+## [1.23.1](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.23.0...v1.23.1) (2026-07-27)
+
+A harness-hygiene patch. Claude-runner scenario **and judge** invocations in the eval sweep now
+pass `--setting-sources project`, so the invoking user's global agent context — user-level
+memory, hooks, and settings — never loads into a run. A sweep's "bare" (no-skill) responses could
+previously absorb the operator's environment, which is the root cause of the environment
+identifier that leaked into a committed baseline (scrubbed after the fact in #79); this closes
+the hole at the harness level instead of relying on post-hoc scrubbing. The temp cwd has no
+project settings, so the flag yields a true clean room. Generic runners are named as
+out-of-scope: the `--runner-cmd` template author owns the foreign CLI's equivalent isolation.
+
+### Bug Fixes
+
+* **evals:** isolate scenario and judge runs from the operator's global agent context ([#114](https://github.com/bjgreenberg/senior-engineering-partner/issues/114)) ([09a616f](https://github.com/bjgreenberg/senior-engineering-partner/commit/09a616fd840cd10c742f252b3eef7b9401a85b4a)) — `scripts/run-evals.py` (both the scenario and judge paths) + the isolation note in `evals/README.md`
+
+## [1.23.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.22.0...v1.23.0) (2026-07-27)
+
+An observe-don't-infer release: both rules come from the same failure class — a healthy-looking
+surface (a clean-seeming install, a zero-exit tool) trusted without reading what it actually
+emitted or produced. One lands on the diagnosis side (read the logs before calling anything
+healthy), one on the supply-chain side (a verified download says nothing about a complete
+install or a correct effect).
+
+**ALWAYS CHECK THE LOGS becomes a standing rule** — and it lands in *Epistemic Discipline*, next to
+*verify before you assert*, because it is an observe-don't-infer rule rather than a logging-design one.
+Prompted by a real miss: a device install was verified through provisioning profiles, entitlements,
+build destination, and version number — and **zero logs were read** — while the framework was printing
+`BUG IN CLIENT OF CLOUDKIT: CloudKit push notifications require the 'remote-notification' background
+mode in your info plist` on every launch. The target had never declared `UIBackgroundModes`, so silent
+push could not be delivered and sync silently ran on its poll fallback with no fast path at all.
+Reasoning from source could never have found it: the complaint was emitted by the *framework*, not the
+app's own logger. Reading the logs is now part of the **Definition of Done** for any change to a
+running system — a row in `scripts/self-review.md` and a clause in the *Definition of Done* section,
+so the rule is mechanized where the checklist is actually copied — and the **first** step of any
+failure diagnosis, before the hypothesis and before anything is called healthy.
+
+**The not-subsystem-scoped pass is the load-bearing half.** Framework-emitted defects
+(`BUG IN CLIENT OF …`, entitlement/sandbox denials, XPC failures) carry **no app subsystem**, so a
+query scoped to the app's own subsystem structurally cannot see them — and the fewer log call sites an
+app has, the more of the truth lives outside its subsystem. The rule requires a second pass that is
+**not** subsystem-scoped: unfiltered when sweeping high-specificity markers, `process ==`-scoped when
+reading volume (fully unfiltered severity sweeps are unreadable at real log rates, so the rule names
+the shape that can actually be run). `swift-apple-development.md` §7 prescribed only the
+subsystem-scoped shape — the shape that hid the defect — and now prescribes the process-scoped one
+with a pointer to the second pass.
+
+**One instrument is never the whole story.** The same install carried a second, independent defect the
+log could *not* show: the macOS-only spelling of the push entitlement, silently dropped on iOS, so the
+shipped binary held no push entitlement at all — surfaced by `codesign -d --entitlements -`, not by
+any log query. The worked example now says so, because "I read the logs" and "I checked the
+entitlements" close different halves of the same change.
+
+**Command shadowing joins the false-negative-search rule.** A second, compounding failure in the same
+session: a `log show … | grep` that returned nothing and nearly got reported clean. `log` is a **zsh
+builtin** shadowing `/usr/bin/log`, so the command errored with `too many arguments` — and because
+stderr had been folded into the pipe, the finding-grep swallowed the error and printed a confident
+empty "clean". This is the existing unquoted-`--include`-glob trap with a different mechanism, so it
+**sharpens that rule rather than becoming a new one**: invoke diagnostic tools by absolute path, gate
+on the *tool's* exit status (`$pipestatus`/`$PIPESTATUS` — in a pipeline `$?` is the grep's), and never
+pipe stderr into the grep that filters for findings. A log surface may never be reported clean without
+showing the exact command and the evidence it ran, and **never off an empty result alone** — an empty
+`log show` is a known false negative (and an "empty" archive query still prints its 1-line header, so
+the tripwire is `<= 1` line, not `0`).
+
+**The runnable procedure is bounded and private.** An unscoped capture is the most PII-dense artifact
+on the machine and measured ~226k lines / ~34 MB over five minutes on one idle Mac, so the documented
+recipe uses `umask 077` + `mktemp` + a cleanup trap over a fixed `/tmp` path, bounds the window, and
+forbids pasting a raw capture into a PR or chat. Marker specificity is measured rather than assumed:
+`BUG IN CLIENT` and `Sandbox: .*deny` run 0–10 hits over minutes, while a bare `entitlement` substring
+ran ~3,000 hits in five minutes — noise, not a marker. Severity filters are named as filters too: a
+`-p warning` / `logType == "error"` floor goes on only *after* an unfiltered read.
+
+**Install the whole distribution — and gate on the tool's output, not its exit code.** The
+supply-chain rule, from a second real miss with the same shape: a CI pipeline installed XcodeGen by
+copying the bare binary out of the dist (`sudo install …/bin/xcodegen /usr/local/bin/`), silently
+orphaning the `share/xcodegen/SettingPresets` directory the binary resolves *relative to itself*.
+XcodeGen warned `No "iOS" settings found`, **exited 0**, and generated every target without
+`SDKROOT` — so iOS/watchOS schemes resolved as macOS and CI reported "no destinations" across 16
+runs, two PRs, and two runner-image generations, all misattributed to the runners. The existing
+pin+hash discipline verified the download perfectly and still missed it: **integrity of the
+artifact says nothing about completeness of the install or correctness of the tool's effect.** A
+new bullet in *Supply-chain integrity* pairs the two halves — install the dist whole (`share/` and
+`lib/` ride beside `bin/`), then assert the produced artifact contains what the tool exists to
+produce (the guard was proven red/green in the source incident: a preset-less install yields 0
+`SDKROOT` matches and fails; a healthy one yields 4 per platform and passes).
+
+Nothing is relaxed; every edit adds or sharpens.
+
+### Features
+
+* **logging:** make "ALWAYS CHECK THE LOGS" a standing rule
+  ([#111](https://github.com/bjgreenberg/senior-engineering-partner/issues/111),
+  [da28fc0](https://github.com/bjgreenberg/senior-engineering-partner/commit/da28fc0ff35acff792a1424cbe6945eeca926e0b))
+  — log-reading enters the Definition of
+  Done (with a `scripts/self-review.md` row) and becomes step one of diagnosis, with the
+  subsystem-scoped-plus-not-subsystem-scoped query requirement, the empty-is-not-clean rule, and the
+  never-report-clean-without-the-command obligation (`SKILL.md`,
+  `references/logging-and-monitoring.md`, `references/debugging.md`,
+  `references/swift-apple-development.md`)
+* **epistemic:** sharpen the false-negative-search rule with the **command-shadowing** mechanism
+  (shell builtins shadowing `/usr/bin/log`, `$pipestatus`/`$PIPESTATUS` vs `$?`, never
+  `2>&1 | grep` a diagnostic command) ([#111](https://github.com/bjgreenberg/senior-engineering-partner/issues/111))
+* **evals:** add `log-read-before-declaring-healthy` — guards against declaring a surface healthy
+  without a log read, and against reporting a log query clean without showing the command
+  ([#111](https://github.com/bjgreenberg/senior-engineering-partner/issues/111))
+* **supply-chain:** install the whole distribution and gate on tool output, not exit code
+  ([#112](https://github.com/bjgreenberg/senior-engineering-partner/issues/112),
+  [d5410ec](https://github.com/bjgreenberg/senior-engineering-partner/commit/d5410ec7dbfd3dea524b499474d14e5cd5283090))
+  — one new bullet in *Supply-chain integrity* beside the binaries/tarballs canonical pattern
+  (`SKILL.md`)
+
+## [1.22.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.21.0...v1.22.0) (2026-07-22)
+
+Prompted by holding the skill up against the OWASP **secure-agent-playbook** (#105): the
+disciplines here already enforced the *controls* an agent audit checks for, but three things had no
+home — the security of a product that *is* an agent, a way to review an MCP server, and a
+structured (not ad-hoc) prompt-injection test. Three additive references close the gap; nothing is
+relaxed.
+
+**Agentic-AI security becomes its own discipline.** A new deep reference,
+`references/agentic-ai-security.md`, plus a toolchain trigger in the core, for the surface the
+adjacent files deliberately don't own — `llm-apps.md` *designs* the loop and
+`secure-data-processing.md` secures the *document-analysis* shape, but neither covers the model's
+autonomy once it holds tools that act on the world. Least agency (every tool least-privilege, args
+validated as a trust boundary, tool *results* untrusted); a human-in-the-loop gate on the
+**resolved** consequential call, not the model's narration; agent memory/context as a poisoning
+surface; inter-agent trust and cascading failure for multi-agent products. It **names the mapping**
+to the OWASP Top 10 for Agentic Applications (2026, `ASI01`–`ASI10`) at *theme* level — the
+framework is weeks old and its exact titles still drift across sources, so the durable codes+themes
+carry the mapping and a verify-live pointer carries the labels — and adds a **CSA MAESTRO**
+seven-layer threat-model pass beside STRIDE.
+
+**MCP servers get a review checklist.** A new Part C in
+`references/local-and-agentic-ai-tools.md` — the file that already owns "agentic tooling you run" —
+reviews an MCP server across seven dimensions (transport/auth, per-tool permission audit,
+input-validation/injection, data exposure, scope/sandboxing, supply chain, client config), each
+folded into the existing least-privilege / input-validation / supply-chain floor.
+
+**The injection corpus gets a structure.** `secure-data-processing.md` §2 and `testing.md` §5 turn
+the ad-hoc "ignore previous instructions" corpus into a scheduled, taxonomy-driven red-team tier
+(Arcanum PI Taxonomy, CC BY 4.0, attributed) across intent × technique × evasion, scoped to the
+product's real input surfaces, each case asserting both fence invariants.
+
+Why now, and how it was verified: the 2026 Agentic Top 10 and MAESTRO both postdate the skill's
+existing LLM coverage, so the gap was real and timely. The build was its own advertisement for the
+discipline — a critical-review pass plus primary-source verification caught stale taxonomy counts, a
+mis-shaped test-tier table, and unverifiable verbatim framework titles before any reached `main`;
+MAESTRO and the Arcanum license were confirmed against their primary sources, and the Agentic Top 10
+is mapped at theme level precisely because its primary is gated and its labels still drift.
+
+
+### Features
+
+* agentic-AI security reference, MCP-server review, and prompt-injection red-team tier ([#105](https://github.com/bjgreenberg/senior-engineering-partner/issues/105)) ([2b4de04](https://github.com/bjgreenberg/senior-engineering-partner/commit/2b4de04605c95470fa0ba49b35033b048528dc34))
+
+## [1.21.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.20.0...v1.21.0) (2026-07-21)
+
+The Swift discipline gets its enforcement lane (#103). v1.20.0 shipped the
+knowledge — CloudKit hard rules, concurrency field notes, diagnosis — but no
+gates. Now every mandate names its checker: SwiftLint `--strict` + the
+toolchain's `swift format` + the Swift 6 compiler as merge-blocking gates
+(with a mechanized backstop for the `nonisolated(unsafe)`-needs-justification
+rule); a committed, pinned, osv-scanner-audited `Package.resolved`; the Apple
+bindings of the security floor (Keychain never UserDefaults, App Sandbox +
+minimal entitlements, ATS intact, privacy manifests as a shipping gate, entry
+surfaces as trust boundaries); Swift Testing/XCTest with an xccov coverage
+gate; and the CI job shape in `github-actions.md`. Why: the audit verdict on
+v1.20.0 was "deep but narrow" — every other language named its checker, Swift
+named none. Every flag verified against a live toolchain; every gate proven
+red and green before being encoded — then applied the same day to the app
+that originated the discipline. Guarded by two new evals (suite: 52).
+
+
+### Features
+
+* **skill:** complete the Swift discipline — tooling, supply-chain, security & testing gates ([#103](https://github.com/bjgreenberg/senior-engineering-partner/issues/103)) ([e0199e2](https://github.com/bjgreenberg/senior-engineering-partner/commit/e0199e2d5ac465ece4b07afc90058425b529ca91))
+
+## [1.20.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.19.0...v1.20.0) (2026-07-21)
+
+Two additions, both extracted from the same week of building and shipping a real
+multi-platform Apple app.
+
+**Swift becomes the skill's fifth language discipline** (#101). A new deep reference,
+`references/swift-apple-development.md`, plus a toolchain trigger in the core: XcodeGen
+`project.yml` as the committed source of truth (the generated `.xcodeproj` is a build
+artifact), pure logic in SwiftPM packages with injected clocks, headless
+provisioning/signing with verify-what-the-build-actually-carries, never-store-ticks
+cross-device state design, the **`CKSyncEngine` hard rules**, Swift 6 concurrency field
+notes, and the on-device diagnosis toolkit (`log stream` over `log show`, `.notice`
+persistence, `.ips` crash-report monitoring as the local-app observability floor). Why:
+every rule here cost a real outage, crash, or debugging session during a two-day,
+ten-PR CloudKit sync bring-up — one-shot sync from rebuilt records, an uncatchable
+in-handler assert, three stacked devices-drift-apart root causes — and none of it is
+guessable from the API surface. Guarded by the `swift-cksyncengine-hard-rules` eval
+(suite: 50 scenarios).
+
+**Light/dark support now requires a three-state appearance control** (#100). Wherever an
+app has a settings surface, the control is System / Light / Dark, defaulting to System
+and persisted per-device — a binary toggle that loses "follow the system" no longer
+satisfies the light-and-dark mandate. Why: a real app shipped the binary toggle first,
+and the correction is cheaper as a standing rule than as a per-project rediscovery.
+
+### Features
+
+* require a three-state appearance control (System/Light/Dark) on every GUI deliverable ([#100](https://github.com/bjgreenberg/senior-engineering-partner/issues/100)) ([7e10c4d](https://github.com/bjgreenberg/senior-engineering-partner/commit/7e10c4dd94761023fc86d7bc7a7cd1fa70daabd1))
+* **skill:** add Swift & Apple-platform development discipline ([#101](https://github.com/bjgreenberg/senior-engineering-partner/issues/101)) ([4c5516d](https://github.com/bjgreenberg/senior-engineering-partner/commit/4c5516dfa68419a3c40998a0f6fb3a953ac4a325))
+
+## [1.19.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.18.0...v1.19.0) (2026-07-17)
+
+Two disciplines, one origin story — a real fleet miss, caught the same day it cost
+something. Four automations shared two org API keys; when per-app cost attribution was
+asked for, the billing surface had nothing to attribute (cost reporting groups by
+credential scope, and nothing else) — everything billed before the fix is unattributable
+forever. The missing rule is now in the security floor: **one credential per
+app/workload, provisioned at creation**, in its own provider scope named after the app's
+repo (#95). Least-privilege blast radius is the classic half; the non-obvious half is
+that billing, usage reports, rate limits, and audit trails all attach to the credential
+boundary and are **never retroactive** — which makes this a day-one provisioning
+decision, not a later cleanup. It generalizes the per-repo deploy-key rule from git
+transport to every external service.
+
+Then the process that codified that rule became a rule itself: the **skill
+self-improvement loop** (#97) — active, consent-gated. The model running the skill now
+checks at natural closure points (task done, session end, gate failure, human
+correction) whether the session taught something the skill should encode, and when it
+did, *proposes* — never silently edits — the codified rule with its authoring-tests
+wording, guarding eval, and origin story. Consent is structural, not prose: changes ship
+only through branch → gates → PR → a human approval the proposing agent cannot grant
+itself. The loop may add or sharpen rules, never relax them — loosening a discipline is
+human-initiated by definition, so self-improvement can't become a drift vector. Both
+rules land with guarding eval scenarios (suite 46 → 48).
+
+### Features
+
+* **skill:** active, consent-gated self-improvement loop ([#97](https://github.com/bjgreenberg/senior-engineering-partner/issues/97)) ([b521dcc](https://github.com/bjgreenberg/senior-engineering-partner/commit/b521dcc52f2f39fb663f5e7d5f902d99d968cf55))
+* **skill:** one credential per app/workload, provisioned at creation ([#95](https://github.com/bjgreenberg/senior-engineering-partner/issues/95)) ([5cb2aab](https://github.com/bjgreenberg/senior-engineering-partner/commit/5cb2aab0cf49644b9eb8363934b6c55d9113f9de))
+
+## [1.18.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.17.0...v1.18.0) (2026-07-08)
+
+A navigation discipline, dogfooded from this repo's own README the day it got its
+Contents section: past roughly 10 KB or 8+ sections, a README gains a linked
+`## Contents` after the intro and a back-to-contents link at the foot of every section.
+The load-bearing half is the anchor rule — GitHub's slugger is non-obvious (`&` collapses
+to `--`, a trailing `…` leaves a trailing `-`, backticks and dots vanish), so internal
+links are **validated mechanically** (the canonical `github-slugger` package, or the
+rendered page's own anchors), never hand-computed: a 404 anchor is a broken deliverable
+that no CI gate catches, the same silent-staleness class as a wrong diagram. Guarded by
+the new `readme-toc-anchor-validation` eval scenario (suite 45 → 46).
+
+### Features
+
+* **skill:** linked Contents + back-links + mechanical anchor validation on long READMEs ([#91](https://github.com/bjgreenberg/senior-engineering-partner/issues/91)) ([aa1058b](https://github.com/bjgreenberg/senior-engineering-partner/commit/aa1058b626a37a16533fcdaacc98c36de703bddb))
+
+## [1.17.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.16.2...v1.17.0) (2026-07-08)
+
+Two-command install lands: the repo now doubles as its own Claude Code **plugin marketplace**
+(requested by @Dan-Wood in
+[discussion #86](https://github.com/bjgreenberg/senior-engineering-partner/discussions/86)).
+Inside Claude Code, `/plugin marketplace add bjgreenberg/senior-engineering-partner` then
+`/plugin install senior-engineering-partner@bjgreenberg` installs the skill — with **zero
+restructuring** of the repo, because a root `SKILL.md` is a first-class single-skill plugin.
+Updates track these releases: release-please now bumps `.claude-plugin/plugin.json`'s
+`version` via a JSONPath updater, so the marketplace channel offers each release the moment
+it is tagged. The clone install (and the Codex/Gemini `~/.agents/skills/` path) is unchanged
+and remains the route for customizing `references/my-environment.md` — plugin installs live
+in Claude Code's plugin cache and are replaced wholesale on update, so they always run the
+universal core against the assumed baseline. A new `plugin-validate` CI gate (green-optional)
+runs the official validator in `--strict` mode, so a manifest that would break
+`/plugin marketplace add` for every user fails the PR instead of `main`.
+
+### Features
+
+* **plugin:** package the skill as a Claude Code plugin with a self-hosted marketplace ([#87](https://github.com/bjgreenberg/senior-engineering-partner/issues/87)) ([5b9ecc7](https://github.com/bjgreenberg/senior-engineering-partner/commit/5b9ecc7852038ebf3e902b5a14b0ada6e59f9047))
+
+## [1.16.2](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.16.1...v1.16.2) (2026-07-05)
+
+The Claude-A loop's honest close on the one standing eval residual: the core render-check
+mandate gains the reference's genuinely-tool-less fallback (do the static pass, name the
+unrun check — never skip silently), and the stale-diagram scenario now grades the silent
+skip as a hard fail (a new anti-behavior) with the render item evidence-anchored. Shipped
+with a disclosed negative result: six with-skill samples across three content states show
+the model never renders or names — a durable enforcement gap now measured precisely, not a
+regression. Details in [#83](https://github.com/bjgreenberg/senior-engineering-partner/pull/83).
+
+### Bug Fixes
+
+* **skill:** render-check fallback in the core + an honest hard-fail guard on the silent skip ([#83](https://github.com/bjgreenberg/senior-engineering-partner/issues/83)) ([edb3a46](https://github.com/bjgreenberg/senior-engineering-partner/commit/edb3a46af3c8825cb5f7f3b179a52d77c3e2b17c))
+
+## [1.16.1](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.16.0...v1.16.1) (2026-07-05)
+
+Closes out the 2026-07-04/05 maintenance session. Beyond the privacy fix below, the release
+carries the eval-suite overhaul that shipped as test-scope commits (recorded here by hand,
+since Conventional Commits hides `test:` entries from the generated log):
+
+* **Eval harness v2** ([#81](https://github.com/bjgreenberg/senior-engineering-partner/pull/81)):
+  scenarios can ship fixture workspaces (`evals/fixtures/`, scanner-neutral `.fixture`
+  suffix, two-level drift gates), claude-runner scenario runs get `Bash,Edit,Write`, and the
+  judge receives the ordered tool-call trail plus workspace diffs behind hardened block
+  boundaries — the three long-standing durable-fail scenarios turned out to be refusal
+  artifacts of demanding edits against an empty workspace, not content gaps. Integrated with
+  the v1.16.0 cross-CLI runner; with-skill runs read a staged skill copy that excludes
+  `evals/` and the private profile files.
+* **First harness-v2 baseline** ([#82](https://github.com/bjgreenberg/senior-engineering-partner/pull/82),
+  `evals/baselines/2026-07-05-opus/`): bare 11/22/12/0 vs with-skill **29/16/0/0** — 23 of 45
+  improved, 0 regressed, and the with-skill fail column is zero for the first time on any
+  recorded sweep. All earlier baselines are declared historical (harness discontinuity).
+* **Repo policy:** `skill-lint` and `script-tests` are now required status checks (five
+  total), with the enumerating docs updated in the same pass
+  ([#77](https://github.com/bjgreenberg/senior-engineering-partner/pull/77)).
+
+### Bug Fixes
+
+* **privacy:** scrub environment-specific identifiers from baseline evidence strings ([#79](https://github.com/bjgreenberg/senior-engineering-partner/issues/79)) ([26d523c](https://github.com/bjgreenberg/senior-engineering-partner/commit/26d523c44e19a858b8a7ac7f8cafce42d90c20ed))
+
+## [1.16.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.15.0...v1.16.0) (2026-07-04)
+
+
+### Features
+
+* per-model portability baselines, cross-CLI eval runner, and the tranche-4 rules-lossless core reduction ([#78](https://github.com/bjgreenberg/senior-engineering-partner/issues/78)) ([bb28ce1](https://github.com/bjgreenberg/senior-engineering-partner/commit/bb28ce118e792fd48c2d5df60262ff2a6d1cc23b))
+  * **"Does the skill work equally well across models?" is now a measurement, not an assumption.** Full baseline + with-skill sweeps on **Fable 5 / Sonnet 5 / Haiku 4.5** (opus judge) are recorded as `evals/baselines/2026-07-04-{fable,sonnet,haiku}/`. The headline: with identical skill text, with-skill fails run **16 (Haiku) → 7 (Sonnet) → 4 (Opus, older suite) → 3 (Fable)** — the content transfers down-model but enforcement reliability tracks model tier, and the skill's value *compounds* up-model (Fable: 22 of 45 improved, 0 regressed, the strongest profile on both curves). The shared durable-fail trio (`dependency-manifest-drift` · `stale-diagram-on-behavior-change` · `tdd-regression-red-first`) fails on *every* model — content gaps, not model gaps, and the standing sharpening target.
+  * **The scenario runner is pluggable; the judge is not** (`scripts/run-evals.py --runner generic`): the same 45 scenarios can now grade any agent CLI (Codex, Gemini CLI, …) via a `--runner-cmd` template — `{prompt}`/`{model}` substituted **after** shell-style tokenization so a hostile prompt stays one argv token — with the SKILL.md body materialized as the CLI's own instruction file (`AGENTS.md`/`GEMINI.md`) per scenario, and the judge pinned to the `claude` CLI so verdicts stay comparable. No foreign-CLI flags are hardcoded (this repo can't test them); the template is the operator's assertion, verified against their installed `--help`.
+  * **Tranche-4 token-mass reduction: the always-loaded core shrank ~18%** (~23.7k → ~19.4k tokens) **with zero enforceable rules dropped** — every section rewritten under a preserve-all-rules contract, approved by three adversarial verifier lenses per item (dropped-mandate / eval-anchoring / integrity, fallback-to-original on refutation), then a whole-file panel confirmed zero cross-section double-cuts. Displaced detail *moved* to `debugging.md`, `logging-and-monitoring.md`, and `github-teams.md` (incl. the 2026-06-10 squash-rule provenance), never silently deleted. Post-edit with-skill re-sweeps on all three models, with every drop single-probe re-run and adjudicated ([`2026-07-04-post-t4/`](evals/baselines/2026-07-04-post-t4/BASELINE.md)): **no drop traces to lost text**; Haiku fails 16→13, Sonnet passes 16→18, Fable within noise of its ceiling. Separately verified: the full body loads un-truncated via the real skill loader (`claude` CLI 2.1.201).
+  * **The validation surfaced and fixed an intra-skill tension:** the blanket `MODULARIZATION.md` mandate collided with YAGNI (a model dutifully speccing future channels got judged as speculative design). The spec is now warranted only under **concrete packaging pressure** (a convert-trigger from the Single-File vs. Package framework), and the `yagni-no-speculative-abstraction` scenario's anti-behavior targets *code* artifacts, excusing prose planning notes — verified clean on a live run.
+  * **Copilot-review catches folded** (same PR): `--runner-instructions-file` is validated to a bare filename so the skill-body write can't traverse out of the scenario scratch dir (two fixture tests prove the gate can fail); `run_generic()` trims only a trailing newline, keeping foreign-CLI transcripts faithful; results-dir docs name the `-generic` tag.
+
+
+### Bug Fixes
+
+* stop release-please from corrupting the CFF spec-version reference in SKILL.md ([#75](https://github.com/bjgreenberg/senior-engineering-partner/issues/75)) ([bd5b87c](https://github.com/bjgreenberg/senior-engineering-partner/commit/bd5b87c97ccaa97ad0bee10715d3cbfe98adf3fa))
+
+## [1.15.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.14.0...v1.15.0) (2026-07-04)
+
+
+### Features
+
+* add CITATION.cff with a validation gate, release-please auto-bump, and the discipline in the skill core ([#73](https://github.com/bjgreenberg/senior-engineering-partner/issues/73)) ([b99b624](https://github.com/bjgreenberg/senior-engineering-partner/commit/b99b624c57301573a06b0ef48f8a73dd2c2c6cf6))
+
+## [1.14.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.13.0...v1.14.0) (2026-07-04)
+
+### Features
+
+* **B2 coverage complete — the three disclosed gaps are closed.** ([#66](https://github.com/bjgreenberg/senior-engineering-partner/pull/66), [#69](https://github.com/bjgreenberg/senior-engineering-partner/pull/69), [#70](https://github.com/bjgreenberg/senior-engineering-partner/pull/70))
+  * **RAG + a prompt-injection worked example** ([#66](https://github.com/bjgreenberg/senior-engineering-partner/pull/66)): `llm-apps.md` gains §7 — RAG as rung 1 of the escalation ladder, not an agent pattern (escalate into retrieval only past in-context limits; pin the embedding model — a silent swap invalidates the index; eval the retriever separately from the generator; the index is a derived cache whose **erasure reaches the vector store**). `secure-data-processing.md` gains the **two-zone structural fence** worked example in §2 (zone membership decided by who *controls* the text; planted-delimiter neutralization; an embedded directive is **reported as a finding, never obeyed**; residuals named) and a new §4 — **the vector store is a tenant-data store** (an app-side filter after similarity search is not a boundary; per-tenant namespaces flatten document ACLs; a seeded poisoned-corpus test proves the fence on the *retrieval* path; the embedding call is an egress). The OWASP LLM Top-10 mapping was made honest along the way: LLM08 is mapped *scoped to the slices actually covered* with named residuals, LLM09 (Misinformation) gets a real mapping to §7's grounding controls, and the old "LLM07/LLM09 bite when you fine-tune" claim — which was factually wrong — is corrected.
+  * **Bash gets its deep reference** ([#69](https://github.com/bjgreenberg/senior-engineering-partner/pull/69)): `references/bash-scripting.md` — where `set -e` *doesn't* fire (condition contexts; the `local x=$(cmd)` masking), cleanup/atomic-output/locks **with corrected trap semantics** (bash fires `EXIT` on fatal INT/TERM already; a bare `trap cleanup INT TERM` lets a killed script report success — every claim empirically verified on stock bash 3.2.57), `curl -f`, the stock-macOS-3.2 portability floor, and BATS with the source-guard pattern. Load-bearing claims were probe-tested, not asserted.
+  * **Frontend testing** ([#70](https://github.com/bjgreenberg/senior-engineering-partner/pull/70)): folded into `testing.md` as §8 (the domain stayed coherent — no new file): query by role/label, **contract-pinned network-boundary mocks** (the §1 consumer-mock rule where it bites hardest), thin critical-path E2E, browser flakiness under the zero-tolerance policy, the two floor behaviors as tests (inert render; preserved input), the axe + manual a11y gate, and snapshot discipline. The pre-merge checklist gains two UI lines.
+  * Every slice shipped with its SKILL.md trigger + eval scenario per house doctrine — the suite grows 40 → **44**, and all four new scenarios proof-ran PASS (opus + opus judge).
+
+### Chores
+
+* **Phase-4 smalls** ([#71](https://github.com/bjgreenberg/senior-engineering-partner/pull/71)): a quarterly **mermaid-cli re-pin cadence** in MAINTAINERS.md; **fixture regression tests for the shipped gate scripts** (`scripts/tests/test-scripts.sh` — the guard must FAIL on a planted violation and PASS clean, per testing.md §3c); and a **green-optional `skill-lint`** (`scripts/skill-lint.py` + workflow) validating the Agent-Skills packaging incl. the 1024-char description limit — with a Copilot-review catch folded: block-scalar descriptions can no longer bypass the length check (regression fixture added). Neither new CI job is required — promotion is the maintainer's call.
+* `scripts/run-evals.py` is executable ([#65](https://github.com/bjgreenberg/senior-engineering-partner/pull/65)) — the mode-644/exit-126 gotcha is dead.
+
+## [1.13.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.12.0...v1.13.0) (2026-07-03)
+
+The Phase-3 portability pass (audit finding B1): the universal core no longer bakes the
+author's environment in as mandates. The assumed-baseline paragraph becomes a
+**core-vs-overridable binding table** (Host OS / Shell / VC+CI / secrets manager / deploy
+target) that governs any binding a profile doesn't set, and every mandate-position stack
+noun — 1Password, Cloud Run, the GitHub framing, and the macOS mechanics that two
+*universal* sections still mandated (the least-privilege floor's TCC/FDA vocabulary and the
+`~/Library/Logs` log rule) — now reads as the shipped default's worked example, with host
+equivalents named. The concrete worked examples stay concrete by design; the environment
+profile template gains a Host OS field so every table row has a designated override slot.
+Validated against the fresh 2026-07-02 recorded baseline (#62, the post-A1 re-baseline):
+with-skill 6 up / 31 flat / 1 variance-cleared down on the 38 shared scenarios, 24 improved
+/ 0 regressed vs bare, and **both new portability evals pass** (suite 38 → 40). Shaped by a
+4-lens adversarial review + fold re-review, plus five folded Copilot findings.
+
+
+### Features
+
+* **skill:** de-bias the universal core — shipped defaults become example bindings, not mandates (B1) ([#63](https://github.com/bjgreenberg/senior-engineering-partner/issues/63)) ([b83d8a3](https://github.com/bjgreenberg/senior-engineering-partner/commit/b83d8a367369c08a96f55a733120257c8626739f))
+
+## [1.12.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.11.0...v1.12.0) (2026-07-02)
+
+The A1 token-mass reduction lands its final tranche: every heavy toolchain bullet in the
+always-loaded core is now a pure trigger. The last two — **Scalability & system design** and
+**Python web APIs** — shed their primer prose to the deep references they point at, taking
+SKILL.md from 90,472 to 89,782 bytes with zero content loss: every dropped specific was
+verified line-by-line in its reference *before* trimming, a 4-lens adversarial review
+(content-loss, docs-honesty, coherence, load-bearing floor) folded back the few phrases that
+belong in the always-loaded layer, and both Opus eval sweeps confirmed the same
+improvement profile as the pre-trim skill (19 scenarios improved over the bare model, zero
+real regressions — every apparent flip causally cleared by re-probe).
+
+### Features
+
+* **skill:** convert the last two heavy toolchain bullets to pure triggers (A1 tranche 3) ([#59](https://github.com/bjgreenberg/senior-engineering-partner/issues/59)) ([9656be0](https://github.com/bjgreenberg/senior-engineering-partner/commit/9656be0820e5dfd0c796eba0aafb8cda3e96de3e)) — Scalability & system design 1,164→858 B and Python web APIs 1,064→664 B, keeping the non-negotiables (tenant id never from the client; don't block the event loop; graceful `SIGTERM` drain; statelessness; queue + DLQ + idempotent consumer; the pool ceiling and its pooler fix) and relocating one implicit specific into `references/python-web-apis.md`, now stated outright: uvicorn stops accepting new connections on `SIGTERM` before draining (verified against uvicorn source). The Copilot review's precision catch is fixed at the source too — a blocking call stalls that *worker's* event loop, which on the documented single-worker Cloud Run deployment is the whole instance.
+
+### Documentation
+
+* README `Last updated` stamp refresh, PQC coverage mentions in the security line + compliance catalog row, and the MAINTAINERS note recording the title-only squash setting ([#58](https://github.com/bjgreenberg/senior-engineering-partner/issues/58)) ([b5fce97](https://github.com/bjgreenberg/senior-engineering-partner/commit/b5fce97))
+
+## [1.11.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.10.0...v1.11.0) (2026-07-02)
+
+The release where the skill learns to build the loops it already runs — and where its own
+guard caught its own miss. A new LLM-application reference closes the audit's B2 gap
+(looping/evals slice), a privacy fix scrubs a fingerprint the tiered leakage guard should have
+caught the first time (and hardens the guard so it will), and the release runbook gains the
+parse gotcha that briefly made release-please skip both merges.
+
+*(The two entries below are hand-written: both squash commits were rejected by release-please's
+conventional-commits parser — a wrapped code snippet in the PR-description-derived commit body —
+so the generator considered 0 commits. See the new MAINTAINERS.md gotcha section, added in
+[#56](https://github.com/bjgreenberg/senior-engineering-partner/issues/56).)*
+
+### Features
+
+* **skill:** LLM-app engineering reference — loop patterns, agent loops, evals (B2) ([#55](https://github.com/bjgreenberg/senior-engineering-partner/issues/55)) ([f3b43ef](https://github.com/bjgreenberg/senior-engineering-partner/commit/f3b43efa1f67181c77284109e70ae910edcb6d2a))
+
+  **Why:** the skill ran feedback loops as *process* (tier-aware TDD, the adversarial-review
+  re-review loop, the eval runner) but had zero guidance for *building* them into software —
+  the audit's B2 gap, owner-requested after a loop-prompting best-practices review. The new
+  `references/llm-apps.md` carries the start-simple escalation ladder, the five workflow
+  patterns, evaluator-optimizer's fit preconditions (articulable criteria or don't loop), the
+  agent loop with deterministic per-iteration verification, the every-loop-gets-a-brake rule
+  (done-condition + iteration cap + token/cost budget — an uncapped model loop is the
+  billing-DoS twin), and evals-as-the-outer-loop. Source-fidelity-reviewed against Anthropic's
+  published guidance with the skill's own mandates kept clearly un-attributed; suite grows
+  **37 → 38** (`llm-loop-stopping-criteria`).
+
+### Bug Fixes
+
+* **privacy:** scrub a domain fingerprint from the PQC eval scenario; warn when the Tier-2 guard input is absent ([#54](https://github.com/bjgreenberg/senior-engineering-partner/issues/54)) ([e0bcca9](https://github.com/bjgreenberg/senior-engineering-partner/commit/e0bcca92480ce61c981164f7f6a63be506817fbc))
+
+  **Why:** the v1.10.0 PQC scenario shipped with a phrase on the private Tier-2 leakage
+  denylist. Root cause was a silent downgrade, not the wording: `leakage-guard.sh` skipped
+  Tier 2 without a sound when `references/leakage-denylist.local` was absent — and a git
+  worktree never has the gitignored file, so the pre-PR run false-greened as a full pass. The
+  scenario is re-domained and the guard now warns loudly whenever it runs Tier-1-only.
+
+### Miscellaneous Chores
+
+* **release:** document the squash-body parse gotcha; mark release 1.11.0 ([#56](https://github.com/bjgreenberg/senior-engineering-partner/issues/56)) ([d6183fc](https://github.com/bjgreenberg/senior-engineering-partner/commit/d6183fc07f50216af23fd624b692fe4743e21bfd))
+
+## [1.10.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.9.0...v1.10.0) (2026-07-02)
+
+The release where the A1 diet finally pays in bytes — and the skill learns to talk about the
+quantum clock. The five heaviest toolchain bullets become pure triggers, and a new
+crypto-agility + post-quantum discipline closes the one crypto topic the skill had zero
+coverage of.
+
+### Features
+
+* **skill:** convert the five heavy toolchain bullets to pure triggers (A1 tranche 2) ([#51](https://github.com/bjgreenberg/senior-engineering-partner/issues/51)) ([166a805](https://github.com/bjgreenberg/senior-engineering-partner/commit/166a8052165ec9a3f59de9006877bea8222dd44c))
+
+  **Why:** the always-loaded SKILL.md duplicated primer prose its references already carry,
+  defeating progressive disclosure (audit finding A1). Google Apps Script, Observability &
+  incident response, Diagrams & visual documentation, TypeScript & Node, and Security &
+  compliance frameworks now state their load-bearing non-negotiables tersely and point at their
+  references: **90,954 → 89,222 bytes (net −1,732)** — the first tranche with a real byte payoff
+  (tranche 1 was +386, the pattern and the floor). Every dropped specific was verified
+  line-by-line to already exist in its reference across three independent passes (zero misses);
+  a 4-lens adversarial review + fold re-review restored ~540 B the compression had weakened
+  (the Well-Architected sustainability carve-out, the GAS daily trigger-runtime budget's
+  silent-stop failure, the RUM-client-monitor-as-PII-scrubbed-subprocessor constraint, concrete
+  fast-burn/slow-burn alert routing). Eval-validated against the recorded 2026-07-01 baseline:
+  with-skill **23 pass / 10 partial / 3 fail / 0 error** vs bare 7/17/12 — **19 improved,
+  0 regressed**, every down causally cleared as harness artifact or judge variance. Also
+  corrects the compliance bullet's under-inclusive SOC 2 claim (CC7/CC8 → CC6–CC8) — the
+  inverse of tranche 1's Brewfile finding.
+
+* **skill:** crypto-agility + post-quantum readiness discipline ([#53](https://github.com/bjgreenberg/senior-engineering-partner/issues/53)) ([ee24ad4](https://github.com/bjgreenberg/senior-engineering-partner/commit/ee24ad47dcee6440edd192a37f60422441612f78))
+
+  **Why:** owner request ("we need to be secure") meeting a verified gap — `git grep` found zero
+  post-quantum content anywhere in the tree. `compliance.md`'s A04 block now names the anchors
+  (FIPS 203 ML-KEM / 204 ML-DSA / 205 SLH-DSA; NIST IR 8547's 112-bit-classical-deprecated-~2030
+  / all-classical-disallowed-~2035 trajectory; CNSA 2.0) and **harvest-now-decrypt-later** as
+  the threat with a clock on it — recorded traffic is broken via its *captured key exchange*,
+  not the symmetric ciphertext. Triage-by-surface: AES-256 at rest is already PQ-adequate;
+  signatures aren't HNDL-exposed *unless re-verified after the transition* (retained evidence at
+  trial, git tags at clone time → timestamp/countersign). Strategy: **crypto-agility delegated
+  to managed platforms** (hybrid X25519+ML-KEM; a default `*.run.app` endpoint gets it today, an
+  LB-fronted service needs the SSL-policy opt-in until the announced Oct-2026 default flip) —
+  hand-rolled PQC stays a finding. `data-protection.md` §4 ties HNDL to long-retention classes'
+  retention/DPIA decisions. Adversarially fact-checked against NIST/Federal Register, NSA, Google
+  Cloud, and Cloudflare sources — including an empirical `X25519MLKEM768` negotiation check —
+  and hardened by the Copilot reviewer's ambiguity catch on the HNDL wording. Eval suite grows
+  **36 → 37** (`crypto-agility-pqc-hndl`).
+
+## [1.9.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.8.0...v1.9.0) (2026-07-02)
+
+The release where the eval suite stops being documentation and starts being a gate — and
+immediately earns its keep. **`scripts/run-evals.py` executes the regression scenarios against a
+live model** (headless `claude -p` runs, an LLM judge grading `expected_behavior`/`anti_behavior`,
+deterministic verdicts), in two modes: bare model vs. skill-injected. The first recorded baseline
+(`evals/baselines/2026-07-01-opus/`) measured the skill improving 16 of 31 scenarios over the bare
+model with zero regressions — and exposed one stuck failure the skill's prose never fixed:
+`stale-diagram-on-behavior-change`.
+
+Both findings drive the second feature. **Phase 2, tranche 1 of the core restructuring** converts
+the first DEVELOPMENT DISCIPLINE cluster (Docker/Kubernetes, GCP, Databases, Package managers,
+IDEs) to **pure triggers** — terse non-negotiables plus the read pointer — with every dropped
+specific verified line-by-line to already exist in its reference. A four-lens adversarial review
+hardened the result: it restored three load-bearing rules the trim would have lost (Kubernetes
+runtime secrets via ESO/CSI — never a base64 `Secret`; resource requests+limits; no signing
+certs/keys/profiles committed), and surfaced that the old Brewfile bullet had contradicted
+`package-managers.md`'s `--no-mas` rule since v1.0.0 — that claim is deleted as a correction, not
+relocated. And the stuck failure gets its fix: the behavior-change docs discipline is now
+**procedural** — a request to "update the code" *includes* the docs that depict that code's
+behavior (not scope creep; the *don't-widen-scope* rule cross-points here), and the hunt is
+deterministic (`git grep` the old behavior's names; append-only records get a new entry or a
+superseding ADR, never a rewrite). Re-running both sweep modes against the recorded baseline
+validated the tranche: 16 improved / 0 regressed vs. bare — the identical profile as v1.8.0 —
+and `stale-diagram-on-behavior-change` improved fail→partial. The honest ledger: the file is
++386 bytes (the strengthening and restored non-negotiables outweigh the five shortest bullets'
+trims); the byte payoff of the restructuring comes from the heavy bullets in the next tranches.
+
+
+### Features
+
+* **evals:** add a runner that executes the regression suite ([#47](https://github.com/bjgreenberg/senior-engineering-partner/issues/47)) ([7cc6e4b](https://github.com/bjgreenberg/senior-engineering-partner/commit/7cc6e4b5b380137fc9794b94de41aec918d7aef9))
+* **skill:** convert the infra toolchain cluster to pure triggers; make the behavior-change doc sweep procedural ([#49](https://github.com/bjgreenberg/senior-engineering-partner/issues/49)) ([f640611](https://github.com/bjgreenberg/senior-engineering-partner/commit/f640611bdd9886e4a81ada1ab991932dbff47998))
+
+## [1.8.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.7.1...v1.8.0) (2026-07-01)
+
+Closes the freshness blind spot in the dependency discipline. The skill already demanded
+pinning, locking, and an alert-to-zero *security* audit — but said nothing about a pin that
+simply rots: drifting toward end-of-life, silently missing bug and performance fixes, and
+compounding into a painful multi-major jump. **A pin is for reproducibility, not a museum.**
+The new SKILL.md bullet adds a proactive **currency check on a cadence** (`pip list --outdated`,
+`npm outdated`, `brew outdated` + `mas outdated`, and Dependabot/Renovate *version*-updates —
+not only *security*-updates) as its own lane: scheduled, batched, reviewed as code, run through
+the thin contract test so a breaking upgrade fails red, and held behind a release-age cooldown
+so a freshly published malicious version can't reach you the day it drops. End-of-life is
+treated as a **floor** issue (an EOL runtime stops getting security fixes at all), distinct
+from the urgent security lane, which stays alert-to-zero. `references/package-managers.md`
+gains the Homebrew/mas currency detail, and
+`evals/scenarios/dependency-currency-not-just-pinned.json` guards the lesson.
+
+### Features
+
+* **skill:** add a dependency-currency discipline (stay current, not just pinned) ([#41](https://github.com/bjgreenberg/senior-engineering-partner/issues/41)) ([ef4d196](https://github.com/bjgreenberg/senior-engineering-partner/commit/ef4d196a236fe7dc4e200e90e6e3ddf6ae1e7af5))
+
+## [1.7.1](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.7.0...v1.7.1) (2026-07-01)
+
+External-review follow-ups. An AI-assisted public review flagged the skill; three points held up
+under verification and are folded in here. The headline is a real — if cosmetic — bug: the
+frontmatter wasn't strict-valid YAML, so GitHub rendered a parse error (Claude Code's lenient loader
+always parsed it, so discovery never broke). Plus two reusability refactors.
+
+### Bug Fixes
+
+* **Frontmatter is now strict-valid YAML** ([#37](https://github.com/bjgreenberg/senior-engineering-partner/issues/37), [93757ab](https://github.com/bjgreenberg/senior-engineering-partner/commit/93757ab5dddc49ec35299133e9bc4b0c0ce50341)). The unquoted `description` contained `: ` (colon-space) from the mode triggers (`REVIEW:`, `MVP:`, `DEBUG:`), which strict YAML reads as a nested mapping — Ruby Psych failed. Quoting the value fixes it for every parser; the reviewer's "multi-line" diagnosis was wrong, but the defect was real.
+
+### Changed
+
+* **The hard shell preference moved to the profile** ([#39](https://github.com/bjgreenberg/senior-engineering-partner/issues/39)). "Bash only / never PowerShell" was an absolute baked into the universal core — a forker on Windows would inherit it. The core now reads "a POSIX shell (Bash is the shipped default; your profile sets the shell)"; the hard preference lives in `references/my-environment.md`. No behavior change for anyone whose profile already sets it.
+* **Deduplicated the always-loaded core against its references** ([#40](https://github.com/bjgreenberg/senior-engineering-partner/issues/40)). The diagram taxonomy and the single-file-testing detail were inlined in `SKILL.md` *and* fully present in their references; the core now keeps the always-on rules + pointer and defers the detail — the skill's own no-duplication rule applied to itself. The security section stays inlined (its content isn't duplicated).
+
+## [1.7.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.6.0...v1.7.0) (2026-07-01)
+
+A dogfooding release: the repo adopts the supply-chain + documentation disciplines the skill
+teaches, then folds the lessons back in as new rules. It now runs **OpenSSF Scorecard** on
+*itself* — the skill already told you to check a *dependency's* Scorecard; now it checks its own,
+scoring **7/10** after a least-privilege fix — carries an honest, live badge row, and gained a
+**required-badges** standard in `SKILL.md`. Every badge is true and live; no hardcoded "passing" shipped.
+
+### Features
+
+* **A live badge row is now required on every remote-backed repo — and only honest badges** ([#36](https://github.com/bjgreenberg/senior-engineering-partner/issues/36), [9fc2fcb](https://github.com/bjgreenberg/senior-engineering-partner/commit/9fc2fcb3f1580d141e77ce85afa1b2b93aab228b); discipline [#33](https://github.com/bjgreenberg/senior-engineering-partner/issues/33); repo's own row [#29](https://github.com/bjgreenberg/senior-engineering-partner/issues/29)). Every repo with a remote gets a badge row from day one — the same "standard, not a flourish" posture as branch protection: a **live** CI-status `badge.svg`, license, latest release, and (public repos) an OpenSSF Scorecard posture badge. The honesty rule rides with it — a badge is a *claim*, so never a hardcoded `passing`, a coverage badge with no coverage, an SLSA/SBOM badge with no provenance, or a drifting version; a false badge is the same stale-claim failure as a wrong diagram. Every badge URL is verified live before it ships.
+* **OpenSSF Scorecard, run on our own repo — not just our dependencies** ([#30](https://github.com/bjgreenberg/senior-engineering-partner/issues/30), [9edc4e0](https://github.com/bjgreenberg/senior-engineering-partner/commit/9edc4e0969c32052a70de10db5ee27c9cb7b46b2); docs [#33](https://github.com/bjgreenberg/senior-engineering-partner/issues/33)). `foss-adoption.md` used Scorecard to vet an *inbound* dependency; `compliance.md` now documents it as **bidirectional** — the same tool run on your own repo is a supply-chain posture self-assessment, published as a public score the badge reads. Captures the gotchas learned firsthand: keep the workflow minimal (`checkout` + `scorecard-action`), SHA-pin the actions, and skip the optional SARIF upload whose codeql-action pin scorecard's publish verification rejects as an "imposter commit."
+
+### Bug Fixes
+
+* **Least-privilege release-please permissions** ([#34](https://github.com/bjgreenberg/senior-engineering-partner/issues/34), [836d0f4](https://github.com/bjgreenberg/senior-engineering-partner/commit/836d0f4a5014b5dcb09d220412018f520ee40b75)). Moved `contents`/`pull-requests` write from the workflow top level to the job — the skill's own `github-actions.md` rule, and a self-inconsistency it fixes. Lifted Scorecard's Token-Permissions check from **0 to 10** (7/10 overall).
+* **Minimal Scorecard workflow — fix the broken publish** ([#32](https://github.com/bjgreenberg/senior-engineering-partner/issues/32), [933473e](https://github.com/bjgreenberg/senior-engineering-partner/commit/933473ee8fd256799231e393320fc2a8e4460a72)). The first run analyzed fine but failed to publish; dropping the optional SARIF→code-scanning step (the "imposter commit" above) fixed it and shrank the third-party action surface.
+
+## [1.6.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.5.0...v1.6.0) (2026-07-01)
+
+A comparative-analysis release. After a deep read of an external multi-agent coding-standards
+system, this pulls in the disciplines that genuinely sharpen a **prose, advisory** skill — and
+deliberately leaves out what doesn't fit one: a machine-readable standards *format* that is inert
+without an orchestrator to enforce it, and a full product-lifecycle. Five load-bearing additions,
+each guarded by an eval; an independent baseline-vs-with-skill run confirmed two close a real gap a
+strong model misses (the CSV-injection framing and the ADR-floor line) while the rest hold as
+regression guards. (Plus a documentation-accuracy sweep — the review-model note, the
+architecture-diagram counts, and the reference catalog — in #23–#25.)
+
+### Features
+
+* **Reuse-first, rule-of-three, and YAGNI, named in the modular-code discipline** ([#18](https://github.com/bjgreenberg/senior-engineering-partner/issues/18), [54bdfb3](https://github.com/bjgreenberg/senior-engineering-partner/commit/54bdfb3943680ad2b330ef958c0783ebe3fa42ad)). The section had a "don't reinvent" nudge but never named the three bedrock rules a senior reviewer applies at code-time: reuse before writing new, abstract only at the second-or-third concrete caller (not the first), and no speculative generality — no parameters/hooks/extension points for features nobody has asked for. Unused flexibility is dead code; this is *don't widen scope silently* applied to design.
+* **ADRs name the discipline they waive; the floor is never ADR-overridable** ([#21](https://github.com/bjgreenberg/senior-engineering-partner/issues/21), [6525714](https://github.com/bjgreenberg/senior-engineering-partner/commit/65257146de8f2dd5854594fcaa1ff7388aed3306)). An ADR that deviates from a standing discipline must cite the *specific* rule it overrides — an exception becomes auditable, not silent drift — and the security/CIA floor (secrets, input validation, injection prevention, isolation, authn, tenant RLS) can never be waived by one; only tier-scaled rigor can. "Internal / behind auth / just an MVP" does not move the floor. Also adds the human-review hard-block (an unresolved `CHANGES_REQUESTED` outranks green CI and a bot `APPROVE`) and a CONTRIBUTING "authoring a discipline" convention (binary / diff-checkable / timeless — the skill's falsifiability standard applied to rule-writing).
+* **New `standards-authoring.md` reference — distill sprawling conventions into checkable rules** ([#22](https://github.com/bjgreenberg/senior-engineering-partner/issues/22), [5eff0a5](https://github.com/bjgreenberg/senior-engineering-partner/commit/5eff0a590c70cb16dd49cb9a48316065bf64dc5e)). The inverse of the rest of the skill: instead of *applying* standards, a guided procedure to turn a project's scattered conventions (a 2,000-line `CLAUDE.md`, `.cursorrules`, `*_guidelines.md`) into an enforceable set — discover sources (prose *and* ground-truth artifacts), filter (timeless / enforceable / dedup), take per-rule human approval (write nothing unapproved), classify floor-vs-overridable. Prose-first and format-agnostic: a machine-checkable JSON+validator set only where CI will actually enforce it.
+
+
+### Bug Fixes
+
+* **Spreadsheet/CSV formula injection on export, and SSRF as a first-class API7** ([#19](https://github.com/bjgreenberg/senior-engineering-partner/issues/19), [8f887b0](https://github.com/bjgreenberg/senior-engineering-partner/commit/8f887b0adc9b1a85b7b9f9cccd5be83f97df4dfb)). Two output/boundary gaps the skill left implicit outside the Apps Script context. CSV formula injection (CWE-1236) is a *distinct output sink* from HTML escaping — a cell beginning `=`/`+`/`-`/`@` executes as a formula in Excel/Sheets/LibreOffice — now covered in `frontend-web-security.md` §3 as the export context of encode-per-context. And a general user-supplied-URL SSRF (allowlist the destination, block link-local/metadata + private ranges, re-validate after redirects) now has its own row in the OWASP API Top-10 map as **API7:2023**.
+* **Fail closed — never return a swallowed error as a success-shaped empty/default** ([#20](https://github.com/bjgreenberg/senior-engineering-partner/issues/20), [fbb9b70](https://github.com/bjgreenberg/senior-engineering-partner/commit/fbb9b70d7de7f0a5562d4d0e5e3eda86209b7953)). `resilience-engineering.md` already had "fail clear, never silent" and safe-labeled fallbacks; the subtle gap was the *success-shaped* failure — an `except: return []` / `return None` that makes a *failed* call read as a legitimately-empty one, so bad data flows on unnoticed. Sharpens the existing rule (rather than adding a redundant one) to fail closed by default, degrading only through a deliberate, labeled fallback — reconciling "degrade, don't die" with "fail closed."
+
+## [1.5.0](https://github.com/bjgreenberg/senior-engineering-partner/compare/v1.4.0...v1.5.0) (2026-06-30)
+
+Dogfooding again: two PRs' worth of lessons from a real build session where a **fully green test
+suite still shipped a broken integration**, plus an escalation of the verification step itself.
+
+### Features
+
+* **Consumer-side contract testing — and "test the decision, not the component it renders"** ([#16](https://github.com/bjgreenberg/senior-engineering-partner/issues/16), [aeee0e5](https://github.com/bjgreenberg/senior-engineering-partner/commit/aeee0e506f9e5eb662104cb66325239ed969e01f)). A new-user flow shipped broken past a green suite: the UI was coded and mocked against an *assumed* response (`200`-with-empty) while the server correctly returned `403` — a false green no unit test caught. `references/testing.md` now requires a consumer's mock to encode the producer's **real** responses (status codes *and* error bodies), or a thin integration test across the seam — contract drift cuts both ways. And it calls out the sibling miss: a "thin" route/handler still owns the branch *decision* (which state to show, how to classify an error), so that logic must be extracted and tested — "the components are tested" is not "the orchestration is tested."
+* **The runnable setup is documentation too** ([#16](https://github.com/bjgreenberg/senior-engineering-partner/issues/16), [aeee0e5](https://github.com/bjgreenberg/senior-engineering-partner/commit/aeee0e506f9e5eb662104cb66325239ed969e01f)). A required config var that never reached the dev compose crashed `docker compose up` at boot, long after the test suite was green. The documentation discipline (SKILL.md) now treats **every launch surface** — compose files, env templates, deploy manifests, the README quickstart — as documentation that must move in lockstep when a new required var is added, and treats the quickstart as a *verifiable* artifact you actually run before claiming it works.
+* **Adversarial multi-lens verification for high-stakes diffs** ([#15](https://github.com/bjgreenberg/senior-engineering-partner/issues/15), [bf9f7db](https://github.com/bjgreenberg/senior-engineering-partner/commit/bf9f7db9cabbb92a995282d25a27a7e7edea866a)). The "verify before done" step now escalates a Tier-2 / security- or isolation-sensitive change to several independent, refute-first lenses — then re-reviews whatever folding the findings introduced. That loop is what catches a *green-but-insufficient* change (passes every gate, reads as correct, yet misses its scoped goal) that a single confirmatory read sails past. A multi-lens panel on a trivial diff is review-theater — match the breadth to the stakes.
+
+## [1.4.0] - 2026-06-29 — Dogfooding: file-sync repo corruption, scheduled-job catch-up, infra-doc discipline
+
+Three generalizable lessons that surfaced running the skill against a real multi-machine fleet migration:
+- **`dev-environment-isolation.md` (new §2 subsection) + ENVIRONMENT ISOLATION floor — never host a live `.git` in a file-sync tree.** A file-syncer (iCloud "Desktop & Documents", Dropbox, OneDrive) replicating a live repo *corrupts* it — concurrent `.git` writes, half-synced pack/ref/lock files, online-only eviction of `.git` objects, conflict copies — a **distinct** failure from "sync ≠ backup" (which is about a sync propagating a bad change). Fix: repos in a non-synced path, synced via git push/pull; if a sync tree must contain one, relocate it out and leave a symlink (verify the sync tool's symlink behavior with a scratch test first).
+- **`resilience-engineering.md` (new §5) — scheduled work must catch up after downtime.** Wall-clock schedulers (`cron`, launchd `StartCalendarInterval`, systemd calendar timers) silently **skip** runs missed while the host was off/asleep, not defer them. Pair the wall-clock trigger with an elapsed-time catch-up trigger + an **idempotent due-gate**, and compute "is a run outstanding?" the same way in the gate and in whatever heartbeat monitors the job (a no-op catch-up run must write nothing, so it can't reset the monitor's signal).
+- **SKILL.md DOCUMENTATION — "every representation" now names infra/environment/layout docs.** A doc you *read* to understand a change is one you must update — including the environment/host profiles and directory-layout indexes that describe *how things are wired*, not just code-level docs.
+
+## [1.3.1] - 2026-06-29 — Fix-at-source discipline + a portability correction
+
+Small follow-on, itself an instance of the discipline it adds — issues caught while shipping v1.3.0, fixed at the source instead of deferred:
+- **"Fix it at the source the moment you trip over it" (`engineering-workflow.md` §5).** Names the default that pairs with the existing defer-register: when work surfaces a *different* small fixable problem (a latent bug, a stale comment, a guard false-positive), fix it **now at its root** while the context is loaded, rather than papering over it locally or filing it for a "later" that compounds — the proactive twin of `debugging.md`'s fix-the-cause-not-the-symptom. Guardrails: keep it in its own commit; in a shared tree, flag a problem belonging to *another's* in-flight work to its owner rather than absorbing it (`multi-agent-coordination.md`). Deferral (with a tracked trigger) is the exception, for what genuinely can't be fixed in-flight.
+- **Portability correction (`debugging.md`).** The v1.3.0 non-ASCII-byte tell suggested `grep -nP` unqualified; `-P` is GNU/ripgrep-only (not stock macOS/BSD grep), so it's now labelled as such with `cat -v`/`hexdump -C` as the portable primaries — honoring the skill's own "don't suggest a flag that may not exist" rule.
+
+## [1.3.0] - 2026-06-29 — Dogfooding: test/prod privilege-parity + gate-construction lessons
+
+Additions from building an **RLS production-parity gate** for the multi-tenant codebase — lessons that only surface when you write a security gate end-to-end, including a blind spot in the skill's *own* RLS-testing guidance:
+- **Test/prod privilege parity (`databases.md`, the headline).** The skill mandated pgTAP RLS testing but its documented pattern *seeds/migrates as the superuser* — which silently can't verify the production invariant, because a superuser bypasses RLS unconditionally while production (Cloud SQL/RDS, no true superuser) relies on a **non-superuser owner's `BYPASSRLS`** attribute. Generalized: *a test harness running with more privilege than production cannot verify a security invariant that depends on the privilege difference.* Fix = a **production-parity gate** that re-runs the suite under the prod privilege model (non-superuser `BYPASSRLS` owner), with the `CREATE EXTENSION`-needs-superuser pre-create gotcha called out. Cross-referenced from `testing.md` §2 and the `audit-report-format.md` test/prod-parity flag (now with the privilege sub-case + remediation).
+- **Gate-construction principles (`testing.md` §3c).** Three rules that generalize "red-first" from a single test to a whole gate: **(1)** a gate must be able to *fail* — build a fail-first negative and invert the assertion so a passing negative fails the gate (a green that can't go red proves nothing); **(2)** a gate must **assert** its preconditions (role attributes, object ownership, versions), not just print them, or a refactor passes it for the wrong reason; **(3)** trust the tool's own *verdict* signal, not a bare non-zero exit, so an infra failure can't masquerade as the proof you wanted.
+- **`docker compose run` recreates a `depends_on` service — CI-only (`containers-and-orchestration.md`).** An ephemeral gate that bootstraps a dependency out of band (`up -d db` → seed → `compose run migrator`) can have that dependency **recreated** by `compose run` on the CI runner (not on local Docker Desktop/OrbStack — a works-on-my-machine trap), wiping the bootstrap. Use **`--no-deps`** when you own the dependency's lifecycle.
+- **Suspect the bytes when a symbol is unimpeachable (`debugging.md`).** A bash `unbound variable` on a variable you clearly set can be a non-ASCII character (smart quote, em-dash, ellipsis) adjacent to `$var` whose leading UTF-8 byte folds into the name; keep shell scripts ASCII, and `cat -v`/`hexdump` reveals it.
+- **New eval** `evals/scenarios/rls-superuser-parity-gate.json` encoding the headline lesson so it can't silently regress.
+
+## [1.2.0] - 2026-06-29 — Dogfooding: `AUDIT:` mode + lessons from a real codebase audit
+
+Additions from applying the skill to a full senior audit of a real multi-tenant codebase — gaps the prior evaluation didn't surface because they only appear when the skill drives an actual end-to-end audit-and-remediate workstream:
+- **New `AUDIT:` mode** — a sixth trigger for a **report-first, whole-codebase audit**. `REVIEW:` mandates "a senior engineer who spots a fix delivers it," which actively fights a repo-wide audit where the deliverable is a severity-ranked report and the user picks what to fix; conflating the two buried findings in unrequested diffs. `AUDIT:` is report-only, mechanize-the-checkable, `file:line`-evidenced, strengths-included, then drop into `REVIEW:`/`DEBUG:` to implement. Added to the `description` triggers.
+- **New `references/audit-report-format.md`** — the finding schema, the CRITICAL/HIGH/MEDIUM/LOW severity taxonomy (with the *test/prod-parity* and *deferred-but-gating* cross-cutting flags), and the report structure, so audits are comparable and every finding is falsifiable. Closes the "no findings-report template / severity taxonomy" gap.
+- **Push-only CI steps can red-fail `main` invisibly** (`github-actions.md`) — a step gated `if: github.event_name == 'push'` (attestation, deploy, release-cut) is never exercised by a PR run, so a structurally-broken one (e.g. build-provenance attestation on a user-owned **private** repo) keeps every PR green and red-fails every merge. Make such steps non-blocking / condition-gated, and verify them once via `workflow_dispatch`.
+- **Prefer `git grep` for tree sweeps** (EPISTEMIC DISCIPLINE) — an unquoted `grep -r --include=*.py` is glob-expanded by zsh and silently matches nothing (a false "verified absent"); quote the pattern or use `git grep`.
+
+## [1.1.0] - 2026-06-28 — Evaluation follow-ups
+
+Fixes from a full skill self-evaluation. Privacy & authoring correctness first:
+- **Two-tier `leakage-guard`.** Generic class-patterns (a CGNAT/Tailscale IP range, Obsidian-style
+  wiki-links) stay in the public `scripts/leakage-guard.sh` and run in CI; your *literal* identifiers now live in
+  an un-committed `references/leakage-denylist.local` (from a new `.template`), so the public repo no
+  longer has to publish hostnames/employer/repo names in order to block them.
+- **Frontmatter `description` trimmed to ≤1024 chars** (was ~1.6k, over Anthropic's hard limit) — kept
+  the role, languages, `Use when`, and the mode triggers; moved the framework enumeration to the body.
+- **Fixed the `render-diagrams.sh` digest comment** (it claimed to ship no digest while pinning one; the
+  pinned digest is published — the comment was wrong, not the pin).
+- Noted that eval `source` version tokens (`v2.x–v6.x`) are pre-release provenance, not public versions.
+
+Content additions (from the evaluation's scope/security-framework findings):
+- **New `references/google-apps-script.md`** — `clasp`+git, minimal `oauthScopes`, `PropertiesService` secrets/limits, `LockService`, trigger quotas + the 6-min wall, pure-logic isolation for testing (+ a guarding eval). GAS is a headline language that lacked a reference.
+- **New `references/javascript-and-typescript.md`** — TS strict mode (the `mypy --strict` analog), runtime-validated typed boundaries (the Pydantic analog), Node `SIGTERM`/no-floating-promises patterns. Closes the TS-typing gap.
+- **Named the framework mappings** the skill already implements: **OWASP LLM Top 10 (2025)** in `secure-data-processing.md` and **OWASP API Security Top 10 (2023)** (API1 BOLA ≠ web A01) in `threat-modeling-and-api-design.md`.
+- **Profile-before-you-optimize** discipline (`debugging.md`); **legacy-refactor + tech-debt register** (`engineering-workflow.md`); **systems-theory naming** — feedback loops, Senge archetypes, iceberg/Cynefin, Conway's Law, Safety-II — across the relevant references.
+- **Compliance one-liners**: PCI-DSS scope posture (`compliance.md`), NIST AI RMF / ISO 42001 pointers, and an explicit i18n non-goal (`ui-design-and-accessibility.md`).
+- **Repo/community:** README "What it governs" coverage section, a `MAINTAINERS.md`, and CODEOWNERS updated for a second maintainer (two-tier leakage model + admin-bypass review flow documented).
+
+## [1.0.0] - 2026-06-25 — Initial public release
+
+- First public, sanitized release: a **stack-agnostic universal core** (`SKILL.md`, always
+  loaded) + a **swappable environment profile** (`references/my-environment.md`, copied from the
+  shipped template) + a library of read-on-demand `references/`. Re-home the skill by editing one
+  file.
+- Ships `scripts/` (dependency-audit, Mermaid render-check, self-review checklist), an `evals/`
+  regression suite (each scenario encodes a checkable engineering lesson), and CI that
+  render-checks diagrams and guards against environment-specific leakage.
+
+## Pre-release evolution (sanitized summary)
+
+The skill grew from a focused reviewer / pair-programmer / mentor into a full engineering-discipline
+system. The arc, with all specifics removed:
+
+- **Foundations** — the mode triggers (`REVIEW:`/`EXPLAIN:`/`MVP:`/`DEBUG:` + default pair
+  programmer); a secrets-manager security floor (no hardcoded secrets); PEP 8 + type hints;
+  pytest/Jest/BATS; `bandit`/ShellCheck; pinned dependencies; modular code; README + CHANGELOG
+  standards; Conventional Commits.
+- **Typing & architecture** — a `TypedDict` mandate (no `dict[str, Any]` black holes), the
+  single-file-vs-package decision framework, and a testing pattern for single-file scripts.
+- **macOS & ops hardening** — LaunchAgent `.app`-bundle / TCC standards (least-privilege Full Disk
+  Access, the compiled-launcher requirement), Bash command-injection prevention, structured-logging
+  location/rotation, and unattended-job monitoring with a dead-man's-switch.
+- **Epistemic discipline** — verify-before-asserting (anti-hallucination) and deterministic-first
+  (mechanize anything checkable rather than reasoning it out token-by-token).
+- **Process layer** — the spec → plan → tier-aware iron-law TDD → verify-before-done self-review
+  workflow, plus the `DEBUG:` root-cause method (reproduce → hypothesize → isolate → fix cause →
+  red-first regression test).
+- **Phase-aware rigor ladder** — Prototype → MVP → Production, with a security/CIA floor (and a
+  backup/continuity floor) that holds at every tier; only verification depth scales.
+- **Toolchain depth** — Docker/Kubernetes, GCP/Cloud Run, databases (Postgres/Supabase RLS,
+  BigQuery, SQLite), FastAPI, GitHub Actions, and compliance mappings (NIST CSF 2.0 + SSDF, OWASP,
+  SOC 2, Well-Architected).
+- **Supply-chain & security gates** — SAST + secret-scanning + manifest-level dependency-audit +
+  type-check gates as merge blockers; pin **and** hash-lock fetched inputs; emit an SBOM + SLSA
+  build provenance on outputs.
+- **Reliability & continuity** — disaster recovery (3-2-1-1-0 immutable backups, scheduled restore
+  drills), business continuity (BIA-justified RTO/RPO, provider-outage and bus-factor planning),
+  resilience engineering (timeouts, circuit breaker, bulkhead, load-shed, designed degraded modes),
+  and scalability/system design (statelessness, queues + DLQ, the transactional outbox).
+- **Privacy, threat modeling & API design** — GDPR/CCPA-as-code (DSAR, erasure cascade, retention),
+  in-PR STRIDE threat models, and attack-surface-shrinking API design.
+- **UI & docs** — responsive, light/dark, **WCAG 2.2 AA** accessibility; diagrams-as-code
+  (Mermaid-first, render-checked before commit) kept in lockstep with the code they depict.
+- **Self-tests** — an `evals/` suite that encodes each hard-won lesson as a checkable scenario, so a
+  discipline can't silently regress.
+- **Portability** — restructured into a universal core + a swappable environment profile; this
+  public release completes that separation so the core is fully reusable by anyone.

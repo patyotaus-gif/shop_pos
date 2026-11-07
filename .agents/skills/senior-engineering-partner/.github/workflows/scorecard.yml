@@ -1,0 +1,39 @@
+# OpenSSF Scorecard — supply-chain / security-posture analysis.
+# Publishes a score to https://api.securityscorecards.dev (public) that the README badge reads.
+# On-brand: `references/foss-adoption.md` tells users to check a dependency's Scorecard before
+# adopting it — this runs it on our own repo. Minimal by design: only `checkout` + `scorecard-action`.
+# (The SARIF→code-scanning upload was dropped — it's optional for the badge, and scorecard's publish
+# workflow-verification rejected the codeql-action pin as an "imposter commit"; fewer actions = less
+# surface, per SKILL.md.) Third-party actions are SHA-pinned; the trailing comment is the version.
+name: scorecard
+
+on:
+  branch_protection_rule:        # re-score when branch protection changes
+  schedule:
+    - cron: '32 6 * * 1'         # weekly, Monday ~06:32 UTC
+  push:
+    branches: [ "main" ]
+
+# scorecard reads many repo APIs (branch protection, webhooks, workflow perms); it needs broad
+# READ. The one write scope is elevated only in the job that needs it. (Documented deviation from
+# the default `contents: read`, per SKILL.md's "an undocumented skip is a hidden waiver".)
+permissions: read-all
+
+jobs:
+  analysis:
+    name: Scorecard analysis
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write            # OIDC — publish the result to the OpenSSF API (for the badge)
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run analysis
+        uses: ossf/scorecard-action@fa7117db83c52d787ae5a89f350999701505d78e # v2.5.0
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true   # required for the public badge

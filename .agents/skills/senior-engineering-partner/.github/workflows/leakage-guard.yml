@@ -1,0 +1,24 @@
+name: leakage-guard
+
+# Fail the build if any environment-specific / personal identifier leaks into the public
+# skill. The universal core must stay universal; per-user specifics belong in the
+# (un-committed) references/my-environment.md.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  leakage-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false   # lint job never pushes; do not leave the token in .git/config
+      - name: Scan for environment-specific identifiers
+        run: bash scripts/leakage-guard.sh

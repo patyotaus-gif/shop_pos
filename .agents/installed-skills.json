@@ -1,0 +1,203 @@
+{
+  "installedOn": "2026-11-07",
+  "scope": "project",
+  "destination": ".agents/skills",
+  "sources": [
+    {
+      "repository": "https://github.com/phuryn/product-engineering",
+      "commit": "5ff5f5048bf7a0fa8def7663a1e73f2dad354cd1",
+      "skills": [
+        {
+          "path": "agent-harness/skills/agent-instructions",
+          "directory": "agent-instructions"
+        },
+        {
+          "path": "agent-harness/skills/flight-deck",
+          "directory": "flight-deck"
+        },
+        {
+          "path": "agent-harness/skills/guardrail-hooks",
+          "directory": "guardrail-hooks"
+        },
+        {
+          "path": "agent-harness/skills/handover",
+          "directory": "handover"
+        },
+        {
+          "path": "agent-harness/skills/retro",
+          "directory": "retro"
+        },
+        {
+          "path": "agent-harness/skills/windows-agent-shell",
+          "directory": "windows-agent-shell"
+        },
+        {
+          "path": "agent-teams/skills/claude-agents",
+          "directory": "claude-agents"
+        },
+        {
+          "path": "agent-teams/skills/codex-agents",
+          "directory": "codex-agents"
+        },
+        {
+          "path": "agent-teams/skills/delegation",
+          "directory": "delegation"
+        },
+        {
+          "path": "agent-teams/skills/grok-agents",
+          "directory": "grok-agents"
+        },
+        {
+          "path": "ai-shipping/skills/code-review",
+          "directory": "code-review"
+        },
+        {
+          "path": "ai-shipping/skills/derive-tests",
+          "directory": "derive-tests"
+        },
+        {
+          "path": "ai-shipping/skills/document-app",
+          "directory": "document-app"
+        },
+        {
+          "path": "ai-shipping/skills/independent-review",
+          "directory": "independent-review"
+        },
+        {
+          "path": "ai-shipping/skills/intended-vs-implemented",
+          "directory": "intended-vs-implemented"
+        },
+        {
+          "path": "ai-shipping/skills/performance-audit-static",
+          "directory": "performance-audit-static"
+        },
+        {
+          "path": "ai-shipping/skills/release-gate",
+          "directory": "release-gate"
+        },
+        {
+          "path": "ai-shipping/skills/security-audit-static",
+          "directory": "security-audit-static"
+        },
+        {
+          "path": "ai-shipping/skills/ship-check",
+          "directory": "ship-check"
+        },
+        {
+          "path": "ai-shipping/skills/shipping-artifacts",
+          "directory": "shipping-artifacts"
+        },
+        {
+          "path": "ai-shipping/skills/test-harness",
+          "directory": "test-harness"
+        },
+        {
+          "path": "app-stack/skills/app-lifecycle",
+          "directory": "app-lifecycle"
+        },
+        {
+          "path": "app-stack/skills/chatgpt-plugin",
+          "directory": "chatgpt-plugin"
+        },
+        {
+          "path": "app-stack/skills/clerk-production",
+          "directory": "clerk-production"
+        },
+        {
+          "path": "app-stack/skills/design",
+          "directory": "design"
+        },
+        {
+          "path": "app-stack/skills/embedded-agents-agent-sdk",
+          "directory": "embedded-agents-agent-sdk"
+        },
+        {
+          "path": "app-stack/skills/embedded-agents-messages-api",
+          "directory": "embedded-agents-messages-api"
+        },
+        {
+          "path": "app-stack/skills/environments",
+          "directory": "environments"
+        },
+        {
+          "path": "app-stack/skills/legal-pages",
+          "directory": "legal-pages"
+        },
+        {
+          "path": "app-stack/skills/mcp-server",
+          "directory": "mcp-server"
+        },
+        {
+          "path": "app-stack/skills/product-analytics",
+          "directory": "product-analytics"
+        },
+        {
+          "path": "app-stack/skills/saas-authorization",
+          "directory": "saas-authorization"
+        },
+        {
+          "path": "app-stack/skills/supabase-production",
+          "directory": "supabase-production"
+        },
+        {
+          "path": "app-stack/skills/transactional-email",
+          "directory": "transactional-email"
+        },
+        {
+          "path": "app-stack/skills/uptime-monitoring",
+          "directory": "uptime-monitoring"
+        },
+        {
+          "path": "product/skills/beachhead-segment",
+          "directory": "beachhead-segment"
+        },
+        {
+          "path": "product/skills/competitor-analysis",
+          "directory": "competitor-analysis"
+        },
+        {
+          "path": "product/skills/growth-loops",
+          "directory": "growth-loops"
+        },
+        {
+          "path": "product/skills/market-segments",
+          "directory": "market-segments"
+        },
+        {
+          "path": "product/skills/propose",
+          "directory": "propose"
+        },
+        {
+          "path": "product/skills/start-here",
+          "directory": "start-here"
+        },
+        {
+          "path": "product/skills/value-curve",
+          "directory": "value-curve"
+        },
+        {
+          "path": "product/skills/value-proposition",
+          "directory": "value-proposition"
+        },
+        {
+          "path": "work-humanizer/skills/work-humanizer",
+          "directory": "work-humanizer"
+        }
+      ]
+    },
+    {
+      "repository": "https://github.com/bjgreenberg/senior-engineering-partner",
+      "commit": "ede4bc0a9b216c5d3e680b874e859fbcf21a6a7e",
+      "skills": [
+        {
+          "path": ".",
+          "directory": "senior-engineering-partner"
+        }
+      ]
+    }
+  ],
+  "localAdditions": [
+    ".agents/skills/senior-engineering-partner/references/my-environment.md"
+  ],
+  "automaticUpdates": false
+}
