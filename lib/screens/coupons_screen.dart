@@ -1,3 +1,4 @@
+import '../widgets/promotion_form.dart';
 import '../widgets/content_width.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -173,6 +174,37 @@ class _CouponEditorState extends State<CouponEditor> {
   bool _percent = true, _saving = false;
   late DateTime _date;
   String? _error;
+  List<String> get _summary {
+    final value = double.tryParse(_value.text.trim());
+    final minimum = double.tryParse(_minimum.text.trim());
+    final uses = int.tryParse(_uses.text.trim());
+    final code = _code.text.trim().toUpperCase();
+    if (!RegExp(r'^[A-Z0-9_-]{3,24}$').hasMatch(code) ||
+        value == null ||
+        !value.isFinite ||
+        value <= 0 ||
+        minimum == null ||
+        !minimum.isFinite ||
+        minimum < 0 ||
+        minimum > 1000000 ||
+        uses == null ||
+        uses < 1 ||
+        uses > 100000 ||
+        (_percent &&
+            (int.tryParse(_value.text.trim()) == null || value > 99)) ||
+        (!_percent && ((value * 100).round() < 1 || value > 100000))) {
+      return const [];
+    }
+    return [
+      'โค้ด $code · ลด ${_percent ? '${value.toInt()}%' : '${value.toStringAsFixed(2)} บาท'}',
+      'ยอดซื้อขั้นต่ำ ${minimum.toStringAsFixed(2)} บาท หลังส่วนลดสินค้าและราคาชุด ก่อนใช้คูปอง',
+      'ใช้ได้รวม $uses สิทธิ์ทั้งร้าน ไม่ใช่จำนวนสิทธิ์ต่อคน',
+      'ใช้กับบิลโต๊ะและลิงก์สั่งซื้อ · 1 โค้ดต่อบิล',
+      'ยอดสินค้าหลังใช้คูปองต้องไม่น้อยกว่า 20 บาท',
+      'ถึง ${_date.day}/${_date.month}/${_date.year} สิ้นวัน (เวลาไทย)',
+    ];
+  }
+
   @override
   void initState() {
     super.initState();
@@ -225,22 +257,28 @@ class _CouponEditorState extends State<CouponEditor> {
   Widget build(BuildContext context) => PopScope(
       canPop: !_saving,
       child: AlertDialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         title: const Text('สร้างโค้ดส่วนลด'),
         content: SizedBox(
             width: 420,
             child: SingleChildScrollView(
                 child: Form(
                     key: _form,
+                    onChanged: () => setState(() {}),
                     child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      TextFormField(
-                          controller: _code,
-                          enabled: !_saving,
-                          decoration: const InputDecoration(
-                              labelText: 'โค้ด เช่น WELCOME10'),
-                          validator: (v) => RegExp(r'^[A-Z0-9_-]{3,24}$')
-                                  .hasMatch((v ?? '').trim().toUpperCase())
-                              ? null
-                              : 'ใช้ A-Z ตัวเลข - _ จำนวน 3–24 ตัว'),
+                      PromotionField(
+                          label: 'โค้ด เช่น WELCOME10',
+                          child: TextFormField(
+                              autovalidateMode:
+                                  AutovalidateMode.onUserInteraction,
+                              controller: _code,
+                              enabled: !_saving,
+                              decoration:
+                                  const InputDecoration(errorMaxLines: 3),
+                              validator: (v) => RegExp(r'^[A-Z0-9_-]{3,24}$')
+                                      .hasMatch((v ?? '').trim().toUpperCase())
+                                  ? null
+                                  : 'ใช้ A-Z ตัวเลข - _ จำนวน 3–24 ตัว')),
                       Wrap(spacing: 8, children: [
                         for (final p in [true, false])
                           ChoiceChip(
@@ -253,57 +291,71 @@ class _CouponEditorState extends State<CouponEditor> {
                                         _value.clear();
                                       }))
                       ]),
-                      TextFormField(
-                          controller: _value,
-                          enabled: !_saving,
-                          keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true),
-                          decoration: InputDecoration(
-                              labelText:
-                                  _percent ? 'ส่วนลด 1–99%' : 'ส่วนลด (บาท)'),
-                          validator: (v) {
-                            final n = double.tryParse(v ?? '');
-                            if (n == null || !n.isFinite || n <= 0) {
-                              return 'กรุณาระบุส่วนลดมากกว่า 0';
-                            }
-                            if (_percent &&
-                                (int.tryParse(v!.trim()) == null || n > 99)) {
-                              return 'ระบุจำนวนเต็ม 1–99';
-                            }
-                            if (!_percent &&
-                                ((n * 100).round() < 1 || n > 100000)) {
-                              return 'ระบุ 0.01–100000 บาท';
-                            }
-                            return null;
-                          }),
-                      TextFormField(
-                          controller: _minimum,
-                          enabled: !_saving,
-                          keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true),
-                          decoration: const InputDecoration(
-                              labelText: 'ยอดซื้อขั้นต่ำก่อนใช้โค้ด (บาท)'),
-                          validator: (v) {
-                            final n = double.tryParse(v ?? '');
-                            return n == null ||
-                                    !n.isFinite ||
-                                    n < 0 ||
-                                    n > 1000000
-                                ? 'ระบุยอด 0–1000000 บาท'
-                                : null;
-                          }),
-                      TextFormField(
-                          controller: _uses,
-                          enabled: !_saving,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                              labelText: 'จำนวนสิทธิ์รวม'),
-                          validator: (v) {
-                            final n = int.tryParse(v ?? '');
-                            return n == null || n < 1 || n > 100000
-                                ? 'ระบุ 1–100000 สิทธิ์'
-                                : null;
-                          }),
+                      PromotionField(
+                          label: _percent ? 'ส่วนลด 1–99%' : 'ส่วนลด (บาท)',
+                          child: TextFormField(
+                              autovalidateMode:
+                                  AutovalidateMode.onUserInteraction,
+                              controller: _value,
+                              enabled: !_saving,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
+                              decoration:
+                                  const InputDecoration(errorMaxLines: 3),
+                              validator: (v) {
+                                final n = double.tryParse(v ?? '');
+                                if (n == null || !n.isFinite || n <= 0) {
+                                  return 'กรุณาระบุส่วนลดมากกว่า 0';
+                                }
+                                if (_percent &&
+                                    (int.tryParse(v!.trim()) == null ||
+                                        n > 99)) {
+                                  return 'ระบุจำนวนเต็ม 1–99';
+                                }
+                                if (!_percent &&
+                                    ((n * 100).round() < 1 || n > 100000)) {
+                                  return 'ระบุ 0.01–100000 บาท';
+                                }
+                                return null;
+                              })),
+                      PromotionField(
+                          label: 'ยอดซื้อขั้นต่ำก่อนใช้โค้ด (บาท)',
+                          child: TextFormField(
+                              autovalidateMode:
+                                  AutovalidateMode.onUserInteraction,
+                              controller: _minimum,
+                              enabled: !_saving,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
+                              decoration:
+                                  const InputDecoration(errorMaxLines: 3),
+                              validator: (v) {
+                                final n = double.tryParse(v ?? '');
+                                return n == null ||
+                                        !n.isFinite ||
+                                        n < 0 ||
+                                        n > 1000000
+                                    ? 'ระบุยอด 0–1000000 บาท'
+                                    : null;
+                              })),
+                      PromotionField(
+                          label: 'จำนวนสิทธิ์รวมทั้งร้าน',
+                          child: TextFormField(
+                              autovalidateMode:
+                                  AutovalidateMode.onUserInteraction,
+                              controller: _uses,
+                              enabled: !_saving,
+                              keyboardType: TextInputType.number,
+                              decoration:
+                                  const InputDecoration(errorMaxLines: 3),
+                              validator: (v) {
+                                final n = int.tryParse(v ?? '');
+                                return n == null || n < 1 || n > 100000
+                                    ? 'ระบุ 1–100000 สิทธิ์'
+                                    : null;
+                              })),
                       TextButton.icon(
                           icon: const Icon(Icons.event),
                           label: Text(
@@ -329,6 +381,9 @@ class _CouponEditorState extends State<CouponEditor> {
                                 }),
                       const Text(
                           'เริ่มใช้ทันทีหลังสร้าง เงื่อนไขแก้ย้อนหลังไม่ได้ หากต้องการเปลี่ยนให้ปิดโค้ดเดิมแล้วสร้างโค้ดใหม่'),
+                      if (_summary.isNotEmpty)
+                        PromotionSummary(lines: _summary),
+                      const PromotionCalculationExample(),
                       if (_error != null)
                         Text(_error!,
                             style: TextStyle(

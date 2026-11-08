@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../screens/omise_test_order_screen.dart';
 
 import '../models/sale.dart';
 import '../services/settings_service.dart';
@@ -42,9 +43,13 @@ class _PaymentSheet extends StatefulWidget {
   final double total;
   final SalesChannel initialChannel;
   final String? summary;
+  final bool showOmiseSandbox;
 
   const _PaymentSheet(
-      {required this.total, required this.initialChannel, this.summary});
+      {required this.total,
+      required this.initialChannel,
+      this.summary,
+      this.showOmiseSandbox = false});
 
   @override
   State<_PaymentSheet> createState() => _PaymentSheetState();
@@ -54,13 +59,12 @@ class _PaymentSheetState extends State<_PaymentSheet> {
   static const _prefsKey = 'pos_last_payment_method';
   static final _baht = NumberFormat('#,##0.00', 'th_TH');
 
-  // PaymentMethod.online is intentionally excluded — that label belongs
-  // to orders coming in from pok-pok.app/order; the cashier never picks
-  // it manually for an in-store sale.
+  // Basic in-store payments are manually verified cash and bank transfer.
+  // Keep legacy QR/online values in the ledger, but never restore them here.
+  // Omise add-on methods must use verified gateway settlement, not _confirm.
   static const _selectable = [
     PaymentMethod.cash,
     PaymentMethod.transfer,
-    PaymentMethod.qr,
   ];
 
   PaymentMethod _method = PaymentMethod.cash;
@@ -72,6 +76,7 @@ class _PaymentSheetState extends State<_PaymentSheet> {
   String? _ppPayload;
   String? _ppReceiverName;
   bool _ppLoading = false;
+  bool _openingSandbox = false;
   String? _ppError;
 
   // Match the amount shown to the cashier and the ledger's satang precision.
@@ -89,6 +94,44 @@ class _PaymentSheetState extends State<_PaymentSheet> {
     _cashCtrl.dispose();
     _refCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _openOmiseSandbox() async {
+    if (_openingSandbox) return;
+    setState(() => _openingSandbox = true);
+    try {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Omise Test Mode'),
+          content: const Text('ทดลองชำระ 100 บาทด้วยข้อมูลทดสอบเท่านั้น '
+              'ยอดนี้ไม่ใช่ยอดบิลในตะกร้า\n\n'
+              'ไม่มีการตัดเงินจริง บันทึกยอดขาย หรือตัดสต๊อก '
+              'ต้องเข้าสู่ระบบด้วยบัญชีผู้ดูแล Pokpok ในหน้าทดสอบ '
+              'เมื่อทดสอบเสร็จให้ปิดหน้าทดสอบเพื่อกลับมาที่บิลเดิม'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('ยกเลิก')),
+            FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('เปิดหน้าทดสอบ')),
+          ],
+        ),
+      );
+      if (proceed != true || !mounted) return;
+      await Navigator.of(context).push<void>(
+          MaterialPageRoute(builder: (_) => const OmiseTestOrderScreen()));
+      // Never return a PaymentResult for a simulated payment.
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('เปิดหน้าทดสอบไม่ได้ กรุณาลองใหม่'),
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _openingSandbox = false);
+    }
   }
 
   Future<void> _loadLastMethod() async {
@@ -181,6 +224,7 @@ class _PaymentSheetState extends State<_PaymentSheet> {
   }
 
   void _confirm() {
+    if (!_selectable.contains(_method) || !_canConfirm) return;
     final paid =
         _method == PaymentMethod.cash ? (_cashReceived ?? _total) : _total;
     Navigator.pop(
@@ -272,6 +316,20 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                 ),
                 const SizedBox(height: 20),
                 _buildMethodBody(cs),
+                if (widget.showOmiseSandbox) ...[
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: _openingSandbox ? null : _openOmiseSandbox,
+                      icon: const Icon(Icons.science_outlined),
+                      label: const Text('ทดลองชำระผ่าน Omise'),
+                    ),
+                  ),
+                  const Text(
+                      'Test Mode · พร้อมเพย์ / บัตร / TrueMoney · เงินจำลอง 100 บาท',
+                      style: TextStyle(fontSize: 12)),
+                ],
                 const SizedBox(height: 12),
                 DropdownButtonFormField<SalesChannel>(
                     isExpanded: true,
@@ -521,7 +579,7 @@ class _MethodButton extends StatelessWidget {
                     ? cs.primary
                     : cs.onSurface.withValues(alpha: 0.7)),
             const SizedBox(height: 4),
-            Text(method.label,
+            Text(method == PaymentMethod.transfer ? 'เงินโอน' : method.label,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
@@ -543,6 +601,7 @@ Future<PaymentResult?> showPaymentSheet(
   required double total,
   SalesChannel initialChannel = SalesChannel.storefront,
   String? summary,
+  bool showOmiseSandbox = false,
 }) {
   return showModalBottomSheet<PaymentResult>(
     context: context,
@@ -557,7 +616,10 @@ Future<PaymentResult?> showPaymentSheet(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     builder: (ctx) => _PaymentSheet(
-        total: total, initialChannel: initialChannel, summary: summary),
+        total: total,
+        initialChannel: initialChannel,
+        summary: summary,
+        showOmiseSandbox: showOmiseSandbox),
   );
 }
 

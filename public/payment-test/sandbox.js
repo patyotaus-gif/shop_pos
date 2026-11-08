@@ -36,9 +36,22 @@ function show(data) {
   if (data.testMode !== true || data.amount !== 10000) throw Error('Invalid test response');
   store({...saved, attemptId:data.attemptId, status:data.status});
   $('newPayment').hidden = true; $('existingPayment').hidden = false;
-  $('startNew').hidden = !terminal.has(data.status);
+  $('startNew').hidden = !terminal.has(data.status) || new URLSearchParams(location.search).has('newAttempt');
   $('recovery').hidden = !!data.chargeId || terminal.has(data.status);
   $('authorize').hidden = true;
+  $('qrPanel').hidden = true;
+  $('qrImage').removeAttribute('src');
+  if (data.qrImageUri && data.status === 'pending') {
+    const qr = new URL(data.qrImageUri);
+    if (qr.protocol === 'https:' && qr.hostname === 'api.omise.co' && !qr.username && !qr.password) {
+      $('qrImage').src = qr.href; $('qrPanel').hidden = false;
+    }
+  }
+  $('orderStatus').textContent = data.orderStatus === 'confirmed'
+    ? 'ยืนยันออเดอร์ทดสอบอัตโนมัติแล้ว'
+    : data.orderStatus === 'cancelled' ? 'ออเดอร์ทดสอบถูกยกเลิก'
+    : data.orderStatus === 'payment_failed' ? 'ชำระไม่สำเร็จ ออเดอร์ยังไม่ยืนยัน'
+    : 'ออเดอร์ทดสอบรอชำระเงิน';
   if (data.authorizeUri) {
     const url = new URL(data.authorizeUri);
     if (url.protocol === 'https:' && !url.username && !url.password &&
@@ -60,7 +73,8 @@ async function refresh() {
   }
 }
 async function submitNonce(method, nonce) {
-  const value = {attemptId:crypto.randomUUID(), method, nonce};
+  const requested = new URLSearchParams(location.search).get('newAttempt');
+  const value = {attemptId:/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(requested || '') ? requested : crypto.randomUUID(), method, nonce};
   // Local storage must succeed BEFORE sending the payment request.
   store(value);
   $('newPayment').hidden = true; $('existingPayment').hidden = false; $('startNew').hidden = true;
@@ -99,11 +113,11 @@ $('pay').onclick = () => {
     } catch (_) {busy = false; $('pay').disabled = false; message('เปิดแบบฟอร์มไม่ได้ กรุณาลองใหม่');}
   } else {
     const phone = $('phone').value.trim();
-    if (!/^0\d{9}$/.test(phone)) {message('กรุณากรอกเบอร์ทดสอบ 10 หลัก เริ่มด้วย 0'); return;}
+    if (method === 'truemoney' && !/^0\d{9}$/.test(phone)) {message('กรุณากรอกเบอร์ทดสอบ 10 หลัก เริ่มด้วย 0'); return;}
     run(async () => {
       Omise.setPublicKey(config.publicKey);
-      const nonce = await new Promise((resolve, reject) => Omise.createSource('truemoney',
-        {amount:config.amount, currency:'THB', phone_number:phone}, (status, source) => {
+      const nonce = await new Promise((resolve, reject) => Omise.createSource(method,
+        {amount:config.amount, currency:'THB', ...(method === 'truemoney' ? {phone_number:phone} : {})}, (status, source) => {
           if (status < 300 && source.livemode === false && /^src_test_/.test(source.id)) resolve(source.id);
           else reject(Error('TrueMoney test unavailable'));
         }));
@@ -122,6 +136,18 @@ onAuthStateChanged(auth, async account => {
     if (config.testMode !== true || config.amount !== 10000 || !/^pkey_test_/.test(config.publicKey)) throw Error('Invalid config');
     $('paymentPanel').hidden = false;
     saved = JSON.parse(localStorage.getItem(key()) || 'null');
+    const requested = new URLSearchParams(location.search).get('newAttempt');
+    if (requested && requested !== saved?.attemptId) {
+      // Explicit app session can coexist with an older browser attempt. Do not
+      // reuse its nonce or infer payment from URL input; backend verifies ownership.
+      saved = null;
+      try {
+        const existing = await call('omiseSandboxStatus', {attemptId:requested});
+        show(existing);
+      } catch (e) {
+        if (e.code !== 'functions/not-found') throw e;
+      }
+    }
     const returned = new URLSearchParams(location.search).get('attempt');
     if (returned && /^[a-f0-9-]{36}$/i.test(returned) && returned !== saved?.attemptId) store({attemptId:returned});
     $('newPayment').hidden = !!saved; $('existingPayment').hidden = !saved;
@@ -132,3 +158,8 @@ onAuthStateChanged(auth, async account => {
     $('paymentPanel').hidden = false; $('newPayment').hidden = true; $('existingPayment').hidden = true;
   }
 });
+
+// Webhook updates the server independently. Poll also recovers missed callbacks.
+setInterval(() => {
+  if (user && config && saved && !terminal.has(saved.status) && !busy && !document.hidden) run(refresh);
+}, 5000);

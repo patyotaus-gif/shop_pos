@@ -318,6 +318,7 @@ class _PokpokSplashState extends State<_PokpokSplash>
                         'POINT OF SALE',
                         style: TextStyle(
                           fontSize: 12,
+                          fontWeight: FontWeight.w600,
                           color: cream.withValues(alpha: 0.85),
                           letterSpacing: 5,
                         ),

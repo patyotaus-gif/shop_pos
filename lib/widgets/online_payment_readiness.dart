@@ -15,21 +15,28 @@ class OnlinePaymentReadiness extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('ช่องทางเพิ่มเติมสำหรับลิงก์สั่งสินค้า',
+            Text('รับชำระออนไลน์ผ่าน Omise',
                 style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            const Text('บริการเสริมฟรี ไม่มีค่าแพ็กเกจรายเดือนจาก Pokpok '
+                'ร้านค้ารับผิดชอบค่าธรรมเนียมธุรกรรมตามเงื่อนไขของ Omise'),
             const SizedBox(height: 12),
             const _PaymentMethod(
                 icon: Icons.credit_card, title: 'บัตรเครดิต / เดบิต'),
+            const SizedBox(height: 12),
+            const _PaymentMethod(
+                icon: Icons.qr_code_2, title: 'พร้อมเพย์'),
             const SizedBox(height: 12),
             const _PaymentMethod(
                 icon: Icons.account_balance_wallet_outlined,
                 title: 'TrueMoney'),
             const SizedBox(height: 16),
             const Text(
-                'กำลังเตรียมบริการรับชำระเงิน ร้านยังเปิดใช้สองช่องทางนี้ไม่ได้ '
-                'เมื่อบริการพร้อม จะแจ้งขั้นตอนสมัครและยืนยันข้อมูลร้านก่อนเปิดรับเงิน'),
+                'ขณะนี้อยู่ระหว่างทดสอบ ยังเปิดรับเงินจริงผ่าน Omise ไม่ได้ '
+                'เมื่อบริการพร้อม เจ้าของร้านจะเลือกเปิดใช้ได้หลังเชื่อมบัญชีและยืนยันข้อมูลกับ Omise สำเร็จ'),
             const SizedBox(height: 8),
-            Text('ลูกค้ายังชำระผ่าน PromptPay ที่ร้านตั้งค่าไว้ได้ตามเดิม',
+            Text('หน้าร้านใช้เงินสดและเงินโอนได้ตามปกติ '
+                'ส่วน QR สำหรับลิงก์สั่งสินค้าเดิมยังใช้การตั้งค่า PromptPay ด้านล่าง',
                 style: theme.textTheme.bodySmall),
           ],
         ),

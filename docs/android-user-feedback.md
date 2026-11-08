@@ -1,5 +1,69 @@
 # Android pilot feedback — 2026-10-03
 
+## Promotion editor readability — 2026-11-07 (local, not released)
+
+- Job: owners configure bundle quantities/prices, buy/get limits, and coupon eligibility, then verify the conditions before saving. Updated sales-tool descriptions to state supported channels and manual product pinning clearly.
+- Replaced floating field labels in bundle, coupon and buy/get editors with shared `PromotionField`: wrapping labels above inputs, 8 px label gap and 16 px field gap, using the existing `PokpokTheme`. Long selected product names wrap; field errors wrap and clear as the input is corrected. Dialog actions remain outside the scrolling form.
+- Added live pre-save summaries (quantities, current bundle savings, limits and Thai end date). Coupon copy distinguishes shop-wide uses from per-person limits and states the existing 20-baht minimum after discount. An expandable, explicitly illustrative example explains product discount → bundle → coupon order. No pricing/entitlement/backend behavior changed.
+- Validation: 42 Flutter tests passed across bundles, coupons, buy/get, product promotion and new real-editor layout coverage. Layout matrix: 320/390/768/1440 widths, both themes, actual Thai font, 1.5 text scale, 300 px simulated keyboard, long names and invalid inputs. Persistence callbacks are fake; existing sale tests use fake Firestore. Targeted analysis of changed screens/widget/tests passed. A separate screenshot walkthrough found no overlap or blocked actions.
+- Evidence: `test/promotion_form_layout_test.dart`, `.remember/tmp/promotion-test.log`, `.remember/tmp/promotion-preview/`. Native-device/real-keyboard verification remains outstanding. No version bump, APK publication, iOS release or deployment in this task.
+
+## Released Android 1.2.74+91 — basic checkout methods (2026-11-06)
+
+- Released signed APK at `https://pok-pok.app/app/pokpok.apk`. Version 1.2.74/build 91; signing certificate matches build 90. Public download verified byte-for-byte by SHA-256 `f6473647c88f2f9a79ebdd6b566c8b1a526a87f03ed48e582980d1a7141c7744` (97,319,115 bytes).
+- In-store POS/table checkout offers cash and bank transfer only, with safe fallback for a remembered legacy QR selection. Settings describe the free Omise add-on and separately charged provider fees, and explicitly state that live activation is not available yet. Founder Test Mode remains isolated.
+- Passed all 12 payment journey tests and targeted Flutter analysis. Tablet was disconnected during this release, so no physical-device acceptance claimed. No iOS release or live merchant activation claimed.
+- Hosting used the previously verified build-90 tree and changed only APK/manifest, leaving the pending marketing website rewrite unpublished. Evidence: `.remember/tmp/release91-*`.
+
+## Basic checkout methods and Omise add-on scope — 2026-11-06 (not released)
+
+- Shared POS/table payment picker now offers only cash and bank transfer (`เงินสด`, `เงินโอน`). Saved legacy QR selection falls back to cash; historical payment enums/receipts remain unchanged. Manual confirmation rejects unsupported methods.
+- Founder sandbox remains explicitly labelled Test Mode and cannot settle a real cart. Payment journey tests: 12 passed, including legacy QR restoration and transfer confirmation.
+- User clarified that the Omise add-on is free, without a Pokpok monthly add-on fee; shops pay provider transaction fees separately and should eventually self-activate. Intended additional methods: credit/debit card, PromptPay, TrueMoney. Live activation and these live payment buttons are not implemented yet. Existing Omise integration remains an isolated founder sandbox without merchant onboarding or live checkout. Settings now explain the free add-on, separate fees, all three intended methods and testing status. Targeted Flutter analysis passed.
+- Live activation must require verified add-on payment plus an approved, connected merchant account and enabled payment methods. Never activate from a return URL or treat sandbox success as a real sale.
+
+## Omise sandbox App Check exception — 2026-11-06
+
+- At the user's request, disabled App Check enforcement only on `omiseSandboxConfig`, `omiseSandboxCreate`, and `omiseSandboxStatus`; deployed all three functions. Founder authentication, attempt ownership, test keys, fixed simulated amount and isolated storage remain enforced.
+- Backend tests: 17 passed. All three deployed endpoints still return HTTP 401 UNAUTHENTICATED without login.
+- Physical tablet now retrieves the existing rejected test attempt and displays its failed-payment status plus the new-test-order button, instead of the App Check retry error. This verifies status access, not successful payment or end-to-end confirmation. Existing rejected attempt is preserved.
+- Deployment evidence: `.remember/tmp/omise-appcheck-disable.log`. No APK update required.
+
+## Released Android 1.2.73+90 — Omise test orders (2026-11-06)
+
+- Built signed Android APK; package `app.pokpok.pos`, version 1.2.73/build 90. Signing certificate SHA-256 matches build 89: `f7dc70e0464fed06f8c0d14907ef71a75effb566e41e67d1aa685491dff547eb`.
+- Deployed the four Omise sandbox Functions and `/payment-test/` HTML/JavaScript. Hosting staged from the verified build-89 hosting tree, preserving the existing website rather than publishing the pending marketing-page restructure.
+- Public sandbox assets match source. Unauthenticated config/status requests return 401 and malformed webhook requests return 400 as expected. Prior verification passed 17 backend tests, mocked browser payment/automatic-confirmation tests, 11 payment journey tests, targeted Dart analysis and the Firestore emulator isolation/concurrency test.
+- Test access: founder account → POS/table payment → Omise test → sample order → open customer test checkout. QR PromptPay requires simulating success/failure in Omise Test Dashboard; no real transfer. App reflects server-verified sandbox order status on return. Native and browser authentication are separate.
+- No iOS release, real provider transaction or physical tablet acceptance claimed. Earlier "not released" entries below describe the implementation stage and are superseded by this release entry. Release evidence: `.remember/tmp/release90-*`.
+
+## Omise sandbox order confirmation — 2026-11-06 (not released)
+
+- Added PromptPay source creation and provider QR display to the isolated founder sandbox alongside card and TrueMoney. Omise Test PromptPay requires simulated success/failure in its Dashboard, not a real banking transfer (https://docs.omise.co/promptpay).
+- Verified charge status now transactionally updates an isolated test order in `omiseSandboxAttempts`: awaiting_payment, confirmed, payment_failed or cancelled. Matching server-fetched payment evidence is required; posted webhook success and browser return URLs cannot confirm it. Production shop orders/sales/stock are untouched.
+- Added an in-app test-order status screen, linked to the browser checkout by an owner-checked attempt ID and persisted per account for recovery. App polls while foregrounded and rechecks on resume; web polls pending payments. Fixed server-owned THB 100 sample item. This does not settle actual carts or implement public customer/PayFac onboarding.
+- Backend tests: 17 passed, covering three methods, duplicate webhook, forged success, delayed pending, failures/refunds and isolated writes. Mocked browser scenarios include PromptPay QR and automatic confirmation without a refresh click. Payment journey tests: 11 passed. Actual provider charges, device acceptance, deployment and app release remain pending.
+
+## Omise test entry in checkout — 2026-11-06 (not released)
+
+- Added a founder-only Omise test action to the shared POS/takeaway/table payment sheet. Uses the existing authenticated `/payment-test/` page in an in-app browser; web authentication remains separate from native app authentication.
+- Clearly discloses the existing fixed THB 100 simulated card/TrueMoney payment, independent of the cart total. Opening or returning from the browser never produces a PaymentResult or automatically closes a sale. Normal payment methods remain available. PromptPay and gateway settlement of actual cart orders are not implemented by this entry point.
+- Payment journey tests: 11 passed, including hidden-by-default entry and cancellation preserving the unpaid bill. Actual device/browser login and real Omise sandbox transactions remain unverified. No deployment or version bump.
+
+## Released 1.2.72+89 — clearer splash tagline (2026-11-05)
+
+- Set the splash's POINT OF SALE label to SemiBold (600), preserving its 12-point size, spacing and colour from the approved comparison. Local animated preview and before/after PNGs are under `.remember/tmp/splash-preview/`.
+- Targeted Dart analysis passed; signed release APK built successfully. Android package `app.pokpok.pos` reports version 1.2.72 / build 89; signing certificate SHA-256 matches build 88 (`f7dc70e0464fed06f8c0d14907ef71a75effb566e41e67d1aa685491dff547eb`).
+- Published the APK and optional update manifest through Hosting, retaining minimum supported build 1. Downloaded the complete public APK and verified size 97,286,255 bytes and SHA-256 `b14c078db012b2fa448e321125a377deb07bfb30104654f57b3e7f3a18193463`, exact manifest contents and no-cache headers. Evidence: `.remember/tmp/release89-verified.json`; build 88 backup retained locally.
+- Hosting was staged from the previously released website source, with key pages compared against the live site before publication. Pending multi-page marketing changes remain unpublished. No backend, rules or iOS/TestFlight deployment in this release. Physical-device verification was not performed.
+
+## LINE greeting disabled — 2026-11-05
+
+- Removed webhook greetings for follow/unblock events. Customers initiate conversations; persistent waiting/human states continue suppressing repeated text, images and connection commands until an operator explicitly resumes the bot. The handover acknowledgement is sent once and accurately says the request is recorded, without claiming staff were notified.
+- Added production-webhook routing regressions for first follow, unblock, repeated contact requests, webhook redelivery, photos, seven-day waits, operator takeover and explicit resume. All 17 LINE handover/link/delivery tests passed; syntax and diff checks passed.
+- Published only `functions:lineWebhook` to `shop-pos-89294`. Verified ACTIVE revision `linewebhook-00021-hom`, updated `2026-11-05T08:48:14.584864279Z`; signed empty-event probe returned HTTP 200 / `status: ok`. No customer messages were sent by verification. Website restructuring remains unpublished; no mobile update was made.
+- LINE OA Manager's separately configured greeting and auto-response messages remain unverified and unchanged: no connected OA Manager browser session was available. Those settings must also be disabled to prevent platform-generated greetings. Evidence: `.remember/tmp/line-no-greeting-verified.json`.
+
 ## Released 1.2.71+88 — transparent white splash and official wordmark (2026-11-05)
 
 - Removed the splash's white tile, inset plate and shadow. Separate transparent white mortar/pestle layers retain the original geometry, handle cutout and two-strike animation; the static reduced-motion state uses the same white artwork. Cropped layout space below the artwork and reduced the wordmark gap to 12 logical pixels. Android launcher icons are unchanged.

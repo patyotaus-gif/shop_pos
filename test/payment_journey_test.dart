@@ -18,6 +18,7 @@ void main() {
       {required Size size,
       double scale = 1,
       double total = 75.91,
+      bool showOmiseSandbox = false,
       ValueChanged<PaymentResult?>? onResult}) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -38,7 +39,9 @@ void main() {
               builder: (context) => FilledButton(
                     onPressed: () async {
                       final result = await showPaymentSheet(context,
-                          total: total, initialChannel: SalesChannel.takeaway);
+                          showOmiseSandbox: showOmiseSandbox,
+                          total: total,
+                          initialChannel: SalesChannel.takeaway);
                       onResult?.call(result);
                     },
                     child: const Text('ชำระเงิน'),
@@ -47,6 +50,47 @@ void main() {
     await tester.tap(find.text('ชำระเงิน'));
     await tester.pumpAndSettle();
   }
+
+  testWidgets('sandbox is hidden by default', (tester) async {
+    await openPayment(tester, size: const Size(390, 844));
+    expect(find.text('ทดลองชำระผ่าน Omise'), findsNothing);
+    expect(find.text('เงินสด'), findsOneWidget);
+    expect(find.text('เงินโอน'), findsOneWidget);
+    expect(find.text('QR Code'), findsNothing);
+  });
+
+  testWidgets('legacy saved QR falls back to cash without confirming a sale',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({'pos_last_payment_method': 'qr'});
+    await openPayment(tester, size: const Size(390, 844));
+    expect(find.text('QR Code'), findsNothing);
+    expect(find.text('จำนวนเงินที่รับ'), findsOneWidget);
+    final confirm = find.widgetWithText(FilledButton, 'ยืนยันการชำระเงิน');
+    expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('sandbox cancellation keeps the real bill unconfirmed',
+      (tester) async {
+    var returned = false;
+    await openPayment(tester,
+        size: const Size(390, 844),
+        showOmiseSandbox: true,
+        onResult: (_) => returned = true);
+    final sandbox = find.text('ทดลองชำระผ่าน Omise');
+    await tester.ensureVisible(sandbox);
+    await tester.tap(sandbox);
+    await tester.pumpAndSettle();
+    expect(find.text('Omise Test Mode'), findsOneWidget);
+    expect(find.textContaining('ยอดนี้ไม่ใช่ยอดบิลในตะกร้า'), findsOneWidget);
+    await tester.tap(find.descendant(
+        of: find.byType(AlertDialog), matching: find.text('ยกเลิก')));
+    await tester.pumpAndSettle();
+    expect(returned, false);
+    expect(find.text('Omise Test Mode'), findsNothing);
+    expect(find.text('ยืนยันการชำระเงิน'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
       'cash blocks short payment, calculates change and returns takeaway channel',
@@ -77,7 +121,7 @@ void main() {
     PaymentResult? result;
     await openPayment(tester,
         size: const Size(320, 568), onResult: (r) => result = r);
-    await tester.tap(find.text('โอนเงิน'));
+    await tester.tap(find.text('เงินโอน'));
     await tester.pumpAndSettle();
     final confirm = find.widgetWithText(FilledButton, 'ได้รับเงินแล้ว ยืนยัน');
     await tester.ensureVisible(confirm);

@@ -404,6 +404,7 @@ class _PosScreenState extends State<PosScreen> {
           if (customerName == null || !mounted) return;
         } else {
           final result = await showPaymentSheet(context,
+              showOmiseSandbox: AuthService.isFounder,
               total: _total - bundleDiscount,
               initialChannel: widget.initialChannel);
           if (result == null || !mounted) return;

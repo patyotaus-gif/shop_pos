@@ -1,4 +1,5 @@
 import '../widgets/stock_quantity_dialog.dart';
+import '../services/auth_service.dart';
 import 'package:flutter/material.dart';
 import '../widgets/compact_action.dart';
 import '../widgets/shop_operation.dart';
@@ -369,6 +370,7 @@ class _OpenOrderViewState extends State<TableOrderView> {
         (promotion['serviceChargePercent'] as num).toDouble();
     setState(() => _paymentOpen = true);
     final result = await showPaymentSheet(context,
+        showOmiseSandbox: AuthService.isFounder,
         total: (promotion['totalMinor'] as num).toDouble() / 100,
         summary: [
           ...payableOrder.items.map((i) => '${i.productName} × ${i.quantity}'),

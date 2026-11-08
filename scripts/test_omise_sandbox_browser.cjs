@@ -35,6 +35,8 @@ const server=http.createServer((req,res)=>{
             if(window.dropCreate)throw Object.assign(Error('timeout'),{code:'functions/unavailable'});
           }
           return {data:{testMode:true,amount:10000,attemptId:id,status:window.resultStatus||'successful',chargeId:'chrg_test_fixture',
+            orderStatus:window.resultStatus==='pending'?'awaiting_payment':'confirmed',
+            qrImageUri:window.qrFixture?'https://api.omise.co/test-qr.svg':null,
             authorizeUri:window.resultStatus==='pending'?'https://api.omise.co/payments/test':null}};
         };`;
       else if(url.endsWith('/appcheck.js'))body='export const setupAppCheck=()=>({});';
@@ -70,6 +72,18 @@ const server=http.createServer((req,res)=>{
     await page.reload();await page.waitForFunction(()=>document.getElementById('startNew').hidden===false);
     assert.equal(await page.evaluate(()=>window.calls.find(c=>c.name==='omiseSandboxStatus').data.attemptId),pendingId);
     assert.equal(await page.evaluate(()=>window.calls.filter(c=>c.name==='omiseSandboxCreate').length),0);
+    await page.click('#startNew');
+    await page.selectOption('#method','promptpay');
+    await page.evaluate(()=>{window.dropCreate=false;window.resultStatus='pending';window.qrFixture=true;});
+    await page.click('#pay');
+    await page.waitForFunction(()=>document.getElementById('qrPanel').hidden===false);
+    assert.equal(await page.locator('#qrImage').getAttribute('src'),'https://api.omise.co/test-qr.svg');
+    assert.equal(await page.evaluate(()=>window.sources.at(-1).type),'promptpay');
+    assert.equal(await page.evaluate(()=>window.sources.at(-1).data.phone_number),undefined);
+    await page.evaluate(()=>{window.resultStatus='successful';});
+    // No manual refresh: polling must confirm the test order.
+    await page.waitForFunction(()=>document.getElementById('orderStatus').textContent.includes('อัตโนมัติแล้ว'));
+    assert.equal(await page.locator('#qrPanel').isVisible(),false);
     await page.setViewportSize({width:820,height:1180});
     assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     assert.deepEqual(errors,[]);

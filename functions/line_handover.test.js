@@ -12,6 +12,62 @@ function setup(){
     source:{type:'user',userId},message:{type:'text',text}}),
     request:(mode,expectedMode,userId=uid)=>({auth:{uid:'founder',token:{founder:true}},data:{userId,mode,expectedMode}})};
 }
+
+// Exercise the production webhook routing as well as the pause state machine.
+// All sends, Gemini calls and account links are local spies; no LINE traffic.
+function webhookFixture() {
+  const f=setup(), sent=[], ai=[], links=[];
+  const fs=require('node:fs'),vm=require('node:vm');
+  const source=fs.readFileSync(require.resolve('./index.js'),'utf8');
+  const start=source.indexOf('exports.lineWebhook = onRequest(');
+  const end=source.indexOf('exports.sendLineMessage = onCall(',start);
+  assert.ok(start>=0&&end>start);
+  const secret={value:()=> 'test-only'};
+  const ctx={exports:{},onRequest:(_options,handler)=>handler,
+    lineChannelAccessToken:secret,lineChannelSecret:secret,geminiApiKey:secret,
+    _verifyLineSignature:()=>true,lineHandover:f.api,
+    _lineReply:async(_token,_replyToken,messages)=>{sent.push(...messages);return true;},
+    _lineAiReply:async(_key,_user,text)=>{ai.push(text);return 'test reply';},
+    lineLink:{consume:async data=>{links.push(data);return true;}}};
+  vm.runInNewContext(source.slice(start,end),ctx);
+  return {...f,sent,ai,links,dispatch:async(events)=>{
+    await ctx.exports.lineWebhook({headers:{'x-line-signature':'test'},rawBody:Buffer.alloc(0),
+      body:{events:events.map(e=>({type:'message',replyToken:'test-reply',...e}))}},
+      {json:body=>assert.equal(body.status,'ok')});
+  }};
+}
+
+test('webhook: follow and unblock never greet or create a conversation before the customer speaks',async()=>{
+  const f=webhookFixture();
+  for(const isUnblocked of [false,true]){
+    await f.dispatch([{...f.event(''),type:'follow',follow:{isUnblocked}}]);
+  }
+  assert.equal(f.sent.length,0);assert.equal(f.ai.length,0);
+  assert.equal(f.docs.has('lineSupportChats/'+uid),false);
+  await f.dispatch([f.event('hello')]);
+  assert.equal(f.sent.length,1);assert.equal(f.ai.length,1);
+});
+
+test('webhook: repeated messages, photos and unblock stay silent until an operator explicitly resumes',async()=>{
+  const f=webhookFixture(),request=f.event('ติดต่อเจ้าหน้าที่');
+  await f.dispatch([request]);
+  assert.equal(f.sent.length,1);
+  await f.dispatch([request]); // LINE webhook redelivery
+  f.advance(7*86400000);
+  await f.dispatch([
+    f.event('ติดต่อเจ้าหน้าที่'),f.event('ยังอยู่ไหม'),f.event('ID'),
+    f.event('connect:test:123'),{...f.event(''),message:{type:'image',id:'image-1'}},
+    {...f.event(''),type:'follow',follow:{isUnblocked:true}},f.event('สวัสดี'),
+  ]);
+  assert.equal(f.docs.get('lineSupportChats/'+uid).mode,'waiting');
+  assert.equal(f.sent.length,1);assert.equal(f.ai.length,0);assert.equal(f.links.length,0);
+  await f.api.setMode(f.request('human','waiting'));
+  await f.dispatch([f.event('ขอบคุณค่ะ'),f.event('ติดต่อเจ้าหน้าที่')]);
+  assert.equal(f.sent.length,1);assert.equal(f.ai.length,0);
+  await f.api.setMode(f.request('bot','human'));f.advance(1);
+  await f.dispatch([f.event('สอบถามการใช้งานต่อ')]);
+  assert.equal(f.sent.length,2);assert.equal(f.ai.length,1);
+});
 test('explicit human requests supported; unrelated and negated questions remain bot questions',()=>{
   for(const s of ['ขอคุยกับเจ้าหน้าที่ค่ะ','อยากคุยกับคนจริง','ขอคุยกับคน ไม่เอาบอท','ไม่อยากคุยกับบอท','คุยกับคนได้ไหม','ไม่เอาบอต','เจ้าหน้าที่','human'])assert.equal(wantsHuman(s),true,s);
   for(const s of ['พนักงานเพิ่มยังไง','บอททำอะไรได้บ้าง','ไม่ต้องการคุยกับเจ้าหน้าที่','hello'])assert.equal(wantsHuman(s),false,s);

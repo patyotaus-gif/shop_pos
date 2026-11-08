@@ -8,6 +8,7 @@ import 'package:shop_pos/models/sale.dart';
 import 'package:shop_pos/screens/bundles_screen.dart';
 import 'package:shop_pos/services/sale_service.dart';
 import 'package:shop_pos/widgets/order_summary_card.dart';
+import 'package:shop_pos/widgets/promotion_form.dart';
 
 void main() {
   const tea = Product(
@@ -68,7 +69,9 @@ void main() {
                       child: const Text('open'))))));
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
-      final price = find.widgetWithText(TextFormField, 'ราคาชุด (บาท)');
+      final price = find.descendant(
+          of: find.widgetWithText(PromotionField, 'ราคาชุด (บาท)'),
+          matching: find.byType(TextFormField));
       await tester.ensureVisible(price);
       await tester.enterText(price, '125');
       await tester.tap(find.text('บันทึกชุด'));

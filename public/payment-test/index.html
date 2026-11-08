@@ -17,7 +17,7 @@
     @media(max-width:400px){main{margin:12px auto;padding:16px}.panel{padding:16px}}
   </style>
   <script src="https://cdn.omise.co/omise.js" defer></script>
-  <script type="module" src="./sandbox.js?v=20261012"></script>
+  <script type="module" src="./sandbox.js?v=20261106"></script>
   <link rel="stylesheet" href="/brand/wordmark.css?v=20261105">
 </head>
 <body><main>
@@ -34,7 +34,8 @@
     <p id="account" class="muted"></p><button id="logout" type="button">ออกจากระบบ</button>
     <div id="newPayment">
       <h2>ยอดทดลอง ฿100.00</h2>
-      <label for="method">ช่องทางชำระ</label><select id="method"><option value="card">บัตรเครดิต / เดบิต</option><option value="truemoney">TrueMoney Wallet</option></select>
+      <p>สินค้าทดสอบ 1 ชิ้น · ระบบยืนยันออเดอร์ทดสอบเมื่อ Omise แจ้งว่าชำระสำเร็จ</p>
+      <label for="method">ช่องทางชำระ</label><select id="method"><option value="card">บัตรเครดิต / เดบิต</option><option value="truemoney">TrueMoney Wallet</option><option value="promptpay">PromptPay QR (ทดสอบ)</option></select>
       <div id="phoneRow" hidden><label for="phone">เบอร์โทรสำหรับทดสอบ TrueMoney</label><input id="phone" type="tel" inputmode="numeric" maxlength="10" placeholder="0812345678"></div>
       <p class="muted">ใช้ข้อมูลทดสอบจาก <a href="https://docs.omise.co/api-testing" target="_blank" rel="noopener noreferrer">คู่มือ Omise</a> เท่านั้น</p>
       <button id="pay" class="primary" type="button">เริ่มทดสอบ ฿100.00</button>
@@ -43,6 +44,11 @@
       <p>มีรายการทดลองที่บันทึกไว้ ตรวจผลรายการเดิมก่อนเริ่มใหม่</p>
       <button id="refresh" type="button">ตรวจสถานะล่าสุด</button>
       <a id="authorize" hidden>ไปยืนยันรายการทดลอง</a>
+      <div id="qrPanel" hidden>
+        <img id="qrImage" alt="QR พร้อมเพย์ทดสอบ" style="width:240px;max-width:100%;background:white">
+        <p>QR ทดสอบเท่านั้น ไม่ต้องโอนเงินจริง ให้เปิดรายการใน Omise Test Dashboard แล้วเลือก Actions → Successful หรือ Failed เพื่อจำลองผลธนาคาร</p>
+      </div>
+      <p id="orderStatus" role="status"></p>
       <details id="recovery"><summary>กู้ผลเมื่อการเชื่อมต่อขาดหาย</summary>
         <p class="muted">นำ Charge ID ของรายการนี้จาก Omise Test Dashboard มากรอก ระบบจะตรวจว่าตรงกับคำขอเดิม</p>
         <label for="chargeId">Charge ID</label><input id="chargeId" placeholder="chrg_test_..." autocomplete="off">

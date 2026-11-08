@@ -75,16 +75,18 @@
     @media(max-width:520px){h1{font-size:1.6rem;}h2{font-size:1.18rem;}}
   </style>
   <link rel="stylesheet" href="/brand/wordmark.css?v=20261105">
-</head>
+<link rel="stylesheet" href="/site-base.css"><link rel="stylesheet" href="/brand.css"><link rel="stylesheet" href="/brand/wordmark.css?v=20261105"><link rel="stylesheet" href="/site-pages.css"><script src="/js/site.js" defer></script><noscript><style>.mobile-nav{display:block;position:static;max-height:none}.hamburger{display:none}.guide-tools{display:none}</style></noscript></head>
 <body>
-<header class="site-header">
-  <div class="inner">
-    <a href="/" class="logo" style="display:inline-flex;align-items:center;gap:8px"><img src="/brand/pokpok-icon.svg" width="32" height="32" alt="" /><img src="/brand/pokpok-wordmark.svg" class="pokpok-wordmark pokpok-wordmark--small" width="2022" height="548" alt="pokpok"></a>
-    <a href="/blog" class="to-blog">บทความทั้งหมด</a>
-  </div>
-</header>
+<a class="skip-link" href="#main">ข้ามไปเนื้อหา</a>
+<nav class="site-nav" aria-label="เมนูหลัก"><a href="/" class="logo" aria-label="Pokpok หน้าแรก"><span class="logo-symbol"><img src="/brand/pokpok-icon.svg" width="40" height="40" alt=""></span><img src="/brand/pokpok-wordmark.svg" class="pokpok-wordmark" width="2022" height="548" alt="pokpok"></a><ul class="nav-links">
+<li><a href="/features/">ฟีเจอร์</a></li>
+<li><a href="/pricing/">ราคา</a></li>
+<li><a href="/guides/">คู่มือ</a></li>
+<li><a href="/marketplace/">สั่งของเข้าร้าน</a></li>
+<li><a href="/blog/" aria-current="page">บทความ</a></li>
+<li><a href="/supplier">ร้านส่ง</a></li></ul><div class="nav-end"><a href="/subscribe" class="btn-ghost">เข้าสู่ระบบ</a><a href="/#download" class="btn-ruby">ทดลองใช้ฟรี</a><button type="button" class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="เปิดเมนู" aria-controls="mobileNav" aria-expanded="false"><span></span><span></span><span></span></button></div></nav><div class="mobile-nav" id="mobileNav"><a href="/features/">ฟีเจอร์</a><a href="/pricing/">ราคา</a><a href="/guides/">คู่มือ</a><a href="/marketplace/">สั่งของเข้าร้าน</a><a href="/blog/" aria-current="page">บทความ</a><a href="/supplier">ร้านส่ง</a><a href="/subscribe">เข้าสู่ระบบ</a><a href="/#download">ทดลองใช้ฟรี</a></div>
 
-<article class="article">
+<article id="main" class="article">
   <div class="crumb"><a href="/">หน้าแรก</a> › <a href="/blog">บทความ</a> › โปรแกรมขายหน้าร้าน ฟรี</div>
   <h1>โปรแกรมขายหน้าร้าน ฟรี มีจริงไหม เทียบตัวเลือกในไทยแบบตรงไปตรงมา</h1>
   <div class="meta">สำหรับเจ้าของร้านชำและร้านค้าปลีก · อ่าน 6 นาที</div>
@@ -145,10 +147,57 @@
   <a href="/blog/manage-shop-credit">ลูกหนี้ร้านชำ จัดการยังไงไม่ให้เงินจม</a>
 </nav>
 
-<footer>
-  <div>© 2026 Pokpok · ระบบขายหน้าร้านสำหรับร้านค้าปลีกไทย</div>
-  <div style="margin-top:8px;">
-    <a href="/">หน้าแรก</a><a href="/blog">บทความ</a><a href="/privacy">ความเป็นส่วนตัว</a><a href="/terms">เงื่อนไข</a>
+<footer class="site-footer">
+  <div class="footer-top">
+    <div class="footer-brand">
+      <a href="/" class="footer-logo">
+        <img src="/brand/pokpok-icon.svg" width="36" height="36" alt="" style="border-radius:7px" />
+        <img src="/brand/pokpok-wordmark.svg" class="pokpok-wordmark pokpok-wordmark--white" width="2022" height="548" alt="pokpok">
+      </a>
+      <p class="footer-tagline">ระบบ POS สำหรับร้านค้าปลีกและร้านอาหารไทย จัดการการขาย สต็อก และออเดอร์ออนไลน์ในแอปเดียว — Pokpok</p>
+      <a href="https://lin.ee/V8eWC8Tl" target="_blank" rel="noopener" class="footer-line">
+        <img src="/brand/line-qr-white.svg" width="74" height="74" alt="QR เพิ่มเพื่อน LINE ทางการ Pokpok" class="footer-qr" loading="lazy">
+        <div>
+          <div class="footer-line-title">เพิ่มเพื่อนทาง LINE</div>
+          <div class="footer-line-sub">สแกน หรือแตะเพื่อแอดไลน์ทางการ Pokpok</div>
+        </div>
+      </a>
+    </div>
+    <div class="footer-col">
+      <h3>ผลิตภัณฑ์</h3>
+      <ul>
+        <li><a href="/features/">ฟีเจอร์</a></li>
+        <li><a href="/pricing/">ราคา</a></li>
+        <li><a href="/guides/">คู่มือการใช้งาน</a></li>
+        <li><a href="/blog">บทความ</a></li>
+        <li><a href="/marketplace/">สั่งของเข้าร้าน</a></li>
+        <li><a href="/supplier">พอร์ทัลซัพพลายเออร์</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h3>ติดต่อ</h3>
+      <ul>
+        <li><a href="mailto:contact@pok-pok.app">contact@pok-pok.app</a></li>
+        <li><a href="https://lin.ee/V8eWC8Tl" target="_blank" rel="noopener">LINE ทางการ Pokpok</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h3>ช่วยเหลือ</h3>
+      <ul>
+        <li><a href="/privacy">นโยบายความเป็นส่วนตัว</a></li>
+        <li><a href="/terms">เงื่อนไขการใช้บริการ</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="developer-brand">
+      <span>พัฒนาโดย</span>
+      <!-- Frame the visible artwork; the supplied transparent PNG stays intact. -->
+      <svg class="developer-logo" viewBox="254 688 1624 1720" width="104" height="110" role="img" aria-label="PEXON INNOVATION">
+        <image href="/brand/pexon-transparent.png" width="2121" height="3000" />
+      </svg>
+    </div>
+    <span>© 2026 Pokpok. สงวนลิขสิทธิ์ทุกประการ</span>
   </div>
 </footer>
 </body>

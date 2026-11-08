@@ -1,3 +1,5 @@
+import '../widgets/promotion_form.dart';
+import '../utils/money_format.dart';
 import '../widgets/content_width.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -232,6 +234,47 @@ class _BundleEditorState extends State<BundleEditor> {
           p.modifierGroupIds.isEmpty &&
           (!p.isRecipeMode || p.recipe.isNotEmpty))
       .toList();
+
+  List<String> get _summary {
+    final price = double.tryParse(_price.text.trim());
+    final max = int.tryParse(_max.text);
+    if (price == null ||
+        !price.isFinite ||
+        price <= 0 ||
+        max == null ||
+        max < 1 ||
+        max > 10 ||
+        _ids.toSet().length != _ids.length ||
+        !RegExp(r'^\d+(\.\d{1,2})?$').hasMatch(_price.text.trim())) {
+      return const [];
+    }
+    final lines = <String>[];
+    var fullMinor = 0;
+    for (var n = 0; n < _ids.length; n++) {
+      final matches = _available.where((p) => p.id == _ids[n]);
+      final quantity = int.tryParse(_quantities[n].text);
+      if (matches.isEmpty ||
+          quantity == null ||
+          quantity < 1 ||
+          quantity > 99 ||
+          quantity * max > 99) {
+        return const [];
+      }
+      final product = matches.first;
+      fullMinor += (product.effectivePrice * 100).round() * quantity;
+      lines.add('${product.name} × $quantity ${product.unit}');
+    }
+    final priceMinor = (price * 100).round();
+    if (priceMinor >= fullMinor) return const [];
+    return [
+      ...lines,
+      'ราคาสินค้ารวมปัจจุบัน ${formatBaht(fullMinor / 100)}',
+      'ราคาชุด ${formatBaht(priceMinor / 100)} · ลด ${formatBaht((fullMinor - priceMinor) / 100)} ต่อชุด',
+      'สูงสุด $max ชุดต่อบิล',
+      'ถึง ${_date.day}/${_date.month}/${_date.year} สิ้นวัน (เวลาไทย)',
+    ];
+  }
+
   @override
   void initState() {
     super.initState();
@@ -315,6 +358,7 @@ class _BundleEditorState extends State<BundleEditor> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         title:
             Text(widget.initial == null ? 'สร้างชุดสินค้า' : 'แก้ไขชุดสินค้า'),
         content: SizedBox(
@@ -322,52 +366,66 @@ class _BundleEditorState extends State<BundleEditor> {
             child: SingleChildScrollView(
                 child: Form(
                     key: _form,
+                    onChanged: () => setState(() {}),
                     child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          TextFormField(
-                              controller: _name,
-                              enabled: !_busy,
-                              maxLength: 80,
-                              decoration:
-                                  const InputDecoration(labelText: 'ชื่อชุด'),
-                              validator: (v) => v == null || v.trim().isEmpty
-                                  ? 'ระบุชื่อชุด'
-                                  : null),
+                          PromotionField(
+                              label: 'ชื่อชุด',
+                              child: TextFormField(
+                                  autovalidateMode:
+                                      AutovalidateMode.onUserInteraction,
+                                  controller: _name,
+                                  enabled: !_busy,
+                                  maxLength: 80,
+                                  decoration:
+                                      const InputDecoration(errorMaxLines: 3),
+                                  validator: (v) =>
+                                      v == null || v.trim().isEmpty
+                                          ? 'ระบุชื่อชุด'
+                                          : null)),
                           for (var n = 0; n < _ids.length; n++)
                             Padding(
                                 padding: const EdgeInsets.only(bottom: 12),
                                 child: Column(children: [
-                                  DropdownButtonFormField<String>(
-                                      initialValue: _ids[n],
-                                      isExpanded: true,
-                                      decoration: InputDecoration(
-                                          labelText: 'สินค้า ${n + 1}'),
-                                      items: _available
-                                          .map((p) => DropdownMenuItem(
-                                              value: p.id,
-                                              child: Text(p.name,
-                                                  overflow:
-                                                      TextOverflow.ellipsis)))
-                                          .toList(),
-                                      onChanged: _busy
-                                          ? null
-                                          : (v) => setState(() => _ids[n] = v),
-                                      validator: (v) =>
-                                          v == null ? 'เลือกสินค้า' : null),
-                                  TextFormField(
-                                      controller: _quantities[n],
-                                      enabled: !_busy,
-                                      keyboardType: TextInputType.number,
-                                      decoration: const InputDecoration(
-                                          labelText: 'จำนวนต่อชุด'),
-                                      validator: (v) {
-                                        final q = int.tryParse(v ?? '');
-                                        return q == null || q < 1 || q > 99
-                                            ? 'ระบุ 1–99'
-                                            : null;
-                                      }),
+                                  PromotionField(
+                                      label: 'สินค้า ${n + 1}',
+                                      child: DropdownButtonFormField<String>(
+                                          initialValue: _ids[n],
+                                          isExpanded: true,
+                                          isDense: false,
+                                          itemHeight: null,
+                                          decoration: const InputDecoration(
+                                              errorMaxLines: 3),
+                                          items: _available
+                                              .map((p) => DropdownMenuItem(
+                                                  value: p.id,
+                                                  child: Text(p.name)))
+                                              .toList(),
+                                          onChanged: _busy
+                                              ? null
+                                              : (v) =>
+                                                  setState(() => _ids[n] = v),
+                                          validator: (v) => v == null
+                                              ? 'เลือกสินค้า'
+                                              : null)),
+                                  PromotionField(
+                                      label: 'จำนวนต่อชุด',
+                                      child: TextFormField(
+                                          autovalidateMode: AutovalidateMode
+                                              .onUserInteraction,
+                                          controller: _quantities[n],
+                                          enabled: !_busy,
+                                          keyboardType: TextInputType.number,
+                                          decoration: const InputDecoration(
+                                              errorMaxLines: 3),
+                                          validator: (v) {
+                                            final q = int.tryParse(v ?? '');
+                                            return q == null || q < 1 || q > 99
+                                                ? 'ระบุ 1–99'
+                                                : null;
+                                          })),
                                 ])),
                           Wrap(spacing: 8, children: [
                             TextButton.icon(
@@ -390,36 +448,44 @@ class _BundleEditorState extends State<BundleEditor> {
                                           }),
                                   child: const Text('ลบแถวสุดท้าย')),
                           ]),
-                          TextFormField(
-                              controller: _price,
-                              enabled: !_busy,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                      decimal: true),
-                              decoration: const InputDecoration(
-                                  labelText: 'ราคาชุด (บาท)'),
-                              validator: (v) {
-                                final p = double.tryParse(v ?? '');
-                                return p == null ||
-                                        !p.isFinite ||
-                                        p <= 0 ||
-                                        !RegExp(r'^\d+(\.\d{1,2})?$')
-                                            .hasMatch(v!.trim())
-                                    ? 'ระบุราคาทศนิยมไม่เกิน 2 ตำแหน่ง'
-                                    : null;
-                              }),
-                          TextFormField(
-                              controller: _max,
-                              enabled: !_busy,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                  labelText: 'สูงสุดกี่ชุดต่อบิล'),
-                              validator: (v) {
-                                final q = int.tryParse(v ?? '');
-                                return q == null || q < 1 || q > 10
-                                    ? 'ระบุ 1–10'
-                                    : null;
-                              }),
+                          PromotionField(
+                              label: 'ราคาชุด (บาท)',
+                              child: TextFormField(
+                                  autovalidateMode:
+                                      AutovalidateMode.onUserInteraction,
+                                  controller: _price,
+                                  enabled: !_busy,
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                          decimal: true),
+                                  decoration:
+                                      const InputDecoration(errorMaxLines: 3),
+                                  validator: (v) {
+                                    final p = double.tryParse(v ?? '');
+                                    return p == null ||
+                                            !p.isFinite ||
+                                            p <= 0 ||
+                                            !RegExp(r'^\d+(\.\d{1,2})?$')
+                                                .hasMatch(v!.trim())
+                                        ? 'ระบุราคาทศนิยมไม่เกิน 2 ตำแหน่ง'
+                                        : null;
+                                  })),
+                          PromotionField(
+                              label: 'จำนวนชุดสูงสุดต่อบิล',
+                              child: TextFormField(
+                                  autovalidateMode:
+                                      AutovalidateMode.onUserInteraction,
+                                  controller: _max,
+                                  enabled: !_busy,
+                                  keyboardType: TextInputType.number,
+                                  decoration:
+                                      const InputDecoration(errorMaxLines: 3),
+                                  validator: (v) {
+                                    final q = int.tryParse(v ?? '');
+                                    return q == null || q < 1 || q > 10
+                                        ? 'ระบุ 1–10'
+                                        : null;
+                                  })),
                           const SizedBox(height: 12),
                           OutlinedButton.icon(
                               onPressed: _busy
@@ -447,6 +513,9 @@ class _BundleEditorState extends State<BundleEditor> {
                                   'ถึง ${_date.day}/${_date.month}/${_date.year} (เวลาไทย)')),
                           const Text(
                               'เมื่อเลือกสินค้าครบจะลดให้อัตโนมัติ ก่อนคิดคูปองหรือส่วนลดท้ายบิล ใช้ร่วมกับซื้อแถมได้'),
+                          if (_summary.isNotEmpty)
+                            PromotionSummary(lines: _summary),
+                          const PromotionCalculationExample(),
                           if (_error != null)
                             Text(_error!,
                                 style: TextStyle(

@@ -133,6 +133,46 @@ test('client uses public key on vault for tokens and never sends a live key', as
   await assert.rejects(live('/charges',{}),{code:'failed-precondition'});
   await assert.rejects(api('/../balance'),{code:'invalid-argument'});
 });
+for (const method of ['card','truemoney','promptpay']) {
+  test(`${method}: verified webhook confirms isolated order once; pending cannot confirm`, async () => {
+    let paid = false;
+    const source = {id:'src_test_123', type:method,
+      scannable_code:{image:{download_uri:'https://api.omise.co/charges/chrg_test_123/documents/qr'}}};
+    const h = setup(async path => {
+      if (path.startsWith('/tokens')) return {object:'token',id:nonce,livemode:false,used:false,card:{id:instrumentId}};
+      if (path.startsWith('/sources')) return {object:'source',...source,livemode:false,amount:10000,currency:'THB'};
+      return charge({source, status:paid?'successful':'pending', paid, captured:paid});
+    });
+    const req = request({method,nonce:method==='card'?nonce:source.id});
+    const initial = await h.create(req);
+    assert.equal(initial.orderStatus,'awaiting_payment');
+    if (method==='promptpay') assert.match(initial.qrImageUri,/^https:\/\/api.omise.co\//);
+    const event = {method:'POST',query:{attempt:id},body:{data:{id:'chrg_test_123',status:'successful'}}};
+    await h.webhook(event,response());
+    assert.equal((await h.status(req)).orderStatus,'awaiting_payment');
+    paid=true;
+    const replies=[response(),response()];
+    await Promise.all(replies.map(res=>h.webhook(event,res)));
+    assert(replies.every(res=>res.code===200));
+    assert.equal((await h.status(req)).orderStatus,'confirmed');
+    assert.equal(h.docs.get(`omiseSandboxAttempts/${id}`).confirmedAt,1000);
+    paid=false;
+    assert.equal((await h.status(req)).orderStatus,'confirmed');
+    assert.equal(h.calls.filter(c=>c.body).length,1);
+    assert.deepEqual(h.docs.get('shops/real'),{balance:777});
+    assert([...h.docs.keys()].every(k=>k.startsWith('omiseSandboxAttempts/') || ['shops/real','shops/real/sales/existing'].includes(k)));
+  });
+}
+
+test('failed, expired and refunded payments do not leave a confirmed test order', async () => {
+  for (const status of ['failed','expired','refunded']) {
+    const h=setup(async path=>path.startsWith('/tokens')
+      ? {object:'token',id:nonce,livemode:false,used:false,card:{id:instrumentId}}
+      : charge(status==='refunded'?{refunded_amount:10000}:{status,paid:false,captured:false}));
+    assert.equal((await h.create(request())).orderStatus,status==='refunded'?'cancelled':'payment_failed');
+  }
+});
+
 test('client sanitizes provider errors; 5xx and timeout stay uncertain', async () => {
   for (const status of [400,401,408,429,500]) {
     const api=client({secret:()=> 'skey_test_fixture',fetchImpl:async()=>({ok:false,status,json:async()=>({message:'private payload'})})});

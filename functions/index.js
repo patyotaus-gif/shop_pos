@@ -96,9 +96,11 @@ const omiseTestSecretKey = defineSecret('OMISE_TEST_SECRET_KEY');
 const omiseSandbox = require('./omise_sandbox');
 const omiseTest = omiseSandbox.handlers({db:firestoreSdk.getFirestore(), FieldValue:firestoreSdk.FieldValue,
   assertFounder, api:omiseSandbox.client({secret:() => omiseTestSecretKey.value()})});
-exports.omiseSandboxConfig = onCall({enforceAppCheck:true}, omiseTest.config);
-exports.omiseSandboxCreate = onCall({secrets:[omiseTestSecretKey], enforceAppCheck:true, maxInstances:3}, omiseTest.create);
-exports.omiseSandboxStatus = onCall({secrets:[omiseTestSecretKey], enforceAppCheck:true, maxInstances:3}, omiseTest.status);
+// Sandbox tablet testing: retain founder authorization and test-key enforcement.
+// App Check enforcement is disabled only for these isolated test callables.
+exports.omiseSandboxConfig = onCall({enforceAppCheck:false}, omiseTest.config);
+exports.omiseSandboxCreate = onCall({secrets:[omiseTestSecretKey], enforceAppCheck:false, maxInstances:3}, omiseTest.create);
+exports.omiseSandboxStatus = onCall({secrets:[omiseTestSecretKey], enforceAppCheck:false, maxInstances:3}, omiseTest.status);
 exports.omiseSandboxWebhook = onRequest({secrets:[omiseTestSecretKey], maxInstances:3}, omiseTest.webhook);
 const lineChannelAccessToken = defineSecret("LINE_CHANNEL_ACCESS_TOKEN");
 const lineChannelSecret = defineSecret("LINE_CHANNEL_SECRET");
@@ -981,25 +983,20 @@ exports.lineWebhook = onRequest(
         if (ticket.action === 'ignore') continue;
         if (ticket.action === 'ack') {
           await lineHandover.replyIfCurrent(ticket, () => _lineReply(token, event.replyToken, [{
-            type: 'text', text: 'หยุดการตอบอัตโนมัติในแชทนี้แล้วค่ะ\n\nพิมพ์รายละเอียดที่ต้องการติดต่อทีมงานไว้ได้เลยค่ะ',
+            type: 'text', text:
+              'ขอบคุณที่ติดต่อ Pokpok ค่ะ\n\n' +
+              'ระบบบันทึกคำขอติดต่อเจ้าหน้าที่ไว้แล้ว และพักการตอบอัตโนมัติในแชทนี้ค่ะ\n\n' +
+              'ระหว่างรอ คุณลูกค้าสามารถพิมพ์รายละเอียดเรื่องที่ต้องการติดต่อ หรือแนบรูปภาพไว้ในแชทนี้ได้เลยนะคะ',
           }]));
           continue;
         }
         event.supportTicket = ticket;
       }
 
-      // เมื่อ user follow bot → ส่งข้อความต้อนรับ
-      if (event.type === "follow") {
-        await _lineReply(token, event.replyToken, [{
-          type: "text",
-          text:
-            "ยินดีต้อนรับสู่ Pokpok 🎉\n\n" +
-            "• ร้านค้า: กดเชื่อม LINE ในแอป Pokpok แล้วส่งข้อความที่เตรียมไว้เพื่อยืนยันร้าน\n" +
-            "• ซัพพลายเออร์หรือเชื่อมด้วยรหัสเอง: พิมพ์ \"ID\" เพื่อรับรหัสเชื่อมต่อ\n" +
-            "• มีคำถามอื่น ๆ ทักได้เลย ทีมงานจะตอบกลับโดยเร็ว"
-        }]);
-        continue;
-      }
+      // Follow/unblock stays silent, including during human handover.
+      // Customers start the conversation; only message events trigger replies.
+      // OA Manager greeting/auto-response settings are independent of this webhook.
+      if (event.type !== 'message') continue;
 
       // เมื่อ user ส่งข้อความ → ตอบ userId ให้ copy ไปใส่ settings
       if (event.type === "message" && event.message?.type === "text") {

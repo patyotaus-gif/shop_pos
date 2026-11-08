@@ -43,7 +43,9 @@ function client({secret, fetchImpl = fetch}) {
 
 function view(id, data) {
   return {attemptId:id, amount:AMOUNT, currency:'THB', testMode:true,
-    status:data.status, chargeId:data.chargeId || null, authorizeUri:data.authorizeUri || null};
+    status:data.status, orderStatus:data.orderStatus || 'awaiting_payment',
+    orderId:`TEST-${id}`, qrImageUri:data.qrImageUri || null,
+    chargeId:data.chargeId || null, authorizeUri:data.authorizeUri || null};
 }
 function validateCharge(charge, attempt, id) {
   if (!charge || charge.object !== 'charge' || charge.livemode !== false || !chargeIdOk(charge.id) ||
@@ -66,7 +68,16 @@ function validateCharge(charge, attempt, id) {
     }
     authorizeUri = url.href;
   }
-  return {chargeId:charge.id, status, authorizeUri};
+  let qrImageUri = null;
+  const image = charge.source?.scannable_code?.image?.download_uri;
+  if (attempt.method === 'promptpay' && status === 'pending' && image) {
+    const url = new URL(image);
+    if (url.protocol !== 'https:' || url.hostname !== 'api.omise.co' || url.username || url.password) {
+      fail('failed-precondition', 'ที่อยู่ QR ทดสอบไม่ถูกต้อง');
+    }
+    qrImageUri = url.href;
+  }
+  return {chargeId:charge.id, status, authorizeUri, qrImageUri};
 }
 
 function handlers({db, FieldValue, assertFounder, api}) {
@@ -91,16 +102,21 @@ function handlers({db, FieldValue, assertFounder, api}) {
       // Concurrent status/webhook responses must not undo a verified terminal result.
       if (['successful','refunded','reversed','failed','expired'].includes(data.status) && update.status === 'pending' ||
           data.status === 'refunded' && update.status === 'successful') return view(id, data);
-      tx.update(ref, {...update, checkedAt:FieldValue.serverTimestamp()});
-      return view(id, {...data,...update});
+      const orderStatus = update.status === 'successful' ? 'confirmed'
+        : ['refunded','reversed'].includes(update.status) ? 'cancelled'
+        : ['failed','expired'].includes(update.status) ? 'payment_failed' : 'awaiting_payment';
+      const orderUpdate = {orderStatus};
+      if (orderStatus === 'confirmed' && !data.confirmedAt) orderUpdate.confirmedAt = FieldValue.serverTimestamp();
+      tx.update(ref, {...update, ...orderUpdate, checkedAt:FieldValue.serverTimestamp()});
+      return view(id, {...data,...update,...orderUpdate});
     });
   }
   async function create(request) {
     signed(request);
     const {attemptId:id, method, nonce} = request.data || {};
-    if (!uuid(id) || !['card','truemoney'].includes(method) || typeof nonce !== 'string' ||
+    if (!uuid(id) || !['card','truemoney','promptpay'].includes(method) || typeof nonce !== 'string' ||
         !(method === 'card' ? /^tokn_test_[a-z0-9]+$/ : /^src_test_[a-z0-9]+$/).test(nonce)) {
-      fail('invalid-argument', 'ต้องใช้ข้อมูลบัตรหรือ TrueMoney ในโหมดทดลอง');
+      fail('invalid-argument', 'ต้องใช้ข้อมูลการชำระในโหมดทดลอง');
     }
     const ref = refFor(id);
     // Persist the claim BEFORE contacting Omise. Concurrent calls and lost responses
@@ -114,6 +130,7 @@ function handlers({db, FieldValue, assertFounder, api}) {
         return prior;
       }
       tx.create(ref, {actor:request.auth.uid, method, nonce, status:'creating', testMode:true,
+        orderStatus:'awaiting_payment', items:[{name:'สินค้าทดสอบ', quantity:1, amount:AMOUNT}],
         amount:AMOUNT, currency:'THB', createdAt:FieldValue.serverTimestamp()});
       return null;
     });
@@ -123,12 +140,12 @@ function handlers({db, FieldValue, assertFounder, api}) {
       instrument = await api(`/${method === 'card' ? 'tokens' : 'sources'}/${nonce}`);
       if (instrument.id !== nonce || instrument.livemode !== false ||
           (method === 'card' ? instrument.object !== 'token' || instrument.used !== false || !instrument.card?.id
-            : instrument.object !== 'source' || instrument.type !== 'truemoney' || instrument.amount !== AMOUNT ||
+            : instrument.object !== 'source' || instrument.type !== method || instrument.amount !== AMOUNT ||
               String(instrument.currency).toUpperCase() !== 'THB')) {
         fail('failed-precondition', 'ข้อมูลทดสอบหรือยอดเงินไม่ถูกต้อง');
       }
     } catch (e) {
-      await ref.update({status:'rejected'}); // no POST attempted
+      await ref.update({status:'rejected', orderStatus:'payment_failed'}); // no POST attempted
       throw e;
     }
     await ref.update({instrumentId:method === 'card' ? instrument.card.id : nonce});
@@ -143,7 +160,8 @@ function handlers({db, FieldValue, assertFounder, api}) {
       // Do not overwrite a webhook which already verified the charge.
       await db.runTransaction(async tx => {
         const current = (await tx.get(ref)).data();
-        if (current.status === 'creating') tx.update(ref, {status:e.code === 'failed-precondition' ? 'rejected' : 'unknown'});
+        if (current.status === 'creating') tx.update(ref, {status:e.code === 'failed-precondition' ? 'rejected' : 'unknown',
+          orderStatus:e.code === 'failed-precondition' ? 'payment_failed' : 'awaiting_payment'});
       });
       throw e;
     }

@@ -32,8 +32,8 @@ class SalesToolsScreen extends StatelessWidget {
                     _tool(
                         context,
                         Icons.inventory_2_outlined,
-                        'ชุดสินค้า',
-                        'เลือกสินค้าครบชุด รับราคาพิเศษที่เคาน์เตอร์ บิลโต๊ะ และออนไลน์',
+                        'ชุดสินค้าโปรโมชั่น',
+                        'จัดสินค้าหลายรายการเป็นชุดราคาพิเศษ ใช้ได้ทั้งหน้าร้าน บิลโต๊ะ และออนไลน์',
                         () => Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -41,8 +41,8 @@ class SalesToolsScreen extends StatelessWidget {
                     _tool(
                         context,
                         Icons.card_giftcard,
-                        'ซื้อแถม',
-                        'ซื้อครบจำนวน รับของแถมที่เคาน์เตอร์ บิลโต๊ะ และลิงก์สั่งสินค้า',
+                        'โปรโมชั่นซื้อแถม',
+                        'กำหนดจำนวนสินค้าที่ต้องซื้อเพื่อรับของแถม ใช้ได้ทั้งหน้าร้าน บิลโต๊ะ และออนไลน์',
                         () => Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -50,8 +50,8 @@ class SalesToolsScreen extends StatelessWidget {
                     _tool(
                         context,
                         Icons.confirmation_number_outlined,
-                        'โค้ดส่วนลด',
-                        'สร้างโค้ดสำหรับลิงก์สั่งสินค้าและบิลโต๊ะ พร้อมยอดขั้นต่ำและจำนวนสิทธิ์',
+                        'คูปองส่วนลด',
+                        'สร้างโค้ดสำหรับบิลโต๊ะและลิงก์สั่งซื้อ กำหนดยอดซื้อขั้นต่ำและจำนวนสิทธิ์รวมได้',
                         () => Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -59,8 +59,8 @@ class SalesToolsScreen extends StatelessWidget {
                     _tool(
                         context,
                         Icons.local_offer_outlined,
-                        'โปรโมชั่นส่วนลด',
-                        'เลือกราคาโปรหรือลดเป็นเปอร์เซ็นต์ พร้อมวันสิ้นสุด',
+                        'ส่วนลดรายสินค้า',
+                        'ตั้งราคาพิเศษหรือลดเป็นเปอร์เซ็นต์ พร้อมกำหนดวันสิ้นสุด',
                         () => Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -70,7 +70,7 @@ class SalesToolsScreen extends StatelessWidget {
                         context,
                         Icons.push_pin_outlined,
                         'สินค้าปักหมุดหน้าขาย',
-                        'สร้างปุ่มลัดสินค้าในหน้าขายปลีกและขายกลับบ้าน',
+                        'เลือกสินค้าที่ขายบ่อยให้เป็นปุ่มลัดในหน้าขายปลีกและขายกลับบ้าน',
                         () => Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -164,7 +164,7 @@ class _PromotionProductsScreenState extends State<PromotionProductsScreen> {
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
             title:
-                Text(widget.pins ? 'สินค้าปักหมุดหน้าขาย' : 'โปรโมชั่นส่วนลด')),
+                Text(widget.pins ? 'สินค้าปักหมุดหน้าขาย' : 'ส่วนลดรายสินค้า')),
         body: ContentWidth(
             maxWidth: 1040,
             child: AuthService.isStaff

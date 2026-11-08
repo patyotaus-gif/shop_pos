@@ -1,3 +1,4 @@
+import '../widgets/promotion_form.dart';
 import '../widgets/content_width.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -192,6 +193,31 @@ class _BuyGetEditorState extends State<BuyGetEditor> {
   String? _giftId, _error;
   bool _saving = false;
   late DateTime _date;
+  List<String> get _summary {
+    final buy = int.tryParse(_buy.text);
+    final gift = int.tryParse(_gift.text);
+    final max = int.tryParse(_max.text);
+    final choices = _choices.where((p) => p.id == _giftId);
+    if (buy == null ||
+        buy < 1 ||
+        buy > 99 ||
+        gift == null ||
+        gift < 1 ||
+        gift > 99 ||
+        max == null ||
+        max < 1 ||
+        max > 10 ||
+        choices.isEmpty) {
+      return const [];
+    }
+    return [
+      'ซื้อ ${widget.product.name} $buy ${widget.product.unit}',
+      'รับฟรี ${choices.first.name} $gift ${choices.first.unit} ต่อชุด',
+      'สูงสุด $max ชุดต่อออเดอร์ · แถมไม่เกิน ${gift * max} ${choices.first.unit}',
+      'ถึง ${_date.day}/${_date.month}/${_date.year} สิ้นวัน (เวลาไทย)',
+    ];
+  }
+
   @override
   void initState() {
     super.initState();
@@ -250,55 +276,64 @@ class _BuyGetEditorState extends State<BuyGetEditor> {
   }
 
   Widget _number(TextEditingController controller, String label, int limit) =>
-      TextFormField(
-          controller: controller,
-          enabled: !_saving,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(labelText: label),
-          validator: (value) {
-            final n = int.tryParse(value ?? '');
-            return n == null || n < 1 || n > limit
-                ? 'ระบุจำนวนเต็ม 1–$limit'
-                : null;
-          });
+      PromotionField(
+          label: label,
+          child: TextFormField(
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              controller: controller,
+              enabled: !_saving,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(errorMaxLines: 3),
+              validator: (value) {
+                final n = int.tryParse(value ?? '');
+                return n == null || n < 1 || n > limit
+                    ? 'ระบุจำนวนเต็ม 1–$limit'
+                    : null;
+              }));
 
   @override
   Widget build(BuildContext context) => PopScope(
       canPop: !_saving,
       child: AlertDialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         title: const Text('ตั้งโปรซื้อแถม'),
         content: SizedBox(
             width: 420,
             child: SingleChildScrollView(
                 child: Form(
                     key: _form,
+                    onChanged: () => setState(() {}),
                     child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('ซื้อ ${widget.product.name}'),
-                          _number(_buy, 'จำนวนที่ต้องซื้อ', 99),
                           const SizedBox(height: 16),
-                          DropdownButtonFormField<String>(
-                              initialValue: _giftId,
-                              isExpanded: true,
-                              decoration: const InputDecoration(
-                                  labelText: 'สินค้าที่แถม'),
-                              items: _choices
-                                  .map((p) => DropdownMenuItem(
-                                      value: p.id,
-                                      child: Text(p.name,
-                                          overflow: TextOverflow.ellipsis)))
-                                  .toList(),
-                              onChanged: _saving
-                                  ? null
-                                  : (value) => setState(() => _giftId = value),
-                              validator: (value) =>
-                                  value == null ? 'เลือกสินค้าแถม' : null),
+                          _number(_buy, 'จำนวนที่ต้องซื้อ', 99),
+                          PromotionField(
+                              label: 'สินค้าที่แถม',
+                              child: DropdownButtonFormField<String>(
+                                  initialValue: _giftId,
+                                  isExpanded: true,
+                                  isDense: false,
+                                  itemHeight: null,
+                                  decoration:
+                                      const InputDecoration(errorMaxLines: 3),
+                                  items: _choices
+                                      .map((p) => DropdownMenuItem(
+                                          value: p.id, child: Text(p.name)))
+                                      .toList(),
+                                  onChanged: _saving
+                                      ? null
+                                      : (value) =>
+                                          setState(() => _giftId = value),
+                                  validator: (value) =>
+                                      value == null ? 'เลือกสินค้าแถม' : null)),
                           const Text(
                               'เลือกได้เฉพาะสินค้าที่ไม่มีตัวเลือกเสริม เพื่อให้ร้านเตรียมของแถมได้ตรงกัน'),
+                          const SizedBox(height: 16),
                           _number(_gift, 'จำนวนแถมต่อชุด', 99),
-                          _number(_max, 'สูงสุดกี่ชุดต่อออเดอร์', 10),
+                          _number(_max, 'จำนวนชุดสูงสุดต่อออเดอร์', 10),
                           TextButton.icon(
                               icon: const Icon(Icons.event),
                               label: Text(
@@ -326,6 +361,8 @@ class _BuyGetEditorState extends State<BuyGetEditor> {
                           const Text(
                               'บันทึกแล้วเริ่มใช้ทันที แทนโปรเดิมของสินค้านี้ ออเดอร์ที่สร้างแล้วไม่เปลี่ยน\n'
                               'ของแถมราคา 0 บาท แต่มีต้นทุนและใช้สต็อกตามจริง'),
+                          if (_summary.isNotEmpty)
+                            PromotionSummary(lines: _summary),
                           if (_error != null)
                             Text(_error!,
                                 style: TextStyle(

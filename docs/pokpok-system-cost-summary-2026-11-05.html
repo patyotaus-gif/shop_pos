@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><title>Pokpok — สรุปต้นทุนระบบและเครื่องมือ</title>
+<style>
+@page{size:A4;margin:15mm 16mm}*{box-sizing:border-box}body{font-family:'Leelawadee UI',Tahoma,sans-serif;font-size:10pt;line-height:1.5;color:#292525;margin:0}h1{font-size:21pt;line-height:1.25;color:#781c2c;margin:0 0 5px}h2{font-size:12pt;color:#781c2c;margin:17px 0 7px}.meta{color:#736968;font-size:9pt}.brand{font-size:10pt;letter-spacing:2px;color:#781c2c;margin-bottom:10px}table{width:100%;border-collapse:collapse;margin:8px 0;font-size:9.5pt}th{text-align:left;background:#f4eded;color:#641c29}th,td{padding:7px 8px;border-bottom:1px solid #ddd3d3;vertical-align:top}.num{text-align:right;white-space:nowrap}.total{background:#f8f3f1;border-left:4px solid #781c2c;padding:11px 14px;margin:13px 0}.total strong{font-size:13pt}.small{font-size:9pt;color:#615856}p{margin:6px 0}ul{margin:6px 0;padding-left:20px}footer{border-top:1px solid #ddd3d3;margin-top:15px;padding-top:8px;font-size:8pt;color:#736968}tr{break-inside:avoid}
+@page{margin:12mm 15mm}body{font-size:9.5pt;line-height:1.4}h1{font-size:20pt}h2{margin:12px 0 5px}th,td{padding:5px 7px}table{font-size:9pt}.total{padding:9px 12px;margin:10px 0}.total strong{font-size:12pt}.small{font-size:8.5pt}footer{margin-top:10px;font-size:7.5pt}
+</style></head><body>
+<div class="brand">POKPOK · PEXON INNOVATION</div>
+<h1>สรุปต้นทุนระบบและเครื่องมือ</h1>
+<div class="meta">5 พฤศจิกายน 2026 · ฉบับปรับปรุง 2: เพิ่มงบ Firebase / Google Cloud · สกุลเงิน AUD และบาท</div>
+<h2>1. ค่าใช้จ่ายประจำและค่าใช้จ่ายตามจำนวนลูกค้า</h2>
+<table><thead><tr><th>รายการ</th><th>ค่าใช้จ่ายที่ระบุ</th><th class="num">เฉลี่ยต่อเดือน</th></tr></thead><tbody>
+<tr><td>ChatGPT Pro</td><td>155 AUD / เดือน</td><td class="num">155.00 AUD</td></tr>
+<tr><td>GitHub</td><td>14–15 AUD / เดือน</td><td class="num">14.00–15.00 AUD</td></tr>
+<tr><td>Codemagic</td><td>ใช้แผนฟรีในปัจจุบัน</td><td class="num">0</td></tr>
+<tr><td>Apple Developer</td><td>155 AUD / ปี</td><td class="num">12.92 AUD</td></tr>
+<tr><td>โดเมน pok-pok.app</td><td>ประมาณ 1,200 บาท / ปี</td><td class="num">100 บาท</td></tr>
+<tr><td>Gemini API</td><td>งบที่ผู้ก่อตั้งกำหนด 40 บาท / ร้าน / เดือน</td><td class="num">40N บาท</td></tr>
+<tr><td>Firebase / Google Cloud</td><td>งบสมมติ 50–100 บาท / ร้าน / เดือน</td><td class="num">50N–100N บาท</td></tr>
+</tbody></table>
+<div class="total"><strong>งบตามการใช้งาน: 90–140 บาท / ร้าน / เดือน</strong><p>บวกค่าใช้จ่ายประจำ 181.92–182.92 AUD + ค่าโดเมนเฉลี่ย 100 บาท / เดือน</p><p class="small">สมมติลูกค้า 1 ราย = ร้านค้า 1 ร้าน (N = จำนวนร้านในเดือนนั้น) งบ Cloud ยังไม่ได้วัดจากระบบจริง ไม่ใช่ราคาต่อร้านของผู้ให้บริการ และไม่ใช่เพดานค่าใช้จ่าย</p></div>
+<h2>2. ตัวอย่างงบประมาณตามจำนวนลูกค้า</h2>
+<table><thead><tr><th>ร้าน</th><th class="num">Gemini (บาท)</th><th class="num">Cloud (บาท)</th><th class="num">รวมฝั่งบาท*</th><th class="num">ฝั่ง AUD</th></tr></thead><tbody>
+<tr><td>10</td><td class="num">400</td><td class="num">500–1,000</td><td class="num">1,000–1,500</td><td class="num">181.92–182.92</td></tr>
+<tr><td>50</td><td class="num">2,000</td><td class="num">2,500–5,000</td><td class="num">4,600–7,100</td><td class="num">181.92–182.92</td></tr>
+<tr><td>100</td><td class="num">4,000</td><td class="num">5,000–10,000</td><td class="num">9,100–14,100</td><td class="num">181.92–182.92</td></tr>
+<tr><td>500</td><td class="num">20,000</td><td class="num">25,000–50,000</td><td class="num">45,100–70,100</td><td class="num">181.92–182.92</td></tr>
+</tbody></table>
+<p class="small">ตัวเลขทั้งหมดต่อเดือน *รวมโดเมนเฉลี่ยแล้ว หาก R = บาทต่อ AUD:<br>งบต่ำ = (155 + 14 + 155/12) × R + 100 + 90N<br>งบสูง = (155 + 15 + 155/12) × R + 100 + 140N</p>
+<h2>3. งบรายปีและข้อกำหนดในการใช้ตัวเลข</h2>
+<p><b>รายปี: 2,183–2,195 AUD + (1,200 + 1,080N ถึง 1,200 + 1,680N) บาท</b><br><span class="small">เมื่อจำนวนร้านเท่ากันทุกเดือนตลอดปี ใช้ 140 บาท/ร้าน/เดือนเป็นฐานกันงบด้านสูงได้</span></p>
+<ul class="small">
+<li>ค่า Apple Developer และโดเมนจ่ายเป็นรายปี ยอดรายเดือนเป็นการเฉลี่ยเพื่อวางงบ กระแสเงินสดเดือนต่ออายุจะสูงกว่าเดือนทั่วไป</li>
+<li>Cloud ครอบคลุมงบฐานข้อมูล ระบบหลังบ้าน เก็บไฟล์และรับส่งข้อมูลที่ผูกกับการใช้ของร้าน ต้องวัดจริง 1 เดือน และแยกค่า Cloud ส่วนกลาง/ทดสอบพัฒนาออกมาต่างหาก ซึ่งยังไม่รวมในสูตรนี้</li>
+<li>ยังไม่รวม LINE OA, อีเมล/SMS, พื้นที่สำรองที่ซื้อเพิ่ม, ค่ารับชำระเงิน, Google Play หากมีค่าใช้จ่าย และค่าแรง/ดูแลลูกค้า หลีกเลี่ยงนับค่า Cloud ซ้ำเมื่อใช้บิลจริง</li>
+<li>Gemini และ Cloud เป็นงบประมาณ ไม่ใช่ค่าเหมาจ่าย ยังไม่ได้ตรวจบิลหรือสถานะภาษี จึงไม่บวกภาษี/ค่าแลกเงินเพิ่ม และไม่ถือว่ารายการที่ยังไม่ทราบมีต้นทุนเป็นศูนย์</li>
+</ul>
+<footer>เอกสารวางแผนภายใน · ค่าเครื่องมือจากผู้ก่อตั้ง + งบ Cloud สมมติ · ปัดเศษเฉพาะยอดแสดงผล<br>ข้อมูลการคิดค่าบริการตามใช้: https://firebase.google.com/pricing · https://cloud.google.com/firestore/pricing</footer>
+</body></html>
