@@ -55,6 +55,7 @@ class SaleService {
     SalesChannel salesChannel = SalesChannel.storefront,
     String? staffName,
     String? loyaltyCustomerId,
+    String? debtCustomerId,
     List<Map<String, dynamic>> buyGetQuote = const [],
     List<Map<String, dynamic>> bundleQuote = const [],
   }) async {
@@ -131,7 +132,8 @@ class SaleService {
           ...sale.toFirestore(),
           'id': sale.id,
           'createdAt': sale.createdAt.millisecondsSinceEpoch,
-          if (loyaltyCustomerId != null) 'loyaltyCustomerId': loyaltyCustomerId
+          if (loyaltyCustomerId != null) 'loyaltyCustomerId': loyaltyCustomerId,
+          if (isDebt && debtCustomerId != null) 'debtCustomerId': debtCustomerId
         };
         if (!await prefs.setString(key, jsonEncode(stored))) {
           throw StateError(
@@ -182,7 +184,8 @@ class SaleService {
             StaffAccessService.firestoreDates(response), draft.id);
       } else {
         result = await commitSale(shop, draft,
-            loyaltyCustomerId: data['loyaltyCustomerId'] as String?);
+            loyaltyCustomerId: data['loyaltyCustomerId'] as String?,
+            debtCustomerId: data['debtCustomerId'] as String?);
       }
     } on FirebaseFunctionsException catch (e) {
       // These server validation failures occur before any sale is committed.
@@ -232,7 +235,7 @@ class SaleService {
   /// Public for transaction tests; the same ID is safe to replay.
   static Future<Sale> commitSale(
       DocumentReference<Map<String, dynamic>> shop, Sale draft,
-      {String? loyaltyCustomerId}) async {
+      {String? loyaltyCustomerId, String? debtCustomerId}) async {
     validateSale(draft);
     final saleRef = shop.collection('sales').doc(draft.id);
     final counterRef = shop.collection('counters').doc('receipt');
@@ -343,7 +346,8 @@ class SaleService {
                     customerName: draft.customerName!,
                     amount: draft.total,
                     createdAt: draft.createdAt,
-                    saleId: draft.id)
+                    saleId: draft.id,
+                    customerId: debtCustomerId)
                 .toFirestore());
       }
       if (customer?.exists == true) {

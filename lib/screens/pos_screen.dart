@@ -19,6 +19,8 @@ import '../models/cart_item.dart';
 import '../models/customer.dart';
 import '../models/sale.dart';
 import '../services/customer_service.dart';
+import '../services/debt_service.dart';
+import '../widgets/debt_customer_picker.dart';
 import '../services/entitlements.dart';
 import '../services/product_service.dart';
 import '../services/sale_service.dart';
@@ -337,6 +339,7 @@ class _PosScreenState extends State<PosScreen> {
     try {
       final retry = _pendingSale != null;
       String? customerName;
+      String? debtCustomerId;
       double paid = 0;
       var method = _paymentMethod;
       var channel = widget.initialChannel;
@@ -400,8 +403,14 @@ class _PosScreenState extends State<PosScreen> {
           if (proceed != true || !mounted) return;
         }
         if (isDebt) {
-          customerName = await _askCustomerName();
-          if (customerName == null || !mounted) return;
+          final choice = await DebtCustomerPicker.show(context,
+              customers: CustomerService.watchAll(),
+              debts: DebtService.watchAll(),
+              create: (name, phone) =>
+                  CustomerService.ensureByName(name: name, phone: phone));
+          if (choice == null || !mounted) return;
+          customerName = choice.name;
+          debtCustomerId = choice.customerId;
         } else {
           final result = await showPaymentSheet(context,
               showOmiseSandbox: AuthService.isFounder,
@@ -430,7 +439,8 @@ class _PosScreenState extends State<PosScreen> {
                   staffName: _activeStaffName,
                   buyGetQuote: gifts,
                   bundleQuote: bundles,
-                  loyaltyCustomerId: _loyaltyCustomer?.id));
+                  loyaltyCustomerId: _loyaltyCustomer?.id,
+                  debtCustomerId: debtCustomerId));
       if (!mounted) return;
       setState(() {
         _cart.clear();
@@ -451,35 +461,6 @@ class _PosScreenState extends State<PosScreen> {
       await _loadPending();
       if (mounted) setState(() => _checkoutBusy = false);
     }
-  }
-
-  Future<String?> _askCustomerName() async {
-    final ctrl = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('ชื่อลูกค้า (ค้างชำระ)'),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'ชื่อลูกค้า',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('ยกเลิก')),
-          FilledButton(
-            onPressed: () {
-              if (ctrl.text.trim().isEmpty) return;
-              Navigator.pop(ctx, ctrl.text.trim());
-            },
-            child: const Text('ยืนยัน'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showReceiptDialog(Sale sale) {

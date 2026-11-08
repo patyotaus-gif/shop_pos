@@ -55,6 +55,34 @@ class CustomerService {
     return customer;
   }
 
+  /// Customer picked for a ค้างชำระ bill. Phone is optional here, so reuse a
+  /// record by phone first, then by exact name, before creating a new one.
+  static Future<Customer> ensureByName({
+    required String name,
+    String phone = '',
+  }) async {
+    final cleanName = name.trim();
+    if (cleanName.isEmpty) throw StateError('กรุณาระบุชื่อลูกค้า');
+    final byPhone = await findByPhone(phone);
+    if (byPhone != null) return byPhone;
+    final byName =
+        await _col().where('name', isEqualTo: cleanName).limit(1).get();
+    if (byName.docs.isNotEmpty) {
+      return Customer.fromFirestore(
+          byName.docs.first.data(), byName.docs.first.id);
+    }
+    final ref = _col().doc();
+    final customer = Customer(
+      id: ref.id,
+      name: cleanName,
+      phone: phone.trim(),
+      createdAt: DateTime.now(),
+      lastVisitAt: DateTime.now(),
+    );
+    await ref.set(customer.toFirestore());
+    return customer;
+  }
+
   /// Apply a purchase: accrue points + bump totalSpent + stamp visit.
   /// Atomic via FieldValue increments so concurrent sales don't clobber.
   static Future<void> recordPurchase({

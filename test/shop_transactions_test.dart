@@ -200,6 +200,17 @@ void main() {
         (await shop.collection('counters').doc('receipt').get()).data()!['seq'],
         1);
   });
+  test('debt keeps the picked customer and awards no loyalty points',
+      () async {
+    await shop.collection('customers').doc('c1').set(
+        {'name': 'ลูกค้าทดสอบ', 'phone': '', 'points': 0, 'totalSpent': 0});
+    await SaleService.commitSale(shop, sale(debt: true), debtCustomerId: 'c1');
+    final debt = (await shop.collection('debts').doc('sale-1').get()).data()!;
+    expect(debt['customerId'], 'c1');
+    expect(debt['customerName'], 'ลูกค้าทดสอบ');
+    expect((await shop.collection('customers').doc('c1').get()).data()!['points'],
+        0);
+  });
   test('stock is revalidated against server state before writing a sale',
       () async {
     await SaleService.commitSale(shop, sale(quantity: 5));
