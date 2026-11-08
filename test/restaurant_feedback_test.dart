@@ -135,6 +135,48 @@ void main() {
     expect(badgeOf('1A'), 'กำลังใช้งาน');
     expect(badgeOf('1B'), 'รอชำระเงิน');
   });
+  test('arranged tables come first in their order, the rest by creation', () {
+    RestaurantTable t(String id, int day, [int? order]) => RestaurantTable(
+        id: id, name: id, createdAt: DateTime(2026, 11, day), sortOrder: order);
+    expect(
+        RestaurantTable.sorted(
+                [t('new', 5), t('1A', 1, 1), t('F1', 3, 0), t('old', 2)])
+            .map((t) => t.id),
+        ['F1', '1A', 'old', 'new']);
+  });
+  testWidgets('arranging swaps a dropped table with the target and saves order',
+      (tester) async {
+    final saved = <List<String>>[];
+    await tester.pumpWidget(MaterialApp(
+        theme: PokpokTheme.light(),
+        home: TablesScreen(
+            loadTables: () => Stream.value([
+                  for (final (i, id) in ['1A', 'F1', '1B'].indexed)
+                    RestaurantTable(
+                        id: id, name: id, createdAt: DateTime(2026, 11, i + 1)),
+                ]),
+            loadOpenOrders: () => Stream.value(const []),
+            reorderTables: (ids) async => saved.add(ids))));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('tables-arrange')));
+    await tester.pumpAndSettle();
+    final from = tester.getCenter(find.text('F1'));
+    final to = tester.getCenter(find.text('1A'));
+    final gesture = await tester.startGesture(from);
+    await tester.pump(const Duration(milliseconds: 50));
+    await gesture.moveTo(to);
+    await tester.pump(const Duration(milliseconds: 50));
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(saved, [
+      ['F1', '1A', '1B']
+    ]);
+    expect(tester.getCenter(find.text('F1')).dx,
+        lessThan(tester.getCenter(find.text('1A')).dx));
+    await tester.tap(find.byKey(const ValueKey('tables-arrange')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('ลากโต๊ะ'), findsNothing);
+  });
   testWidgets('bill request toggles on the open table and can be undone',
       (tester) async {
     final calls = <bool>[];

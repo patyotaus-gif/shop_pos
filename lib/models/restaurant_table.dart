@@ -23,6 +23,9 @@ class RestaurantTable {
   final String? currentOrderId;
   final DateTime createdAt;
 
+  /// Position on the table grid chosen by the owner; null keeps creation order.
+  final int? sortOrder;
+
   const RestaurantTable({
     required this.id,
     required this.name,
@@ -31,10 +34,18 @@ class RestaurantTable {
     this.status = TableStatus.available,
     this.currentOrderId,
     required this.createdAt,
+    this.sortOrder,
   });
 
-  factory RestaurantTable.fromFirestore(
-          Map<String, dynamic> data, String id) =>
+  /// Owner-arranged tables first, in their order, then the rest by creation.
+  static List<RestaurantTable> sorted(Iterable<RestaurantTable> tables) =>
+      [...tables]..sort((a, b) {
+          final byOrder =
+              (a.sortOrder ?? 1 << 30).compareTo(b.sortOrder ?? 1 << 30);
+          return byOrder != 0 ? byOrder : a.createdAt.compareTo(b.createdAt);
+        });
+
+  factory RestaurantTable.fromFirestore(Map<String, dynamic> data, String id) =>
       RestaurantTable(
         id: id,
         name: data['name'] ?? '',
@@ -47,6 +58,7 @@ class RestaurantTable {
         currentOrderId: data['currentOrderId'] as String?,
         createdAt:
             (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        sortOrder: (data['sortOrder'] as num?)?.toInt(),
       );
 
   Map<String, dynamic> toFirestore() => {
@@ -56,6 +68,7 @@ class RestaurantTable {
         'status': status.name,
         if (currentOrderId != null) 'currentOrderId': currentOrderId,
         'createdAt': Timestamp.fromDate(createdAt),
+        if (sortOrder != null) 'sortOrder': sortOrder,
       };
 
   RestaurantTable copyWith({
@@ -72,8 +85,10 @@ class RestaurantTable {
         capacity: capacity ?? this.capacity,
         section: section ?? this.section,
         status: status ?? this.status,
-        currentOrderId:
-            clearCurrentOrderId ? null : (currentOrderId ?? this.currentOrderId),
+        currentOrderId: clearCurrentOrderId
+            ? null
+            : (currentOrderId ?? this.currentOrderId),
         createdAt: createdAt,
+        sortOrder: sortOrder,
       );
 }

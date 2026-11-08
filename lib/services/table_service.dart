@@ -45,12 +45,21 @@ class TableService {
   // ───────────────────────── Tables CRUD ─────────────────────────
 
   static Stream<List<RestaurantTable>> watchTables() => AuthService.isStaff
-      ? StaffAccessService.watch('tables').map((rows) => rows
-          .map((r) => RestaurantTable.fromFirestore(r, r['id'] as String))
-          .toList())
-      : _tablesCol().orderBy('createdAt').snapshots().map((s) => s.docs
-          .map((d) => RestaurantTable.fromFirestore(d.data(), d.id))
-          .toList());
+      ? StaffAccessService.watch('tables').map((rows) => RestaurantTable.sorted(
+          rows.map((r) => RestaurantTable.fromFirestore(r, r['id'] as String))))
+      : _tablesCol().orderBy('createdAt').snapshots().map((s) =>
+          RestaurantTable.sorted(s.docs
+              .map((d) => RestaurantTable.fromFirestore(d.data(), d.id))));
+
+  /// Persist the owner's grid order. Only sortOrder changes, so open bills and
+  /// table status are untouched.
+  static Future<void> reorderTables(List<String> orderedIds) async {
+    final batch = _shopDoc().firestore.batch();
+    for (var i = 0; i < orderedIds.length; i++) {
+      batch.update(_tablesCol().doc(orderedIds[i]), {'sortOrder': i});
+    }
+    await batch.commit();
+  }
 
   static Future<RestaurantTable?> getTable(String tableId) async {
     if (AuthService.isStaff) {

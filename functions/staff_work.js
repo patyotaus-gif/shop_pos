@@ -4,7 +4,7 @@ const {randomUUID}=require('node:crypto');
 const validId=v=>typeof v==='string'&&/^[\w-]{1,128}$/.test(v);
 // Only operational fields cross the staff boundary. Never expose whole shop documents.
 const fields={
- tables:'name capacity section status currentOrderId createdAt',
+ tables:'name capacity section status currentOrderId createdAt sortOrder',
  tableOrders:'tableId tableName items status openedAt closedAt saleId tablePromotion billRequestedAt',
  orders:'orderNumber queueNumber queueChannel queueSessionId customerName customerPhone items total discount coupon bundleDiscount bundles finalAmount paymentMethod paymentRef slipUrl autoConfirmed bankMatchStatus status createdAt paidAt statusUpdatedAt orderType tableName pickupMode pickupStartAt pickupEndAt pickupLabel saleId',
  sales:'queueNumber queueChannel queueSessionId items total discount bundleDiscount bundles serviceCharge serviceChargePercent paid change paymentMethod salesChannel isDebt isRefunded createdAt staffName staffId receiptNo receiptProfile tableName splitCount customerName refundReason refundedAt',

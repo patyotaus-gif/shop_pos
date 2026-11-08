@@ -12,11 +12,14 @@ import 'table_form_screen.dart';
 
 /// Grid of restaurant tables with explicit labels and shared status colors.
 /// Tap to open the order screen for that
-/// table; long-press to edit/delete.
+/// table; long-press to edit/delete. Owners can switch to จัดเรียง and drop
+/// one table on another to swap their places.
 class TablesScreen extends StatefulWidget {
-  const TablesScreen({super.key, this.loadTables, this.loadOpenOrders});
+  const TablesScreen(
+      {super.key, this.loadTables, this.loadOpenOrders, this.reorderTables});
   final Stream<List<RestaurantTable>> Function()? loadTables;
   final Stream<List<TableOrder>> Function()? loadOpenOrders;
+  final Future<void> Function(List<String> orderedIds)? reorderTables;
   @override
   State<TablesScreen> createState() => _TablesScreenState();
 }
@@ -33,11 +36,56 @@ class _TablesScreenState extends State<TablesScreen> {
                   if (o.billRequested) o.tableId
               })
           .handleError((_) {});
+  bool _arranging = false;
+  // Shown immediately after a swap, until the saved order streams back.
+  List<String>? _pendingOrder;
+
+  List<RestaurantTable> _ordered(List<RestaurantTable> tables) {
+    final pending = _pendingOrder;
+    if (pending == null) return tables;
+    final rank = {for (var i = 0; i < pending.length; i++) pending[i]: i};
+    return [...tables]..sort((a, b) =>
+        (rank[a.id] ?? pending.length).compareTo(rank[b.id] ?? pending.length));
+  }
+
+  Future<void> _swap(
+      List<RestaurantTable> shown, String from, String to) async {
+    if (from == to) return;
+    final ids = shown.map((t) => t.id).toList();
+    final a = ids.indexOf(from), b = ids.indexOf(to);
+    if (a < 0 || b < 0) return;
+    ids[a] = to;
+    ids[b] = from;
+    setState(() => _pendingOrder = ids);
+    try {
+      await (widget.reorderTables ?? TableService.reorderTables)(ids);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _pendingOrder = null);
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('บันทึกตำแหน่งโต๊ะไม่สำเร็จ: $e')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('โต๊ะ'), centerTitle: true),
+      appBar: AppBar(
+        title: const Text('โต๊ะ'),
+        centerTitle: true,
+        actions: [
+          if (!AuthService.isStaff)
+            TextButton.icon(
+              key: const ValueKey('tables-arrange'),
+              onPressed: () => setState(() {
+                _arranging = !_arranging;
+                if (!_arranging) _pendingOrder = null;
+              }),
+              icon: Icon(_arranging ? Icons.check : Icons.swap_horiz),
+              label: Text(_arranging ? 'เสร็จ' : 'จัดเรียง'),
+            ),
+        ],
+      ),
       body: StreamBuilder<List<RestaurantTable>>(
         stream: _tables,
         builder: (context, snap) {
@@ -55,7 +103,7 @@ class _TablesScreenState extends State<TablesScreen> {
               !snap.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
-          final tables = snap.data ?? const [];
+          final tables = _ordered(snap.data ?? const []);
           if (tables.isEmpty) {
             if (AuthService.isStaff) {
               return const Center(
@@ -74,29 +122,70 @@ class _TablesScreenState extends State<TablesScreen> {
               final readable =
                   ((available + 12) / (readableWidth + 12)).floor();
               final columns = math.max(1, math.min(desired, readable));
+              final cellHeight = math.max(180.0, scale.scale(130) + 48);
+              final cellWidth = (available - 12 * (columns - 1)) / columns;
+              Widget card(RestaurantTable table, Set<String>? bills,
+                      {bool highlighted = false}) =>
+                  _TableCard(
+                    table: table,
+                    billRequested: bills?.contains(table.id) ?? false,
+                    highlighted: highlighted,
+                    onTap:
+                        _arranging ? null : () => _openDetail(context, table),
+                    onLongPress: AuthService.isStaff || _arranging
+                        ? null
+                        : () => _editTable(context, table),
+                  );
               return StreamBuilder<Set<String>>(
                   stream: _billRequested,
-                  builder: (context, bills) => GridView.builder(
-                        padding: const EdgeInsets.all(16),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: columns,
-                          // Reserve two lines for the status, name and section at
-                          // the user's text scale, plus card padding and spacing.
-                          mainAxisExtent: math.max(180, scale.scale(130) + 48),
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                        ),
-                        itemCount: tables.length,
-                        itemBuilder: (_, i) => _TableCard(
-                          table: tables[i],
-                          billRequested:
-                              bills.data?.contains(tables[i].id) ?? false,
-                          onTap: () => _openDetail(context, tables[i]),
-                          onLongPress: AuthService.isStaff
-                              ? null
-                              : () => _editTable(context, tables[i]),
-                        ),
-                      ));
+                  builder: (context, bills) => Column(children: [
+                        if (_arranging)
+                          const Padding(
+                            padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+                            child: Text(
+                                'ลากโต๊ะไปวางบนอีกโต๊ะเพื่อสลับตำแหน่ง แล้วกด "เสร็จ"'),
+                          ),
+                        Expanded(
+                            child: GridView.builder(
+                          padding: const EdgeInsets.all(16),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: columns,
+                            // Reserve two lines for the status, name and section at
+                            // the user's text scale, plus card padding and spacing.
+                            mainAxisExtent: cellHeight,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                          ),
+                          itemCount: tables.length,
+                          itemBuilder: (_, i) {
+                            final table = tables[i];
+                            if (!_arranging) return card(table, bills.data);
+                            return DragTarget<String>(
+                              key: ValueKey('arrange-${table.id}'),
+                              onWillAcceptWithDetails: (d) =>
+                                  d.data != table.id,
+                              onAcceptWithDetails: (d) =>
+                                  _swap(tables, d.data, table.id),
+                              builder: (context, candidates, _) =>
+                                  Draggable<String>(
+                                data: table.id,
+                                feedback: Material(
+                                    color: Colors.transparent,
+                                    child: SizedBox(
+                                        width: cellWidth,
+                                        height: cellHeight,
+                                        child: card(table, bills.data))),
+                                childWhenDragging: Opacity(
+                                    opacity: 0.3,
+                                    child: card(table, bills.data)),
+                                child: card(table, bills.data,
+                                    highlighted: candidates.isNotEmpty),
+                              ),
+                            );
+                          },
+                        )),
+                      ]));
             },
           );
         },
@@ -136,11 +225,13 @@ class _TableCard extends StatelessWidget {
     required this.onTap,
     required this.onLongPress,
     this.billRequested = false,
+    this.highlighted = false,
   });
 
   final RestaurantTable table;
   final bool billRequested;
-  final VoidCallback onTap;
+  final bool highlighted;
+  final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
   @override
@@ -158,7 +249,11 @@ class _TableCard extends StatelessWidget {
                 ? OperationalTone.warning
                 : OperationalTone.neutral;
     final status = OperationalColors.of(context, tone);
-    final border = occupied || reserved ? status.foreground : cs.outlineVariant;
+    final border = highlighted
+        ? cs.primary
+        : occupied || reserved
+            ? status.foreground
+            : cs.outlineVariant;
 
     return Material(
       color: cs.surface,
@@ -170,7 +265,8 @@ class _TableCard extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: border, width: occupied ? 2 : 1),
+            border: Border.all(
+                color: border, width: occupied || highlighted ? 2 : 1),
           ),
           padding: const EdgeInsets.all(12),
           child: Column(
