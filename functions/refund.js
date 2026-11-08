@@ -33,7 +33,8 @@ async function refundSale({db,stripe,shopId,saleId,reason,returnToStock=false,re
       return {success:false,pending:true};
     }
   }
-  return db.runTransaction(async tx=>{
+  // Concurrent refunds of one sale can close the transaction; isRefunded makes a retry a no-op.
+  return require('./transaction_retry').runTransaction(db,async tx=>{
     const current=await tx.get(ref);
     if(!current.exists)throw new Error('ไม่พบบิล');
     const s=current.data(); if(s.isRefunded)return {success:true,stripeRefundId:s.stripeRefundId||null};
