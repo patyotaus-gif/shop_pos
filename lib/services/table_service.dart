@@ -415,7 +415,8 @@ class TableService {
       String? couponCode,
       String? revision,
       bool keepPreparedGifts = false,
-      String reason = ''}) async {
+      String reason = '',
+      Map<String, Object?> extra = const {}}) async {
     final response = await FirebaseFunctions.instanceFor(
             region: 'asia-southeast1')
         .httpsCallable('tablePromotions',
@@ -428,9 +429,18 @@ class TableService {
       if (revision != null) 'revision': revision,
       if (keepPreparedGifts) 'keepPreparedGifts': true,
       if (reason.isNotEmpty) 'reason': reason,
+      ...extra,
     });
     return Map<String, dynamic>.from(response.data['promotion'] as Map);
   }
+
+  /// Attach a loyalty customer to the open bill and redeem whole baht of
+  /// points; a null [customerId] detaches. Priced and checked on the server.
+  static Future<void> setTableLoyalty(String orderId,
+          {String? customerId, int redeemBaht = 0}) =>
+      promotions(orderId,
+          action: 'loyalty',
+          extra: {'customerId': customerId, 'redeemBaht': redeemBaht});
 
   static Future<TableOrder> syncPromotions(TableOrder order,
       {bool send = false,

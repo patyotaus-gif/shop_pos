@@ -44,6 +44,7 @@ const {HttpsError}=require('firebase-functions/v2/https');
    await work(req({action:'bill',orderId,requested:true}));
    await assert.rejects(table(req({action:'apply',orderId,couponCode:'FREE'})),e=>e.code==='permission-denied');
    await assert.rejects(table(req({action:'cancel',orderId,reason:'test'})),e=>e.code==='permission-denied');
+   await assert.rejects(table(req({action:'loyalty',orderId,customerId:'c1',redeemBaht:0})),e=>e.code==='permission-denied');
    const close=req({action:'close',orderId,revision:synced.promotion.revision,expectedTotalMinor:15000,paid:150,paymentMethod:'cash',splitCount:1});
    const sales=await Promise.all([table(close),table(close)]);assert.equal(sales[0].saleId,sales[1].saleId);
    console.log(' closed table');

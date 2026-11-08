@@ -71,6 +71,11 @@ class CustomerService {
     return customer;
   }
 
+  static Future<int> pointsOf(String customerId) async {
+    final snap = await _col().doc(customerId).get();
+    return (snap.data()?['points'] as num? ?? 0).toInt();
+  }
+
   /// Customer picked for a ค้างชำระ bill. Phone is optional here, so reuse a
   /// record by phone first, then by exact name, before creating a new one.
   static Future<Customer> ensureByName({
