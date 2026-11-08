@@ -5,7 +5,7 @@ const validId=v=>typeof v==='string'&&/^[\w-]{1,128}$/.test(v);
 // Only operational fields cross the staff boundary. Never expose whole shop documents.
 const fields={
  tables:'name capacity section status currentOrderId createdAt',
- tableOrders:'tableId tableName items status openedAt closedAt saleId tablePromotion',
+ tableOrders:'tableId tableName items status openedAt closedAt saleId tablePromotion billRequestedAt',
  orders:'orderNumber queueNumber queueChannel queueSessionId customerName customerPhone items total discount coupon bundleDiscount bundles finalAmount paymentMethod paymentRef slipUrl autoConfirmed bankMatchStatus status createdAt paidAt statusUpdatedAt orderType tableName pickupMode pickupStartAt pickupEndAt pickupLabel saleId',
  sales:'queueNumber queueChannel queueSessionId items total discount bundleDiscount bundles serviceCharge serviceChargePercent paid change paymentMethod salesChannel isDebt isRefunded createdAt staffName staffId receiptNo receiptProfile tableName splitCount customerName refundReason refundedAt',
  cashSessions:'openedAt openedBy openedByName closedAt closedBy closedByName openingFloat countedCash status summary accountingVersion accountingStartAt needsReconciliation nextSessionId previousSessionId carriedCash',
@@ -102,7 +102,7 @@ function handler({db,FieldValue,HttpsError}){
    }
    return {records:rows.docs.map(d=>({id:d.id,...project(raw.collection,d.data())}))};
   }
-  if(!['open','add','quantity','ready'].includes(raw.action))fail('คำสั่งไม่ถูกต้อง');
+  if(!['open','add','quantity','ready','bill'].includes(raw.action))fail('คำสั่งไม่ถูกต้อง');
   if(!validId(raw.action==='open'?raw.tableId:raw.orderId))fail('รหัสไม่ถูกต้อง');
   const ref=shop.collection('tableOrders').doc(raw.action==='open'?randomUUID():raw.orderId);
   return require('./transaction_retry').runTransaction(db,async tx=>{
@@ -140,6 +140,12 @@ function handler({db,FieldValue,HttpsError}){
    if(!order||order.status!=='open')fail('บิลนี้ปิดหรือยกเลิกแล้ว');
    const table=(await tx.get(shop.collection('tables').doc(order.tableId))).data();
    if(table?.currentOrderId!==ref.id)fail('โต๊ะเปลี่ยนบิลแล้ว');
+   if(raw.action==='bill'){
+    // Marks the open bill as waiting for payment so cashiers can see it on the table grid.
+    if(typeof raw.requested!=='boolean')fail('คำสั่งไม่ถูกต้อง');
+    tx.update(ref,{billRequestedAt:raw.requested?FieldValue.serverTimestamp():FieldValue.delete(),...audit});
+    return {success:true};
+   }
    let items=order.items||[];
    if(raw.action==='add'){
     if(!validId(raw.requestId))fail('รหัสคำขอไม่ถูกต้อง');

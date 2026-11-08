@@ -7,7 +7,7 @@ enum TableStatus { available, occupied, reserved }
 extension TableStatusExt on TableStatus {
   String get label => switch (this) {
         TableStatus.available => 'ว่าง',
-        TableStatus.occupied => 'รอชำระเงิน',
+        TableStatus.occupied => 'กำลังใช้งาน',
         TableStatus.reserved => 'จอง',
       };
 }

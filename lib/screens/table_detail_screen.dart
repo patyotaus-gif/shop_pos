@@ -149,8 +149,10 @@ class TableOrderView extends StatefulWidget {
       required this.order,
       this.changeQuantity,
       this.syncPromotions,
-      this.loadServiceCharge});
+      this.loadServiceCharge,
+      this.setBillRequested});
   final TableOrder order;
+  final Future<void> Function(String orderId, bool requested)? setBillRequested;
   final Future<void> Function(String, String, num, num)? changeQuantity;
   final Future<double> Function()? loadServiceCharge;
   final SyncTablePromotion? syncPromotions;
@@ -163,6 +165,7 @@ class _OpenOrderViewState extends State<TableOrderView> {
   bool _closing = false;
   bool _paymentOpen = false;
   bool _sending = false;
+  bool _billSaving = false;
   late final TablePromotionController _promotions;
   TableOrder get _order => _promotions.order;
   final Map<String, num> _quantityPreview = {};
@@ -176,7 +179,8 @@ class _OpenOrderViewState extends State<TableOrderView> {
     super.dispose();
   }
 
-  bool get _busy => _closing || _sending || _quantityPreview.isNotEmpty;
+  bool get _busy =>
+      _closing || _sending || _billSaving || _quantityPreview.isNotEmpty;
   double get _subtotal => _order.items.fold(
       0.0,
       (sum, item) =>
@@ -321,6 +325,23 @@ class _OpenOrderViewState extends State<TableOrderView> {
     return pending.any((i) => i.isGift)
         ? 'ส่งครัวพร้อมของแถม ($count)'
         : 'ส่งครัว ($count)';
+  }
+
+  Future<void> _toggleBillRequested() async {
+    if (_busy) return;
+    final requested = !_order.billRequested;
+    setState(() => _billSaving = true);
+    try {
+      await (widget.setBillRequested ?? TableService.setBillRequested)(
+          _order.id, requested);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('บันทึกสถานะเช็กบิลไม่สำเร็จ: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _billSaving = false);
+    }
   }
 
   Future<void> _sendToKitchen() async {
@@ -805,6 +826,21 @@ class _OpenOrderViewState extends State<TableOrderView> {
                         const SizedBox(height: 8),
                         ActionButtons(
                           children: [
+                            OutlinedButton.icon(
+                              key: const ValueKey('table-bill-request'),
+                              onPressed:
+                                  _busy || empty ? null : _toggleBillRequested,
+                              icon: Icon(order.billRequested
+                                  ? Icons.undo
+                                  : Icons.receipt_long_outlined),
+                              label: Text(order.billRequested
+                                  ? 'ยกเลิกขอเช็กบิล'
+                                  : 'ลูกค้าขอเช็กบิล'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 14),
+                              ),
+                            ),
                             OutlinedButton.icon(
                               onPressed: _busy || empty ? null : _split,
                               icon: const Icon(Icons.call_split),

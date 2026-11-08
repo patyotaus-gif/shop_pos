@@ -354,6 +354,27 @@ class TableService {
               return next;
             });
 
+  /// Mark or clear "customer asked for the bill" on an open tab. Lives on the
+  /// order, so closing the bill clears it without touching the table.
+  static Future<void> setBillRequested(String orderId, bool requested) async {
+    if (AuthService.isStaff) {
+      await StaffAccessService.work(
+          'bill', {'orderId': orderId, 'requested': requested});
+      return;
+    }
+    final ref = _tableOrdersCol().doc(orderId);
+    await ref.firestore.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      if (!snap.exists || snap.data()?['status'] != 'open') {
+        throw StateError('บิลนี้ปิดหรือยกเลิกแล้ว กรุณาเปิดหน้าโต๊ะใหม่');
+      }
+      tx.update(ref, {
+        'billRequestedAt':
+            requested ? FieldValue.serverTimestamp() : FieldValue.delete()
+      });
+    });
+  }
+
   static Future<void> sendToKitchen(String orderId) => AuthService.isStaff
       ? promotions(orderId, action: 'send').then((_) {})
       : _edit(orderId, (items) {

@@ -157,6 +157,9 @@ class TableOrder {
   final String? saleId;
   final Map<String, dynamic>? promotion;
 
+  /// Set while the customer has asked for the bill; shown as รอชำระเงิน.
+  final DateTime? billRequestedAt;
+
   const TableOrder({
     required this.id,
     required this.tableId,
@@ -167,7 +170,10 @@ class TableOrder {
     this.closedAt,
     this.saleId,
     this.promotion,
+    this.billRequestedAt,
   });
+
+  bool get billRequested => billRequestedAt != null;
 
   double get subtotal => items.fold<double>(0, (s, i) => s + i.subtotal);
 
@@ -213,6 +219,7 @@ class TableOrder {
         promotion: data['tablePromotion'] == null
             ? null
             : Map<String, dynamic>.from(data['tablePromotion'] as Map),
+        billRequestedAt: (data['billRequestedAt'] as Timestamp?)?.toDate(),
       );
 
   Map<String, dynamic> toFirestore() => {
@@ -224,5 +231,7 @@ class TableOrder {
         if (closedAt != null) 'closedAt': Timestamp.fromDate(closedAt!),
         if (saleId != null) 'saleId': saleId,
         if (promotion != null) 'tablePromotion': promotion,
+        if (billRequestedAt != null)
+          'billRequestedAt': Timestamp.fromDate(billRequestedAt!),
       };
 }

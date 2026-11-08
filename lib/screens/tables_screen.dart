@@ -5,6 +5,7 @@ import '../theme/operational_colors.dart';
 import '../widgets/status_badge.dart';
 
 import '../models/restaurant_table.dart';
+import '../models/table_order.dart';
 import '../services/table_service.dart';
 import 'table_detail_screen.dart';
 import 'table_form_screen.dart';
@@ -13,8 +14,9 @@ import 'table_form_screen.dart';
 /// Tap to open the order screen for that
 /// table; long-press to edit/delete.
 class TablesScreen extends StatefulWidget {
-  const TablesScreen({super.key, this.loadTables});
+  const TablesScreen({super.key, this.loadTables, this.loadOpenOrders});
   final Stream<List<RestaurantTable>> Function()? loadTables;
+  final Stream<List<TableOrder>> Function()? loadOpenOrders;
   @override
   State<TablesScreen> createState() => _TablesScreenState();
 }
@@ -23,6 +25,14 @@ class _TablesScreenState extends State<TablesScreen> {
   late Stream<List<RestaurantTable>> _tables = _load();
   Stream<List<RestaurantTable>> _load() =>
       (widget.loadTables ?? TableService.watchTables)();
+  // Open bills only add the รอชำระเงิน hint; the grid still works without them.
+  late final Stream<Set<String>> _billRequested =
+      (widget.loadOpenOrders ?? TableService.watchOpenOrders)()
+          .map((orders) => {
+                for (final o in orders)
+                  if (o.billRequested) o.tableId
+              })
+          .handleError((_) {});
 
   @override
   Widget build(BuildContext context) {
@@ -64,25 +74,29 @@ class _TablesScreenState extends State<TablesScreen> {
               final readable =
                   ((available + 12) / (readableWidth + 12)).floor();
               final columns = math.max(1, math.min(desired, readable));
-              return GridView.builder(
-                padding: const EdgeInsets.all(16),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: columns,
-                  // Reserve two lines for the status, name and section at
-                  // the user's text scale, plus card padding and spacing.
-                  mainAxisExtent: math.max(180, scale.scale(130) + 48),
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                itemCount: tables.length,
-                itemBuilder: (_, i) => _TableCard(
-                  table: tables[i],
-                  onTap: () => _openDetail(context, tables[i]),
-                  onLongPress: AuthService.isStaff
-                      ? null
-                      : () => _editTable(context, tables[i]),
-                ),
-              );
+              return StreamBuilder<Set<String>>(
+                  stream: _billRequested,
+                  builder: (context, bills) => GridView.builder(
+                        padding: const EdgeInsets.all(16),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: columns,
+                          // Reserve two lines for the status, name and section at
+                          // the user's text scale, plus card padding and spacing.
+                          mainAxisExtent: math.max(180, scale.scale(130) + 48),
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                        ),
+                        itemCount: tables.length,
+                        itemBuilder: (_, i) => _TableCard(
+                          table: tables[i],
+                          billRequested:
+                              bills.data?.contains(tables[i].id) ?? false,
+                          onTap: () => _openDetail(context, tables[i]),
+                          onLongPress: AuthService.isStaff
+                              ? null
+                              : () => _editTable(context, tables[i]),
+                        ),
+                      ));
             },
           );
         },
@@ -121,9 +135,11 @@ class _TableCard extends StatelessWidget {
     required this.table,
     required this.onTap,
     required this.onLongPress,
+    this.billRequested = false,
   });
 
   final RestaurantTable table;
+  final bool billRequested;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
 
@@ -132,12 +148,15 @@ class _TableCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final occupied = table.status == TableStatus.occupied;
     final reserved = table.status == TableStatus.reserved;
+    final awaitingPayment = occupied && billRequested;
 
-    final tone = occupied
-        ? OperationalTone.information
-        : reserved
-            ? OperationalTone.warning
-            : OperationalTone.neutral;
+    final tone = awaitingPayment
+        ? OperationalTone.warning
+        : occupied
+            ? OperationalTone.information
+            : reserved
+                ? OperationalTone.warning
+                : OperationalTone.neutral;
     final status = OperationalColors.of(context, tone);
     final border = occupied || reserved ? status.foreground : cs.outlineVariant;
 
@@ -159,11 +178,13 @@ class _TableCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               StatusBadge(
-                  label: table.status.label,
+                  label: awaitingPayment ? 'รอชำระเงิน' : table.status.label,
                   tone: tone,
-                  icon: reserved
-                      ? Icons.event_available_outlined
-                      : Icons.table_restaurant_outlined),
+                  icon: awaitingPayment
+                      ? Icons.receipt_long_outlined
+                      : reserved
+                          ? Icons.event_available_outlined
+                          : Icons.table_restaurant_outlined),
               const SizedBox(height: 4),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

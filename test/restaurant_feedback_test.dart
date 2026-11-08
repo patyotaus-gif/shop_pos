@@ -2,10 +2,13 @@ import 'package:shop_pos/theme/pokpok_theme.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shop_pos/models/restaurant_table.dart';
 import 'package:shop_pos/models/table_order.dart';
 import 'package:shop_pos/screens/kitchen_screen.dart';
 import 'package:shop_pos/screens/sale_receipt_screen.dart';
 import 'package:shop_pos/screens/table_detail_screen.dart';
+import 'package:shop_pos/screens/tables_screen.dart';
+import 'package:shop_pos/widgets/status_badge.dart';
 
 void main() {
   testWidgets(
@@ -93,6 +96,86 @@ void main() {
           isGift: true),
     ]);
     expect(find.text('ส่งครัวพร้อมของแถม (3)'), findsOneWidget);
+  });
+  testWidgets('table grid separates free, in-use and awaiting-payment tables',
+      (tester) async {
+    RestaurantTable table(String id, TableStatus status) => RestaurantTable(
+        id: id, name: id, status: status, createdAt: DateTime(2026, 11, 8));
+    await tester.pumpWidget(MaterialApp(
+        theme: PokpokTheme.light(),
+        home: TablesScreen(
+            loadTables: () => Stream.value([
+                  table('F1', TableStatus.available),
+                  table('1A', TableStatus.occupied),
+                  table('1B', TableStatus.occupied),
+                ]),
+            loadOpenOrders: () => Stream.value([
+                  TableOrder(
+                      id: 'a',
+                      tableId: '1A',
+                      tableName: '1A',
+                      items: const [],
+                      openedAt: DateTime(2026, 11, 8)),
+                  TableOrder(
+                      id: 'b',
+                      tableId: '1B',
+                      tableName: '1B',
+                      items: const [],
+                      openedAt: DateTime(2026, 11, 8),
+                      billRequestedAt: DateTime(2026, 11, 8, 12)),
+                ]))));
+    await tester.pumpAndSettle();
+    String badgeOf(String name) => tester
+        .widget<StatusBadge>(find.descendant(
+            of: find.ancestor(
+                of: find.text(name), matching: find.byType(InkWell)),
+            matching: find.byType(StatusBadge)))
+        .label;
+    expect(badgeOf('F1'), 'ว่าง');
+    expect(badgeOf('1A'), 'กำลังใช้งาน');
+    expect(badgeOf('1B'), 'รอชำระเงิน');
+  });
+  testWidgets('bill request toggles on the open table and can be undone',
+      (tester) async {
+    final calls = <bool>[];
+    Future<void> pump(DateTime? requestedAt) async {
+      await tester.pumpWidget(MaterialApp(
+          theme: PokpokTheme.light(),
+          home: Scaffold(
+              body: TableOrderView(
+            order: TableOrder(
+                id: 'o',
+                tableId: 't',
+                tableName: '1B',
+                openedAt: DateTime.now(),
+                billRequestedAt: requestedAt,
+                items: const [
+                  TableOrderItem(
+                      id: 'b',
+                      productId: 'b',
+                      productName: 'B',
+                      price: 5,
+                      quantity: 1,
+                      kitchenStatus: KitchenStatus.sent),
+                ]),
+            loadServiceCharge: () async => 0,
+            setBillRequested: (orderId, requested) async {
+              expect(orderId, 'o');
+              calls.add(requested);
+            },
+          ))));
+      await tester.pumpAndSettle();
+    }
+
+    await pump(null);
+    await tester.ensureVisible(find.text('ลูกค้าขอเช็กบิล'));
+    await tester.tap(find.text('ลูกค้าขอเช็กบิล'));
+    await tester.pumpAndSettle();
+    await pump(DateTime(2026, 11, 8, 12));
+    await tester.ensureVisible(find.text('ยกเลิกขอเช็กบิล'));
+    await tester.tap(find.text('ยกเลิกขอเช็กบิล'));
+    await tester.pumpAndSettle();
+    expect(calls, [true, false]);
   });
   testWidgets('kitchen read errors are not presented as an empty kitchen',
       (tester) async {

@@ -6,6 +6,7 @@ import 'package:shop_pos/models/order.dart';
 import 'package:shop_pos/models/product.dart';
 import 'package:shop_pos/models/cart_item.dart';
 import 'package:shop_pos/models/restaurant_table.dart';
+import 'package:shop_pos/models/table_order.dart';
 import 'package:shop_pos/screens/tables_screen.dart';
 import 'package:shop_pos/theme/pokpok_theme.dart';
 import 'package:shop_pos/theme/operational_colors.dart';
@@ -185,6 +186,15 @@ void main() {
                         section: 'ห้องปรับอากาศ',
                         status: status,
                         createdAt: DateTime(2026, 10, 10)),
+                ]),
+            loadOpenOrders: () => Stream.value([
+                  TableOrder(
+                      id: 'bill',
+                      tableId: TableStatus.occupied.name,
+                      tableName: 'โต๊ะริมหน้าต่าง 12',
+                      items: const [],
+                      openedAt: DateTime(2026, 10, 10),
+                      billRequestedAt: DateTime(2026, 10, 10, 12)),
                 ]))));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
