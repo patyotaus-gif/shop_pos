@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../models/customer.dart';
 import '../services/customer_service.dart';
+import '../services/settings_service.dart';
 
 /// Loyalty customers list — points balance + lifetime spend per customer.
 /// Reached from Settings (Full/Restaurant). Customers are usually created
@@ -24,7 +25,18 @@ class _CustomersScreenState extends State<CustomersScreen> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('ลูกค้าสะสมแต้ม'), centerTitle: true),
+      appBar: AppBar(
+        title: const Text('ลูกค้าสะสมแต้ม'),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            key: const ValueKey('loyalty-rate'),
+            tooltip: 'อัตราแลกแต้ม',
+            icon: const Icon(Icons.tune),
+            onPressed: _editRedeemRate,
+          ),
+        ],
+      ),
       body: ContentWidth(
           maxWidth: 1040,
           child: Column(
@@ -118,6 +130,45 @@ class _CustomersScreenState extends State<CustomersScreen> {
         label: const Text('เพิ่มลูกค้า'),
       ),
     );
+  }
+
+  Future<void> _editRedeemRate() async {
+    final current = await SettingsService.getLoyaltyPointsPerBaht();
+    if (!mounted) return;
+    final ctrl = TextEditingController(text: '$current');
+    final rate = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('อัตราแลกแต้ม'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'ใช้กี่แต้ม = ลด ฿1',
+            helperText: 'ลูกค้าได้ 1 แต้มทุกยอดซื้อ ฿25',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('ยกเลิก')),
+          FilledButton(
+              onPressed: () {
+                final value = int.tryParse(ctrl.text.trim());
+                if (value == null || value < 1 || value > 10000) return;
+                Navigator.pop(ctx, value);
+              },
+              child: const Text('บันทึก')),
+        ],
+      ),
+    );
+    if (rate == null) return;
+    await SettingsService.saveLoyaltyPointsPerBaht(rate);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('บันทึกแล้ว: $rate แต้ม = ลด ฿1')));
+    }
   }
 
   Future<void> _addCustomer() async {

@@ -55,10 +55,15 @@ class SaleService {
     SalesChannel salesChannel = SalesChannel.storefront,
     String? staffName,
     String? loyaltyCustomerId,
+    int loyaltyPointsRedeemed = 0,
     String? debtCustomerId,
     List<Map<String, dynamic>> buyGetQuote = const [],
     List<Map<String, dynamic>> bundleQuote = const [],
   }) async {
+    // Staff sales go through the server, which does not handle loyalty points.
+    if (AuthService.isStaff && loyaltyPointsRedeemed > 0) {
+      throw StateError('การใช้แต้มทำได้เฉพาะเจ้าของร้าน');
+    }
     if (_running) throw StateError('กำลังบันทึกรายการ กรุณารอสักครู่');
     _running = true;
     try {
@@ -133,6 +138,8 @@ class SaleService {
           'id': sale.id,
           'createdAt': sale.createdAt.millisecondsSinceEpoch,
           if (loyaltyCustomerId != null) 'loyaltyCustomerId': loyaltyCustomerId,
+          if (loyaltyCustomerId != null && loyaltyPointsRedeemed > 0)
+            'loyaltyPointsRedeemed': loyaltyPointsRedeemed,
           if (isDebt && debtCustomerId != null) 'debtCustomerId': debtCustomerId
         };
         if (!await prefs.setString(key, jsonEncode(stored))) {
@@ -185,6 +192,8 @@ class SaleService {
       } else {
         result = await commitSale(shop, draft,
             loyaltyCustomerId: data['loyaltyCustomerId'] as String?,
+            loyaltyPointsRedeemed:
+                (data['loyaltyPointsRedeemed'] as num?)?.toInt() ?? 0,
             debtCustomerId: data['debtCustomerId'] as String?);
       }
     } on FirebaseFunctionsException catch (e) {
@@ -235,7 +244,9 @@ class SaleService {
   /// Public for transaction tests; the same ID is safe to replay.
   static Future<Sale> commitSale(
       DocumentReference<Map<String, dynamic>> shop, Sale draft,
-      {String? loyaltyCustomerId, String? debtCustomerId}) async {
+      {String? loyaltyCustomerId,
+      int loyaltyPointsRedeemed = 0,
+      String? debtCustomerId}) async {
     validateSale(draft);
     final saleRef = shop.collection('sales').doc(draft.id);
     final counterRef = shop.collection('counters').doc('receipt');
@@ -289,6 +300,18 @@ class SaleService {
           ? null
           : shop.collection('customers').doc(loyaltyCustomerId);
       final customer = customerRef == null ? null : await tx.get(customerRef);
+      // Redeemed points are already inside the sale discount, so a missing
+      // customer or short balance must stop the sale, not just skip loyalty.
+      if (loyaltyPointsRedeemed > 0) {
+        if (customer?.exists != true) {
+          throw StateError('ไม่พบลูกค้าสะสมแต้ม กรุณาเลือกลูกค้าใหม่');
+        }
+        final balance = (customer!.data()?['points'] as num? ?? 0).toInt();
+        if (balance < loyaltyPointsRedeemed) {
+          throw StateError(
+              'แต้มลูกค้าไม่พอ (มี $balance แต้ม) กรุณาปรับการใช้แต้ม');
+        }
+      }
       final control = await MoneyLedger.read(tx, shop);
       final queue = draft.salesChannel == SalesChannel.takeaway
           ? await RoundQueueService.prepare(tx, shop, control, draft.createdAt)
@@ -317,6 +340,8 @@ class SaleService {
         if (customer?.exists == true) 'loyaltyCustomerId': loyaltyCustomerId,
         if (customer?.exists == true)
           'loyaltyPointsAwarded': CustomerService.pointsFor(draft.total),
+        if (loyaltyPointsRedeemed > 0)
+          'loyaltyPointsRedeemed': loyaltyPointsRedeemed,
       };
       tx.set(saleRef, payload);
       RoundQueueService.write(tx, shop, queue);
@@ -352,8 +377,8 @@ class SaleService {
       }
       if (customer?.exists == true) {
         tx.update(customerRef!, {
-          'points':
-              FieldValue.increment(CustomerService.pointsFor(draft.total)),
+          'points': FieldValue.increment(
+              CustomerService.pointsFor(draft.total) - loyaltyPointsRedeemed),
           'totalSpent': FieldValue.increment(draft.total),
           'lastVisitAt': Timestamp.fromDate(draft.createdAt)
         });

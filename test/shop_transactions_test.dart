@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shop_pos/models/sale.dart';
 import 'package:shop_pos/models/table_order.dart';
 import 'package:shop_pos/models/restaurant_table.dart';
+import 'package:shop_pos/services/customer_service.dart';
 import 'package:shop_pos/services/sale_service.dart';
 import 'package:shop_pos/services/table_service.dart';
 import 'package:shop_pos/services/shop_database.dart';
@@ -200,15 +201,85 @@ void main() {
         (await shop.collection('counters').doc('receipt').get()).data()!['seq'],
         1);
   });
-  test('debt keeps the picked customer and awards no loyalty points',
+  test('redeemable baht is limited by points and by the payable bill', () {
+    expect(
+        CustomerService.maxRedeemBaht(
+            points: 125, pointsPerBaht: 10, payable: 40),
+        12);
+    expect(
+        CustomerService.maxRedeemBaht(
+            points: 1000, pointsPerBaht: 10, payable: 19.5),
+        19);
+    expect(
+        CustomerService.maxRedeemBaht(
+            points: 9, pointsPerBaht: 10, payable: 50),
+        0);
+    expect(
+        CustomerService.maxRedeemBaht(
+            points: 50, pointsPerBaht: 0, payable: 50),
+        0);
+  });
+  test('redeemed points are deducted once with the sale and recorded on it',
       () async {
+    await shop
+        .collection('customers')
+        .doc('c1')
+        .set({'name': 'เอ', 'phone': '081', 'points': 100, 'totalSpent': 0});
+    // ฿20 tea, ฿5 off with 50 points (10 points = ฿1).
+    final draft = Sale(
+        id: 'redeem',
+        items: const [
+          SaleItem(
+              productId: 'tea',
+              productName: 'ชา',
+              price: 20,
+              quantity: 1,
+              subtotal: 20)
+        ],
+        total: 15,
+        discount: 5,
+        paid: 15,
+        change: 0,
+        createdAt: DateTime(2026, 9, 7));
+    await SaleService.commitSale(shop, draft,
+        loyaltyCustomerId: 'c1', loyaltyPointsRedeemed: 50);
+    await SaleService.commitSale(shop, draft,
+        loyaltyCustomerId: 'c1', loyaltyPointsRedeemed: 50);
+    final customer =
+        (await shop.collection('customers').doc('c1').get()).data()!;
+    expect(customer['points'], 50, reason: '100 - 50 redeemed + 0 earned');
+    final sale = (await shop.collection('sales').doc('redeem').get()).data()!;
+    expect(sale['loyaltyPointsRedeemed'], 50);
+    expect(sale['discount'], 5);
+  });
+  test('a short points balance stops the sale before anything is written',
+      () async {
+    await shop
+        .collection('customers')
+        .doc('c1')
+        .set({'name': 'เอ', 'phone': '081', 'points': 30, 'totalSpent': 0});
+    await expectLater(
+        SaleService.commitSale(shop, sale(),
+            loyaltyCustomerId: 'c1', loyaltyPointsRedeemed: 50),
+        throwsA(isA<StateError>()
+            .having((e) => e.message, 'message', contains('แต้มลูกค้าไม่พอ'))));
+    expect((await shop.collection('sales').get()).docs, isEmpty);
+    expect(
+        (await shop.collection('products').doc('tea').get()).data()!['stock'],
+        5);
+    expect(
+        (await shop.collection('customers').doc('c1').get()).data()!['points'],
+        30);
+  });
+  test('debt keeps the picked customer and awards no loyalty points', () async {
     await shop.collection('customers').doc('c1').set(
         {'name': 'ลูกค้าทดสอบ', 'phone': '', 'points': 0, 'totalSpent': 0});
     await SaleService.commitSale(shop, sale(debt: true), debtCustomerId: 'c1');
     final debt = (await shop.collection('debts').doc('sale-1').get()).data()!;
     expect(debt['customerId'], 'c1');
     expect(debt['customerName'], 'ลูกค้าทดสอบ');
-    expect((await shop.collection('customers').doc('c1').get()).data()!['points'],
+    expect(
+        (await shop.collection('customers').doc('c1').get()).data()!['points'],
         0);
   });
   test('stock is revalidated against server state before writing a sale',

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'auth_service.dart';
+import 'customer_service.dart';
 import 'staff_access_service.dart';
 
 class SettingsService {
@@ -98,4 +99,14 @@ class SettingsService {
 
   static Future<void> saveServiceChargePercent(double percent) =>
       saveSettings({'serviceChargePercent': percent});
+
+  /// Loyalty points needed for ฿1 off when a customer redeems points.
+  static Future<int> getLoyaltyPointsPerBaht() async {
+    final data = await getSettings();
+    final rate = (data['loyaltyPointsPerBaht'] as num?)?.toInt() ?? 0;
+    return rate >= 1 ? rate : CustomerService.defaultPointsPerBaht;
+  }
+
+  static Future<void> saveLoyaltyPointsPerBaht(int pointsPerBaht) =>
+      saveSettings({'loyaltyPointsPerBaht': pointsPerBaht});
 }

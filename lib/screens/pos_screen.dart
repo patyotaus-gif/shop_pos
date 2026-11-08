@@ -24,6 +24,7 @@ import '../widgets/debt_customer_picker.dart';
 import '../services/entitlements.dart';
 import '../services/product_service.dart';
 import '../services/sale_service.dart';
+import '../services/settings_service.dart';
 import '../services/buy_get_service.dart';
 import '../services/shop_service.dart';
 import '../services/auth_service.dart';
@@ -67,6 +68,9 @@ class _PosScreenState extends State<PosScreen> {
   // cart, cleared after each sale.
   bool _loyaltyEnabled = false;
   Customer? _loyaltyCustomer;
+  // Whole baht taken off this bill with the attached customer's points.
+  int _redeemBaht = 0;
+  int _pointsPerBaht = CustomerService.defaultPointsPerBaht;
 
   @override
   void initState() {
@@ -144,8 +148,13 @@ class _PosScreenState extends State<PosScreen> {
     if (ok != true || phoneCtrl.text.trim().isEmpty || !mounted) return;
     final customer = await CustomerService.ensure(
         phone: phoneCtrl.text, name: nameCtrl.text);
+    final rate = await SettingsService.getLoyaltyPointsPerBaht();
     if (mounted) {
-      setState(() => _loyaltyCustomer = customer);
+      setState(() {
+        _loyaltyCustomer = customer;
+        _pointsPerBaht = rate;
+        _redeemBaht = 0;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text('ลูกค้า ${customer.name} · ${customer.points} แต้ม')),
@@ -154,7 +163,66 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   double get _subtotal => _cart.fold(0, (s, e) => s + e.subtotal);
-  double get _total => _subtotal - _discount;
+  double get _total => _subtotal - _discount - _redeemBaht;
+
+  /// Keep a points discount within what is still payable after cart edits.
+  void _clampRedeem() {
+    final payable = (_subtotal - _discount).floor();
+    if (_redeemBaht > payable) _redeemBaht = payable < 0 ? 0 : payable;
+  }
+
+  Future<void> _redeemPoints() async {
+    final customer = _loyaltyCustomer;
+    if (customer == null) return;
+    final max = CustomerService.maxRedeemBaht(
+        points: customer.points,
+        pointsPerBaht: _pointsPerBaht,
+        payable: _subtotal - _discount);
+    if (max < 1) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(_cart.isEmpty
+              ? 'เพิ่มสินค้าก่อนใช้แต้ม'
+              : 'แต้มยังไม่พอใช้ ต้องมีอย่างน้อย $_pointsPerBaht แต้มต่อ ฿1')));
+      return;
+    }
+    final ctrl =
+        TextEditingController(text: '${_redeemBaht > 0 ? _redeemBaht : max}');
+    final result = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('ใช้แต้มเป็นส่วนลด'),
+        content: TextField(
+          key: const ValueKey('redeem-baht'),
+          controller: ctrl,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'ลดกี่บาท',
+            prefixText: '฿',
+            helperText:
+                'ใช้ได้สูงสุด ฿$max · $_pointsPerBaht แต้ม = ฿1 · มี ${customer.points} แต้ม',
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('ยกเลิก')),
+          if (_redeemBaht > 0)
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, 0),
+                child: const Text('ไม่ใช้แต้ม')),
+          FilledButton(
+              onPressed: () {
+                final baht = int.tryParse(ctrl.text.trim());
+                if (baht == null || baht < 1 || baht > max) return;
+                Navigator.pop(ctx, baht);
+              },
+              child: const Text('ใช้แต้ม')),
+        ],
+      ),
+    );
+    if (result != null && mounted) setState(() => _redeemBaht = result);
+  }
 
   Future<void> _chooseBundle() async {
     if (_checkoutBusy || _pendingSale != null) return;
@@ -278,6 +346,7 @@ class _PosScreenState extends State<PosScreen> {
   void _removeFromCart(int idx) => setState(() {
         _cart.removeAt(idx);
         _discount = cartDiscountAfterEdit(_cart, _discount);
+        _clampRedeem();
       });
 
   void _updateQty(int idx, num qty) {
@@ -287,6 +356,7 @@ class _PosScreenState extends State<PosScreen> {
       setState(() {
         _cart[idx] = _cart[idx].copyWith(quantity: stockRound(qty));
         _discount = cartDiscountAfterEdit(_cart, _discount);
+        _clampRedeem();
       });
     }
   }
@@ -366,7 +436,7 @@ class _PosScreenState extends State<PosScreen> {
         }
         bundleDiscount = bundles.fold<double>(
             0, (s, b) => s + (b['discountMinor'] as num) / 100);
-        if (_discount + bundleDiscount > _subtotal) {
+        if (_discount + _redeemBaht + bundleDiscount > _subtotal) {
           throw StateError('ส่วนลดรวมเกินยอดสินค้า กรุณาปรับส่วนลดท้ายบิล');
         }
         if (!mounted) return;
@@ -431,7 +501,7 @@ class _PosScreenState extends State<PosScreen> {
               : SaleService.checkout(
                   cart: frozenCart,
                   paid: paid,
-                  discount: _discount,
+                  discount: _discount + _redeemBaht,
                   isDebt: isDebt,
                   customerName: customerName,
                   paymentMethod: method,
@@ -440,12 +510,16 @@ class _PosScreenState extends State<PosScreen> {
                   buyGetQuote: gifts,
                   bundleQuote: bundles,
                   loyaltyCustomerId: _loyaltyCustomer?.id,
+                  loyaltyPointsRedeemed: _loyaltyCustomer == null
+                      ? 0
+                      : _redeemBaht * _pointsPerBaht,
                   debtCustomerId: debtCustomerId));
       if (!mounted) return;
       setState(() {
         _cart.clear();
         _discount = 0;
         _loyaltyCustomer = null;
+        _redeemBaht = 0;
         _pendingSale = null;
         _paymentMethod = method;
       });
@@ -716,6 +790,7 @@ class _PosScreenState extends State<PosScreen> {
                                       child: Text(
                                         _loyaltyCustomer != null
                                             ? '${_loyaltyCustomer!.name} · ${_loyaltyCustomer!.points} แต้ม'
+                                                '${_redeemBaht > 0 ? ' · ใช้ ${_redeemBaht * _pointsPerBaht} แต้ม -฿$_redeemBaht' : ''}'
                                             : 'เพิ่มลูกค้าสะสมแต้ม',
                                         style: TextStyle(
                                             fontSize: 13,
@@ -726,9 +801,19 @@ class _PosScreenState extends State<PosScreen> {
                                       ),
                                     ),
                                     if (_loyaltyCustomer != null)
+                                      TextButton(
+                                        key: const ValueKey('redeem-points'),
+                                        onPressed: _redeemPoints,
+                                        child: Text(_redeemBaht > 0
+                                            ? 'แก้แต้ม'
+                                            : 'ใช้แต้ม'),
+                                      ),
+                                    if (_loyaltyCustomer != null)
                                       GestureDetector(
-                                        onTap: () => setState(
-                                            () => _loyaltyCustomer = null),
+                                        onTap: () => setState(() {
+                                          _loyaltyCustomer = null;
+                                          _redeemBaht = 0;
+                                        }),
                                         child: Icon(Icons.close,
                                             size: 18,
                                             color: cs.onSurface
@@ -750,7 +835,7 @@ class _PosScreenState extends State<PosScreen> {
                     canDiscount: StaffAccessService.can('discount'),
                     canDebt: !AuthService.isStaff,
                     subtotal: _subtotal,
-                    discount: _discount,
+                    discount: _discount + _redeemBaht,
                     total: _total,
                     onDiscount: _setDiscount,
                     onCheckout: () => _checkout(),

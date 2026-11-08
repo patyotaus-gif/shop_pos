@@ -13,6 +13,22 @@ class CustomerService {
 
   static int pointsFor(double spend) => (spend / bahtPerPoint).floor();
 
+  /// Points a customer spends for each baht of discount, unless the shop
+  /// sets its own rate in settings.
+  static const int defaultPointsPerBaht = 10;
+
+  /// Whole baht a customer can take off this bill: limited by their points
+  /// and by what is still payable after other discounts.
+  static int maxRedeemBaht(
+      {required int points,
+      required int pointsPerBaht,
+      required double payable}) {
+    if (pointsPerBaht <= 0 || points <= 0 || payable <= 0) return 0;
+    final byPoints = points ~/ pointsPerBaht;
+    final byBill = payable.floor();
+    return byPoints < byBill ? byPoints : byBill;
+  }
+
   static CollectionReference<Map<String, dynamic>> _col() =>
       FirebaseFirestore.instance
           .collection('shops')
