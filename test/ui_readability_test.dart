@@ -193,9 +193,8 @@ void main() {
   });
 
   testWidgets(
-      'pinned checkout shares one action row on phone and fits with total on tablet',
+      'checkout menu shares one action row on phone and fits with total on tablet',
       (tester) async {
-    SharedPreferences.setMockInitialValues({'shortcut:a': 'discount'});
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -207,7 +206,6 @@ void main() {
               body: Align(
                   alignment: Alignment.bottomCenter,
                   child: PosCheckoutPanel(
-                      preferenceKey: 'shortcut:a',
                       compact: true,
                       subtotal: 1000,
                       total: 1000,
@@ -219,10 +217,10 @@ void main() {
                       onDiscount: () {},
                       onDebt: () {})))));
       await tester.pumpAndSettle();
-      final pin = tester.getRect(find.byKey(const ValueKey('checkout-pinned')));
+      final more = tester.getRect(find.byKey(const ValueKey('checkout-more')));
       final pay = tester.getRect(find.byKey(const ValueKey('checkout-pay')));
-      expect(pin.center.dy, closeTo(pay.center.dy, 1));
-      expect(pin.height, greaterThanOrEqualTo(48));
+      expect(more.center.dy, closeTo(pay.center.dy, 1));
+      expect(more.height, greaterThanOrEqualTo(48));
       expect(tester.getSize(find.byType(PosCheckoutPanel)).height,
           lessThanOrEqualTo(width < 500 ? 132 : 80));
       expect(tester.takeException(), isNull);

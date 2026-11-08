@@ -54,7 +54,7 @@ class _SalesInsightsState extends State<SalesInsights> {
     return ListView(padding: const EdgeInsets.all(16), children: [
       const Text('ยอดขายตามวิธีชำระเงิน',
           style: TextStyle(fontWeight: FontWeight.bold)),
-      const Text('แยกตามวิธีจ่ายที่บันทึกในบิล ไม่รวมบิลยกเลิกและขายเชื่อ'),
+      const Text('แยกตามวิธีจ่ายที่บันทึกในบิล ไม่รวมบิลยกเลิกและบิลค้างชำระ'),
       for (final method in PaymentMethod.values)
         if (active.any((s) => !s.isDebt && s.paymentMethod == method))
           ListTile(
@@ -67,9 +67,9 @@ class _SalesInsightsState extends State<SalesInsights> {
       if (active.any((s) => s.isDebt))
         ListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('ขายเชื่อ'),
+            title: const Text('ค้างชำระ'),
             subtitle: const Text(
-                'ยอดขายเชื่อเดิมในบิล ดูยอดค้างชำระที่หน้าลูกค้าเครดิต'),
+                'ยอดตามบิลตอนขาย ดูยอดที่ยังค้างจริงที่หน้าลูกค้าเครดิต'),
             trailing: Text(
                 '฿${active.where((s) => s.isDebt).fold(0.0, (sum, s) => sum + s.total).toStringAsFixed(2)}')),
       const Divider(),

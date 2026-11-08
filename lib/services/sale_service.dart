@@ -225,7 +225,7 @@ class SaleService {
       throw StateError('จำนวนเงินที่รับน้อยกว่ายอดบิล');
     }
     if (sale.isDebt && (sale.customerName?.trim().isEmpty ?? true)) {
-      throw StateError('กรุณาระบุชื่อลูกค้าสำหรับขายเชื่อ');
+      throw StateError('กรุณาระบุชื่อลูกค้าสำหรับรายการค้างชำระ');
     }
   }
 

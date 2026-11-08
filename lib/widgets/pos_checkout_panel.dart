@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'compact_action.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 /// Presentation only; checkout and permission checks remain in the POS flow.
-class PosCheckoutPanel extends StatefulWidget {
+class PosCheckoutPanel extends StatelessWidget {
   const PosCheckoutPanel(
       {super.key,
       required this.subtotal,
@@ -17,81 +16,17 @@ class PosCheckoutPanel extends StatefulWidget {
       required this.canDiscount,
       required this.canDebt,
       this.compact = false,
-      this.horizontalTotal = false,
-      this.preferenceKey});
+      this.horizontalTotal = false});
 
   final double subtotal, discount, total;
   final VoidCallback onDiscount, onCheckout, onDebt;
   final bool hasItems, canDiscount, canDebt, compact;
   final bool horizontalTotal;
-  final String? preferenceKey;
-
-  @override
-  State<PosCheckoutPanel> createState() => _PosCheckoutPanelState();
-}
-
-class _PosCheckoutPanelState extends State<PosCheckoutPanel> {
-  String? _pin;
-  int _revision = 0;
-  Future<void> _saving = Future.value();
-  double get subtotal => widget.subtotal;
-  double get discount => widget.discount;
-  double get total => widget.total;
-  bool get hasItems => widget.hasItems;
-  bool get canDiscount => widget.canDiscount;
-  bool get canDebt => widget.canDebt;
-  bool get compact => widget.compact;
-  VoidCallback get onDiscount => widget.onDiscount;
-  VoidCallback get onDebt => widget.onDebt;
-  VoidCallback get onCheckout => widget.onCheckout;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadPin();
-  }
-
-  @override
-  void didUpdateWidget(covariant PosCheckoutPanel oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.preferenceKey != oldWidget.preferenceKey) {
-      _revision++;
-      _pin = null;
-      _loadPin();
-    }
-  }
-
-  Future<void> _loadPin() async {
-    final key = widget.preferenceKey;
-    if (key == null) return;
-    final revision = _revision;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (mounted && revision == _revision) {
-        setState(() => _pin = prefs.getString(key));
-      }
-    } catch (_) {/* Shortcut preferences must never block a sale. */}
-  }
-
-  void _setPin(String value) {
-    setState(() {
-      _revision++;
-      _pin = value;
-    });
-    final key = widget.preferenceKey;
-    if (key == null) return;
-    _saving = _saving.then((_) async {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(key, value);
-    }).catchError((_) {});
-  }
 
   @override
   Widget build(BuildContext context) {
     final baht = NumberFormat('#,##0.00', 'th_TH');
     final cs = Theme.of(context).colorScheme;
-    final pinned =
-        _pin == 'discount' && canDiscount || _pin == 'debt' && canDebt;
     final totalTexts = <Widget>[
       Text('ยอดสุทธิ',
           style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
@@ -99,7 +34,7 @@ class _PosCheckoutPanelState extends State<PosCheckoutPanel> {
           style: TextStyle(
               fontSize: 20, fontWeight: FontWeight.w700, color: cs.primary)),
     ];
-    final totalLabel = widget.horizontalTotal
+    final totalLabel = horizontalTotal
         ? Wrap(
             spacing: 6,
             crossAxisAlignment: WrapCrossAlignment.center,
@@ -108,34 +43,23 @@ class _PosCheckoutPanelState extends State<PosCheckoutPanel> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: totalTexts);
+    // One row on phones: secondary actions live behind a menu so the bar
+    // stays short enough to keep the basket visible.
     final actions = Wrap(
         alignment: WrapAlignment.end,
         spacing: 4,
         runSpacing: 4,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          if (pinned)
-            OutlinedButton(
-                key: const ValueKey('checkout-pinned'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                ),
-                onPressed: _pin == 'discount'
-                    ? onDiscount
-                    : hasItems
-                        ? onDebt
-                        : null,
-                child: Text(_pin == 'discount' ? 'ส่วนลด' : 'ขายเชื่อ')),
           if (canDiscount || canDebt)
             PopupMenuButton<String>(
               key: const ValueKey('checkout-more'),
-              tooltip: 'ส่วนลด ขายเชื่อ และปักหมุดปุ่ม',
+              tooltip: 'ส่วนลด และค้างชำระ',
               icon: const Icon(Icons.more_vert),
               constraints: const BoxConstraints(minWidth: 180),
               onSelected: (value) {
                 if (value == 'discount' && canDiscount) onDiscount();
                 if (value == 'debt' && canDebt && hasItems) onDebt();
-                if (value.startsWith('pin:')) _setPin(value.substring(4));
               },
               itemBuilder: (_) => [
                 if (canDiscount)
@@ -144,17 +68,7 @@ class _PosCheckoutPanelState extends State<PosCheckoutPanel> {
                   PopupMenuItem(
                       value: 'debt',
                       enabled: hasItems,
-                      child: const Text('ขายเชื่อ')),
-                const PopupMenuDivider(),
-                if (canDiscount)
-                  const PopupMenuItem(
-                      value: 'pin:discount', child: Text('ปักหมุดปุ่มส่วนลด')),
-                if (canDebt)
-                  const PopupMenuItem(
-                      value: 'pin:debt', child: Text('ปักหมุดปุ่มขายเชื่อ')),
-                if (pinned)
-                  const PopupMenuItem(
-                      value: 'pin:none', child: Text('เอาปุ่มที่ปักหมุดออก')),
+                      child: const Text('ค้างชำระ')),
               ],
             ),
           FilledButton(
@@ -223,7 +137,7 @@ class _PosCheckoutPanelState extends State<PosCheckoutPanel> {
                     OutlinedButton.icon(
                         onPressed: canDebt && hasItems ? onDebt : null,
                         icon: const Icon(Icons.person_outline, size: 18),
-                        label: const Text('เชื่อ')),
+                        label: const Text('ค้างชำระ')),
                     FilledButton.icon(
                         onPressed: hasItems ? onCheckout : null,
                         icon: const Icon(Icons.payments_outlined, size: 18),

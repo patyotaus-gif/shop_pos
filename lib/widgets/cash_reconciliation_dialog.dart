@@ -80,7 +80,7 @@ class _CashReconciliationDialogState extends State<CashReconciliationDialog> {
                 'cash' => 'เงินสด',
                 'transfer' => 'โอน',
                 'qr' => 'QR',
-                'credit' => 'ขายเชื่อ',
+                'credit' => 'ค้างชำระ',
                 _ => 'ออนไลน์'
               }}'),
               Text('฿${_money.format(widget.amountMinor / 100)}',

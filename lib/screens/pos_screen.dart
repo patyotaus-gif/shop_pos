@@ -458,7 +458,7 @@ class _PosScreenState extends State<PosScreen> {
     return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('ชื่อลูกค้า (เชื่อ)'),
+        title: const Text('ชื่อลูกค้า (ค้างชำระ)'),
         content: TextField(
           controller: ctrl,
           autofocus: true,
@@ -764,7 +764,6 @@ class _PosScreenState extends State<PosScreen> {
                         : null,
                   );
                   final checkout = PosCheckoutPanel(
-                    preferenceKey: 'checkout-shortcut:${AuthService.shopId}',
                     compact: !wide,
                     horizontalTotal: constraints.maxHeight < 300,
                     canDiscount: StaffAccessService.can('discount'),

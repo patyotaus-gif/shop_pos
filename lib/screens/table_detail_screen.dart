@@ -313,6 +313,16 @@ class _OpenOrderViewState extends State<TableOrderView> {
   bool get _hasPendingItems =>
       _order.items.any((i) => i.kitchenStatus == KitchenStatus.pending);
 
+  /// Mentions gifts only when a pending gift line actually goes to the kitchen.
+  String get _sendToKitchenLabel {
+    final pending =
+        _order.items.where((i) => i.kitchenStatus == KitchenStatus.pending);
+    final count = pending.fold<num>(0, (sum, i) => sum + i.quantity);
+    return pending.any((i) => i.isGift)
+        ? 'ส่งครัวพร้อมของแถม ($count)'
+        : 'ส่งครัว ($count)';
+  }
+
   Future<void> _sendToKitchen() async {
     if (_busy) return;
     setState(() => _sending = true);
@@ -784,8 +794,7 @@ class _OpenOrderViewState extends State<TableOrderView> {
                               FilledButton.tonalIcon(
                                 onPressed: _busy ? null : _sendToKitchen,
                                 icon: const Icon(Icons.soup_kitchen_outlined),
-                                label: Text(
-                                    'ส่งครัวพร้อมของแถม (${_order.items.where((i) => i.kitchenStatus == KitchenStatus.pending).fold<num>(0, (sum, i) => sum + i.quantity)})'),
+                                label: Text(_sendToKitchenLabel),
                                 style: FilledButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 20, vertical: 14),

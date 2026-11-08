@@ -98,7 +98,8 @@ void main() {
     expect(discounted, 1);
     await tester.tap(find.byKey(const ValueKey('checkout-more')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('ขายเชื่อ'));
+    expect(find.textContaining('ปักหมุด'), findsNothing);
+    await tester.tap(find.text('ค้างชำระ'));
     await tester.pumpAndSettle();
     expect(debt, 1);
     await tester.tap(find.byKey(const ValueKey('checkout-pay')));
@@ -116,7 +117,7 @@ void main() {
     expect(
         tester
             .widget<PopupMenuItem<String>>(
-                find.widgetWithText(PopupMenuItem<String>, 'ขายเชื่อ'))
+                find.widgetWithText(PopupMenuItem<String>, 'ค้างชำระ'))
             .enabled,
         isFalse);
   });

@@ -163,7 +163,7 @@ class ZReportGenerator {
               _row(
                   session.accountingVersion == 1
                       ? '  หนี้เพิ่ม/ลดในรอบ'
-                      : '  ขายเชื่อ',
+                      : '  ค้างชำระ',
                   _baht.format(summary.debtTotal)),
             if (summary.refundTotal > 0)
               _row('  คืนเงิน', '-${_baht.format(summary.refundTotal)}'),

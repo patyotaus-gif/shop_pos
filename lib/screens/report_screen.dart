@@ -139,7 +139,7 @@ class _ReportScreenState extends State<ReportScreen>
 
     final byMethod = <String, double>{};
     for (final s in active) {
-      final key = s.isDebt ? 'เชื่อ' : s.paymentMethod.label;
+      final key = s.isDebt ? 'ค้างชำระ' : s.paymentMethod.label;
       byMethod[key] = (byMethod[key] ?? 0) + s.total;
     }
 
@@ -571,7 +571,7 @@ class _ReportScreenState extends State<ReportScreen>
                     td(
                         isRef
                             ? '-'
-                            : (s.isDebt ? 'เชื่อ' : s.paymentMethod.label),
+                            : (s.isDebt ? 'ค้างชำระ' : s.paymentMethod.label),
                         color: textColor),
                     td(
                         isRef
@@ -849,7 +849,7 @@ class _SalesReportState extends State<_SalesReport> {
                         color: cs.primary),
                     const SizedBox(width: 8),
                     _Card(
-                        label: 'ขายเชื่อ',
+                        label: 'ค้างชำระ',
                         value: '฿${baht.format(debtTotal)}',
                         icon: Icons.person_outline,
                         color: Colors.orange),
@@ -996,7 +996,7 @@ class _SalesReportState extends State<_SalesReport> {
                                 Expanded(
                                   child: Text(
                                     s.isDebt
-                                        ? 'เชื่อ: ${s.customerName}'
+                                        ? 'ค้างชำระ: ${s.customerName}'
                                         : s.paymentMethod.label,
                                     style: TextStyle(
                                       fontWeight: FontWeight.w600,

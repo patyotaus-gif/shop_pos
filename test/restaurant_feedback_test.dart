@@ -56,6 +56,44 @@ void main() {
             .onPressed,
         isNotNull);
   });
+  testWidgets('send-to-kitchen mentions gifts only when a gift is pending',
+      (tester) async {
+    Future<void> pump(List<TableOrderItem> items) async {
+      await tester.pumpWidget(MaterialApp(
+          theme: PokpokTheme.light(),
+          home: Scaffold(
+              body: TableOrderView(
+            order: TableOrder(
+                id: 'o',
+                tableId: 't',
+                tableName: '1B',
+                openedAt: DateTime.now(),
+                items: items),
+            loadServiceCharge: () async => 0,
+          ))));
+      await tester.pumpAndSettle();
+    }
+
+    await pump(const [
+      TableOrderItem(
+          id: 'b', productId: 'b', productName: 'B', price: 5, quantity: 4),
+    ]);
+    expect(find.text('ส่งครัว (4)'), findsOneWidget);
+    expect(find.textContaining('ของแถม'), findsNothing);
+
+    await pump(const [
+      TableOrderItem(
+          id: 'b', productId: 'b', productName: 'B', price: 5, quantity: 2),
+      TableOrderItem(
+          id: 'g',
+          productId: 'c',
+          productName: 'ของแถม: C',
+          price: 0,
+          quantity: 1,
+          isGift: true),
+    ]);
+    expect(find.text('ส่งครัวพร้อมของแถม (3)'), findsOneWidget);
+  });
   testWidgets('kitchen read errors are not presented as an empty kitchen',
       (tester) async {
     await tester.pumpWidget(MaterialApp(

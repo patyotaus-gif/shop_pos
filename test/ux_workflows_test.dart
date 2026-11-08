@@ -41,13 +41,13 @@ void main() {
             body: RestaurantSalesScreen(
                 dineIn: Text('รายการโต๊ะ'), takeaway: _CounterCart()))));
     expect(find.text('รายการโต๊ะ'), findsOneWidget);
-    await tester.tap(find.text('กลับบ้าน'));
+    await tester.tap(find.text('สั่งกลับบ้าน'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('เพิ่มรายการ 0'));
     await tester.pump();
-    await tester.tap(find.text('กินที่ร้าน'));
+    await tester.tap(find.text('ทานที่ร้าน'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('กลับบ้าน'));
+    await tester.tap(find.text('สั่งกลับบ้าน'));
     await tester.pumpAndSettle();
     expect(find.text('เพิ่มรายการ 1'), findsOneWidget);
   });
@@ -216,14 +216,13 @@ void main() {
   });
 
   testWidgets(
-      'pinned shortcut persists per shop and cannot expose staff actions',
+      'checkout menu offers debt and discount without pins and hides them from staff',
       (tester) async {
-    Widget app(String shop, {bool staff = false}) => MaterialApp(
+    Widget app({bool staff = false}) => MaterialApp(
         home: Scaffold(
             body: Align(
                 alignment: Alignment.bottomCenter,
                 child: PosCheckoutPanel(
-                    preferenceKey: 'shortcut:$shop',
                     compact: true,
                     subtotal: 100,
                     discount: 0,
@@ -234,22 +233,19 @@ void main() {
                     onCheckout: () {},
                     onDiscount: () {},
                     onDebt: () {}))));
-    await tester.pumpWidget(app('a'));
+    await tester.pumpWidget(app());
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('checkout-more')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('ปักหมุดปุ่มขายเชื่อ'));
+    expect(find.text('ค้างชำระ'), findsOneWidget);
+    expect(find.text('ส่วนลด'), findsOneWidget);
+    expect(find.textContaining('ปักหมุด'), findsNothing);
+    await tester.tapAt(Offset.zero);
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(OutlinedButton, 'ขายเชื่อ'), findsOneWidget);
-    await tester.pumpWidget(app('b'));
+    await tester.pumpWidget(app(staff: true));
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(OutlinedButton, 'ขายเชื่อ'), findsNothing);
-    await tester.pumpWidget(app('a'));
-    await tester.pumpAndSettle();
-    expect(find.widgetWithText(OutlinedButton, 'ขายเชื่อ'), findsOneWidget);
-    await tester.pumpWidget(app('a', staff: true));
-    await tester.pumpAndSettle();
-    expect(find.text('ขายเชื่อ'), findsNothing);
+    expect(find.text('ค้างชำระ'), findsNothing);
+    expect(find.text('ส่วนลด'), findsNothing);
     expect(find.byKey(const ValueKey('checkout-more')), findsNothing);
   });
 

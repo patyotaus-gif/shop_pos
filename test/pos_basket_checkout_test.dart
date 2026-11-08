@@ -91,7 +91,6 @@ void main() {
                           ? null
                           : const ListTile(title: Text('เพิ่มลูกค้าสะสมแต้ม'))),
                   checkout: PosCheckoutPanel(
-                      preferenceKey: 'test-shortcut',
                       compact: true,
                       horizontalTotal: size.height < 500,
                       subtotal: 700,
