@@ -128,5 +128,12 @@ void main() {
         find.textContaining('เบอร์นี้เป็นของลูกค้า "คุณเอ"'), findsOneWidget);
     expect(find.textContaining('Bad state'), findsNothing);
     expect(results, isEmpty, reason: 'the dialog stays open');
+    await tester.tap(find.byKey(const ValueKey('debt-customer-back')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('เบอร์นี้เป็นของลูกค้า'), findsNothing);
+    await tester.tap(find.text('คุณเอ'));
+    await tester.pumpAndSettle();
+    expect(results.single!.customerId, 'c1',
+        reason: 'back to the list searched by that phone');
   });
 }

@@ -110,64 +110,69 @@ class _DebtCustomerPickerState extends State<DebtCustomerPicker> {
                 border: OutlineInputBorder(),
               ),
             ),
-          ] else
-            Flexible(
-              child: StreamBuilder<List<Customer>>(
-                stream: _customers,
-                builder: (context, customerSnap) => StreamBuilder<List<Debt>>(
-                  stream: _debts,
-                  builder: (context, debtSnap) {
-                    if (customerSnap.hasError) {
-                      return const Padding(
-                          padding: EdgeInsets.all(8),
-                          child: Text(
-                              'โหลดรายชื่อลูกค้าไม่สำเร็จ เพิ่มชื่อใหม่ได้ด้านล่าง'));
-                    }
-                    final customers = customerSnap.data ?? const <Customer>[];
-                    final known = customers.map((c) => c.name.trim()).toSet();
-                    final legacy = <String>{
-                      for (final d in debtSnap.data ?? const <Debt>[])
-                        if (d.customerId == null &&
-                            d.customerName.trim().isNotEmpty &&
-                            !known.contains(d.customerName.trim()))
-                          d.customerName.trim()
-                    }.toList()
-                      ..sort();
-                    bool matches(String text) =>
-                        query.isEmpty || text.toLowerCase().contains(query);
-                    final rows = <Widget>[
-                      for (final c in customers)
-                        if (matches(c.name) || matches(c.phone))
-                          ListTile(
-                            dense: true,
-                            leading: const Icon(Icons.person_outline),
-                            title: Text(c.name),
-                            subtitle: c.phone.isEmpty ? null : Text(c.phone),
-                            onTap: () => _choose(c.name, id: c.id),
-                          ),
-                      for (final name in legacy)
-                        if (matches(name))
-                          ListTile(
-                            dense: true,
-                            leading: const Icon(Icons.history),
-                            title: Text(name),
-                            subtitle: const Text('เคยค้างชำระ'),
-                            onTap: () => _choose(name),
-                          ),
-                    ];
-                    if (rows.isEmpty) {
-                      return Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(query.isEmpty
-                            ? 'ยังไม่มีรายชื่อลูกค้า'
-                            : 'ไม่พบ "${_search.text.trim()}"'),
-                      );
-                    }
-                    return ListView(shrinkWrap: true, children: rows);
-                  },
+          ],
+          // Kept mounted while adding, so going back to the list never
+          // re-listens the customer and debt streams.
+          Flexible(
+              key: const ValueKey('debt-customer-list'),
+              child: Offstage(
+                offstage: _adding,
+                child: StreamBuilder<List<Customer>>(
+                  stream: _customers,
+                  builder: (context, customerSnap) => StreamBuilder<List<Debt>>(
+                    stream: _debts,
+                    builder: (context, debtSnap) {
+                      if (customerSnap.hasError) {
+                        return const Padding(
+                            padding: EdgeInsets.all(8),
+                            child: Text(
+                                'โหลดรายชื่อลูกค้าไม่สำเร็จ เพิ่มชื่อใหม่ได้ด้านล่าง'));
+                      }
+                      final customers = customerSnap.data ?? const <Customer>[];
+                      final known = customers.map((c) => c.name.trim()).toSet();
+                      final legacy = <String>{
+                        for (final d in debtSnap.data ?? const <Debt>[])
+                          if (d.customerId == null &&
+                              d.customerName.trim().isNotEmpty &&
+                              !known.contains(d.customerName.trim()))
+                            d.customerName.trim()
+                      }.toList()
+                        ..sort();
+                      bool matches(String text) =>
+                          query.isEmpty || text.toLowerCase().contains(query);
+                      final rows = <Widget>[
+                        for (final c in customers)
+                          if (matches(c.name) || matches(c.phone))
+                            ListTile(
+                              dense: true,
+                              leading: const Icon(Icons.person_outline),
+                              title: Text(c.name),
+                              subtitle: c.phone.isEmpty ? null : Text(c.phone),
+                              onTap: () => _choose(c.name, id: c.id),
+                            ),
+                        for (final name in legacy)
+                          if (matches(name))
+                            ListTile(
+                              dense: true,
+                              leading: const Icon(Icons.history),
+                              title: Text(name),
+                              subtitle: const Text('เคยค้างชำระ'),
+                              onTap: () => _choose(name),
+                            ),
+                      ];
+                      if (rows.isEmpty) {
+                        return Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Text(query.isEmpty
+                              ? 'ยังไม่มีรายชื่อลูกค้า'
+                              : 'ไม่พบ "${_search.text.trim()}"'),
+                        );
+                      }
+                      return ListView(shrinkWrap: true, children: rows);
+                    },
+                  ),
                 ),
-              ),
-            ),
+              )),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -183,6 +188,19 @@ class _DebtCustomerPickerState extends State<DebtCustomerPicker> {
         TextButton(
             onPressed: _saving ? null : () => Navigator.pop(context),
             child: const Text('ยกเลิก')),
+        if (_adding)
+          TextButton(
+            key: const ValueKey('debt-customer-back'),
+            onPressed: _saving
+                ? null
+                : () => setState(() {
+                      _adding = false;
+                      _error = null;
+                      final phone = _phone.text.trim();
+                      if (phone.isNotEmpty) _search.text = phone;
+                    }),
+            child: const Text('กลับไปรายชื่อ'),
+          ),
         if (_adding)
           FilledButton(
             key: const ValueKey('debt-customer-save'),

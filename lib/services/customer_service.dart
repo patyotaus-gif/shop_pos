@@ -79,7 +79,8 @@ class CustomerService {
       byPhone.name.trim() == typedName.trim()
           ? null
           : 'เบอร์นี้เป็นของลูกค้า "${byPhone.name}" อยู่แล้ว '
-              'กรุณาเลือกจากรายชื่อ หรือใช้เบอร์อื่น';
+              'ถ้าเป็นคนเดียวกัน กด "กลับไปรายชื่อ" แล้วเลือกชื่อนั้น '
+              'หรือใช้เบอร์อื่น';
 
   /// Customer picked for a ค้างชำระ bill. Phone is optional here, so reuse a
   /// record by phone first, then by exact name, before creating a new one.

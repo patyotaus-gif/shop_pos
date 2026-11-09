@@ -16,7 +16,7 @@ Rules:
 ## Current state (updated 2026-11-09)
 
 **Branch:** `gif-feedback-2026-11` on top of `d29153f` (master), pushed to GitHub.
-Not merged; nothing deployed or released from it. Release in progress: review round 2 next.
+Not merged; nothing deployed or released from it. Release in progress: review round 3 next.
 
 **Live:** Android 1.2.74 (build 91) from `d29153f`, served at
 `pok-pok.app/app/version.json`. Functions on production are the pre-branch versions.
@@ -45,6 +45,14 @@ signed with the release key. The owner's test shop is logged in.
   shop has more tables than fit on one screen.
 - **L6** Staff tables tab polls all open table orders every 5 s. Revisit if
   Functions cost or latency rises.
+- Round 2 **L-3**: bill-request hints are listened once and not re-subscribed
+  after the stream errors (hints can freeze until the screen is rebuilt).
+  Revisit if รอชำระเงิน badges are reported stale.
+- Round 2 **L-4**: `ensureByName` and the counter POS redemption have no
+  automated test (CustomerService uses `FirebaseFirestore.instance`, not the
+  `ShopDatabase` test override). Revisit when CustomerService is next changed.
+- Pre-existing: if the typed debt phone matches nobody, `ensureByName` falls back
+  to an exact name match and drops the phone (same-name customers merge).
 - L3 part not fixed: counter redemption maximum ignores bundle discounts;
   checkout still blocks a negative total.
 
@@ -77,6 +85,21 @@ signed with the release key. The owner's test shop is logged in.
 ---
 
 ## Log
+
+### 2026-11-09 — Review round 2 fixes
+- Round 2 (subject `d841f9b`): one Medium, four Lows; nothing Critical/High.
+- Fixed **M-1**: the counter redeem flow awaited a balance read with no guard,
+  so a slow network could apply a points discount mid-checkout or to the next
+  bill. It now holds a `_redeeming` lock (button, ✕, checkout and bundles
+  blocked) and re-checks the attached customer after every wait.
+- Fixed **L-2**: if the re-read balance no longer covers the applied points, the
+  redemption is cleared with a message; the prefill never exceeds the maximum.
+- Fixed **L-1**: the phone-conflict message points to a new "กลับไปรายชื่อ"
+  button that returns to the list searched by that phone. The list now stays
+  mounted while adding (a new test caught a re-listen crash there).
+- Verified locally: analyze clean; flutter test 395 pass, only the 5
+  pre-existing failures. No server code changed. Not on a device.
+- Backlog L-3, L-4: see Current state. Next: review round 3.
 
 ### 2026-11-09 — Review round 1 fixes
 - Round 1 report: H1, M1 and L1–L6, all introduced; nothing Critical.
