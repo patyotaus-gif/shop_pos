@@ -63,6 +63,12 @@ signed with the release key. The owner's test shop is logged in.
 
 ## Log
 
+### 2026-11-09 — Handoff log introduced
+- Added this file and the "Handoff log (required)" rule in `AGENTS.md`
+  (branch `467777f`, `2c1b713`). At the owner's request both were also
+  cherry-picked onto local master as `42dce63` and `3679443`, so any assistant
+  starting from master sees them. Nothing pushed.
+
 ### 2026-11-09 — Device test, refund bug fix, cleanup
 - Installed the branch build on SM-X900 and tested on the real shop (owner approved):
   table status (ว่าง / กำลังใช้งาน / รอชำระเงิน), bill-request toggle, drag to
