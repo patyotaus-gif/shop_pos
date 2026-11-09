@@ -135,6 +135,47 @@ void main() {
     expect(badgeOf('1A'), 'กำลังใช้งาน');
     expect(badgeOf('1B'), 'รอชำระเงิน');
   });
+  testWidgets(
+      'a failed tables poll recovers without re-listening the staff bill stream',
+      (tester) async {
+    // Staff streams are single-subscription polls: a second listen throws.
+    final tables = StreamController<List<RestaurantTable>>();
+    final orders = StreamController<List<TableOrder>>();
+    var listens = 0;
+    orders.onListen = () => listens++;
+    await tester.pumpWidget(MaterialApp(
+        theme: PokpokTheme.light(),
+        home: TablesScreen(
+            loadTables: () => tables.stream,
+            loadOpenOrders: () => orders.stream)));
+    final open = RestaurantTable(
+        id: '1B',
+        name: '1B',
+        status: TableStatus.occupied,
+        createdAt: DateTime(2026, 11, 8));
+    tables.add([open]);
+    orders.add([
+      TableOrder(
+          id: 'b',
+          tableId: '1B',
+          tableName: '1B',
+          items: const [],
+          openedAt: DateTime(2026, 11, 8),
+          billRequestedAt: DateTime(2026, 11, 8, 12)),
+    ]);
+    await tester.pumpAndSettle();
+    expect(find.text('รอชำระเงิน'), findsOneWidget);
+    tables.addError(Exception('unavailable'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('โหลดโต๊ะไม่สำเร็จ'), findsOneWidget);
+    tables.add([open]);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('รอชำระเงิน'), findsOneWidget);
+    expect(listens, 1);
+    await tables.close();
+    await orders.close();
+  });
   test('arranged tables come first in their order, the rest by creation', () {
     RestaurantTable t(String id, int day, [int? order]) => RestaurantTable(
         id: id, name: id, createdAt: DateTime(2026, 11, day), sortOrder: order);

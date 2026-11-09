@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shop_pos/models/customer.dart';
 import 'package:shop_pos/models/debt.dart';
+import 'package:shop_pos/services/customer_service.dart';
 import 'package:shop_pos/theme/pokpok_theme.dart';
 import 'package:shop_pos/widgets/debt_customer_picker.dart';
 
@@ -30,7 +31,7 @@ void main() {
   ];
 
   Future<List<DebtCustomerChoice?>> open(WidgetTester tester,
-      {required List<(String, String)> created}) async {
+      {required List<(String, String)> created, Object? createError}) async {
     final results = <DebtCustomerChoice?>[];
     await tester.pumpWidget(MaterialApp(
         theme: PokpokTheme.light(),
@@ -38,17 +39,18 @@ void main() {
             builder: (context) => Scaffold(
                 body: TextButton(
                     onPressed: () async => results.add(
-                        await DebtCustomerPicker.show(context,
-                            customers: Stream.value(customers),
-                            debts: Stream.value(debts),
-                            create: (name, phone) async {
-                              created.add((name, phone));
-                              return Customer(
-                                  id: 'new-$name',
-                                  name: name,
-                                  phone: phone,
-                                  createdAt: DateTime(2026, 11, 8));
-                            })),
+                            await DebtCustomerPicker.show(context,
+                                customers: Stream.value(customers),
+                                debts: Stream.value(debts),
+                                create: (name, phone) async {
+                          created.add((name, phone));
+                          if (createError != null) throw createError;
+                          return Customer(
+                              id: 'new-$name',
+                              name: name,
+                              phone: phone,
+                              createdAt: DateTime(2026, 11, 8));
+                        })),
                     child: const Text('open'))))));
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
@@ -98,5 +100,33 @@ void main() {
     await tester.pumpAndSettle();
     expect(created, [('ลุงดำ', '0822222222')]);
     expect(results.single!.name, 'ลุงดำ');
+  });
+
+  test('a phone owned by a differently named customer is a conflict', () {
+    final owner = customers.first;
+    expect(CustomerService.phoneConflict(owner, ' คุณเอ '), isNull);
+    expect(CustomerService.phoneConflict(owner, 'ป้าแดง'), contains('คุณเอ'));
+  });
+
+  testWidgets('a rejected new customer shows why and records no debt',
+      (tester) async {
+    final created = <(String, String)>[];
+    final results = await open(tester,
+        created: created,
+        createError: StateError(
+            CustomerService.phoneConflict(customers.first, 'ป้าแดง')!));
+    await tester.tap(find.byKey(const ValueKey('debt-customer-add')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byKey(const ValueKey('debt-customer-search')), 'ป้าแดง');
+    await tester.enterText(
+        find.byKey(const ValueKey('debt-customer-phone')), '0811111111');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('debt-customer-save')));
+    await tester.pumpAndSettle();
+    expect(
+        find.textContaining('เบอร์นี้เป็นของลูกค้า "คุณเอ"'), findsOneWidget);
+    expect(find.textContaining('Bad state'), findsNothing);
+    expect(results, isEmpty, reason: 'the dialog stays open');
   });
 }

@@ -35,17 +35,14 @@ class CustomerService {
           .doc(AuthService.shopId)
           .collection('customers');
 
-  static Stream<List<Customer>> watchAll() => _col()
-      .orderBy('lastVisitAt', descending: true)
-      .snapshots()
-      .map((s) =>
+  static Stream<List<Customer>> watchAll() =>
+      _col().orderBy('lastVisitAt', descending: true).snapshots().map((s) =>
           s.docs.map((d) => Customer.fromFirestore(d.data(), d.id)).toList());
 
   static Future<Customer?> findByPhone(String phone) async {
     final clean = phone.trim();
     if (clean.isEmpty) return null;
-    final snap =
-        await _col().where('phone', isEqualTo: clean).limit(1).get();
+    final snap = await _col().where('phone', isEqualTo: clean).limit(1).get();
     if (snap.docs.isEmpty) return null;
     return Customer.fromFirestore(snap.docs.first.data(), snap.docs.first.id);
   }
@@ -76,6 +73,14 @@ class CustomerService {
     return (snap.data()?['points'] as num? ?? 0).toInt();
   }
 
+  /// A typed phone that already belongs to a differently named customer must
+  /// not silently book the debt to that customer.
+  static String? phoneConflict(Customer byPhone, String typedName) =>
+      byPhone.name.trim() == typedName.trim()
+          ? null
+          : 'เบอร์นี้เป็นของลูกค้า "${byPhone.name}" อยู่แล้ว '
+              'กรุณาเลือกจากรายชื่อ หรือใช้เบอร์อื่น';
+
   /// Customer picked for a ค้างชำระ bill. Phone is optional here, so reuse a
   /// record by phone first, then by exact name, before creating a new one.
   static Future<Customer> ensureByName({
@@ -85,7 +90,11 @@ class CustomerService {
     final cleanName = name.trim();
     if (cleanName.isEmpty) throw StateError('กรุณาระบุชื่อลูกค้า');
     final byPhone = await findByPhone(phone);
-    if (byPhone != null) return byPhone;
+    if (byPhone != null) {
+      final conflict = phoneConflict(byPhone, cleanName);
+      if (conflict != null) throw StateError(conflict);
+      return byPhone;
+    }
     final byName =
         await _col().where('name', isEqualTo: cleanName).limit(1).get();
     if (byName.docs.isNotEmpty) {

@@ -15,8 +15,8 @@ Rules:
 
 ## Current state (updated 2026-11-09)
 
-**Branch:** `gif-feedback-2026-11`, 12 commits on top of `d29153f` (master), the last one adds this handoff log.
-Not merged, not pushed, nothing deployed or released from it.
+**Branch:** `gif-feedback-2026-11` on top of `d29153f` (master), pushed to GitHub.
+Not merged; nothing deployed or released from it. Release in progress: review round 2 next.
 
 **Live:** Android 1.2.74 (build 91) from `d29153f`, served at
 `pok-pok.app/app/version.json`. Functions on production are the pre-branch versions.
@@ -32,6 +32,21 @@ signed with the release key. The owner's test shop is logged in.
    self-hosted release steps (copy APK to `public/app/`, update `version.json`,
    deploy hosting). Copy the APK before deploying hosting.
 3. Every step needs the owner's go-ahead.
+
+### Review backlog (round 1, Low, accepted for this release)
+- **L1** Staff can't unblock a table bill whose redeemed points no longer fit
+  (loyalty action is owner-only; staff UI hides the strip). Staff reads also
+  include `tablePromotion.loyalty` (customer name/id). Revisit if staff report
+  a stuck table or before giving staff loyalty controls.
+- **L2** Points discount not itemised in the coupon dialog; payment sheet lumps it
+  into ส่วนลด; 1.2.74/staff figures don't add up (totals correct). Revisit when
+  the dialog is next changed.
+- **L5** จัดเรียง mode can't scroll (cards start a drag at once). Revisit if a
+  shop has more tables than fit on one screen.
+- **L6** Staff tables tab polls all open table orders every 5 s. Revisit if
+  Functions cost or latency rises.
+- L3 part not fixed: counter redemption maximum ignores bundle discounts;
+  checkout still blocks a negative total.
 
 ### Known issues and leftovers
 - **Live bug on 1.2.74:** refunds started from the sales report do nothing
@@ -62,6 +77,33 @@ signed with the release key. The owner's test shop is logged in.
 ---
 
 ## Log
+
+### 2026-11-09 — Review round 1 fixes
+- Round 1 report: H1, M1 and L1–L6, all introduced; nothing Critical.
+- Fixed **H1**: the staff tables grid crashed ("Stream has already been
+  listened to") after one failed poll. The bill stream is now listened once in
+  `initState`. A regression test fails on the old code and passes now.
+- Fixed **M1**: a new ค้างชำระ customer whose phone belongs to a differently
+  named customer is now refused with a message naming that customer, instead of
+  booking the debt to them.
+- Fixed **L3**: setting a manual discount now shrinks the points redemption.
+  Fixed **L4**: the counter redeem dialog re-reads the points balance.
+- Verified locally: flutter analyze clean; flutter test 395 pass, with only the
+  5 pre-existing failures. No server code changed. Not yet on a device.
+- Backlog L1, L2, L5, L6: see Current state. Next: independent review round 2.
+
+### 2026-11-09 — Pushed; release started with an independent review
+- Owner asked to push and release. Pushed `master` (3679443) and
+  `gif-feedback-2026-11` (7b805f2) to GitHub. Pushing deploys nothing: no GitHub
+  Actions, and `codemagic.yaml` has no push trigger.
+- Security: the `origin` remote URL embeds a GitHub personal access token in
+  plain text in `.git/config`. Owner advised to revoke it and switch to a
+  credential manager. Not changed yet.
+- Owner chose an independent review before release (release-gate). Round 1:
+  fresh headless Claude Code 2.1.319 (`--restricted`, read-only), subject
+  `d29153f..gif-feedback-2026-11`. Grok not installed. Use the VS Code bundled
+  `claude.exe`; `~/.local/bin/claude.exe` is 2.1.77 and lacks `--restricted`.
+  Python for the wrapper: `~/.local/bin/python3.12.exe`.
 
 ### 2026-11-09 — Handoff log introduced
 - Added this file and the "Handoff log (required)" rule in `AGENTS.md`

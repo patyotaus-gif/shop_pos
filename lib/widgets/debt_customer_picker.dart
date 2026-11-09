@@ -114,8 +114,7 @@ class _DebtCustomerPickerState extends State<DebtCustomerPicker> {
             Flexible(
               child: StreamBuilder<List<Customer>>(
                 stream: _customers,
-                builder: (context, customerSnap) =>
-                    StreamBuilder<List<Debt>>(
+                builder: (context, customerSnap) => StreamBuilder<List<Debt>>(
                   stream: _debts,
                   builder: (context, debtSnap) {
                     if (customerSnap.hasError) {
@@ -125,8 +124,7 @@ class _DebtCustomerPickerState extends State<DebtCustomerPicker> {
                               'โหลดรายชื่อลูกค้าไม่สำเร็จ เพิ่มชื่อใหม่ได้ด้านล่าง'));
                     }
                     final customers = customerSnap.data ?? const <Customer>[];
-                    final known =
-                        customers.map((c) => c.name.trim()).toSet();
+                    final known = customers.map((c) => c.name.trim()).toSet();
                     final legacy = <String>{
                       for (final d in debtSnap.data ?? const <Debt>[])
                         if (d.customerId == null &&
@@ -173,7 +171,10 @@ class _DebtCustomerPickerState extends State<DebtCustomerPicker> {
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Text('บันทึกลูกค้าไม่สำเร็จ: $_error',
+              child: Text(
+                  _error is StateError
+                      ? (_error as StateError).message
+                      : 'บันทึกลูกค้าไม่สำเร็จ: $_error',
                   style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ),
         ]),

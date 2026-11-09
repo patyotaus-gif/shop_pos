@@ -1,3 +1,4 @@
+import 'dart:async';
 import '../services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -29,13 +30,35 @@ class _TablesScreenState extends State<TablesScreen> {
   Stream<List<RestaurantTable>> _load() =>
       (widget.loadTables ?? TableService.watchTables)();
   // Open bills only add the รอชำระเงิน hint; the grid still works without them.
-  late final Stream<Set<String>> _billRequested =
-      (widget.loadOpenOrders ?? TableService.watchOpenOrders)()
-          .map((orders) => {
-                for (final o in orders)
-                  if (o.billRequested) o.tableId
-              })
-          .handleError((_) {});
+  // Listened to once for the screen's life: the staff stream is a
+  // single-subscription poll, so rebuilding the grid must not re-listen.
+  Set<String> _bills = const {};
+  StreamSubscription<List<TableOrder>>? _billSub;
+
+  @override
+  void initState() {
+    super.initState();
+    final Stream<List<TableOrder>> orders;
+    try {
+      orders = (widget.loadOpenOrders ?? TableService.watchOpenOrders)();
+    } catch (_) {
+      return; // No bill hints; the grid itself still loads.
+    }
+    _billSub = orders.listen((orders) {
+      if (!mounted) return;
+      setState(() => _bills = {
+            for (final o in orders)
+              if (o.billRequested) o.tableId
+          });
+    }, onError: (_) {});
+  }
+
+  @override
+  void dispose() {
+    _billSub?.cancel();
+    super.dispose();
+  }
+
   bool _arranging = false;
   // Shown immediately after a swap, until the saved order streams back.
   List<String>? _pendingOrder;
@@ -136,56 +159,50 @@ class _TablesScreenState extends State<TablesScreen> {
                         ? null
                         : () => _editTable(context, table),
                   );
-              return StreamBuilder<Set<String>>(
-                  stream: _billRequested,
-                  builder: (context, bills) => Column(children: [
-                        if (_arranging)
-                          const Padding(
-                            padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
-                            child: Text(
-                                'ลากโต๊ะไปวางบนอีกโต๊ะเพื่อสลับตำแหน่ง แล้วกด "เสร็จ"'),
-                          ),
-                        Expanded(
-                            child: GridView.builder(
-                          padding: const EdgeInsets.all(16),
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: columns,
-                            // Reserve two lines for the status, name and section at
-                            // the user's text scale, plus card padding and spacing.
-                            mainAxisExtent: cellHeight,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                          ),
-                          itemCount: tables.length,
-                          itemBuilder: (_, i) {
-                            final table = tables[i];
-                            if (!_arranging) return card(table, bills.data);
-                            return DragTarget<String>(
-                              key: ValueKey('arrange-${table.id}'),
-                              onWillAcceptWithDetails: (d) =>
-                                  d.data != table.id,
-                              onAcceptWithDetails: (d) =>
-                                  _swap(tables, d.data, table.id),
-                              builder: (context, candidates, _) =>
-                                  Draggable<String>(
-                                data: table.id,
-                                feedback: Material(
-                                    color: Colors.transparent,
-                                    child: SizedBox(
-                                        width: cellWidth,
-                                        height: cellHeight,
-                                        child: card(table, bills.data))),
-                                childWhenDragging: Opacity(
-                                    opacity: 0.3,
-                                    child: card(table, bills.data)),
-                                child: card(table, bills.data,
-                                    highlighted: candidates.isNotEmpty),
-                              ),
-                            );
-                          },
-                        )),
-                      ]));
+              return Column(children: [
+                if (_arranging)
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: Text(
+                        'ลากโต๊ะไปวางบนอีกโต๊ะเพื่อสลับตำแหน่ง แล้วกด "เสร็จ"'),
+                  ),
+                Expanded(
+                    child: GridView.builder(
+                  padding: const EdgeInsets.all(16),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: columns,
+                    // Reserve two lines for the status, name and section at
+                    // the user's text scale, plus card padding and spacing.
+                    mainAxisExtent: cellHeight,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  itemCount: tables.length,
+                  itemBuilder: (_, i) {
+                    final table = tables[i];
+                    if (!_arranging) return card(table, _bills);
+                    return DragTarget<String>(
+                      key: ValueKey('arrange-${table.id}'),
+                      onWillAcceptWithDetails: (d) => d.data != table.id,
+                      onAcceptWithDetails: (d) =>
+                          _swap(tables, d.data, table.id),
+                      builder: (context, candidates, _) => Draggable<String>(
+                        data: table.id,
+                        feedback: Material(
+                            color: Colors.transparent,
+                            child: SizedBox(
+                                width: cellWidth,
+                                height: cellHeight,
+                                child: card(table, _bills))),
+                        childWhenDragging:
+                            Opacity(opacity: 0.3, child: card(table, _bills)),
+                        child: card(table, _bills,
+                            highlighted: candidates.isNotEmpty),
+                      ),
+                    );
+                  },
+                )),
+              ]);
             },
           );
         },

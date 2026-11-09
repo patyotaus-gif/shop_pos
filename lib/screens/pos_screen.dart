@@ -172,8 +172,27 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   Future<void> _redeemPoints() async {
-    final customer = _loyaltyCustomer;
-    if (customer == null) return;
+    final attached = _loyaltyCustomer;
+    if (attached == null) return;
+    Customer customer = attached;
+    // The balance may have changed since the customer was attached (another
+    // device, a refund, or a failed redemption), so read it fresh.
+    try {
+      final points = await CustomerService.pointsOf(customer.id);
+      if (!mounted || _loyaltyCustomer?.id != attached.id) return;
+      final fresh = Customer(
+          id: customer.id,
+          name: customer.name,
+          phone: customer.phone,
+          points: points,
+          totalSpent: customer.totalSpent,
+          createdAt: customer.createdAt,
+          lastVisitAt: customer.lastVisitAt);
+      customer = fresh;
+      setState(() => _loyaltyCustomer = fresh);
+    } catch (_) {
+      // Offline: fall back to the balance shown; checkout re-checks it.
+    }
     final max = CustomerService.maxRedeemBaht(
         points: customer.points,
         pointsPerBaht: _pointsPerBaht,
@@ -573,7 +592,10 @@ class _PosScreenState extends State<PosScreen> {
       ),
     );
     if (result != null) {
-      setState(() => _discount = result.clamp(0.0, _subtotal));
+      setState(() {
+        _discount = result.clamp(0.0, _subtotal);
+        _clampRedeem();
+      });
     }
   }
 
