@@ -49,6 +49,13 @@ function localFile(url) {
     await page.locator('#by').click();assert.equal(await page.locator('.p-amt').first().textContent(),'1,990');
     await page.locator('#bm').click();assert.equal(await page.locator('.p-amt').first().textContent(),'199');
     await page.locator('#type-retail').click();assert.match(await page.locator('#plan-desc-0').textContent(),/ขายเอง/);
+    await page.goto('https://pokpok-preview.test/');
+    assert.match(await page.locator('h1').textContent(),/POS/);
+    assert.equal(await page.locator('#plans .p-card').count(),3);
+    assert.equal(await page.locator('.p-avg').first().isVisible(),false);
+    await page.locator('#by').click();assert.equal(await page.locator('.p-amt').first().textContent(),'1,990');assert.match(await page.locator('.p-avg').first().textContent(),/฿166/);
+    await page.locator('#type-restaurant').click();assert.match(await page.locator('#plan-fit-1').textContent(),/โต๊ะและครัว/);
+    await page.locator('#bm').click();assert.equal(await page.locator('.p-avg').first().isVisible(),false);
     await page.goto('https://pokpok-preview.test/guides/');
     await page.locator('#guide-search').fill('หมวดหมู่');assert.equal(await page.locator('.guide-card:visible').count(),1);
     await page.locator('#guide-search').fill('ไม่มีผลลัพธ์xyz');assert.equal(await page.locator('#guide-empty').isVisible(),true);

@@ -103,3 +103,6 @@ main > .online { width: 100%; }
   .download-guides { padding: 22px; }
   .order-shot img { width: 100%; }
 }
+.p-fit { font-size: 13px; color: var(--muted); margin-top: 4px; line-height: 1.6; }
+.p-avg { font-size: 13px; color: var(--wine); font-weight: 600; margin-top: -4px; }
+#plans .pricing-cards { margin-top: 20px; }

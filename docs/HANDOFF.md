@@ -31,8 +31,11 @@ it will be offered 1.2.75 by the in-app updater.
 - Device-check 1.2.75 on the tablet: table-bill loyalty and staff bill request
   (now possible with the Functions live), counter points lock on a slow network,
   debt picker phone conflict and "กลับไปรายชื่อ".
-- Gif's website feedback (2026-11-09): plan agreed in chat; start with hero
-  headline, current screenshots and pricing cards on the home page.
+- Website (Gif's feedback 2026-11-09), branch `website-gif-2026-11`:
+  round 1 committed, **not deployed** (needs the owner's go-ahead). Still to do:
+  current-version screenshots (needs the tablet and a shop whose data may be
+  shown publicly), 3–4 feature blocks with real screenshots (Thai names first),
+  separate `/retail/` and `/restaurant/` pages, real shop photography.
 
 ### Review backlog (Low, accepted for 1.2.75)
 - **L1** Staff can't unblock a table bill whose redeemed points no longer fit
@@ -100,6 +103,20 @@ it will be offered 1.2.75 by the in-app updater.
 ---
 
 ## Log
+
+### 2026-11-10 — Website round 1 (branch `website-gif-2026-11`, not deployed)
+- Home hero: the H1 now names the product ("แอป POS สำหรับร้านค้าปลีกและร้านอาหาร");
+  the slogan moved to the eyebrow; the subtitle lists plain benefits (phone or
+  tablet the shop already has, cash/transfer/QR, low stock, debts, daily sales,
+  table orders to the kitchen).
+- Home page now shows the real pricing cards (monthly/yearly and shop-type
+  toggles) instead of a one-line summary. Both home and `/pricing/` cards add a
+  "เหมาะกับ…" line per plan and shop type, a yearly per-month average (฿166 /
+  ฿333 / ฿499), and a named CTA per plan. Prices unchanged.
+- Section id is `plans`; legacy `/#pricing` still redirects to `/pricing/`.
+  CSS/JS links carry `?v=20261110-plans`.
+- Verified locally: `scripts/test_marketing_pages.cjs` PASS (16 pages × 5
+  widths, plus new home-pricing checks); screenshots at 390 and 1440 reviewed.
 
 ### 2026-11-10 — Released Android 1.2.75 (92)
 - Owner said "ปล่อยก่อน" while review round 6 was running; round 6 then
