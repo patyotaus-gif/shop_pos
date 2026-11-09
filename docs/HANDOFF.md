@@ -32,7 +32,7 @@ it will be offered 1.2.75 by the in-app updater.
   (now possible with the Functions live), counter points lock on a slow network,
   debt picker phone conflict and "กลับไปรายชื่อ".
 - Website (Gif's feedback 2026-11-09), branch `website-gif-2026-11`:
-  round 1 committed, **not deployed** (needs the owner's go-ahead). Still to do:
+  round 1 merged to master and **deployed 2026-11-10**. Still to do:
   current-version screenshots (needs the tablet and a shop whose data may be
   shown publicly), 3–4 feature blocks with real screenshots (Thai names first),
   separate `/retail/` and `/restaurant/` pages, real shop photography.
@@ -104,7 +104,9 @@ it will be offered 1.2.75 by the in-app updater.
 
 ## Log
 
-### 2026-11-10 — Website round 1 (branch `website-gif-2026-11`, not deployed)
+### 2026-11-10 — Website round 1 deployed
+- Owner approved; fast-forwarded master to `0089fd2`, deployed hosting. Verified
+  live: new H1, `#plans` section, new site.js; version.json still 1.2.75/92.
 - Home hero: the H1 now names the product ("แอป POS สำหรับร้านค้าปลีกและร้านอาหาร");
   the slogan moved to the eyebrow; the subtitle lists plain benefits (phone or
   tablet the shop already has, cash/transfer/QR, low stock, debts, daily sales,
