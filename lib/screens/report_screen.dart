@@ -1122,7 +1122,9 @@ class _SalesReportState extends State<_SalesReport> {
                 ),
               ),
               const SizedBox(width: 8),
-              Expanded(child: _RefundButton(sale: sale, baht: bahtFmt)),
+              Expanded(
+                  child: _RefundButton(
+                      sale: sale, baht: bahtFmt, host: context)),
             ]),
           ],
         ),
@@ -1135,7 +1137,31 @@ class _SalesReportState extends State<_SalesReport> {
 class _RefundButton extends StatelessWidget {
   final Sale sale;
   final NumberFormat baht;
-  const _RefundButton({required this.sale, required this.baht});
+
+  /// Context of the sales list that opened the sheet. The sheet's own context
+  /// is gone once it closes, so the refund must run from here.
+  final BuildContext host;
+  const _RefundButton(
+      {required this.sale, required this.baht, required this.host});
+
+  Future<void> _refund() async {
+    final reason = await showDialog<RefundDecision>(
+      context: host,
+      builder: (_) => RefundReasonDialog(
+        amount: baht.format(sale.total),
+        online: sale.paymentMethod == PaymentMethod.online,
+        debt: sale.isDebt,
+      ),
+    );
+    if (reason == null || !host.mounted) return;
+    await performShopOperation(
+        host,
+        () => SaleService.refundSale(sale,
+            reason: reason.reason,
+            returnToStock: reason.returnToStock,
+            refundMethod: reason.method),
+        success: 'บันทึกคืนเงินแล้ว');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1146,25 +1172,9 @@ class _RefundButton extends StatelessWidget {
       );
     }
     return OutlinedButton.icon(
-      onPressed: () async {
+      onPressed: () {
         Navigator.pop(context);
-        final reason = await showDialog<RefundDecision>(
-          context: context,
-          builder: (_) => RefundReasonDialog(
-            amount: baht.format(sale.total),
-            online: sale.paymentMethod == PaymentMethod.online,
-            debt: sale.isDebt,
-          ),
-        );
-        if (reason != null && context.mounted) {
-          await performShopOperation(
-              context,
-              () => SaleService.refundSale(sale,
-                  reason: reason.reason,
-                  returnToStock: reason.returnToStock,
-                  refundMethod: reason.method),
-              success: 'บันทึกคืนเงินแล้ว');
-        }
+        _refund();
       },
       icon: const Icon(Icons.undo, color: Colors.red),
       label: const Text('คืนเงิน', style: TextStyle(color: Colors.red)),
