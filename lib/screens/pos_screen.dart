@@ -59,11 +59,18 @@ class _PosScreenState extends State<PosScreen> {
   // Every read is time-limited so the lock can't hang.
   bool _redeeming = false;
   static const _loyaltyReadTimeout = Duration(seconds: 6);
+  // Attaching may create the customer record, a write the server must confirm.
+  static const _loyaltyWriteTimeout = Duration(seconds: 12);
 
-  void _loyaltyBusyMessage() {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('กำลังโหลดข้อมูลลูกค้าสะสมแต้ม รอสักครู่')));
+  // Replace, never queue: a stale "please wait" must not delay the result.
+  void _loyaltyMessage(String text) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(text)));
   }
+
+  void _loyaltyBusyMessage() =>
+      _loyaltyMessage('กำลังโหลดข้อมูลลูกค้าสะสมแต้ม รอสักครู่');
   bool _checkingPending = true;
   Sale? _pendingSale;
   PaymentMethod _paymentMethod = PaymentMethod.cash;
@@ -172,33 +179,32 @@ class _PosScreenState extends State<PosScreen> {
       ),
     );
     if (ok != true || phoneCtrl.text.trim().isEmpty || !mounted) return;
+    // ✕ while loading cancels this attach.
+    final before = _loyaltyCustomer?.id;
     final Customer customer;
     final int rate;
     try {
       customer = await CustomerService.ensure(
               phone: phoneCtrl.text, name: nameCtrl.text)
-          .timeout(_loyaltyReadTimeout);
+          .timeout(_loyaltyWriteTimeout);
       rate = await SettingsService.getLoyaltyPointsPerBaht()
           .timeout(_loyaltyReadTimeout);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(e is TimeoutException
-                ? 'โหลดลูกค้าสะสมแต้มไม่สำเร็จ กรุณาตรวจการเชื่อมต่อแล้วลองใหม่'
-                : operationError(e))));
+        _loyaltyMessage(e is TimeoutException
+            ? 'เชื่อมต่อช้า ยังไม่ได้เลือกลูกค้า (ลูกค้าใหม่อาจถูกบันทึกไว้แล้ว) '
+                'กรุณาเลือกเบอร์เดิมอีกครั้ง'
+            : operationError(e));
       }
       return;
     }
-    if (mounted) {
+    if (mounted && _loyaltyCustomer?.id == before) {
       setState(() {
         _loyaltyCustomer = customer;
         _pointsPerBaht = rate;
         _redeemBaht = 0;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('ลูกค้า ${customer.name} · ${customer.points} แต้ม')),
-      );
+      _loyaltyMessage('ลูกค้า ${customer.name} · ${customer.points} แต้ม');
     }
   }
 
@@ -896,8 +902,8 @@ class _PosScreenState extends State<PosScreen> {
                                       ),
                                     ),
                                     if (_redeeming)
-                                      // Absorbs taps so they don't fall
-                                      // through to the strip's attach action.
+                                      // Shows the lock; taps around it reach
+                                      // _attachCustomer, which is guarded.
                                       GestureDetector(
                                         key: const ValueKey('loyalty-loading'),
                                         onTap: _loyaltyBusyMessage,

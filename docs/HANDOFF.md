@@ -13,10 +13,10 @@ Rules:
 
 ---
 
-## Current state (updated 2026-11-09)
+## Current state (updated 2026-11-10)
 
 **Branch:** `gif-feedback-2026-11` on top of `d29153f` (master), pushed to GitHub.
-Not merged; nothing deployed or released from it. Release in progress: review round 4 next.
+Not merged; nothing deployed or released from it. Release in progress: review round 5 next.
 
 **Live:** Android 1.2.74 (build 91) from `d29153f`, served at
 `pok-pok.app/app/version.json`. Functions on production are the pre-branch versions.
@@ -51,6 +51,8 @@ signed with the release key. The owner's test shop is logged in.
 - Round 2 **L-4**: `ensureByName` and the counter POS redemption have no
   automated test (CustomerService uses `FirebaseFirestore.instance`, not the
   `ShopDatabase` test override). Revisit when CustomerService is next changed.
+- Round 3 **L-5** / round 4 **L-5**: the counter POS loyalty lock, timeouts and
+  redemption cap have no automated test (same cause as round 2 L-4).
 - Pre-existing: if the typed debt phone matches nobody, `ensureByName` falls back
   to an exact name match and drops the phone (same-name customers merge).
 - L3 part not fixed: counter redemption maximum ignores bundle discounts;
@@ -86,6 +88,16 @@ signed with the release key. The owner's test shop is logged in.
 
 ## Log
 
+### 2026-11-10 — Review round 4 fixes
+- Round 4 (subject `45bb0d6`): nothing Critical, High or Medium; four Lows.
+- Fixed: going back in the debt picker no longer forces the old name over a new
+  search; loyalty messages replace each other instead of queuing (a stale
+  "รอสักครู่" could delay the attach result); attaching a customer allows 12 s
+  for the create write and the timeout message says the customer may already be
+  saved; ✕ while an attach is loading now cancels it.
+- Verified locally: analyze clean; flutter test 396 pass, only the 5
+  pre-existing failures. No server code changed. Not on a device.
+
 ### 2026-11-10 — Review round 3 fixes
 - Round 3 (subject `9e56dbe`): one Medium, five Lows; nothing Critical/High.
   It also flagged, outside its subject, that attaching a loyalty customer on a
@@ -104,6 +116,7 @@ signed with the release key. The owner's test shop is logged in.
 - Verified locally: analyze clean; flutter test 396 pass, only the 5
   pre-existing failures. No server code changed. Counter POS lock still has no
   automated test (backlog L-4). Not on a device.
+- Round 3 Lows L-1 to L-4 fixed as above; L-5 (POS tests) is backlog.
 
 ### 2026-11-09 — Review round 2 fixes
 - Round 2 (subject `d841f9b`): one Medium, four Lows; nothing Critical/High.

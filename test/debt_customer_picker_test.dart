@@ -173,5 +173,14 @@ void main() {
         tester.widget<TextField>(find.byKey(ValueKey(key))).controller!.text;
     expect(text('debt-customer-search'), 'ป้าแดง');
     expect(text('debt-customer-phone'), '0811111111');
+    // A new search after going back wins over the kept name.
+    await tester.tap(find.byKey(const ValueKey('debt-customer-back')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byKey(const ValueKey('debt-customer-search')), 'สมศักดิ์');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('debt-customer-add')));
+    await tester.pumpAndSettle();
+    expect(text('debt-customer-search'), 'สมศักดิ์');
   });
 }

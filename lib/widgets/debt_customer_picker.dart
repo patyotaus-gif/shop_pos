@@ -94,7 +94,10 @@ class _DebtCustomerPickerState extends State<DebtCustomerPicker> {
             key: const ValueKey('debt-customer-search'),
             controller: _search,
             autofocus: true,
-            onChanged: (_) => setState(() {}),
+            onChanged: (_) => setState(() {
+              // A new search in the list replaces the name kept from before.
+              if (!_adding) _typedName = null;
+            }),
             decoration: InputDecoration(
               labelText: _adding ? 'ชื่อลูกค้าใหม่' : 'ค้นหาชื่อหรือเบอร์โทร',
               prefixIcon: Icon(_adding ? Icons.person_add_alt : Icons.search),
@@ -208,7 +211,8 @@ class _DebtCustomerPickerState extends State<DebtCustomerPicker> {
                 : () => setState(() {
                       _adding = false;
                       _error = null;
-                      _typedName = _search.text;
+                      final name = _search.text.trim();
+                      _typedName = name.isEmpty ? null : name;
                       final phone = _phone.text.trim();
                       if (phone.isNotEmpty) _search.text = phone;
                     }),
