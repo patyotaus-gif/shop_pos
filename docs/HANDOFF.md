@@ -15,7 +15,7 @@ Rules:
 
 ## Current state (updated 2026-11-09)
 
-**Branch:** `gif-feedback-2026-11`, 11 commits on top of `d29153f` (master).
+**Branch:** `gif-feedback-2026-11`, 12 commits on top of `d29153f` (master), the last one adds this handoff log.
 Not merged, not pushed, nothing deployed or released from it.
 
 **Live:** Android 1.2.74 (build 91) from `d29153f`, served at
