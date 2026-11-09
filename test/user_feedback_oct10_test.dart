@@ -93,7 +93,7 @@ void main() {
         find.ancestor(of: find.text('เงินสด'), matching: find.byType(ListTile));
     expect(find.descendant(of: cash, matching: find.text('฿485.00')),
         findsOneWidget);
-    expect(find.text('ขายเชื่อ'), findsOneWidget);
+    expect(find.text('ค้างชำระ'), findsOneWidget);
     expect(find.text('ช่องทางที่ลูกค้าสั่งซื้อ'), findsOneWidget);
     expect(find.text('ไม่ระบุช่องทาง'), findsOneWidget);
     expect(tester.takeException(), isNull);

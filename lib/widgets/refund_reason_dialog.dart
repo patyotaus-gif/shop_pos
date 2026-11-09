@@ -73,6 +73,8 @@ class _RefundReasonDialogState extends State<RefundReasonDialog> {
         ),
         if (widget.debt) ...[
           const Text('ยกเลิกหนี้คงค้าง และคืนเฉพาะเงินที่รับชำระแล้ว'),
+          // Room for the floating label so it does not overlap the note.
+          const SizedBox(height: 16),
           DropdownButtonFormField<PaymentMethod>(
             initialValue: _method,
             decoration: const InputDecoration(

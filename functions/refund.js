@@ -33,7 +33,8 @@ async function refundSale({db,stripe,shopId,saleId,reason,returnToStock=false,re
       return {success:false,pending:true};
     }
   }
-  return db.runTransaction(async tx=>{
+  // Concurrent refunds of one sale can close the transaction; isRefunded makes a retry a no-op.
+  return require('./transaction_retry').runTransaction(db,async tx=>{
     const current=await tx.get(ref);
     if(!current.exists)throw new Error('ไม่พบบิล');
     const s=current.data(); if(s.isRefunded)return {success:true,stripeRefundId:s.stripeRefundId||null};
@@ -71,7 +72,8 @@ async function refundSale({db,stripe,shopId,saleId,reason,returnToStock=false,re
     if(debts)for(const d of debts.docs)tx.update(d.ref,{cancelledAt:at,cancelReason:reason.trim(),refundedAmount:paid/100});
     if(order?.exists)tx.update(orderRef,{status:'cancelled',refundedAt:at,cancelReason:reason.trim(),saleId});
     if(customer?.exists)tx.update(customerRef,{
-      points:Math.max(0,Number(customer.data().points||0)-Number(s.loyaltyPointsAwarded||0)),
+      // Take back points earned on this bill and return points spent on it.
+      points:Math.max(0,Number(customer.data().points||0)-Number(s.loyaltyPointsAwarded||0)+Number(s.loyaltyPointsRedeemed||0)),
       totalSpent:Math.max(0,Number(customer.data().totalSpent||0)-s.total),
     });
     writeMovement(tx,shop,context,'refund-'+saleId,{kind:'refund',saleId,amountMinor:-paid,

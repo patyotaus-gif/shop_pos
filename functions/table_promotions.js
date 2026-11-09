@@ -8,6 +8,12 @@ const ledger = require('./money_ledger');
 const hash = value => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const unit = i => Number(i.price) + (i.modifiers || []).reduce((s,m)=>s+Number(m.priceAdjust||0),0);
 const paidLines = order => order.items.filter(i=>!i.isGift);
+// Same earn rate as counter sales: 1 point per ฿25 of the final total.
+const pointsAwarded = totalMinor => Math.floor(totalMinor / 2500);
+const pointsPerBaht = settings => {
+  const rate = Math.trunc(Number(settings.loyaltyPointsPerBaht || 0));
+  return rate >= 1 ? rate : 10;
+};
 const signature = order => hash(paidLines(order).map(i=>[i.id,i.productId,i.quantity,unit(i),i.notes||'',i.modifiers||[]]));
 function handlers({db,FieldValue,HttpsError,now=()=>new Date()}) {
   const fail = message => {throw new HttpsError('failed-precondition',message);};
@@ -44,7 +50,7 @@ function handlers({db,FieldValue,HttpsError,now=()=>new Date()}) {
     }
     return {products,quantities,allocations,usage};
   }
-  async function preview(tx,shop,order,code,{keepPreparedGifts=false,reason='',actor=''}={}) {
+  async function preview(tx,shop,order,code,{keepPreparedGifts=false,reason='',actor='',loyalty:wanted=null}={}) {
     const lines=paidLines(order);
     if(!lines.length)fail('ไม่มีรายการสินค้า');
     if(lines.some(i=>!Number.isFinite(unit(i))||unit(i)<0))fail('ราคาสินค้าไม่ถูกต้อง');
@@ -99,11 +105,19 @@ function handlers({db,FieldValue,HttpsError,now=()=>new Date()}) {
     const settings=(await tx.get(shop.collection('settings').doc('shop'))).data()||{};
     const serviceChargePercent=Number(settings.serviceChargePercent||0);
     if(!Number.isFinite(serviceChargePercent)||serviceChargePercent<0||serviceChargePercent>100)fail('ค่าบริการไม่ถูกต้อง');
-    const discountMinor=bundleDiscount+(coupon?.discountMinor||0);
+    const promotionMinor=bundleDiscount+(coupon?.discountMinor||0);
+    // Points redeem whole baht and never exceed what is still payable.
+    let loyalty=null;
+    if(wanted?.customerId) {
+      const redeemBaht=Math.max(0,Math.min(Math.trunc(wanted.redeemBaht||0),Math.floor((subtotalMinor-promotionMinor)/100)));
+      loyalty={customerId:wanted.customerId,customerName:wanted.customerName||'',pointsPerBaht:wanted.pointsPerBaht,
+        redeemBaht,pointsRedeemed:redeemBaht*wanted.pointsPerBaht,discountMinor:redeemBaht*100};
+    }
+    const discountMinor=promotionMinor+(loyalty?.discountMinor||0);
     const serviceMinor=Math.round((subtotalMinor-discountMinor)*serviceChargePercent/100);
     const data={signature:signature(order),lines:lines.map(i=>({id:i.id,productId:i.productId,quantity:i.quantity,unitPrice:unit(i)})),bundles:bundleQuote,buyGet,coupon,subtotalMinor,discountMinor,
       bundleDiscountMinor:bundleDiscount,serviceChargePercent,serviceMinor,totalMinor:subtotalMinor-discountMinor+serviceMinor,
-      ...(retainedGifts.length?{retainedGifts}:{})};
+      ...(retainedGifts.length?{retainedGifts}:{}),...(loyalty?{loyalty}:{})};
     data.revision=hash(data);
     const items=[...lines,...nextGifts];
     await inventory(tx,shop,items);
@@ -114,7 +128,7 @@ function handlers({db,FieldValue,HttpsError,now=()=>new Date()}) {
     const actor=await require('./staff_permissions').authorize(request,db,HttpsError,
       raw.action==='cancel'?'cancel':raw.action==='apply'||Object.hasOwn(raw,'couponCode')||raw.keepPreparedGifts?'discount':null);
     const shopId=actor.shopId;
-    if(!require('./order_accounting').validId(raw.orderId)||!['preview','apply','sync','send','close','cancel'].includes(raw.action))throw new HttpsError('invalid-argument','คำสั่งไม่ถูกต้อง');
+    if(!require('./order_accounting').validId(raw.orderId)||!['preview','apply','sync','send','close','cancel','loyalty'].includes(raw.action))throw new HttpsError('invalid-argument','คำสั่งไม่ถูกต้อง');
     const shop=db.collection('shops').doc(shopId),ref=shop.collection('tableOrders').doc(raw.orderId);
     try {return await require('./transaction_retry').runTransaction(db,async tx=>{
       await require('./staff_permissions').recheck(tx,shop,request,HttpsError);
@@ -147,6 +161,26 @@ function handlers({db,FieldValue,HttpsError,now=()=>new Date()}) {
         tx.update(tableRef,{status:'available',currentOrderId:null});
         return {success:true};
       }
+      if(raw.action==='loyalty') {
+        // Customer records are owner-only, matching counter sales.
+        if(actor.staffId)throw new HttpsError('permission-denied','การใช้แต้มทำได้เฉพาะเจ้าของร้าน');
+        let loyalty=null;
+        if(raw.customerId!=null) {
+          if(!require('./order_accounting').validId(raw.customerId)||!Number.isInteger(raw.redeemBaht)||raw.redeemBaht<0||raw.redeemBaht>1e6)fail('ข้อมูลแต้มไม่ถูกต้อง');
+          const customer=(await tx.get(shop.collection('customers').doc(raw.customerId))).data();
+          if(!customer)fail('ไม่พบลูกค้าสะสมแต้ม');
+          const rate=pointsPerBaht((await tx.get(shop.collection('settings').doc('shop'))).data()||{});
+          if(raw.redeemBaht*rate>Number(customer.points||0))fail('แต้มลูกค้าไม่พอ');
+          loyalty={customerId:raw.customerId,customerName:String(customer.name||''),pointsPerBaht:rate,redeemBaht:raw.redeemBaht};
+        }
+        const code=order.tablePromotion?.coupon?.code||'';
+        const {data,items}=await preview(tx,shop,order,code,{loyalty});
+        await coupons.reserve(tx,shop,{total:(data.subtotalMinor-data.bundleDiscountMinor)/100,
+          couponCode:data.coupon?.code,couponQuote:data.coupon},+now());
+        data.giftLines=items.filter(i=>i.isGift).map(i=>({id:i.id,productId:i.productId,promotionId:i.promotionId,quantity:i.quantity}));
+        tx.update(ref,{items,tablePromotion:data});
+        return {promotion:data};
+      }
       if(raw.action==='sync'||raw.action==='send') {
         const saved=order.tablePromotion;
         const code=Object.hasOwn(raw,'couponCode')?coupons.codeOf(raw.couponCode):saved?.coupon?.code||'';
@@ -160,7 +194,7 @@ function handlers({db,FieldValue,HttpsError,now=()=>new Date()}) {
           Number(settings.serviceChargePercent||0)===saved.serviceChargePercent) {
           data=saved;items=order.items;
           await inventory(tx,shop,items);
-        } else ({data,items}=await preview(tx,shop,order,code,{keepPreparedGifts,reason,actor:request.auth.uid}));
+        } else ({data,items}=await preview(tx,shop,order,code,{keepPreparedGifts,reason,actor:request.auth.uid,loyalty:saved?.loyalty}));
         // Check validity before displaying the payment sheet. Claim only at close.
         await coupons.reserve(tx,shop,{total:(data.subtotalMinor-data.bundleDiscountMinor)/100,
           couponCode:data.coupon?.code,couponQuote:data.coupon},+now());
@@ -171,7 +205,7 @@ function handlers({db,FieldValue,HttpsError,now=()=>new Date()}) {
         return {promotion:data};
       }
       if(raw.action!=='close') {
-        const {data,items}=await preview(tx,shop,order,coupons.codeOf(raw.couponCode));
+        const {data,items}=await preview(tx,shop,order,coupons.codeOf(raw.couponCode),{loyalty:order.tablePromotion?.loyalty});
         if(raw.action==='apply') {
           if(raw.revision!==data.revision)fail('รายการหรือโปรโมชั่นเปลี่ยน กรุณาตรวจใหม่');
           data.giftLines=items.filter(i=>i.isGift).map(i=>({id:i.id,productId:i.productId,promotionId:i.promotionId,quantity:i.quantity}));
@@ -196,6 +230,12 @@ function handlers({db,FieldValue,HttpsError,now=()=>new Date()}) {
       const context=await ledger.ledgerContext(tx,shop);
       const settings=(await tx.get(shop.collection('settings').doc('shop'))).data()||{};
       if(Number(settings.serviceChargePercent||0)!==p.serviceChargePercent)fail('ค่าบริการเปลี่ยน กรุณาตรวจยอดใหม่');
+      // Redeemed points are already in the total, so a short balance blocks payment.
+      const loyalty=p.loyalty?.customerId?p.loyalty:null;
+      const customerRef=loyalty?shop.collection('customers').doc(loyalty.customerId):null;
+      const customer=customerRef?(await tx.get(customerRef)).data():null;
+      if(loyalty&&!customer)fail('ไม่พบลูกค้าสะสมแต้ม กรุณาเลือกลูกค้าใหม่');
+      if(loyalty&&Number(customer.points||0)<loyalty.pointsRedeemed)fail('แต้มลูกค้าไม่พอ กรุณาปรับการใช้แต้ม');
       const saleRef=shop.collection('sales').doc('table-'+raw.orderId);
       if((await tx.get(saleRef)).exists)fail('พบบิลขายเดิม กรุณาตรวจสถานะโต๊ะ');
       const date=now(),parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);
@@ -214,8 +254,12 @@ function handlers({db,FieldValue,HttpsError,now=()=>new Date()}) {
         createdAt:date,receiptNo:`T-${day}-${String(seq).padStart(3,'0')}`,receiptProfile:require('./receipt_profile').receiptProfile(settings),
         accountingVersion:1,isDebt:false,isRefunded:false,ingredientsDeducted:true,ingredientUsage:inv.usage,
         stockDeducted:Object.fromEntries(Object.keys(inv.allocations).map(id=>[id,inv.quantities[id]])),
-        stockLotsDeducted:Object.fromEntries(Object.entries(inv.allocations).map(([id,a])=>[id,a.used]))};
+        stockLotsDeducted:Object.fromEntries(Object.entries(inv.allocations).map(([id,a])=>[id,a.used])),
+        ...(loyalty?{loyaltyCustomerId:loyalty.customerId,loyaltyPointsAwarded:pointsAwarded(p.totalMinor),
+          ...(loyalty.pointsRedeemed?{loyaltyPointsRedeemed:loyalty.pointsRedeemed}:{})}:{})};
       tx.create(saleRef,sale);tx.set(counter,{day,seq});coupon?.write();
+      if(loyalty)tx.update(customerRef,{points:FieldValue.increment(pointsAwarded(p.totalMinor)-loyalty.pointsRedeemed),
+        totalSpent:FieldValue.increment(p.totalMinor/100),lastVisitAt:date});
       for(const [id,a] of Object.entries(inv.allocations))stock.write(tx,shop.collection('products').doc(id),inv.products[id],a,{id:'sale-'+saleRef.id,referenceId:saleRef.id,actor:request.auth.uid},FieldValue);
       for(const [id,qty] of Object.entries(inv.usage))tx.update(shop.collection('ingredients').doc(id),{stock:FieldValue.increment(-qty)});
       ledger.writeMovement(tx,shop,context,'sale-'+saleRef.id,{...ledger.saleMovement(sale,request.auth.uid),saleId:saleRef.id},FieldValue);

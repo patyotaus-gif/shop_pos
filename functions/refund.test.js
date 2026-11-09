@@ -39,3 +39,14 @@ test('refund callable rejects anonymous callers and a different shop owner',asyn
   await assert.rejects(endpoint.run({data:{shopId:'shop',saleId:'sale'}}),e=>e.code==='permission-denied');
   await assert.rejects(endpoint.run({data:{shopId:'shop',saleId:'sale'},auth:{uid:'other-shop'}}),e=>e.code==='permission-denied');
 });
+test('refund takes back earned points and returns redeemed points once',async()=>{
+  const base=require('./accounting_fixture.cjs').fixture({
+    'shops/shop/sales/sale':{total:95,paymentMethod:'cash',items:[{productId:'tea',quantity:1}],
+      loyaltyCustomerId:'c1',loyaltyPointsAwarded:3,loyaltyPointsRedeemed:50},
+    'shops/shop/customers/c1':{points:100,totalSpent:500},
+  });
+  const args={db:base.db,shopId:'shop',saleId:'sale',reason:'test',FieldValue:{increment:n=>({increment:n}),serverTimestamp:()=>123}};
+  await Promise.all([refundSale(args),refundSale(args)]);
+  assert.equal(base.docs.get('shops/shop/customers/c1').points,147);
+  assert.equal(base.docs.get('shops/shop/customers/c1').totalSpent,405);
+});

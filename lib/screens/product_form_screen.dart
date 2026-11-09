@@ -1,3 +1,4 @@
+import '../widgets/profit_summary.dart';
 import '../widgets/compact_action.dart';
 import '../widgets/content_width.dart';
 import 'dart:io';
@@ -275,6 +276,12 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
           },
         ),
         const SizedBox(height: 8),
+        if (_stockMode == 'count')
+          Text(
+            'เมนูที่ทำจากวัตถุดิบ เลือก "ใช้สูตรวัตถุดิบ" แล้วระบบจะคิดต้นทุน ตัดสต็อก และแสดงกำไรให้อัตโนมัติ',
+            style: TextStyle(
+                fontSize: 12, color: cs.onSurface.withValues(alpha: 0.7)),
+          ),
         if (_stockMode == 'recipe') ...[
           Text(
             'ขาย 1 จาน = ตัดวัตถุดิบตามสูตรอัตโนมัติ · ต้นทุนคิดจากสูตร',
@@ -693,7 +700,16 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 8),
+                      ListenableBuilder(
+                          listenable: Listenable.merge([_price, _costPrice]),
+                          builder: (context, _) => ProfitSummary(
+                              price: double.tryParse(_price.text),
+                              cost: _stockMode == 'recipe'
+                                  ? _recipeCost
+                                  : double.tryParse(_costPrice.text),
+                              fromRecipe: _stockMode == 'recipe')),
+                      const SizedBox(height: 8),
                       if (_stockMode != 'recipe')
                         Align(
                             alignment: Alignment.centerRight,

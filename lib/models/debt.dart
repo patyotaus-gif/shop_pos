@@ -10,6 +10,9 @@ class Debt {
   final String note;
   final bool cancelled;
 
+  /// Customer record picked at checkout; null for older free-text debts.
+  final String? customerId;
+
   const Debt({
     required this.id,
     required this.customerName,
@@ -19,6 +22,7 @@ class Debt {
     required this.saleId,
     this.note = '',
     this.cancelled = false,
+    this.customerId,
   });
 
   double get remaining =>
@@ -35,6 +39,7 @@ class Debt {
         saleId: data['saleId'] ?? '',
         note: data['note'] ?? '',
         cancelled: data['cancelledAt'] != null,
+        customerId: data['customerId'] as String?,
       );
 
   Map<String, dynamic> toFirestore() => {
@@ -44,5 +49,6 @@ class Debt {
         'createdAt': Timestamp.fromDate(createdAt),
         'saleId': saleId,
         'note': note,
+        if (customerId != null) 'customerId': customerId,
       };
 }

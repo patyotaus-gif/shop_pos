@@ -45,12 +45,21 @@ class TableService {
   // ───────────────────────── Tables CRUD ─────────────────────────
 
   static Stream<List<RestaurantTable>> watchTables() => AuthService.isStaff
-      ? StaffAccessService.watch('tables').map((rows) => rows
-          .map((r) => RestaurantTable.fromFirestore(r, r['id'] as String))
-          .toList())
-      : _tablesCol().orderBy('createdAt').snapshots().map((s) => s.docs
-          .map((d) => RestaurantTable.fromFirestore(d.data(), d.id))
-          .toList());
+      ? StaffAccessService.watch('tables').map((rows) => RestaurantTable.sorted(
+          rows.map((r) => RestaurantTable.fromFirestore(r, r['id'] as String))))
+      : _tablesCol().orderBy('createdAt').snapshots().map((s) =>
+          RestaurantTable.sorted(s.docs
+              .map((d) => RestaurantTable.fromFirestore(d.data(), d.id))));
+
+  /// Persist the owner's grid order. Only sortOrder changes, so open bills and
+  /// table status are untouched.
+  static Future<void> reorderTables(List<String> orderedIds) async {
+    final batch = _shopDoc().firestore.batch();
+    for (var i = 0; i < orderedIds.length; i++) {
+      batch.update(_tablesCol().doc(orderedIds[i]), {'sortOrder': i});
+    }
+    await batch.commit();
+  }
 
   static Future<RestaurantTable?> getTable(String tableId) async {
     if (AuthService.isStaff) {
@@ -354,6 +363,27 @@ class TableService {
               return next;
             });
 
+  /// Mark or clear "customer asked for the bill" on an open tab. Lives on the
+  /// order, so closing the bill clears it without touching the table.
+  static Future<void> setBillRequested(String orderId, bool requested) async {
+    if (AuthService.isStaff) {
+      await StaffAccessService.work(
+          'bill', {'orderId': orderId, 'requested': requested});
+      return;
+    }
+    final ref = _tableOrdersCol().doc(orderId);
+    await ref.firestore.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      if (!snap.exists || snap.data()?['status'] != 'open') {
+        throw StateError('บิลนี้ปิดหรือยกเลิกแล้ว กรุณาเปิดหน้าโต๊ะใหม่');
+      }
+      tx.update(ref, {
+        'billRequestedAt':
+            requested ? FieldValue.serverTimestamp() : FieldValue.delete()
+      });
+    });
+  }
+
   static Future<void> sendToKitchen(String orderId) => AuthService.isStaff
       ? promotions(orderId, action: 'send').then((_) {})
       : _edit(orderId, (items) {
@@ -385,7 +415,8 @@ class TableService {
       String? couponCode,
       String? revision,
       bool keepPreparedGifts = false,
-      String reason = ''}) async {
+      String reason = '',
+      Map<String, Object?> extra = const {}}) async {
     final response = await FirebaseFunctions.instanceFor(
             region: 'asia-southeast1')
         .httpsCallable('tablePromotions',
@@ -398,9 +429,18 @@ class TableService {
       if (revision != null) 'revision': revision,
       if (keepPreparedGifts) 'keepPreparedGifts': true,
       if (reason.isNotEmpty) 'reason': reason,
+      ...extra,
     });
     return Map<String, dynamic>.from(response.data['promotion'] as Map);
   }
+
+  /// Attach a loyalty customer to the open bill and redeem whole baht of
+  /// points; a null [customerId] detaches. Priced and checked on the server.
+  static Future<void> setTableLoyalty(String orderId,
+          {String? customerId, int redeemBaht = 0}) =>
+      promotions(orderId,
+          action: 'loyalty',
+          extra: {'customerId': customerId, 'redeemBaht': redeemBaht});
 
   static Future<TableOrder> syncPromotions(TableOrder order,
       {bool send = false,

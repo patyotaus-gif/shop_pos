@@ -159,7 +159,8 @@ function createStaffAccess({db, auth, FieldValue, Timestamp, now=()=>new Date()}
       ...(request.data.buyGetQuote?{buyGetQuote:request.data.buyGetQuote}:{}),
       ...(request.data.bundleQuote?{bundleQuote:request.data.bundleQuote}:{})})).digest('hex');
     const ref=ctx.ref.collection('sales').doc(requestId);
-    return db.runTransaction(async tx=>{
+    // Duplicate taps race on the same requestId; the replay check makes a retry safe.
+    return require('./transaction_retry').runTransaction(db,async tx=>{
       const [prior,member,shop]=await Promise.all([tx.get(ref),tx.get(ctx.ref.collection('staff').doc(ctx.user.token.staffId)),tx.get(ctx.ref)]);
       if(!member.exists||member.data().active===false||Number(member.data().sessionVersion||0)!==ctx.user.token.staffVersion) fail('permission-denied','สิทธิ์พนักงานถูกยกเลิก');
       requireSubscription(shop.data(),now());

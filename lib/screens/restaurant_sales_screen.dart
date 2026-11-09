@@ -27,11 +27,11 @@ class _RestaurantSalesScreenState extends State<RestaurantSalesScreen> {
                   ButtonSegment(
                       value: 0,
                       icon: Icon(Icons.restaurant),
-                      label: Text('กินที่ร้าน')),
+                      label: Text('ทานที่ร้าน')),
                   ButtonSegment(
                       value: 1,
                       icon: Icon(Icons.takeout_dining),
-                      label: Text('กลับบ้าน')),
+                      label: Text('สั่งกลับบ้าน')),
                 ],
                 selected: {
                   _mode

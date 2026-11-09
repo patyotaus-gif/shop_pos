@@ -169,7 +169,7 @@ class ReceiptGenerator {
       pw.SizedBox(height: 8),
       pw.Center(
           child: await text(
-              sale.isDebt ? 'ใบแจ้งยอดขายเชื่อ' : 'ใบเสร็จรับเงิน',
+              sale.isDebt ? 'ใบแจ้งยอดค้างชำระ' : 'ใบเสร็จรับเงิน',
               style: pw.TextStyle(
                   fontSize: 11 * fontScale, fontWeight: pw.FontWeight.bold))),
       if (profile.vatEnabled)
@@ -283,7 +283,7 @@ class ReceiptGenerator {
       ],
       if (sale.isDebt)
         pw.Center(
-          child: await text('** เชื่อ: ${sale.customerName} **',
+          child: await text('** ค้างชำระ: ${sale.customerName} **',
               style: pw.TextStyle(
                   fontSize: 10 * fontScale, fontWeight: pw.FontWeight.bold)),
         ),

@@ -108,7 +108,7 @@ class DashboardScreen extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           _BigCard(
-                            label: 'ขายเชื่อวันนี้',
+                            label: 'ค้างชำระวันนี้',
                             value: '฿${_baht.format(debtRevenue)}',
                             icon: Icons.person_outline,
                             color: Colors.orange,

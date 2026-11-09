@@ -17,6 +17,12 @@ import '../widgets/payment_sheet.dart';
 import '../widgets/product_picker_sheet.dart';
 import '../widgets/split_bill_sheet.dart';
 import '../widgets/table_promotion_dialog.dart';
+import '../widgets/loyalty_dialogs.dart';
+import '../widgets/table_loyalty_strip.dart';
+import '../models/customer.dart';
+import '../services/customer_service.dart';
+import '../services/entitlements.dart';
+import '../services/shop_service.dart';
 import 'sale_receipt_screen.dart';
 import 'kitchen_screen.dart';
 
@@ -149,8 +155,21 @@ class TableOrderView extends StatefulWidget {
       required this.order,
       this.changeQuantity,
       this.syncPromotions,
-      this.loadServiceCharge});
+      this.loadServiceCharge,
+      this.setBillRequested,
+      this.loyaltyEnabled,
+      this.setLoyalty,
+      this.pickLoyaltyCustomer,
+      this.loadCustomerPoints});
   final TableOrder order;
+
+  /// Null means decide from the shop plan (owner devices on Full/Restaurant).
+  final bool? loyaltyEnabled;
+  final Future<void> Function(String orderId,
+      {String? customerId, int redeemBaht})? setLoyalty;
+  final Future<Customer?> Function(BuildContext context)? pickLoyaltyCustomer;
+  final Future<int> Function(String customerId)? loadCustomerPoints;
+  final Future<void> Function(String orderId, bool requested)? setBillRequested;
   final Future<void> Function(String, String, num, num)? changeQuantity;
   final Future<double> Function()? loadServiceCharge;
   final SyncTablePromotion? syncPromotions;
@@ -163,6 +182,9 @@ class _OpenOrderViewState extends State<TableOrderView> {
   bool _closing = false;
   bool _paymentOpen = false;
   bool _sending = false;
+  bool _billSaving = false;
+  bool _loyaltySaving = false;
+  bool _loyaltyEnabled = false;
   late final TablePromotionController _promotions;
   TableOrder get _order => _promotions.order;
   final Map<String, num> _quantityPreview = {};
@@ -176,7 +198,12 @@ class _OpenOrderViewState extends State<TableOrderView> {
     super.dispose();
   }
 
-  bool get _busy => _closing || _sending || _quantityPreview.isNotEmpty;
+  bool get _busy =>
+      _closing ||
+      _sending ||
+      _billSaving ||
+      _loyaltySaving ||
+      _quantityPreview.isNotEmpty;
   double get _subtotal => _order.items.fold(
       0.0,
       (sum, item) =>
@@ -198,6 +225,74 @@ class _OpenOrderViewState extends State<TableOrderView> {
         .then((pct) {
       if (mounted) setState(() => _serviceChargePercent = pct);
     });
+    final enabled = widget.loyaltyEnabled;
+    if (enabled != null) {
+      _loyaltyEnabled = enabled;
+    } else if (!AuthService.isStaff) {
+      ShopService.getCurrentShop().then((shop) {
+        if (mounted && shop != null) {
+          setState(
+              () => _loyaltyEnabled = Entitlements.canUseLoyalty(shop.tier));
+        }
+      }).catchError((_) {});
+    }
+  }
+
+  Map<String, dynamic>? get _loyalty {
+    final value = _order.promotion?['loyalty'];
+    return value is Map ? Map<String, dynamic>.from(value) : null;
+  }
+
+  Future<void> _setLoyalty(String? customerId, int redeemBaht) async {
+    if (_busy) return;
+    setState(() => _loyaltySaving = true);
+    try {
+      await (widget.setLoyalty ?? TableService.setTableLoyalty)(_order.id,
+          customerId: customerId, redeemBaht: redeemBaht);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('บันทึกแต้มไม่สำเร็จ: ${operationError(e)}')));
+      }
+    } finally {
+      if (mounted) setState(() => _loyaltySaving = false);
+    }
+  }
+
+  Future<void> _attachLoyalty() async {
+    final customer = await (widget.pickLoyaltyCustomer ??
+        showLoyaltyCustomerDialog)(context);
+    if (customer == null || !mounted) return;
+    await _setLoyalty(customer.id, 0);
+  }
+
+  Future<void> _redeemLoyalty() async {
+    final loyalty = _loyalty, promotion = _order.promotion;
+    if (loyalty == null || promotion == null) return;
+    final customerId = loyalty['customerId'] as String;
+    final points = await (widget.loadCustomerPoints ??
+        CustomerService.pointsOf)(customerId);
+    if (!mounted) return;
+    final rate = (loyalty['pointsPerBaht'] as num? ?? 1).toInt();
+    // Other discounts stay; only the points part is being changed.
+    final payable = ((promotion['subtotalMinor'] as num) -
+            (promotion['discountMinor'] as num) +
+            (loyalty['discountMinor'] as num? ?? 0)) /
+        100;
+    final max = CustomerService.maxRedeemBaht(
+        points: points, pointsPerBaht: rate, payable: payable);
+    if (max < 1) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('แต้มยังไม่พอใช้ ต้องมีอย่างน้อย $rate แต้มต่อ ฿1')));
+      return;
+    }
+    final baht = await showRedeemPointsDialog(context,
+        maxBaht: max,
+        pointsPerBaht: rate,
+        points: points,
+        current: (loyalty['redeemBaht'] as num? ?? 0).toInt());
+    if (baht == null || !mounted) return;
+    await _setLoyalty(customerId, baht);
   }
 
   @override
@@ -312,6 +407,33 @@ class _OpenOrderViewState extends State<TableOrderView> {
 
   bool get _hasPendingItems =>
       _order.items.any((i) => i.kitchenStatus == KitchenStatus.pending);
+
+  /// Mentions gifts only when a pending gift line actually goes to the kitchen.
+  String get _sendToKitchenLabel {
+    final pending =
+        _order.items.where((i) => i.kitchenStatus == KitchenStatus.pending);
+    final count = pending.fold<num>(0, (sum, i) => sum + i.quantity);
+    return pending.any((i) => i.isGift)
+        ? 'ส่งครัวพร้อมของแถม ($count)'
+        : 'ส่งครัว ($count)';
+  }
+
+  Future<void> _toggleBillRequested() async {
+    if (_busy) return;
+    final requested = !_order.billRequested;
+    setState(() => _billSaving = true);
+    try {
+      await (widget.setBillRequested ?? TableService.setBillRequested)(
+          _order.id, requested);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('บันทึกสถานะเช็กบิลไม่สำเร็จ: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _billSaving = false);
+    }
+  }
 
   Future<void> _sendToKitchen() async {
     if (_busy) return;
@@ -688,6 +810,14 @@ class _OpenOrderViewState extends State<TableOrderView> {
                               const Icon(Icons.local_offer_outlined, size: 18),
                           label: const Text('คูปอง / รายละเอียดส่วนลด'),
                         ),
+                        if (_loyaltyEnabled)
+                          TableLoyaltyStrip(
+                            loyalty: _loyalty,
+                            enabled: !_busy && !_promotions.busy && !empty,
+                            onAttach: _attachLoyalty,
+                            onRedeem: _redeemLoyalty,
+                            onRemove: () => _setLoyalty(null, 0),
+                          ),
                         if (_promotions.busy)
                           const Text('กำลังคำนวณโปรโมชั่นอัตโนมัติ'),
                         if (_promotions.error != null) ...[
@@ -784,8 +914,7 @@ class _OpenOrderViewState extends State<TableOrderView> {
                               FilledButton.tonalIcon(
                                 onPressed: _busy ? null : _sendToKitchen,
                                 icon: const Icon(Icons.soup_kitchen_outlined),
-                                label: Text(
-                                    'ส่งครัวพร้อมของแถม (${_order.items.where((i) => i.kitchenStatus == KitchenStatus.pending).fold<num>(0, (sum, i) => sum + i.quantity)})'),
+                                label: Text(_sendToKitchenLabel),
                                 style: FilledButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 20, vertical: 14),
@@ -796,6 +925,21 @@ class _OpenOrderViewState extends State<TableOrderView> {
                         const SizedBox(height: 8),
                         ActionButtons(
                           children: [
+                            OutlinedButton.icon(
+                              key: const ValueKey('table-bill-request'),
+                              onPressed:
+                                  _busy || empty ? null : _toggleBillRequested,
+                              icon: Icon(order.billRequested
+                                  ? Icons.undo
+                                  : Icons.receipt_long_outlined),
+                              label: Text(order.billRequested
+                                  ? 'ยกเลิกขอเช็กบิล'
+                                  : 'ลูกค้าขอเช็กบิล'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 14),
+                              ),
+                            ),
                             OutlinedButton.icon(
                               onPressed: _busy || empty ? null : _split,
                               icon: const Icon(Icons.call_split),
