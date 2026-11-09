@@ -15,25 +15,26 @@ Rules:
 
 ## Current state (updated 2026-11-10)
 
-**Branch:** `gif-feedback-2026-11` on top of `d29153f` (master), pushed to GitHub.
-Not merged; nothing deployed or released from it. Release in progress: review round 6 next.
+**Branch:** `gif-feedback-2026-11` is merged into `master` (merge `7458f2f`);
+the release commit on master is tagged `v1.2.75`.
 
-**Live:** Android 1.2.74 (build 91) from `d29153f`, served at
-`pok-pok.app/app/version.json`. Functions on production are the pre-branch versions.
+**Live (released 2026-11-10):** Android **1.2.75 (build 92)**, served at
+`pok-pok.app/app/version.json` (sha256 `85f7045c…3f84`, 97,548,539 bytes, signed
+with the release key `f7dc70e0…`). Functions `tablePromotions`, `staffWork`,
+`staffCheckout`, `createRefund` deployed to production the same day, before the APK.
+Other Functions are unchanged.
 
-**Test tablet (SM-X900):** runs a build of this branch, labelled 1.2.74 (91),
-signed with the release key. The owner's test shop is logged in.
+**Test tablet (SM-X900):** still on an earlier branch build labelled 1.2.74 (91);
+it will be offered 1.2.75 by the in-app updater.
 
-### Must do before releasing this branch
-1. Deploy Functions first: `tablePromotions`, `staffWork`, `staffCheckout`, and the
-   refund callable (`createRefund`, implemented in `functions/refund.js`). The app
-   calls new server actions (`bill`, `loyalty`) and relies on the refund fix.
-2. Bump `pubspec.yaml` to 1.2.75+92, build the release APK, then follow the
-   self-hosted release steps (copy APK to `public/app/`, update `version.json`,
-   deploy hosting). Copy the APK before deploying hosting.
-3. Every step needs the owner's go-ahead.
+### Next
+- Device-check 1.2.75 on the tablet: table-bill loyalty and staff bill request
+  (now possible with the Functions live), counter points lock on a slow network,
+  debt picker phone conflict and "กลับไปรายชื่อ".
+- Gif's website feedback (2026-11-09): plan agreed in chat; start with hero
+  headline, current screenshots and pricing cards on the home page.
 
-### Review backlog (round 1, Low, accepted for this release)
+### Review backlog (Low, accepted for 1.2.75)
 - **L1** Staff can't unblock a table bill whose redeemed points no longer fit
   (loyalty action is owner-only; staff UI hides the strip). Staff reads also
   include `tablePromotion.loyalty` (customer name/id). Revisit if staff report
@@ -58,6 +59,11 @@ signed with the release key. The owner's test shop is logged in.
 - Round 5 **L-4**: ✕ only discards a late attach result; it can't cancel a
   first attach (no ✕ shown) and doesn't release the loading lock early (worst
   case 18 s). Revisit if cashiers report waits.
+- Round 6 (subject `e5de43e`, nothing above Low): late counter loyalty messages
+  clear other screens' queued SnackBars; the first-attach timeout says
+  "ยังไม่ได้เปลี่ยนลูกค้า" when none was attached; the picker "phone never
+  becomes the name" holds only if the search isn't edited. Revisit together
+  with the loyalty strip's next change.
 - Round 3 **L-5** / round 4 test note: the counter POS loyalty lock, timeouts and
   redemption cap have no automated test (same cause as round 2 L-4).
 - Pre-existing: if the typed debt phone matches nobody, `ensureByName` falls back
@@ -94,6 +100,22 @@ signed with the release key. The owner's test shop is logged in.
 ---
 
 ## Log
+
+### 2026-11-10 — Released Android 1.2.75 (92)
+- Owner said "ปล่อยก่อน" while review round 6 was running; round 6 then
+  finished with nothing above Low (backlog). Rounds 4–6 found only Lows.
+- Merged the branch into master (`7458f2f`, HANDOFF add/add conflict resolved
+  with the branch copy; trees identical afterwards).
+- Before deploy: Functions `npm test` 174 + 16 pass; emulator `test:rules`
+  exit 0; `staff_work.integration.cjs` exit 0.
+- Deployed Functions `tablePromotions`, `staffWork`, `staffCheckout`,
+  `createRefund` (asia-southeast1) — all "Successful update".
+- Bumped to 1.2.75+92, built the release APK, verified the signing cert
+  `f7dc70e0…` and versionCode 92, copied to `public/app/pokpok.apk`, updated
+  `version.json`, then deployed hosting (only `version.json` changed in public/).
+- Verified live: served `version.json` is 1.2.75/92 and the downloaded APK's
+  sha256 and size match the build.
+- Not verified: 1.2.75 on a real device.
 
 ### 2026-11-10 — Review round 5 fixes
 - Round 5 (subject `6649b09`): nothing Critical, High or Medium; five Lows.
