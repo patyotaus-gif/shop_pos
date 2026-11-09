@@ -48,6 +48,9 @@ class _DebtCustomerPickerState extends State<DebtCustomerPicker> {
   bool _adding = false;
   bool _saving = false;
   Object? _error;
+  // The new-customer name, kept while the cashier goes back to the list
+  // (the same field is the search box there).
+  String? _typedName;
 
   @override
   void dispose() {
@@ -116,63 +119,72 @@ class _DebtCustomerPickerState extends State<DebtCustomerPicker> {
           Flexible(
               key: const ValueKey('debt-customer-list'),
               child: Offstage(
-                offstage: _adding,
-                child: StreamBuilder<List<Customer>>(
-                  stream: _customers,
-                  builder: (context, customerSnap) => StreamBuilder<List<Debt>>(
-                    stream: _debts,
-                    builder: (context, debtSnap) {
-                      if (customerSnap.hasError) {
-                        return const Padding(
-                            padding: EdgeInsets.all(8),
-                            child: Text(
-                                'โหลดรายชื่อลูกค้าไม่สำเร็จ เพิ่มชื่อใหม่ได้ด้านล่าง'));
-                      }
-                      final customers = customerSnap.data ?? const <Customer>[];
-                      final known = customers.map((c) => c.name.trim()).toSet();
-                      final legacy = <String>{
-                        for (final d in debtSnap.data ?? const <Debt>[])
-                          if (d.customerId == null &&
-                              d.customerName.trim().isNotEmpty &&
-                              !known.contains(d.customerName.trim()))
-                            d.customerName.trim()
-                      }.toList()
-                        ..sort();
-                      bool matches(String text) =>
-                          query.isEmpty || text.toLowerCase().contains(query);
-                      final rows = <Widget>[
-                        for (final c in customers)
-                          if (matches(c.name) || matches(c.phone))
-                            ListTile(
-                              dense: true,
-                              leading: const Icon(Icons.person_outline),
-                              title: Text(c.name),
-                              subtitle: c.phone.isEmpty ? null : Text(c.phone),
-                              onTap: () => _choose(c.name, id: c.id),
-                            ),
-                        for (final name in legacy)
-                          if (matches(name))
-                            ListTile(
-                              dense: true,
-                              leading: const Icon(Icons.history),
-                              title: Text(name),
-                              subtitle: const Text('เคยค้างชำระ'),
-                              onTap: () => _choose(name),
-                            ),
-                      ];
-                      if (rows.isEmpty) {
-                        return Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Text(query.isEmpty
-                              ? 'ยังไม่มีรายชื่อลูกค้า'
-                              : 'ไม่พบ "${_search.text.trim()}"'),
-                        );
-                      }
-                      return ListView(shrinkWrap: true, children: rows);
-                    },
-                  ),
-                ),
-              )),
+                  offstage: _adding,
+                  // Hidden rows must not take keyboard focus: Enter on one
+                  // would pick a customer the cashier can't see.
+                  child: ExcludeFocus(
+                    excluding: _adding,
+                    child: StreamBuilder<List<Customer>>(
+                      stream: _customers,
+                      builder: (context, customerSnap) =>
+                          StreamBuilder<List<Debt>>(
+                        stream: _debts,
+                        builder: (context, debtSnap) {
+                          if (customerSnap.hasError) {
+                            return const Padding(
+                                padding: EdgeInsets.all(8),
+                                child: Text(
+                                    'โหลดรายชื่อลูกค้าไม่สำเร็จ เพิ่มชื่อใหม่ได้ด้านล่าง'));
+                          }
+                          final customers =
+                              customerSnap.data ?? const <Customer>[];
+                          final known =
+                              customers.map((c) => c.name.trim()).toSet();
+                          final legacy = <String>{
+                            for (final d in debtSnap.data ?? const <Debt>[])
+                              if (d.customerId == null &&
+                                  d.customerName.trim().isNotEmpty &&
+                                  !known.contains(d.customerName.trim()))
+                                d.customerName.trim()
+                          }.toList()
+                            ..sort();
+                          bool matches(String text) =>
+                              query.isEmpty ||
+                              text.toLowerCase().contains(query);
+                          final rows = <Widget>[
+                            for (final c in customers)
+                              if (matches(c.name) || matches(c.phone))
+                                ListTile(
+                                  dense: true,
+                                  leading: const Icon(Icons.person_outline),
+                                  title: Text(c.name),
+                                  subtitle:
+                                      c.phone.isEmpty ? null : Text(c.phone),
+                                  onTap: () => _choose(c.name, id: c.id),
+                                ),
+                            for (final name in legacy)
+                              if (matches(name))
+                                ListTile(
+                                  dense: true,
+                                  leading: const Icon(Icons.history),
+                                  title: Text(name),
+                                  subtitle: const Text('เคยค้างชำระ'),
+                                  onTap: () => _choose(name),
+                                ),
+                          ];
+                          if (rows.isEmpty) {
+                            return Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: Text(query.isEmpty
+                                  ? 'ยังไม่มีรายชื่อลูกค้า'
+                                  : 'ไม่พบ "${_search.text.trim()}"'),
+                            );
+                          }
+                          return ListView(shrinkWrap: true, children: rows);
+                        },
+                      ),
+                    ),
+                  ))),
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -196,6 +208,7 @@ class _DebtCustomerPickerState extends State<DebtCustomerPicker> {
                 : () => setState(() {
                       _adding = false;
                       _error = null;
+                      _typedName = _search.text;
                       final phone = _phone.text.trim();
                       if (phone.isNotEmpty) _search.text = phone;
                     }),
@@ -212,7 +225,13 @@ class _DebtCustomerPickerState extends State<DebtCustomerPicker> {
         else
           FilledButton.tonalIcon(
             key: const ValueKey('debt-customer-add'),
-            onPressed: _saving ? null : () => setState(() => _adding = true),
+            onPressed: _saving
+                ? null
+                : () => setState(() {
+                      _adding = true;
+                      final name = _typedName;
+                      if (name != null) _search.text = name;
+                    }),
             icon: const Icon(Icons.person_add_alt),
             label: const Text('เพิ่มลูกค้าใหม่'),
           ),

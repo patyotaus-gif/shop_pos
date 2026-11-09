@@ -131,9 +131,47 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('debt-customer-back')));
     await tester.pumpAndSettle();
     expect(find.textContaining('เบอร์นี้เป็นของลูกค้า'), findsNothing);
+    expect(
+        tester
+            .widget<TextField>(
+                find.byKey(const ValueKey('debt-customer-search')))
+            .controller!
+            .text,
+        '0811111111');
+    expect(find.text('คุณบี'), findsNothing, reason: 'list filtered by phone');
     await tester.tap(find.text('คุณเอ'));
     await tester.pumpAndSettle();
     expect(results.single!.customerId, 'c1',
         reason: 'back to the list searched by that phone');
+  });
+
+  testWidgets('going back keeps the typed name and hides the list from focus',
+      (tester) async {
+    final created = <(String, String)>[];
+    await open(tester, created: created);
+    ExcludeFocus listFocus() => tester.widget<ExcludeFocus>(find
+        .descendant(
+            of: find.byKey(const ValueKey('debt-customer-list'),
+                skipOffstage: false),
+            matching: find.byType(ExcludeFocus, skipOffstage: false),
+            skipOffstage: false)
+        .first);
+    expect(listFocus().excluding, isFalse);
+    await tester.tap(find.byKey(const ValueKey('debt-customer-add')));
+    await tester.pumpAndSettle();
+    expect(listFocus().excluding, isTrue,
+        reason: 'hidden rows must not take Enter');
+    await tester.enterText(
+        find.byKey(const ValueKey('debt-customer-search')), 'ป้าแดง');
+    await tester.enterText(
+        find.byKey(const ValueKey('debt-customer-phone')), '0811111111');
+    await tester.tap(find.byKey(const ValueKey('debt-customer-back')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('debt-customer-add')));
+    await tester.pumpAndSettle();
+    String text(String key) =>
+        tester.widget<TextField>(find.byKey(ValueKey(key))).controller!.text;
+    expect(text('debt-customer-search'), 'ป้าแดง');
+    expect(text('debt-customer-phone'), '0811111111');
   });
 }

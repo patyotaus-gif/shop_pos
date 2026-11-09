@@ -16,7 +16,7 @@ Rules:
 ## Current state (updated 2026-11-09)
 
 **Branch:** `gif-feedback-2026-11` on top of `d29153f` (master), pushed to GitHub.
-Not merged; nothing deployed or released from it. Release in progress: review round 3 next.
+Not merged; nothing deployed or released from it. Release in progress: review round 4 next.
 
 **Live:** Android 1.2.74 (build 91) from `d29153f`, served at
 `pok-pok.app/app/version.json`. Functions on production are the pre-branch versions.
@@ -85,6 +85,25 @@ signed with the release key. The owner's test shop is logged in.
 ---
 
 ## Log
+
+### 2026-11-10 — Review round 3 fixes
+- Round 3 (subject `9e56dbe`): one Medium, five Lows; nothing Critical/High.
+  It also flagged, outside its subject, that attaching a loyalty customer on a
+  slow network could finish while the payment sheet was open and reset the
+  points discount (QR/transfer sale saved at full total with less paid).
+- Fixed: attaching a customer and choosing points now share one lock with
+  checkout and bundles, in both directions. Every loyalty read has a 6 s timeout
+  (falls back to the shown balance or shows a connection message). While loading,
+  the strip shows a spinner that absorbs taps, and checkout/bundles say why they
+  wait. ✕ always works.
+- Fixed: a balance that covers only part of the applied points caps the
+  redemption to the new maximum with a message (round 2 only handled zero).
+- Debt picker: hidden list rows can no longer take keyboard focus
+  (`ExcludeFocus`); going back to the list keeps the typed new-customer name.
+  Tests now check the search text, the restored name and the focus exclusion.
+- Verified locally: analyze clean; flutter test 396 pass, only the 5
+  pre-existing failures. No server code changed. Counter POS lock still has no
+  automated test (backlog L-4). Not on a device.
 
 ### 2026-11-09 — Review round 2 fixes
 - Round 2 (subject `d841f9b`): one Medium, four Lows; nothing Critical/High.

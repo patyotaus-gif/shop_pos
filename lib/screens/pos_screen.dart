@@ -53,9 +53,17 @@ class _PosScreenState extends State<PosScreen> {
   final List<CartItem> _cart = [];
   double _discount = 0;
   bool _checkoutBusy = false;
-  // A points redemption is being chosen (balance read or dialog open); blocks
-  // checkout and customer changes so the discount lands on the right bill.
+  // A loyalty customer is being attached or a points redemption chosen
+  // (network read or dialog open). Checkout and bundles wait for it, and it
+  // waits for checkout, so a late result never changes a bill being paid.
+  // Every read is time-limited so the lock can't hang.
   bool _redeeming = false;
+  static const _loyaltyReadTimeout = Duration(seconds: 6);
+
+  void _loyaltyBusyMessage() {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('กำลังโหลดข้อมูลลูกค้าสะสมแต้ม รอสักครู่')));
+  }
   bool _checkingPending = true;
   Sale? _pendingSale;
   PaymentMethod _paymentMethod = PaymentMethod.cash;
@@ -110,6 +118,21 @@ class _PosScreenState extends State<PosScreen> {
   /// Attach a loyalty customer to the current cart by phone. Finds an
   /// existing customer or creates one, then shows their points.
   Future<void> _attachCustomer() async {
+    if (_redeeming ||
+        _checkoutBusy ||
+        _checkingPending ||
+        _pendingSale != null) {
+      return;
+    }
+    setState(() => _redeeming = true);
+    try {
+      await _chooseCustomer();
+    } finally {
+      if (mounted) setState(() => _redeeming = false);
+    }
+  }
+
+  Future<void> _chooseCustomer() async {
     final phoneCtrl = TextEditingController();
     final nameCtrl = TextEditingController();
     final ok = await showDialog<bool>(
@@ -149,9 +172,23 @@ class _PosScreenState extends State<PosScreen> {
       ),
     );
     if (ok != true || phoneCtrl.text.trim().isEmpty || !mounted) return;
-    final customer = await CustomerService.ensure(
-        phone: phoneCtrl.text, name: nameCtrl.text);
-    final rate = await SettingsService.getLoyaltyPointsPerBaht();
+    final Customer customer;
+    final int rate;
+    try {
+      customer = await CustomerService.ensure(
+              phone: phoneCtrl.text, name: nameCtrl.text)
+          .timeout(_loyaltyReadTimeout);
+      rate = await SettingsService.getLoyaltyPointsPerBaht()
+          .timeout(_loyaltyReadTimeout);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(e is TimeoutException
+                ? 'โหลดลูกค้าสะสมแต้มไม่สำเร็จ กรุณาตรวจการเชื่อมต่อแล้วลองใหม่'
+                : operationError(e))));
+      }
+      return;
+    }
     if (mounted) {
       setState(() {
         _loyaltyCustomer = customer;
@@ -196,7 +233,8 @@ class _PosScreenState extends State<PosScreen> {
     // The balance may have changed since the customer was attached (another
     // device, a refund, or a failed redemption), so read it fresh.
     try {
-      final points = await CustomerService.pointsOf(customer.id);
+      final points = await CustomerService.pointsOf(customer.id)
+          .timeout(_loyaltyReadTimeout);
       if (!mounted || _loyaltyCustomer?.id != attached.id) return;
       final fresh = Customer(
           id: customer.id,
@@ -209,7 +247,7 @@ class _PosScreenState extends State<PosScreen> {
       customer = fresh;
       setState(() => _loyaltyCustomer = fresh);
     } catch (_) {
-      // Offline: fall back to the balance shown; checkout re-checks it.
+      // Offline or slow: fall back to the balance shown; checkout re-checks it.
       if (!mounted || _loyaltyCustomer?.id != attached.id) return;
     }
     final max = CustomerService.maxRedeemBaht(
@@ -226,6 +264,13 @@ class _PosScreenState extends State<PosScreen> {
                   ? 'เพิ่มสินค้าก่อนใช้แต้ม'
                   : 'แต้มยังไม่พอใช้ ต้องมีอย่างน้อย $_pointsPerBaht แต้มต่อ ฿1')));
       return;
+    }
+    if (_redeemBaht > max) {
+      // The balance now covers less than was applied: never keep a discount
+      // the customer can no longer pay for in points.
+      setState(() => _redeemBaht = max);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('แต้มเหลือพอใช้ได้ ฿$max ปรับการใช้แต้มในบิลนี้แล้ว')));
     }
     final ctrl = TextEditingController(
         text: '${_redeemBaht > 0 && _redeemBaht <= max ? _redeemBaht : max}');
@@ -270,7 +315,8 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   Future<void> _chooseBundle() async {
-    if (_checkoutBusy || _redeeming || _pendingSale != null) return;
+    if (_redeeming) return _loyaltyBusyMessage();
+    if (_checkoutBusy || _pendingSale != null) return;
     setState(() => _checkoutBusy = true);
     try {
       final result = await StaffAccessService.call('counterBundleCatalog');
@@ -445,9 +491,9 @@ class _PosScreenState extends State<PosScreen> {
 
   Future<void> _checkout({bool isDebt = false}) async {
     if (AuthService.isStaff && isDebt) return;
+    if (_redeeming) return _loyaltyBusyMessage();
     if (_checkoutBusy ||
         _checkingPending ||
-        _redeeming ||
         (_cart.isEmpty && _pendingSale == null)) {
       return;
     }
@@ -849,23 +895,36 @@ class _PosScreenState extends State<PosScreen> {
                                             color: cs.onSurface),
                                       ),
                                     ),
-                                    if (_loyaltyCustomer != null)
+                                    if (_redeeming)
+                                      // Absorbs taps so they don't fall
+                                      // through to the strip's attach action.
+                                      GestureDetector(
+                                        key: const ValueKey('loyalty-loading'),
+                                        onTap: _loyaltyBusyMessage,
+                                        child: const Padding(
+                                          padding: EdgeInsets.symmetric(
+                                              horizontal: 12),
+                                          child: SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                  strokeWidth: 2)),
+                                        ),
+                                      )
+                                    else if (_loyaltyCustomer != null)
                                       TextButton(
                                         key: const ValueKey('redeem-points'),
-                                        onPressed:
-                                            _redeeming ? null : _redeemPoints,
+                                        onPressed: _redeemPoints,
                                         child: Text(_redeemBaht > 0
                                             ? 'แก้แต้ม'
                                             : 'ใช้แต้ม'),
                                       ),
                                     if (_loyaltyCustomer != null)
                                       GestureDetector(
-                                        onTap: () => _redeeming
-                                            ? null
-                                            : setState(() {
-                                                _loyaltyCustomer = null;
-                                                _redeemBaht = 0;
-                                              }),
+                                        onTap: () => setState(() {
+                                          _loyaltyCustomer = null;
+                                          _redeemBaht = 0;
+                                        }),
                                         child: Icon(Icons.close,
                                             size: 18,
                                             color: cs.onSurface
