@@ -18,6 +18,15 @@ Upstream examples using Next.js, Supabase, Clerk, Netlify, macOS, or Bash are no
 instructions to migrate this project or install those services. Select technology-
 specific skills only when that technology is actually relevant to the request.
 
+## Handoff log (required)
+
+`docs/HANDOFF.md` is the shared handoff between every AI assistant and the owner,
+whichever tool is used. Read it before starting any task. Update it after every
+meaningful step (commit, deploy, release, device test, decision) and before
+stopping, then commit it with the work. Keep its **Current state** accurate and
+add new **Log** entries at the top. Never put credentials or customer personal
+data in it.
+
 ## Working conventions
 
 - Preserve unrelated work in the working tree. Scope commits and deployments to
