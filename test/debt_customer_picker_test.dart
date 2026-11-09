@@ -183,4 +183,30 @@ void main() {
     await tester.pumpAndSettle();
     expect(text('debt-customer-search'), 'สมศักดิ์');
   });
+
+  testWidgets('going back with only a phone never makes it the name',
+      (tester) async {
+    await open(tester, created: <(String, String)>[]);
+    await tester.tap(find.byKey(const ValueKey('debt-customer-add')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+        find.byKey(const ValueKey('debt-customer-phone')), '0899999999');
+    await tester.tap(find.byKey(const ValueKey('debt-customer-back')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('debt-customer-add')));
+    await tester.pumpAndSettle();
+    expect(
+        tester
+            .widget<TextField>(
+                find.byKey(const ValueKey('debt-customer-search')))
+            .controller!
+            .text,
+        isEmpty);
+    expect(
+        tester
+            .widget<FilledButton>(
+                find.byKey(const ValueKey('debt-customer-save')))
+            .onPressed,
+        isNull);
+  });
 }

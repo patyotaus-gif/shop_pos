@@ -65,7 +65,7 @@ class _PosScreenState extends State<PosScreen> {
   // Replace, never queue: a stale "please wait" must not delay the result.
   void _loyaltyMessage(String text) {
     ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
+      ..clearSnackBars()
       ..showSnackBar(SnackBar(content: Text(text)));
   }
 
@@ -190,10 +190,13 @@ class _PosScreenState extends State<PosScreen> {
       rate = await SettingsService.getLoyaltyPointsPerBaht()
           .timeout(_loyaltyReadTimeout);
     } catch (e) {
-      if (mounted) {
+      // Silent after ✕: the cashier already cancelled this attach.
+      if (mounted && _loyaltyCustomer?.id == before) {
+        final current = _loyaltyCustomer;
         _loyaltyMessage(e is TimeoutException
-            ? 'เชื่อมต่อช้า ยังไม่ได้เลือกลูกค้า (ลูกค้าใหม่อาจถูกบันทึกไว้แล้ว) '
-                'กรุณาเลือกเบอร์เดิมอีกครั้ง'
+            ? 'เชื่อมต่อช้า ยังไม่ได้เปลี่ยนลูกค้า'
+                '${current == null ? '' : ' (บิลนี้ยังเป็นของ ${current.name})'} '
+                'ลูกค้าใหม่อาจถูกบันทึกไว้แล้ว กรุณาเลือกเบอร์อีกครั้ง'
             : operationError(e));
       }
       return;
@@ -263,20 +266,18 @@ class _PosScreenState extends State<PosScreen> {
     if (max < 1) {
       final hadRedemption = _redeemBaht > 0;
       if (hadRedemption) setState(() => _redeemBaht = 0);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(hadRedemption && _cart.isNotEmpty
-              ? 'แต้มไม่พอแล้ว ยกเลิกการใช้แต้มในบิลนี้'
-              : _cart.isEmpty
-                  ? 'เพิ่มสินค้าก่อนใช้แต้ม'
-                  : 'แต้มยังไม่พอใช้ ต้องมีอย่างน้อย $_pointsPerBaht แต้มต่อ ฿1')));
+      _loyaltyMessage(hadRedemption && _cart.isNotEmpty
+          ? 'แต้มไม่พอแล้ว ยกเลิกการใช้แต้มในบิลนี้'
+          : _cart.isEmpty
+              ? 'เพิ่มสินค้าก่อนใช้แต้ม'
+              : 'แต้มยังไม่พอใช้ ต้องมีอย่างน้อย $_pointsPerBaht แต้มต่อ ฿1');
       return;
     }
     if (_redeemBaht > max) {
       // The balance now covers less than was applied: never keep a discount
       // the customer can no longer pay for in points.
       setState(() => _redeemBaht = max);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('แต้มเหลือพอใช้ได้ ฿$max ปรับการใช้แต้มในบิลนี้แล้ว')));
+      _loyaltyMessage('แต้มเหลือพอใช้ได้ ฿$max ปรับการใช้แต้มในบิลนี้แล้ว');
     }
     final ctrl = TextEditingController(
         text: '${_redeemBaht > 0 && _redeemBaht <= max ? _redeemBaht : max}');

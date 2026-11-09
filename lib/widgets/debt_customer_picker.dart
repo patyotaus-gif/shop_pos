@@ -211,8 +211,9 @@ class _DebtCustomerPickerState extends State<DebtCustomerPicker> {
                 : () => setState(() {
                       _adding = false;
                       _error = null;
-                      final name = _search.text.trim();
-                      _typedName = name.isEmpty ? null : name;
+                      // Kept even when empty, so the phone placed in the
+                      // search box never becomes the new customer's name.
+                      _typedName = _search.text.trim();
                       final phone = _phone.text.trim();
                       if (phone.isNotEmpty) _search.text = phone;
                     }),

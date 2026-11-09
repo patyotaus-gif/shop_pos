@@ -16,7 +16,7 @@ Rules:
 ## Current state (updated 2026-11-10)
 
 **Branch:** `gif-feedback-2026-11` on top of `d29153f` (master), pushed to GitHub.
-Not merged; nothing deployed or released from it. Release in progress: review round 5 next.
+Not merged; nothing deployed or released from it. Release in progress: review round 6 next.
 
 **Live:** Android 1.2.74 (build 91) from `d29153f`, served at
 `pok-pok.app/app/version.json`. Functions on production are the pre-branch versions.
@@ -51,7 +51,14 @@ signed with the release key. The owner's test shop is logged in.
 - Round 2 **L-4**: `ensureByName` and the counter POS redemption have no
   automated test (CustomerService uses `FirebaseFirestore.instance`, not the
   `ShopDatabase` test override). Revisit when CustomerService is next changed.
-- Round 3 **L-5** / round 4 **L-5**: the counter POS loyalty lock, timeouts and
+- Round 5 **L-2**: in the debt picker, after going back, editing the phone in
+  the search box drops the kept name, and the phone field is never cleared by a
+  new search (a new name can be saved with the old phone). Revisit with the
+  picker's next change.
+- Round 5 **L-4**: ✕ only discards a late attach result; it can't cancel a
+  first attach (no ✕ shown) and doesn't release the loading lock early (worst
+  case 18 s). Revisit if cashiers report waits.
+- Round 3 **L-5** / round 4 test note: the counter POS loyalty lock, timeouts and
   redemption cap have no automated test (same cause as round 2 L-4).
 - Pre-existing: if the typed debt phone matches nobody, `ensureByName` falls back
   to an exact name match and drops the phone (same-name customers merge).
@@ -88,11 +95,24 @@ signed with the release key. The owner's test shop is logged in.
 
 ## Log
 
+### 2026-11-10 — Review round 5 fixes
+- Round 5 (subject `6649b09`): nothing Critical, High or Medium; five Lows.
+- Fixed **L-1**: going back with only a phone no longer makes the phone the new
+  customer's name (test added). Fixed **L-5**: loyalty messages now clear the
+  whole queue, and redemption messages use the same path. Fixed **L-3**: the
+  attach timeout message names the customer still on the bill and is silent
+  after ✕.
+- Backlog: L-2, L-4 (see Current state).
+- Verified locally: analyze clean; flutter test 397 pass, only the 5
+  pre-existing failures. No server code changed. Not on a device.
+
 ### 2026-11-10 — Review round 4 fixes
-- Round 4 (subject `45bb0d6`): nothing Critical, High or Medium; four Lows.
+- Round 4 (subject `45bb0d6`): nothing Critical, High or Medium; four Lows
+  plus a test-gap note.
 - Fixed: going back in the debt picker no longer forces the old name over a new
   search; loyalty messages replace each other instead of queuing (a stale
-  "รอสักครู่" could delay the attach result); attaching a customer allows 12 s
+  "รอสักครู่" could delay the attach result; only partly true, completed in
+  round 5); attaching a customer allows 12 s
   for the create write and the timeout message says the customer may already be
   saved; ✕ while an attach is loading now cancels it.
 - Verified locally: analyze clean; flutter test 396 pass, only the 5
