@@ -201,6 +201,7 @@ class _PosScreenState extends State<PosScreen> {
             prefixText: '฿',
             helperText:
                 'ใช้ได้สูงสุด ฿$max · $_pointsPerBaht แต้ม = ฿1 · มี ${customer.points} แต้ม',
+            helperMaxLines: 3,
             border: const OutlineInputBorder(),
           ),
         ),

@@ -63,6 +63,7 @@ Future<int?> showRedeemPointsDialog(BuildContext context,
           prefixText: '฿',
           helperText:
               'ใช้ได้สูงสุด ฿$maxBaht · $pointsPerBaht แต้ม = ฿1 · มี $points แต้ม',
+          helperMaxLines: 3,
           border: const OutlineInputBorder(),
         ),
       ),
