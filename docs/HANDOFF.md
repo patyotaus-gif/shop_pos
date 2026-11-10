@@ -104,6 +104,21 @@ it will be offered 1.2.75 by the in-app updater.
 
 ## Log
 
+### 2026-11-10 — Demo data for website screenshots (paused by owner)
+- Owner allowed turning the shop logged in on SM-X900 (1.2.75 installed) into a
+  demo shop. Added through the app UI: categories อาหาร and เครื่องดื่ม; 7 dishes
+  (ข้าวกะเพราหมูกรอบ 60, ข้าวผัดกุ้ง 70, ผัดไทยกุ้งสด 80, ต้มยำกุ้งน้ำข้น 120,
+  ข้าวมันไก่ 55, ส้มตำไทย 50, ไข่เจียวหมูสับ 45) and 4 drinks (ชาไทยเย็น 40,
+  กาแฟเย็น 45, โกโก้เย็น 45, น้ำเปล่า 10), stock 50/100; tables 3–6. Old items
+  (ยาดม, เลย์, ขนม/ยา) and the empty open orders on tables 1–2 are unchanged.
+- Installed ADBKeyboard (senzhk/ADBKeyBoard v2.5-dev, no permissions) on the
+  tablet with owner approval so adb can type Thai; Samsung Keyboard restored as
+  the default. Uninstall with `adb uninstall com.android.adbkeyboard` when done.
+- Direct Firestore writes were blocked by the Claude Code permission policy;
+  nothing was read or written that way.
+- Next: add items to tables (one awaiting payment), a counter sale, then take
+  screenshots of tables, POS and reports for the website.
+
 ### 2026-11-10 — Website round 1 deployed
 - Owner approved; fast-forwarded master to `0089fd2`, deployed hosting. Verified
   live: new H1, `#plans` section, new site.js; version.json still 1.2.75/92.
