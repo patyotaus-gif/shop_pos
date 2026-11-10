@@ -116,9 +116,18 @@ it will be offered 1.2.75 by the in-app updater.
   the default. Uninstall with `adb uninstall com.android.adbkeyboard` when done.
 - Later the owner added a local allow rule (`.claude/settings.local.json`, not
   committed) for one scratchpad script that uses the owner's gcloud login and is
-  locked to the demo shop (owner's own shop, the one on the tablet). Used so far
-  for reads only: verified the 11 new products (category, price, cost, stock).
-  Nothing written through it yet.
+  locked to the demo shop (owner's own shop, the one on the tablet). Verified the
+  11 new products, then (owner request) deleted ยาดมตราโอ้ยเสี้ยน and เลย์ (and
+  the ยาดม Storage image), and gave all 11 dishes photos: uploaded to
+  `shops/<uid>/products/<id>.jpg` with a download token and `imageUrl` set, the
+  same layout the app uses. Photos are CC0 / public domain only (Wikimedia
+  Commons: Basil fried crispy pork with rice Chiang Mai 2017-07-11 (002); Khao
+  Phat Kung; Phat thai Chiang Mai 2017-07-08 (002); Tom Yum Soup; Som Tom
+  (Papaya Salad) Little Thai 2024-06-14; FoodOmelete; Thai Red Ice Milk Tea Siam
+  Siam 2024-07-31; Iced Coffee 20240730-135859; Classic Iced Chocolate MOGUMOGU
+  2025-04-16, cropped to the glass so no faces; This is a cold water bottle.
+  Flickr PDM: "Hainan Chicken Rice" 54909670636), square-cropped to 600 px.
+  Not yet seen on the tablet (it disconnected).
 - Next: add items to tables (one awaiting payment), a counter sale, then take
   screenshots of tables, POS and reports for the website.
 
