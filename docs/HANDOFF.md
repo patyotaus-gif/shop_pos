@@ -114,8 +114,11 @@ it will be offered 1.2.75 by the in-app updater.
 - Installed ADBKeyboard (senzhk/ADBKeyBoard v2.5-dev, no permissions) on the
   tablet with owner approval so adb can type Thai; Samsung Keyboard restored as
   the default. Uninstall with `adb uninstall com.android.adbkeyboard` when done.
-- Direct Firestore writes were blocked by the Claude Code permission policy;
-  nothing was read or written that way.
+- Later the owner added a local allow rule (`.claude/settings.local.json`, not
+  committed) for one scratchpad script that uses the owner's gcloud login and is
+  locked to the demo shop (owner's own shop, the one on the tablet). Used so far
+  for reads only: verified the 11 new products (category, price, cost, stock).
+  Nothing written through it yet.
 - Next: add items to tables (one awaiting payment), a counter sale, then take
   screenshots of tables, POS and reports for the website.
 
