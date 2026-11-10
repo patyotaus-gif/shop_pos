@@ -127,7 +127,22 @@ it will be offered 1.2.75 by the in-app updater.
   Siam 2024-07-31; Iced Coffee 20240730-135859; Classic Iced Chocolate MOGUMOGU
   2025-04-16, cropped to the glass so no faces; This is a cold water bottle.
   Flickr PDM: "Hainan Chicken Rice" 54909670636), square-cropped to 600 px.
-  Not yet seen on the tablet (it disconnected).
+  Seen on the tablet 2026-11-11: photos show in the POS grid and table picker.
+- 2026-11-11 on the tablet: table 1 has 3 dishes sent to kitchen + bill
+  requested (รอชำระเงิน, ฿220); table 2 has 3 dishes sent (กำลังใช้งาน, ฿155).
+  Website screenshots saved locally (not committed): tables.png, pos.png in the
+  session temp folder `web-shots/`.
+- **Unresolved, investigate before more demo work:**
+  1. The sale screen keeps jumping back from สั่งกลับบ้าน to the tables view
+     (ทานที่ร้าน) by itself; once the counter cart was emptied too.
+  2. A counter cash sale (฿190, received ฿200) was confirmed, the screen jumped
+     to the tables view with no receipt, and รายงาน still showed 0 bills.
+     Not yet known whether it is queued (see "ขายออฟไลน์ / บิลค้าง" on the POS)
+     or lost. Once, the payment sheet showed "ติดต่อระบบไม่ได้" although the
+     tablet's network was fine (ping to Firestore OK).
+  3. The green "ส่งเข้าคิวครัวแล้ว" SnackBar (with action จอครัว / พิมพ์) never
+     times out, stacks per send, and covers the checkout buttons until swiped.
+  ADBKeyboard is installed but the Samsung keyboard is the default.
 - Next: add items to tables (one awaiting payment), a counter sale, then take
   screenshots of tables, POS and reports for the website.
 
