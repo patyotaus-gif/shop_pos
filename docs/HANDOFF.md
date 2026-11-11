@@ -15,19 +15,20 @@ Rules:
 
 ## Current state (updated 2026-11-12)
 
-**Branch:** `master`, fast-forwarded from `kitchen-no-bill-button` and pushed.
-Android 1.2.76 and the website were deployed from commit `1913e1c`.
+**Branch:** `master`. Website copy commit `5c68828` is pushed and deployed.
+Android 1.2.76 remains the artifact released from commit `1913e1c`.
 
-**Local website copy update (2026-11-12):** home, features and pricing copy
+**Live website copy update (2026-11-12):** home, features and pricing copy
 revised from the owner's video feedback; retail plan HTML/JS stay in sync.
-Local browser checks passed; this wording update is not pushed or deployed.
+Independent review, local checks and live browser checks passed.
+Hosting version: `00daee4b204effc7` (2026-11-11 14:03:49 UTC / 12 Nov Sydney).
 See `docs/website-copy-2026-11-12.md`. The 2026-11-11 read-only website audit
 is recorded below; its performance/accessibility/analytics fixes remain pending.
 
-**Live (released 2026-11-11):** Android **1.2.76 (build 93)**, served at
+**Live app (released 2026-11-11):** Android **1.2.76 (build 93)**, served at
 `pok-pok.app/app/version.json` (sha256 `afb8f92f…a9ad`, 97,532,155 bytes, signed
 with the release key `f7dc70e0…`). New website screenshots are also live.
-Hosting version: `c28bc9b38e17d96e`. Functions `tablePromotions`, `staffWork`,
+Previous Hosting version / rollback: `c28bc9b38e17d96e`. Functions `tablePromotions`, `staffWork`,
 `staffCheckout`, `createRefund` remain at their 2026-11-10 deployment;
 this release changed no Functions, rules or payment/security settings.
 
@@ -36,7 +37,7 @@ Kitchen table tickets have no bill shortcut; table billing remains reachable
 from Sales > dine-in > table. Fresh website screenshots retain their real capture
 version, 1.2.75 (92); the only app UI change is outside those screenshots.
 
-**Release verified:** downloaded the live APK and checked its size/hash against
+**App release verification (2026-11-11):** downloaded the live APK and checked its size/hash against
 the signed, device-tested artifact; live version.json and all 10 changed website
 HTML/image files match local bytes. Source review, focused checks, signed APK
 build, installation and metadata review passed. iOS/TestFlight was not built
@@ -123,6 +124,31 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-12 — Published revised website wording
+
+- Pushed `5c68828` to `origin/master`, then deployed Hosting only to the explicit
+  project `shop-pos-89294`. Release version `00daee4b204effc7`, at
+  2026-11-11 14:03:49 UTC. Release message records the full source commit.
+- Fresh independent Claude CLI review of `1913e1c..5c68828` completed with no
+  blocking findings (27 turns, exit 0, read-only snapshot, no tool denials).
+  Accepted pre-existing Low observations: JSON-LD description still uses the
+  older accurate wording (revisit with metadata edits); bare shared-script URLs
+  on non-pricing pages (revisit when shared JS behavior changes).
+- Re-ran the local marketing gate: 16 pages × 5 widths passed. Focused copy
+  checks passed for 3 pages × 5 widths / 40 states; syntax and diff checks passed.
+  Looked at mobile/desktop hero, pricing and feature-story captures.
+- Live home, features, pricing, shared JS and app manifest all match local bytes.
+  Read both Hosting versions' complete file lists: 69 files each, exactly the
+  four intended HTML/JS files changed; no additions/removals and APK unchanged.
+- Live Edge/Chromium smoke passed on 3 pages at 390/1440 px: new copy, business
+  switches, monthly/yearly prices, no horizontal overflow or page errors.
+  No physical-device or Safari test, app build or iOS release in this round.
+- Rollback version: `c28bc9b38e17d96e`. No Functions, rules, database,
+  payment/security configuration or hosting-routing changes.
+- Evidence: `D:/pokpok-copy-release-20261112/` (review, file-list comparison,
+  live byte checks and browser captures); copy details in
+  `docs/website-copy-2026-11-12.md`.
 
 ### 2026-11-12 — Revise website wording from video feedback (local only)
 
