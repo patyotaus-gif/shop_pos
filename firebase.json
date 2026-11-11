@@ -28,6 +28,24 @@
     ],
     "headers": [
       {
+        "source": "/{,index.html}",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+      {
+        "source": "/{features,pricing,marketplace,guides,blog,privacy,terms}{,/**}",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+      {
         "source": "/app/**",
         "headers": [
           {

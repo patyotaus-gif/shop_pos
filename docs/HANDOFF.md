@@ -22,6 +22,8 @@ Android 1.2.76 remains the artifact released from commit `1913e1c`.
 revised from the owner's video feedback; retail plan HTML/JS stay in sync.
 Independent review, local checks and live browser checks passed.
 Hosting version: `00daee4b204effc7` (2026-11-11 14:03:49 UTC / 12 Nov Sydney).
+Follow-up cache fix is prepared locally: marketing HTML must revalidate on
+navigation instead of retaining the old response for one hour. Not deployed yet.
 See `docs/website-copy-2026-11-12.md`. The 2026-11-11 read-only website audit
 is recorded below; its performance/accessibility/analytics fixes remain pending.
 
@@ -124,6 +126,33 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-12 — Correct stale marketing-page cache (prepared locally)
+
+- Owner still saw the previous homepage wording after the copy release.
+  Fresh GETs to the custom domain and web.app both returned the new bytes, but
+  root, index.html, features and pricing all returned `Cache-Control: max-age=3600`.
+  This supports browser caching as the cause; the owner's browser storage itself
+  was not inspected.
+- Added `no-cache` only to root/index.html and the marketing content directories
+  in firebase.json. Shared assets, APK/app manifest, order pages, API rewrites,
+  payment settings and application code are unchanged.
+- Focused regression: scripts/test_marketing_cache.cjs. Live header check failed
+  before deployment at `/` with max-age=3600; local policy check passes 48 URLs.
+  Real Edge HTTP-cache fixture reproduces stale content with the old policy and
+  receives updated content after navigation with the new policy, without clearing
+  cache between the two visits. The fixture is not the Hosting emulator.
+- Superstatic 10 on this Windows host converts URL slashes to backslashes in
+  header matching, so it was unsuitable for validating these headers. Replaced
+  that attempted harness with local glob-policy checks plus a read-only live
+  Hosting check; the browser fixture independently verifies browser behavior.
+- Existing cached copies cannot receive the new header until fetched again:
+  Ctrl+F5 once, a fresh query URL, or expiry is needed for the old cached response.
+  Already open tabs are not automatically refreshed.
+- Run with MINIMATCH_MODULE pointing to Firebase CLI's minimatch dependency,
+  PLAYWRIGHT_MODULE and BROWSER_EXECUTABLE as for the marketing gate; optional
+  CACHE_CHECK_URL=https://pok-pok.app validates real headers instead of local ones.
+  Independent review, deployment and live verification are pending.
 
 ### 2026-11-12 — Published revised website wording
 
