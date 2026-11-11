@@ -29,6 +29,15 @@ data in it.
 
 ## Working conventions
 
+### Website direction (owner-approved 2026-11-11)
+
+Before planning, editing, reviewing, or releasing the marketing website, read
+`docs/website-development-core.md`. It is the owner's standing direction for
+website copy, visuals, navigation, segment pages, pricing, CTAs, mobile, and SEO;
+use it over older website proposals where they disagree. Recording this direction
+does not mean the website already implements it. Review with the owner when the
+positioning changes (review 2027-02).
+
 - Preserve unrelated work in the working tree. Scope commits and deployments to
   the requested change and check current state before changing anything.
 - User instructions and existing authorization take precedence over skill defaults.

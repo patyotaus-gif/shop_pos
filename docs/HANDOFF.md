@@ -13,7 +13,7 @@ Rules:
 
 ---
 
-## Current state (updated 2026-11-10)
+## Current state (updated 2026-11-11)
 
 **Branch:** `gif-feedback-2026-11` is merged into `master` (merge `7458f2f`);
 the release commit on master is tagged `v1.2.75`.
@@ -34,8 +34,12 @@ it will be offered 1.2.75 by the in-app updater.
 - Website (Gif's feedback 2026-11-09), branch `website-gif-2026-11`:
   round 1 merged to master and **deployed 2026-11-10**. Still to do:
   current-version screenshots (needs the tablet and a shop whose data may be
-  shown publicly), 3–4 feature blocks with real screenshots (Thai names first),
+  shown publicly), 3–4 feature blocks with real screenshots (follow the latest
+  owner-approved naming direction in `docs/website-development-core.md`),
   separate `/retail/` and `/restaurant/` pages, real shop photography.
+- Website direction: owner approved the ten-part brief in
+  `docs/website-development-core.md` on 2026-11-11. Read it before website work;
+  it is the target direction, not a claim that all ten parts are implemented.
 
 ### Review backlog (Low, accepted for 1.2.75)
 - **L1** Staff can't unblock a table bill whose redeemed points no longer fit
@@ -103,6 +107,27 @@ it will be offered 1.2.75 by the in-app updater.
 ---
 
 ## Log
+
+### 2026-11-11 — Recorded the owner's website development core
+- Owner designated four supplied screenshots as the standing website direction.
+  Recorded all ten areas in `docs/website-development-core.md` and routed future
+  website planning, edits, reviews and releases to it from `AGENTS.md`.
+- Covers hero clarity, visual identity, retail/restaurant pages, feature proof,
+  pricing, trust, CTAs/install guidance, mobile, SEO and footer. Explicitly records
+  the latest English-feature-name/Thai-description direction over the older
+  "Thai names first" planning note; no website copy changed in this task.
+- Documentation only; no application build, deployment or device test.
+
+### 2026-11-11 — Curated photos applied to the authorized demo shop
+- With owner authorization, replaced names/photos for eight demo products using
+  the curated Pexels set, grouped them into pasta, salad, desserts and drinks,
+  and pinned them. Kept the other three in เมนูเดิม, unpinned; no products deleted.
+- Backed up the original documents locally under the ignored food-set review
+  directory before writing. Atomic updates guarded against concurrent edits.
+  Readback verified all eight image downloads and unchanged other product fields
+  including price and stock. Sales history was not edited.
+- Data change only; no new app build. ADB showed no connected device, so the
+  updated menu has not been checked on a real device.
 
 ### 2026-11-11 — Kitchen screen no longer opens bills (Gif feedback)
 - Gif: "ไปที่บิล ปิดโต๊ะ ไม่อยากให้ครัวกดได้ อยากให้กดได้แค่แคชเชียร์". Her kitchen
