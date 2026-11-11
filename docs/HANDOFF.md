@@ -15,36 +15,36 @@ Rules:
 
 ## Current state (updated 2026-11-11)
 
-**Branch:** current checkout is `kitchen-no-bill-button`, with the unreleased
-kitchen button change, website direction and screenshot refresh. Previously,
-`gif-feedback-2026-11` merged into `master` (`7458f2f`); the release on master is
-tagged `v1.2.75`.
+**Branch:** `master`, fast-forwarded from `kitchen-no-bill-button` and pushed.
+Android 1.2.76 and the website were deployed from commit `1913e1c`.
 
-**Live (released 2026-11-10):** Android **1.2.75 (build 92)**, served at
-`pok-pok.app/app/version.json` (sha256 `85f7045c…3f84`, 97,548,539 bytes, signed
-with the release key `f7dc70e0…`). Functions `tablePromotions`, `staffWork`,
-`staffCheckout`, `createRefund` deployed to production the same day, before the APK.
-Other Functions are unchanged.
+**Live (released 2026-11-11):** Android **1.2.76 (build 93)**, served at
+`pok-pok.app/app/version.json` (sha256 `afb8f92f…a9ad`, 97,532,155 bytes, signed
+with the release key `f7dc70e0…`). New website screenshots are also live.
+Hosting version: `c28bc9b38e17d96e`. Functions `tablePromotions`, `staffWork`,
+`staffCheckout`, `createRefund` remain at their 2026-11-10 deployment;
+this release changed no Functions, rules or payment/security settings.
 
 **Test tablet (SM-X900):** installed and verified **1.2.76 (93)** on 2026-11-11.
 Kitchen table tickets have no bill shortcut; table billing remains reachable
 from Sales > dine-in > table. Fresh website screenshots retain their real capture
 version, 1.2.75 (92); the only app UI change is outside those screenshots.
 
-**Release in progress:** owner authorized Android 1.2.76 (93), followed by
-publishing the prepared website screenshots. Source review, focused checks,
-signed APK build and installation passed. Metadata review round 9 passed.
-Production remains 1.2.75 until verified below.
+**Release verified:** downloaded the live APK and checked its size/hash against
+the signed, device-tested artifact; live version.json and all 10 changed website
+HTML/image files match local bytes. Source review, focused checks, signed APK
+build, installation and metadata review passed. iOS/TestFlight was not built
+or triggered; its Codemagic workflow does not run automatically on push.
 
 ### Next
-- Device-check 1.2.75 on the tablet: table-bill loyalty and staff bill request
+- Device-check the features shipped in 1.2.75 on the current tablet build:
+  table-bill loyalty and staff bill request
   (now possible with the Functions live), counter points lock on a slow network,
   debt picker phone conflict and "กลับไปรายชื่อ".
 - Website (Gif's feedback 2026-11-09), branch `website-gif-2026-11`:
-  round 1 merged to master and **deployed 2026-11-10**. Still to do:
-  deploy the current-version screenshot refresh prepared on
-  `kitchen-no-bill-button` (see `docs/website-screenshots-2026-11-11.md`),
-  3–4 feature blocks with real screenshots (follow the latest
+  round 1 merged to master and **deployed 2026-11-10**; refreshed app screenshots
+  **deployed and verified 2026-11-11** (see `docs/website-screenshots-2026-11-11.md`).
+  Still to do: 3–4 feature blocks with real screenshots (follow the latest
   owner-approved naming direction in `docs/website-development-core.md`),
   separate `/retail/` and `/restaurant/` pages, real shop photography.
 - Website direction: owner approved the ten-part brief in
@@ -117,6 +117,24 @@ Production remains 1.2.75 until verified below.
 ---
 
 ## Log
+
+### 2026-11-11 — Released Android 1.2.76 (93) and website screenshots
+- Fast-forwarded master to `1913e1c` and pushed, then deployed Hosting only to
+  `shop-pos-89294`; deployed Hosting version `c28bc9b38e17d96e`.
+- Verified public `https://pok-pok.app/app/version.json` matches the staged
+  manifest. Downloaded the public APK: 97,532,155 bytes, SHA-256
+  `afb8f92f10568907da090296ff5cb9e5788628d506a193453ff8bebf5a74a9ad`, identical
+  to the signed APK installed and checked on the tablet.
+- All 7 changed HTML files and 3 new screenshots fetched from pok-pok.app match
+  local bytes. Verification finished at 2026-11-11 03:11:57 UTC; evidence in
+  ignored `.remember/tmp/release-1.2.76/live-verification.json`.
+- Refreshed the existing Google Drive provenance document in the screenshots
+  folder with the deployment result, preserving its file ID and sharing.
+  Metadata readback confirms the new size (9,363 bytes) and modification time.
+- Water removal was verified again in the updated tablet's product list.
+  Ten other demo products remain; no sales or historical stock records changed.
+- Previous APK/manifest retained in ignored release scratch for rollback.
+  iOS/TestFlight was not built or triggered. No backend/security/payment changes.
 
 ### 2026-11-11 — Prepared Android 1.2.76 (93) and tested on the tablet
 - Release APK built successfully (97,532,155 bytes), version read from APK
