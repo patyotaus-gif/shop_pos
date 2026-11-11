@@ -13,10 +13,16 @@ Rules:
 
 ---
 
-## Current state (updated 2026-11-11)
+## Current state (updated 2026-11-12)
 
 **Branch:** `master`, fast-forwarded from `kitchen-no-bill-button` and pushed.
 Android 1.2.76 and the website were deployed from commit `1913e1c`.
+
+**Local website copy update (2026-11-12):** home, features and pricing copy
+revised from the owner's video feedback; retail plan HTML/JS stay in sync.
+Local browser checks passed; this wording update is not pushed or deployed.
+See `docs/website-copy-2026-11-12.md`. The 2026-11-11 read-only website audit
+is recorded below; its performance/accessibility/analytics fixes remain pending.
 
 **Live (released 2026-11-11):** Android **1.2.76 (build 93)**, served at
 `pok-pok.app/app/version.json` (sha256 `afb8f92f…a9ad`, 97,532,155 bytes, signed
@@ -117,6 +123,37 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-12 — Revise website wording from video feedback (local only)
+
+- Replaced colloquial headings/descriptions on home, features and pricing with
+  clear Thai for sales, stock, credit, kitchen, checkout, online ordering and
+  reports. Updated home search/share descriptions and trial/download CTAs.
+- Updated retail Solo/Lite/Full descriptions and fit text in both static HTML
+  and shared JS; bumped the script URL on both pricing surfaces. Existing
+  prices, tier features, trial terms and iOS TestFlight qualification preserved.
+- Updated the existing retail-toggle assertion to use the revised copy.
+  Local regression passed: 16 pages × 5 widths. Focused text geometry and
+  pricing-state agreement passed: 3 pages × 5 widths, 40 rendered states.
+  No physical-device/Safari test; no push, deployment or app build.
+- Details: `docs/website-copy-2026-11-12.md`; evidence on
+  `D:/pokpok-copy-20261112/` and `.remember/tmp/brand-preview/`.
+
+### 2026-11-11 — Public website checklist audit (read-only; recorded 2026-11-12)
+
+- Audited live source a9b2673: 16 routes at 320/390/768/1440 px, 29 HTTP(S)
+  links and 13 interaction flows. No horizontal overflow, broken checked links
+  or page exceptions. Full report: `D:/pokpok-audit-20261111/website-audit-2026-11-11.md`.
+- Lighthouse/Edge lab Performance: home mobile/desktop 100/100, pricing mobile
+  99, features mobile 98. PSI API returned 429 and PSI UI could not resolve
+  the URL: real-user Core Web Vitals remain unverified.
+- Pending findings: no conversion tracking on marketing pages; oversized POS
+  screenshot/Pexon raster; stale sitemap lastmod; color-only breadcrumb links
+  and missing main landmarks in two blog articles; expanded mobile menu outside
+  a navigation landmark. Menu keyboard interaction itself passed.
+- No site changes, deployment or physical-device/Safari test in that audit.
+  Its handoff write was deferred because C: was full; space became available
+  before this entry was merged. Original evidence remains on D:.
 
 ### 2026-11-11 — Released Android 1.2.76 (93) and website screenshots
 - Fast-forwarded master to `1913e1c` and pushed, then deployed Hosting only to

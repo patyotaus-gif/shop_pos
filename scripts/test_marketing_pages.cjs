@@ -48,7 +48,7 @@ function localFile(url) {
     await page.locator('#type-restaurant').click();assert.match(await page.locator('#plan-desc-0').textContent(),/กลับบ้าน/);
     await page.locator('#by').click();assert.equal(await page.locator('.p-amt').first().textContent(),'1,990');
     await page.locator('#bm').click();assert.equal(await page.locator('.p-amt').first().textContent(),'199');
-    await page.locator('#type-retail').click();assert.match(await page.locator('#plan-desc-0').textContent(),/ขายเอง/);
+    await page.locator('#type-retail').click();assert.match(await page.locator('#plan-desc-0').textContent(),/จัดการการขายและตรวจสอบยอดขายประจำวัน/);
     await page.goto('https://pokpok-preview.test/');
     assert.match(await page.locator('h1').textContent(),/POS/);
     assert.equal(await page.locator('#plans .p-card').count(),3);
