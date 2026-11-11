@@ -33,7 +33,7 @@ version, 1.2.75 (92); the only app UI change is outside those screenshots.
 
 **Release in progress:** owner authorized Android 1.2.76 (93), followed by
 publishing the prepared website screenshots. Source review, focused checks,
-signed APK build and installation passed. Metadata review is running.
+signed APK build and installation passed. Metadata review round 9 passed.
 Production remains 1.2.75 until verified below.
 
 ### Next
@@ -129,8 +129,11 @@ Production remains 1.2.75 until verified below.
   Sales > dine-in; its bill and รับชำระเงิน button remain available.
   No payment, sale or kitchen-status change was made during this check.
 - Local analyze and 21 focused kitchen tests passed; website checks passed
-  16 pages × 5 widths. Source review round 7 was clean; round 8 is checking
-  release metadata in fresh read-only bundled Claude Code 2.1.322.
+  16 pages × 5 widths. Source review round 7 was clean. Metadata review round 8
+  (bundled Claude Code 2.1.322) returned no report after 705 seconds and was
+  stopped, not counted as a pass. Fresh read-only Codex round 9 independently
+  checked commit 33207c0, metadata/update-service/hosting interactions and both
+  APK hashes, with no finding. Signature and device checks were run separately.
 - Staged APK and matching public/app/version.json; previous APK/manifest backed
   up in ignored release scratch. Still not deployed. iOS is not built locally;
   Codemagic's TestFlight workflow has no push trigger and was not started.
