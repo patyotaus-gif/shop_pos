@@ -15,8 +15,10 @@ Rules:
 
 ## Current state (updated 2026-11-11)
 
-**Branch:** `gif-feedback-2026-11` is merged into `master` (merge `7458f2f`);
-the release commit on master is tagged `v1.2.75`.
+**Branch:** current checkout is `kitchen-no-bill-button`, with the unreleased
+kitchen button change, website direction and screenshot refresh. Previously,
+`gif-feedback-2026-11` merged into `master` (`7458f2f`); the release on master is
+tagged `v1.2.75`.
 
 **Live (released 2026-11-10):** Android **1.2.75 (build 92)**, served at
 `pok-pok.app/app/version.json` (sha256 `85f7045c…3f84`, 97,548,539 bytes, signed
@@ -24,8 +26,8 @@ with the release key `f7dc70e0…`). Functions `tablePromotions`, `staffWork`,
 `staffCheckout`, `createRefund` deployed to production the same day, before the APK.
 Other Functions are unchanged.
 
-**Test tablet (SM-X900):** still on an earlier branch build labelled 1.2.74 (91);
-it will be offered 1.2.75 by the in-app updater.
+**Test tablet (SM-X900):** verified installed **1.2.75 (92)** on 2026-11-11.
+New demo photos are visible in the app; fresh website screenshots captured.
 
 ### Next
 - Device-check 1.2.75 on the tablet: table-bill loyalty and staff bill request
@@ -33,8 +35,9 @@ it will be offered 1.2.75 by the in-app updater.
   debt picker phone conflict and "กลับไปรายชื่อ".
 - Website (Gif's feedback 2026-11-09), branch `website-gif-2026-11`:
   round 1 merged to master and **deployed 2026-11-10**. Still to do:
-  current-version screenshots (needs the tablet and a shop whose data may be
-  shown publicly), 3–4 feature blocks with real screenshots (follow the latest
+  deploy the current-version screenshot refresh prepared on
+  `kitchen-no-bill-button` (see `docs/website-screenshots-2026-11-11.md`),
+  3–4 feature blocks with real screenshots (follow the latest
   owner-approved naming direction in `docs/website-development-core.md`),
   separate `/retail/` and `/restaurant/` pages, real shop photography.
 - Website direction: owner approved the ten-part brief in
@@ -107,6 +110,27 @@ it will be offered 1.2.75 by the in-app updater.
 ---
 
 ## Log
+
+### 2026-11-11 — Replaced website app screenshots with real 1.2.75 captures
+- Captured POS (curated pasta photos and draft cart), unpaid demo order, and
+  report overview from the connected SM-X900 running 1.2.75 (92). Updated home,
+  features, two guides and three blog/share surfaces; replaced outdated image
+  references, alt text and captions. Removed the four unused legacy images from
+  public assets. No app UI, price, payment or security configuration changed.
+- Used the authorized demo shop. Created one clearly labelled pending-payment
+  order solely for capture, never confirmed payment; deleted it with a status
+  guard and verified absence. Cleared the temporary POS cart. Restored tablet
+  display density/system-bar settings and S Pen setting after capture.
+- Local: marketing checks PASS, 16 pages × 5 widths. Separate image geometry
+  checks PASS, 3 pages × 4 widths; original aspect ratios retained and full-size
+  image link opens. Reviewed actual browser screenshots at 390/768/1440.
+  A screenshot-only newcomer walkthrough found a capture artefact (sticky header
+  over a scrolled element); full viewport recapture confirms normal page layout.
+- Source and provenance: `docs/website-screenshots-2026-11-11.md`. Copied approved
+  screenshots, desktop/mobile website previews and that document to the team's
+  dated 03_App Assets folder; Drive file readback verified separately.
+- Website source only, **not deployed**; no new APK or Functions release. These
+  captures do not resolve or certify the previously recorded checkout bugs.
 
 ### 2026-11-11 — Recorded the owner's website development core
 - Owner designated four supplied screenshots as the standing website direction.
