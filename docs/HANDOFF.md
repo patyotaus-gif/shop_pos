@@ -15,22 +15,23 @@ Rules:
 
 ## Current state (updated 2026-11-12)
 
-**Branch:** `master`. Website copy commit `5c68828` is pushed and deployed.
+**Branch:** `master`. Website copy `5c68828` and cache fix `05540a7` are pushed and deployed.
 Android 1.2.76 remains the artifact released from commit `1913e1c`.
 
 **Live website copy update (2026-11-12):** home, features and pricing copy
 revised from the owner's video feedback; retail plan HTML/JS stay in sync.
 Independent review, local checks and live browser checks passed.
-Hosting version: `00daee4b204effc7` (2026-11-11 14:03:49 UTC / 12 Nov Sydney).
-Follow-up cache fix is prepared locally: marketing HTML must revalidate on
-navigation instead of retaining the old response for one hour. Not deployed yet.
+Hosting version: `4f04f89cb357738d` (2026-11-11 14:28:39 UTC / 12 Nov Sydney).
+Follow-up cache fix is live: marketing HTML revalidates on navigation instead
+of retaining the old response for one hour. Old cached copies still need one
+hard refresh or expiry before receiving this policy.
 See `docs/website-copy-2026-11-12.md`. The 2026-11-11 read-only website audit
 is recorded below; its performance/accessibility/analytics fixes remain pending.
 
 **Live app (released 2026-11-11):** Android **1.2.76 (build 93)**, served at
 `pok-pok.app/app/version.json` (sha256 `afb8f92f…a9ad`, 97,532,155 bytes, signed
 with the release key `f7dc70e0…`). New website screenshots are also live.
-Previous Hosting version / rollback: `c28bc9b38e17d96e`. Functions `tablePromotions`, `staffWork`,
+Previous Hosting version / rollback: `00daee4b204effc7`. Functions `tablePromotions`, `staffWork`,
 `staffCheckout`, `createRefund` remain at their 2026-11-10 deployment;
 this release changed no Functions, rules or payment/security settings.
 
@@ -127,7 +128,7 @@ or triggered; its Codemagic workflow does not run automatically on push.
 
 ## Log
 
-### 2026-11-12 — Correct stale marketing-page cache (prepared locally)
+### 2026-11-12 — Correct stale marketing-page cache (published)
 
 - Owner still saw the previous homepage wording after the copy release.
   Fresh GETs to the custom domain and web.app both returned the new bytes, but
@@ -152,7 +153,20 @@ or triggered; its Codemagic workflow does not run automatically on push.
 - Run with MINIMATCH_MODULE pointing to Firebase CLI's minimatch dependency,
   PLAYWRIGHT_MODULE and BROWSER_EXECUTABLE as for the marketing gate; optional
   CACHE_CHECK_URL=https://pok-pok.app validates real headers instead of local ones.
-  Independent review, deployment and live verification are pending.
+- Fresh isolated Claude CLI review of the git-produced release range passed:
+  no material findings, 29 turns, exit 0, read-only tools and no tool denials.
+  Reviewed the actual findings and the 18-line configuration diff before release.
+- Pushed source `05540a7`, then deployed Hosting only to shop-pos-89294.
+  Version `4f04f89cb357738d`, released 2026-11-11 14:28:39 UTC. Compared the
+  complete 69-file inventory with `00daee4b204effc7`: every file hash is unchanged;
+  only Hosting configuration changed. Rollback: `00daee4b204effc7`.
+- Live cache regression passed all 48 marketing URLs, shared-asset exclusions,
+  and existing app/order policies. The actual live HTML/JS/manifest bytes still
+  match local files. Live Edge checks passed on home/features/pricing at
+  390/1440 px, including new wording, plan switches, no overflow or page errors.
+  Looked at the actual desktop homepage capture. No physical-device/Safari test.
+- Evidence: `D:/pokpok-cache-release-20261112/` (independent review, deployment
+  result, Hosting file inventory, byte checks and live browser captures).
 
 ### 2026-11-12 — Published revised website wording
 
