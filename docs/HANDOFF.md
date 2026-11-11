@@ -26,8 +26,15 @@ with the release key `f7dc70e0…`). Functions `tablePromotions`, `staffWork`,
 `staffCheckout`, `createRefund` deployed to production the same day, before the APK.
 Other Functions are unchanged.
 
-**Test tablet (SM-X900):** verified installed **1.2.75 (92)** on 2026-11-11.
-New demo photos are visible in the app; fresh website screenshots captured.
+**Test tablet (SM-X900):** installed and verified **1.2.76 (93)** on 2026-11-11.
+Kitchen table tickets have no bill shortcut; table billing remains reachable
+from Sales > dine-in > table. Fresh website screenshots retain their real capture
+version, 1.2.75 (92); the only app UI change is outside those screenshots.
+
+**Release in progress:** owner authorized Android 1.2.76 (93), followed by
+publishing the prepared website screenshots. Source review, focused checks,
+signed APK build and installation passed. Metadata review is running.
+Production remains 1.2.75 until verified below.
 
 ### Next
 - Device-check 1.2.75 on the tablet: table-bill loyalty and staff bill request
@@ -82,13 +89,13 @@ New demo photos are visible in the app; fresh website screenshots captured.
   checkout still blocks a negative total.
 
 ### Known issues and leftovers
-- **Live bug on 1.2.74:** refunds started from the sales report do nothing
-  (fixed on this branch in `0de7903`). Refunds from the receipt screen work.
+- **Historical 1.2.74 bug:** refunds started from the sales report did nothing.
+  The fix in `0de7903` shipped in 1.2.75; this release does not re-test refunds.
 - Test data left in the owner's test shop: loyalty customer `TEST-CLAUDE`
   (0990000001, 0 points) cannot be deleted from the app. Three test sales from
   2026-11-09 are refunded. Loyalty rate was restored to 10 points = ฿1.
-- Because production `createRefund` is still old, refunding a bill that redeemed
-  points does not return those points until Functions are deployed.
+- Production `createRefund` was updated on 2026-11-10. Real-device verification
+  of returning redeemed points is still pending; do not infer it from deployment.
 - 5 Flutter tests already failed on `d29153f` before this work and still fail:
   `online_payment_readiness_test` (2), `product_promotion_service_test` (1),
   `table_promotion_ux_test` (2). Not caused by this branch; not fixed.
@@ -110,6 +117,40 @@ New demo photos are visible in the app; fresh website screenshots captured.
 ---
 
 ## Log
+
+### 2026-11-11 — Prepared Android 1.2.76 (93) and tested on the tablet
+- Release APK built successfully (97,532,155 bytes), version read from APK
+  packaging: 1.2.76 / 93. SHA-256:
+  `afb8f92f10568907da090296ff5cb9e5788628d506a193453ff8bebf5a74a9ad`.
+  apksigner verification passed; certificate matches the previous release.
+- Installed with `adb install -r` on SM-X900; existing login and data retained.
+  Package manager confirms version/build. Two existing table tickets appear on
+  the kitchen screen with zero bill/close-table shortcuts. Opened table 1 from
+  Sales > dine-in; its bill and รับชำระเงิน button remain available.
+  No payment, sale or kitchen-status change was made during this check.
+- Local analyze and 21 focused kitchen tests passed; website checks passed
+  16 pages × 5 widths. Source review round 7 was clean; round 8 is checking
+  release metadata in fresh read-only bundled Claude Code 2.1.322.
+- Staged APK and matching public/app/version.json; previous APK/manifest backed
+  up in ignored release scratch. Still not deployed. iOS is not built locally;
+  Codemagic's TestFlight workflow has no push trigger and was not started.
+
+### 2026-11-11 — Removed water from the demo menu before publishing
+- Owner explicitly requested removing น้ำเปล่า. Verified the authorized demo
+  shop, saved the complete product and SKU-index record in ignored local
+  release scratch, then deleted only that product and its matching SKU index.
+  The transaction checked no online stock reservation and no concurrent edit.
+- Readback: 10 products remain; every other product's update time is unchanged.
+  Connected SM-X900 product screen also lists the remaining products without
+  น้ำเปล่า. Existing orders, sales and inventory history were not modified.
+- The three prepared website screenshots contain no water product, so their
+  original captures are retained. No release has been published yet.
+- Release checks so far: Flutter analyze PASS; kitchen output, regression and
+  chef journey tests PASS (21); marketing checks PASS (16 pages × 5 widths).
+  APK 1.2.76 (93) build is running. Independent review round 7 (fresh, read-only
+  Codex process, no inherited conversation) read the full unreleased source and
+  found no blocking defect. It checked old 1.2.75 artifacts; new APK metadata,
+  signature and installation must be verified after the build.
 
 ### 2026-11-11 — Replaced website app screenshots with real 1.2.75 captures
 - Captured POS (curated pasta photos and draft cart), unpaid demo order, and
