@@ -13,8 +13,6 @@ import '../services/order_service.dart';
 import '../services/settings_service.dart';
 import '../services/kitchen_print_service.dart';
 import '../services/cash_session_service.dart';
-import '../utils/operation_error.dart';
-import 'table_detail_screen.dart';
 
 class KitchenScreen extends StatefulWidget {
   const KitchenScreen(
@@ -600,29 +598,8 @@ class _TicketCard extends StatelessWidget {
                       : 'ชำระแล้ว • ยังมีอาหารที่ต้องเตรียม',
                   style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
             const Divider(height: 16),
-            if (order.status == TableOrderStatus.open)
-              TextButton.icon(
-                icon: const Icon(Icons.receipt_long_outlined),
-                label: const Text('ไปที่บิลโต๊ะ / ปิดโต๊ะ'),
-                onPressed: () async {
-                  try {
-                    final table = await runShopOperation(
-                        context, () => TableService.getTable(order.tableId),
-                        timeout: const Duration(seconds: 15),
-                        message: 'กำลังเปิดบิลโต๊ะ');
-                    if (table == null) throw StateError('ไม่พบโต๊ะนี้');
-                    if (context.mounted) {
-                      await Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => TableDetailScreen(table: table)));
-                    }
-                  } catch (error) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(operationError(error))));
-                    }
-                  }
-                },
-              ),
+            // No bill / close-table shortcut here: the kitchen only prepares
+            // food. Bills are opened and closed by the cashier from โต๊ะ.
             for (final entry in kitchenItems) ...[
               _ItemRow(
                 orderId: order.id,

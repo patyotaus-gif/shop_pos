@@ -104,6 +104,15 @@ it will be offered 1.2.75 by the in-app updater.
 
 ## Log
 
+### 2026-11-11 — Kitchen screen no longer opens bills (Gif feedback)
+- Gif: "ไปที่บิล ปิดโต๊ะ ไม่อยากให้ครัวกดได้ อยากให้กดได้แค่แคชเชียร์". Her kitchen
+  device is logged in as the owner, so a staff-position check would not help.
+  Removed the "ไปที่บิลโต๊ะ / ปิดโต๊ะ" button from the kitchen screen for
+  everyone; bills are opened/closed from โต๊ะ. Branch `kitchen-no-bill-button`.
+- Verified locally: analyze clean; kitchen tests 16 pass (test now asserts the
+  button is absent); full suite 397 pass, only the 5 pre-existing failures.
+  Not released (needs an APK release); not on a device.
+
 ### 2026-11-10 — Demo data for website screenshots (paused by owner)
 - Owner allowed turning the shop logged in on SM-X900 (1.2.75 installed) into a
   demo shop. Added through the app UI: categories อาหาร and เครื่องดื่ม; 7 dishes

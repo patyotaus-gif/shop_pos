@@ -155,7 +155,9 @@ void main() {
     final queue = tester.state<ScrollableState>(find.byType(Scrollable).first);
     queue.position.jumpTo(queue.position.maxScrollExtent);
     await tester.pumpAndSettle();
-    expect(find.text('ไปที่บิลโต๊ะ / ปิดโต๊ะ'), findsOneWidget);
+    expect(find.text('โต๊ะ ${old.tableName}'), findsOneWidget);
+    expect(find.text('ไปที่บิลโต๊ะ / ปิดโต๊ะ'), findsNothing,
+        reason: 'only the cashier opens and closes bills, from the tables screen');
     expect(tester.takeException(), isNull);
   });
   testWidgets(
