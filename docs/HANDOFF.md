@@ -18,6 +18,12 @@ Rules:
 **Branch:** `master`. Website copy `5c68828` and cache fix `05540a7` are pushed and deployed.
 Android 1.2.76 remains the artifact released from commit `1913e1c`.
 
+**Ready locally (2026-11-12):** additional marketing wording from
+`Recording 2026-11-12 2222.mp4`: plan feature lists, costs, FAQ and consistent
+Thai terminology. Completed and locally verified; committed with this entry.
+Not pushed or deployed. The live release above is unchanged.
+See `docs/website-copy-followup-2026-11-12.md` for wording and verification.
+
 **Live website copy update (2026-11-12):** home, features and pricing copy
 revised from the owner's video feedback; retail plan HTML/JS stay in sync.
 Independent review, local checks and live browser checks passed.
@@ -127,6 +133,28 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-12 — Additional website wording from recorded feedback (local)
+
+- Read the 22.4-second clip as ordered frames. Feedback asks for clearer
+  Solo/Lite/Full feature lists, costs and service conditions, FAQ questions and
+  contact copy, with a professional, simple and reliable tone.
+- Updated plan lists in both HTML and JavaScript, costs/service conditions and
+  FAQ. Standardized payment, order, supplier and inventory wording across the
+  marketing pages, including navigation/footer. Kept exact app menu names in
+  quoted instructions and retained old guide search terms as keywords.
+- Privacy/Terms bodies are untouched; only shared chrome/script version changed.
+  Prices, trial, entitlements, application/backend/payment configuration are unchanged.
+- Local verification: marketing browser suite passed 16 pages at 5 widths
+  (320/390/768/1024/1440); additional copy check passed 48 rendered states,
+  HTML/JS/no-JS plan agreement, monthly/yearly prices and legacy guide keywords.
+  Initial extra check compared UL whitespace and failed; corrected the harness
+  to compare individual LI text and reran successfully. No product fix was needed.
+- Inspected all eight mobile/desktop plan, costs and FAQ preview captures.
+  `git diff --check` passed. Details: `docs/website-copy-followup-2026-11-12.md`.
+- Initial tree was clean at `6c964c9`. This entry is committed with the copy work.
+  Evidence: `D:/pokpok-copy-followup-20261112/`. No push, deployment, production
+  data write, app release or physical-device test in this follow-up.
 
 ### 2026-11-12 — Correct stale marketing-page cache (published)
 

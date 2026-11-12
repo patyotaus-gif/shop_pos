@@ -59,7 +59,7 @@ function localFile(url) {
     await page.goto('https://pokpok-preview.test/guides/');
     await page.locator('#guide-search').fill('หมวดหมู่');assert.equal(await page.locator('.guide-card:visible').count(),1);
     await page.locator('#guide-search').fill('ไม่มีผลลัพธ์xyz');assert.equal(await page.locator('#guide-empty').isVisible(),true);
-    await page.locator('#guide-search').fill('');await page.locator('#guide-category').selectOption({label:'ขายและรับเงิน'});assert.equal(await page.locator('.guide-card:visible').count(),2);
+    await page.locator('#guide-search').fill('');await page.locator('#guide-category').selectOption({label:'ขายและรับชำระเงิน'});assert.equal(await page.locator('.guide-card:visible').count(),2);
     await page.locator('#guide-category').selectOption('');await page.locator('.guide-card').first().click();assert.match(page.url(),/getting-started/);
     await page.goBack();assert.match(page.url(),/\/guides\/$/);
     await page.goto('https://pokpok-preview.test/#download');assert.equal(await page.locator('#download').isVisible(),true);
