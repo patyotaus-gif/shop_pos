@@ -15,20 +15,18 @@ Rules:
 
 ## Current state (updated 2026-11-12)
 
-**Branch:** `master`. Website copy `5c68828` and cache fix `05540a7` are pushed and deployed.
+**Branch:** `master`. Website wording follow-up `5f12130` is pushed and deployed.
 Android 1.2.76 remains the artifact released from commit `1913e1c`.
 
-**Ready locally (2026-11-12):** additional marketing wording from
+**Live wording follow-up (2026-11-12):** additional marketing wording from
 `Recording 2026-11-12 2222.mp4`: plan feature lists, costs, FAQ and consistent
-Thai terminology. Completed and locally verified; committed with this entry.
-Not pushed or deployed. The live release above is unchanged.
+Thai terminology. Hosting version `06bd0506b99944b0`, released at
+2026-11-12 01:04:58 UTC (12:04:58 Sydney). Local checks and live browser checks
+passed. Only 16 marketing HTML files and `site.js` changed in Hosting.
 See `docs/website-copy-followup-2026-11-12.md` for wording and verification.
 
-**Live website copy update (2026-11-12):** home, features and pricing copy
-revised from the owner's video feedback; retail plan HTML/JS stay in sync.
-Independent review, local checks and live browser checks passed.
-Hosting version: `4f04f89cb357738d` (2026-11-11 14:28:39 UTC / 12 Nov Sydney).
-Follow-up cache fix is live: marketing HTML revalidates on navigation instead
+**Earlier website copy/cache update (2026-11-12):** `5c68828` and `05540a7`
+remain included in the current release. Marketing HTML revalidates on navigation instead
 of retaining the old response for one hour. Old cached copies still need one
 hard refresh or expiry before receiving this policy.
 See `docs/website-copy-2026-11-12.md`. The 2026-11-11 read-only website audit
@@ -37,7 +35,7 @@ is recorded below; its performance/accessibility/analytics fixes remain pending.
 **Live app (released 2026-11-11):** Android **1.2.76 (build 93)**, served at
 `pok-pok.app/app/version.json` (sha256 `afb8f92f…a9ad`, 97,532,155 bytes, signed
 with the release key `f7dc70e0…`). New website screenshots are also live.
-Previous Hosting version / rollback: `00daee4b204effc7`. Functions `tablePromotions`, `staffWork`,
+Website rollback: `4f04f89cb357738d`. Functions `tablePromotions`, `staffWork`,
 `staffCheckout`, `createRefund` remain at their 2026-11-10 deployment;
 this release changed no Functions, rules or payment/security settings.
 
@@ -133,6 +131,29 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-12 — Website wording follow-up published and verified
+
+- Owner requested release. Pushed clean reviewed source `5f12130` to `origin/master`
+  and deployed only Firebase Hosting, explicitly targeting `shop-pos-89294`.
+- Live version `06bd0506b99944b0`, 2026-11-12 01:04:58 UTC; release message contains
+  the source commit. Rollback version: `4f04f89cb357738d`.
+- Independently ran `test_marketing_pages.cjs`: PASS, 16 pages × 5 widths.
+  Fresh isolated read-only Claude Opus 4.6 review completed (exit 0); triaged only
+  Low/cosmetic terminology observations. Rationale and revisit triggers are in
+  `docs/website-copy-followup-2026-11-12.md`; no unresolved release-blocking defect.
+- Hosting inventory: 69 files including two Firebase-generated `/__/` files;
+  exactly 17 reviewed content files changed, no added/removed files. Local gzip
+  hashes match all 67 uploaded files. APK, app manifest and other surfaces unchanged.
+  First inventory preflight needed adjustment for those generated files, then passed.
+- Production HTTP checks: all 17 changed files plus app manifest match local bytes;
+  changed HTML and app manifest retain `no-cache`.
+- Production browser checks: 48 rendered states across 320/390/1440 px on homepage
+  and pricing, retail/restaurant and monthly/yearly switching, FAQ, HTML/JS and
+  no-JS consistency, and legacy guide-search synonyms PASS; no JS errors/overflow.
+  Inspected all eight live screenshots of prices, costs and FAQ at 390/1440 px.
+- Evidence: `D:/pokpok-copy-followup-release-20261112/`. No physical-device test,
+  app rebuild, Functions/rules deployment or payment/security configuration change.
 
 ### 2026-11-12 — Additional website wording from recorded feedback (local)
 
