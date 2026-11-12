@@ -13,15 +13,21 @@ Rules:
 
 ---
 
-## Current state (updated 2026-11-12)
+## Current state (updated 2026-11-13)
+
+**Release 1.2.77 (94) ready for publication:** owner authorized release of the
+sales-display and kitchen-width changes. All 68 focused tests, targeted analysis,
+fresh source and metadata reviews passed. Clean signed APK installed and checked
+on SM-X900. Live Android remains 1.2.76 (93) until Hosting publication completes.
+See `docs/release-1.2.77.md` for evidence and limitations.
 
 **Sales display modes (local only, not released):** owner asked for an optional
 name-only sales view with configurable button colors. Added photo/name controls,
 category colors and shop-scoped device preferences to POS, table selection and
 offline entry. Cart/draft, prices, permissions and backend data are unchanged.
 All 34 focused tests and targeted Dart analysis passed. Two visual review rounds
-finished clean for the rendered fixtures. No push, release or device install;
-the new controls have not yet been exercised in the installed POS app.
+finished clean for the rendered fixtures. SM-X900 checks now also passed for
+switching modes, category colors, cart retention and persistence after restart.
 
 **Kitchen width fix (local only, not released):** SM-X900 confirmed that both
 kitchen modes stretched a single ticket across the tablet workspace. They now
@@ -29,9 +35,10 @@ use up to two columns within 1120 logical pixels, or one centered column with
 tickets capped at 600 pixels on smaller workspaces / larger text. History
 controls and printer guidance are bounded; action spacing and a table-row tap
 hint improve readability. All 34 focused kitchen tests and targeted Dart
-analysis passed. See `docs/ui-layout.md`. The tablet still runs the released
-app; only the original defect was inspected there. No new APK, physical print,
-shop-data write, push or deployment was performed for this task.
+analysis passed. See `docs/ui-layout.md`. Both modes now checked on SM-X900 with
+1.2.77 (94): two-column tickets, bounded history/guidance and print controls.
+Test-shop output mode was temporarily changed and restored to display. No
+physical print or saved sale/order/inventory changes were made.
 
 **Website direction fixes pushed and deployed:** all six
 approved items from `website-direction-review-2026-11-12.md` are implemented;
@@ -89,10 +96,10 @@ Website rollback: `4f04f89cb357738d`. Functions `tablePromotions`, `staffWork`,
 `staffCheckout`, `createRefund` remain at their 2026-11-10 deployment;
 this release changed no Functions, rules or payment/security settings.
 
-**Test tablet (SM-X900):** installed and verified **1.2.76 (93)** on 2026-11-11.
+**Test tablet (SM-X900):** installed and verified **1.2.77 (94)** on 2026-11-13.
 Kitchen table tickets have no bill shortcut; table billing remains reachable
 from Sales > dine-in > table. Fresh website screenshots retain their real capture
-version, 1.2.75 (92); the only app UI change is outside those screenshots.
+version, 1.2.75 (92); they were not refreshed in this Android release.
 
 **App release verification (2026-11-11):** downloaded the live APK and checked its size/hash against
 the signed, device-tested artifact; live version.json and all 10 changed website
@@ -186,6 +193,48 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-13 — Android 1.2.77 device gate passed, ready to publish
+- Correct signed APK cold-started successfully, preserving existing shop/login.
+  SM-X900 passed photo/name switching, category-only color changes, draft/cart
+  retention across switching, and preference persistence after force-stop/restart.
+  Temporary cart item removed; photo mode/default color restored.
+- Both kitchen display and printer views show bounded two-column tickets and
+  usable controls. Switching output mode saves the test-shop preference and
+  rebuilds its shell; restored display mode and returned to Sales. No physical
+  printing or saved sale/order/inventory mutation was performed.
+- Fresh isolated metadata review also passed (Claude Opus 4.6, read-only tools,
+  no MCP or denials). Source review and all 68 tests/analysis were already green.
+- Restored normal local `build/` directory; the relocated junction/cache and old
+  directory remain ignored backups. Release uses the verified clean D-drive
+  source build, not the rejected junction build. No publication yet.
+
+### 2026-11-12 — Prepare Android 1.2.77 (94)
+- Owner authorized update. Scope: optional name/color sales buttons and bounded
+  kitchen display/printer layouts. No payment, backend or security configuration.
+- Bumped pubspec version. Build temporary files are being relocated to the
+  explicit D-drive release workspace because C has less than 200 MB free.
+  A native cross-volume move stopped on a long generated path; Robocopy completed
+  the copy (exit 3), then the build directory became a junction to D. The old
+  directory remains as a local backup. C regained about 4 GB free space.
+- All 68 focused sales/offline/kitchen tests passed; targeted analysis passed.
+- First signed build returned success and installed, but device startup crashed:
+  APK inspection found all three `libapp.so` missing after build-directory
+  relocation. Rejected this artifact (57,997,357 bytes); restored the previous
+  public APK/manifest. No defective build was deployed. Building again from an
+  isolated clean source on D and adding explicit native-library checks.
+- SM-X900 retains its app data. Clean-build UI verification and independent
+  review were pending at the failed-build checkpoint. Fresh isolated Claude
+  Opus 4.6 review has now completed (exit 0, read-only tools, no MCP or denials):
+  no confirmed introduced defect. Root checked its candidates against source
+  and the passing test/analyzer runs. Clean source matches all 260 tracked
+  native input files, ignoring checkout line endings. No push/deployment yet.
+- Clean build completed successfully (exit 0, 504.1 seconds). All three ABIs
+  include both libapp.so and libflutter.so; signing certificate matches the
+  previous release. Accepted candidate: 92,403,745 bytes, SHA-256
+  `045d56ca6d6b191be45dc0ae52f0db73bceb7a4af7a69f65db8c0f722266d9b6`.
+  Installed successfully over the rejected local candidate on SM-X900;
+  installed package reports 1.2.77 / 94. Device UI checks running.
 
 ### 2026-11-12 — Optional name buttons in sales catalogs
 - Committed locally as `f1427dc`; no push or release. This documentation update
