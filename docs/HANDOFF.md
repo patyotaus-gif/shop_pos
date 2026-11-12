@@ -42,7 +42,8 @@ and 12 page/viewport states, segment pricing and installation-guide navigation.
 All 71 public files match Hosting; exactly the 25 reviewed files changed.
 APK installation and physical iOS were not retested in this website release.
 
-**Branch:** `master`. Website source `3fab693` is pushed and deployed; this includes
+**Branch:** `master`. Kitchen layout source `c097378` is committed locally and
+not pushed or released. Website source `3fab693` is pushed and deployed; this includes
 the earlier denser desktop homepage `5714a72`.
 Android 1.2.76 remains the artifact released from commit `1913e1c`.
 
@@ -179,6 +180,9 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ## Log
 
 ### 2026-11-12 — Bound kitchen tickets on tablet workspaces
+- Committed local implementation and tests as `c097378`; working tree clean
+  after that commit. This handoff records its local-only status for the next
+  explicitly requested app release.
 - Owner asked why kitchen display and kitchen-printer mode stretch across the
   screen. Read-only capture of connected SM-X900 confirmed the defect; source
   shared one unconstrained ListView between both modes. Standalone Bluetooth
