@@ -132,6 +132,31 @@ or triggered; its Codemagic workflow does not run automatically on push.
 
 ## Log
 
+### 2026-11-12 — Denser desktop homepage (local branch, not deployed)
+
+- Owner feedback: the website feels empty ("โล่งๆ") on a computer. Live captures at
+  1440/1920 px showed that the three middle sections (features, supplier orders,
+  guides) were a heading, a paragraph and a button each, leaving about 60% of the
+  width blank.
+- Branch `website-desktop-density`:
+  - `#features` became a heading row plus four feature cards: Sales & Checkout,
+    Inventory, Tables & Kitchen, Reports. Each card has an English name, Thai
+    description, benefit and starting plan, per `docs/website-development-core.md` §4.
+  - `#marketplace` and `#how` became two side-by-side cards with numbered steps.
+  - The section ids and links are unchanged. CSS was appended to `brand.css`, and the
+    cache key was bumped to `20261112-density` on the homepage and pricing page.
+- Source of each claim:
+  - Plan tiers and features come from the existing `/features/` and pricing copy.
+  - Day-close is not tier-gated (`dashboard_screen.dart`).
+  - Wording follows the terminology table in `docs/website-copy-followup-2026-11-12.md`.
+- Cards use icons, not screenshots. `overview-1.2.75.png` shows ฿0.00 and is not
+  fit for advertising. Real screenshots or photos in the cards are still to do.
+- Local checks:
+  - `test_marketing_pages.cjs` PASS (16 pages × 5 widths).
+  - `git diff --check` clean.
+  - Inspected local captures at 390, 1024, 1440 and 1920 px.
+- Not done: independent review, owner preview approval, Hosting deploy.
+
 ### 2026-11-12 — Website wording follow-up published and verified
 
 - Owner requested release. Pushed clean reviewed source `5f12130` to `origin/master`
