@@ -141,7 +141,9 @@ or triggered; its Codemagic workflow does not run automatically on push.
 - Branch `website-desktop-density`:
   - `#features` became a heading row plus four feature cards: Sales & Checkout,
     Inventory, Tables & Kitchen, Reports. Each card has an English name, Thai
-    description, benefit and starting plan, per `docs/website-development-core.md` §4.
+    description, benefit and starting plan. That covers parts 1, 2 and 4 of
+    `docs/website-development-core.md` §4; part 3 (a real screenshot per feature)
+    is still pending, and icons stand in for it for now.
   - `#marketplace` and `#how` became two side-by-side cards with numbered steps.
   - The section ids and links are unchanged. CSS was appended to `brand.css`, and the
     cache key was bumped to `20261112-density` on the homepage and pricing page.
