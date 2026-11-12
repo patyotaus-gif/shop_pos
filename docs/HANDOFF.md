@@ -50,7 +50,7 @@ and 12 page/viewport states, segment pricing and installation-guide navigation.
 All 71 public files match Hosting; exactly the 25 reviewed files changed.
 APK installation and physical iOS were not retested in this website release.
 
-**Branch:** `master`. Sales-display changes and kitchen layout source `c097378`
+**Branch:** `master`. Sales-display source `f1427dc` and kitchen layout source `c097378`
 are local only, not pushed or released. Website source `3fab693` is pushed and deployed; this includes
 the earlier denser desktop homepage `5714a72`.
 Android 1.2.76 remains the artifact released from commit `1913e1c`.
@@ -188,6 +188,8 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ## Log
 
 ### 2026-11-12 — Optional name buttons in sales catalogs
+- Committed locally as `f1427dc`; no push or release. This documentation update
+  records the final commit and verification state for the next session.
 - Owner requested switchable image/name-only product buttons and suggestions.
   Implemented photo-default and name-button modes with five soft category colors
   plus reset. Names, prices and availability remain visible in both modes.
