@@ -15,7 +15,7 @@ Rules:
 
 ## Current state (updated 2026-11-12)
 
-**Branch:** `master`. Website wording follow-up `5f12130` is pushed and deployed.
+**Branch:** `master`. Denser desktop homepage (branch `website-desktop-density`) merged; see the Log for its deploy status.
 Android 1.2.76 remains the artifact released from commit `1913e1c`.
 
 **Live wording follow-up (2026-11-12):** additional marketing wording from
@@ -132,32 +132,51 @@ or triggered; its Codemagic workflow does not run automatically on push.
 
 ## Log
 
-### 2026-11-12 — Denser desktop homepage (local branch, not deployed)
+### 2026-11-12 — Denser desktop homepage (owner approved release)
 
 - Owner feedback: the website feels empty ("โล่งๆ") on a computer. Live captures at
   1440/1920 px showed that the three middle sections (features, supplier orders,
   guides) were a heading, a paragraph and a button each, leaving about 60% of the
-  width blank.
-- Branch `website-desktop-density`:
+  width blank. Owner previewed and said "อัพขึ้นเว็บเลย".
+- Branch `website-desktop-density` (`2e4259b`, `1d0f930`, plus the round 2 fix commit):
   - `#features` became a heading row plus four feature cards: Sales & Checkout,
-    Inventory, Tables & Kitchen, Reports. Each card has an English name, Thai
-    description, benefit and starting plan. That covers parts 1, 2 and 4 of
-    `docs/website-development-core.md` §4; part 3 (a real screenshot per feature)
-    is still pending, and icons stand in for it for now.
+    Inventory, Tables & Kitchen, Reports. Each card has an English name (inside its
+    h3, `lang="en"`), Thai description, benefit and starting plan.
+  - That covers parts 1, 2 and 4 of `docs/website-development-core.md` §4. Part 3 (a
+    real screenshot per feature) is still pending; icons stand in for it for now.
   - `#marketplace` and `#how` became two side-by-side cards with numbered steps.
-  - The section ids and links are unchanged. CSS was appended to `brand.css`, and the
-    cache key was bumped to `20261112-density` on the homepage and pricing page.
-- Source of each claim:
-  - Plan tiers and features come from the existing `/features/` and pricing copy.
+  - The features CTA shows above the cards at 801 px and wider, and below them at
+    800 px and narrower; exactly one shows at each width.
+  - Section ids are unchanged. CSS was appended to `brand.css`, and the cache key was
+    bumped to `20261112-density` on the homepage and pricing page.
+- Sources for the claims:
+  - Plan tiers come from the `/features/` and pricing copy.
+  - The Inventory card's Lite items (low-stock alert, low-stock list, scan-to-receive
+    button) come from the app: `product_form_screen.dart`, `dashboard_screen.dart`
+    and `products_screen.dart`.
   - Day-close is not tier-gated (`dashboard_screen.dart`).
-  - Wording follows the terminology table in `docs/website-copy-followup-2026-11-12.md`.
-- Cards use icons, not screenshots. `overview-1.2.75.png` shows ฿0.00 and is not
-  fit for advertising. Real screenshots or photos in the cards are still to do.
-- Local checks:
+  - Wording follows `docs/website-copy-followup-2026-11-12.md`.
+- Independent review (fresh read-only Claude session, `review.py`):
+  - **Round 1** (on `2e4259b`) found two Medium issues, both fixed in `1d0f930`:
+    - M1: Inventory was described as "deducts on sale from Lite", but the app deducts
+      at every plan.
+    - M2: absolute promises such as "ยอดไม่ตกหล่น" and "ครัวเห็นทันที".
+  - Round 1 also found five Lows, all fixed: the staff step, "เปิดบิล" terminology,
+    the CTA after the cards on phones, `lang`/`role="list"`/the ✓ alt text, and
+    this log's §4 wording.
+  - **Round 2** (on `1d0f930`) found nothing above Low. Its three Lows were fixed:
+    - "ทุกบิล" became "ตรวจรายการขายย้อนหลังได้".
+    - The English name moved into the h3.
+    - This entry was updated.
+- Out of scope, noted by round 2: the product edit form opens the stock screen,
+  including "สแกนรับสินค้าเข้า", with no tier check. A Solo shop may be able to
+  scan-receive even though the card says Lite. This is an app entitlement gap and
+  was not changed.
+- Local checks on the final tree:
   - `test_marketing_pages.cjs` PASS (16 pages × 5 widths).
-  - `git diff --check` clean.
+  - The CTA visibility check passed at 320/390/800/801/1024/1440/1920 px.
+  - `git diff --check` is clean.
   - Inspected local captures at 390, 1024, 1440 and 1920 px.
-- Not done: independent review, owner preview approval, Hosting deploy.
 
 ### 2026-11-12 — Website wording follow-up published and verified
 
