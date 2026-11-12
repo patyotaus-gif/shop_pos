@@ -15,13 +15,15 @@ Rules:
 
 ## Current state (updated 2026-11-13)
 
-**Release 1.2.77 (94) ready for publication:** owner authorized release of the
-sales-display and kitchen-width changes. All 68 focused tests, targeted analysis,
-fresh source and metadata reviews passed. Clean signed APK installed and checked
-on SM-X900. Live Android remains 1.2.76 (93) until Hosting publication completes.
+**Android 1.2.77 (94) released:** sales-display and kitchen-width changes are
+pushed and live in Hosting `cb06af000098f85d` (2026-11-13 00:11:44 Sydney).
+All 68 focused tests, targeted analysis, fresh source/metadata reviews and SM-X900
+device checks passed. Public APK download matches the signed, tested artifact.
+Only APK/version.json changed; all 71 public files verified. Rollback Hosting
+`b362e6435d006aad`. No iOS build, physical print, backend or payment/security change.
 See `docs/release-1.2.77.md` for evidence and limitations.
 
-**Sales display modes (local only, not released):** owner asked for an optional
+**Sales display modes (released in 1.2.77):** owner asked for an optional
 name-only sales view with configurable button colors. Added photo/name controls,
 category colors and shop-scoped device preferences to POS, table selection and
 offline entry. Cart/draft, prices, permissions and backend data are unchanged.
@@ -29,7 +31,7 @@ All 34 focused tests and targeted Dart analysis passed. Two visual review rounds
 finished clean for the rendered fixtures. SM-X900 checks now also passed for
 switching modes, category colors, cart retention and persistence after restart.
 
-**Kitchen width fix (local only, not released):** SM-X900 confirmed that both
+**Kitchen width fix (released in 1.2.77):** SM-X900 confirmed that both
 kitchen modes stretched a single ticket across the tablet workspace. They now
 use up to two columns within 1120 logical pixels, or one centered column with
 tickets capped at 600 pixels on smaller workspaces / larger text. History
@@ -45,8 +47,9 @@ approved items from `website-direction-review-2026-11-12.md` are implemented;
 see `website-direction-implementation-2026-11-12.md`. Full specifies owner 1 +
 staff 2, Retail/Restaurant pages preserve their pricing context, four homepage
 feature cards have real screenshots, and Android/iOS setup has illustrated steps.
-Source `3fab693` is on GitHub and Firebase Hosting `b362e6435d006aad`, released
-2026-11-12 11:49:26 UTC (22:49:26 Sydney); rollback `b7110c9b1acdcfe9`.
+Source `3fab693` is on GitHub; initially published as Hosting `b362e6435d006aad`
+at 2026-11-12 11:49:26 UTC (22:49:26 Sydney), now retained unchanged in the
+Android 1.2.77 Hosting release. Website-release rollback was `b7110c9b1acdcfe9`.
 Local browser checks passed: 18 pages × 5 widths plus a focused 4-page × 4-width
 contrast/target/geometry check. Two newcomer visual rounds completed with no
 remaining dead end in the shown flows. SM-X900 app 1.2.76 (93) supplied Products
@@ -58,10 +61,11 @@ All 71 public files match Hosting; exactly the 25 reviewed files changed.
 APK installation and physical iOS were not retested in this website release.
 
 **Branch:** `master`. Release source `2d1cbce`, including sales display `f1427dc`
-and kitchen layout `c097378`, is pushed; Hosting publication is pending.
+and kitchen layout `c097378`, is pushed. Hosting release records `d8e0ded`
+(release source plus its preflight handoff).
 Website source `3fab693` is pushed and deployed; this includes
 the earlier denser desktop homepage `5714a72`.
-Android 1.2.76 remains the artifact released from commit `1913e1c`.
+Android 1.2.77 replaces the 1.2.76 artifact from `1913e1c`.
 
 **Website content direction (recorded 2026-11-12, documentation only):**
 Owner supplied `POKPOK.PDF` (14 pages). Source preserved in
@@ -90,10 +94,10 @@ hard refresh or expiry before receiving this policy.
 See `docs/website-copy-2026-11-12.md`. The 2026-11-11 read-only website audit
 is recorded below; its performance/accessibility/analytics fixes remain pending.
 
-**Live app (released 2026-11-11):** Android **1.2.76 (build 93)**, served at
-`pok-pok.app/app/version.json` (sha256 `afb8f92f…a9ad`, 97,532,155 bytes, signed
-with the release key `f7dc70e0…`). New website screenshots are also live.
-Website rollback: `4f04f89cb357738d`. Functions `tablePromotions`, `staffWork`,
+**Live app (released 2026-11-13):** Android **1.2.77 (build 94)**, served at
+`pok-pok.app/app/version.json` (sha256 `045d56ca…d9b6`, 92,403,745 bytes, signed
+with the existing release key `f7dc70e0…`). Website screenshots are unchanged.
+Hosting rollback: `b362e6435d006aad`. Functions `tablePromotions`, `staffWork`,
 `staffCheckout`, `createRefund` remain at their 2026-11-10 deployment;
 this release changed no Functions, rules or payment/security settings.
 
@@ -102,9 +106,10 @@ Kitchen table tickets have no bill shortcut; table billing remains reachable
 from Sales > dine-in > table. Fresh website screenshots retain their real capture
 version, 1.2.75 (92); they were not refreshed in this Android release.
 
-**App release verification (2026-11-11):** downloaded the live APK and checked its size/hash against
-the signed, device-tested artifact; live version.json and all 10 changed website
-HTML/image files match local bytes. Source review, focused checks, signed APK
+**App release verification (2026-11-13):** downloaded the live APK and checked its size/hash against
+the signed, device-tested artifact; live version.json and 10 sampled unchanged
+website HTML/image files match local bytes. Hosting API verifies all 71 public
+files and exactly the two intended changes. Source review, focused checks, signed APK
 build, installation and metadata review passed. iOS/TestFlight was not built
 or triggered; its Codemagic workflow does not run automatically on push.
 
@@ -194,6 +199,20 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-13 — Android 1.2.77 (94) published and verified
+- Hosting-only deploy from pushed `d8e0ded` completed with exit 0. New version
+  `cb06af000098f85d`, released 2026-11-12 13:11:44 UTC (00:11:44 Sydney).
+  Rollback `b362e6435d006aad`; changed only APK/version.json. All 71 public paths
+  and gzip hashes match local; headers/rewrites and website assets unchanged.
+- Downloaded public APK and verified 92,403,745 bytes and SHA-256
+  `045d56ca6d6b191be45dc0ae52f0db73bceb7a4af7a69f65db8c0f722266d9b6`.
+  Manifest and 10 sampled website files match. SM-X900 already runs this artifact.
+- No iOS/TestFlight trigger or physical printing. No Functions/rules/payment/
+  security changes. Original signing inputs retained; automatic approval review
+  blocked deletion of the local temporary signing copies (policy rejection,
+  no specific reason supplied). No retry or workaround attempted; copies remain
+  in the local release workspace, outside tracked/public files.
 
 ### 2026-11-13 — Release source pushed; Hosting preflight passed
 - Committed and pushed `2d1cbce` to master; remote SHA read back matches.

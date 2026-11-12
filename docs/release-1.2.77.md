@@ -1,6 +1,7 @@
 # Android 1.2.77 (94)
 
-Prepared 2026-11-13. Owner authorized release; publication pending.
+Released 2026-11-13 with the owner's authorization. Android APK is live and
+installed on the connected SM-X900 tablet.
 
 ## Changes
 
@@ -44,7 +45,12 @@ from an isolated clean build on D; normal local build-directory behavior restore
 - Hosting rollback target: `b362e6435d006aad`.
 - Release source `2d1cbce` pushed to master and remote SHA verified.
 - Hosting preflight passed: only APK and version manifest differ from live.
-- Hosting deployment and public download verification: pending.
+- Hosting deployment from pushed `d8e0ded` completed successfully.
+- Hosting version: `cb06af000098f85d`, 2026-11-12 13:11:44 UTC
+  (2026-11-13 00:11:44 Sydney).
+- Hosting API verified all 71 public files, exactly two changed paths, unchanged
+  headers/rewrites and website. Public APK downloaded and size/SHA-256 matched
+  the installed artifact; manifest and 10 sampled website files matched too.
 
 Local evidence: `D:/pokpok-release-1.2.77/` (test/analyzer logs, isolated reviews,
 clean build log, APK validation, tablet screenshots/XML). Device captures remain
