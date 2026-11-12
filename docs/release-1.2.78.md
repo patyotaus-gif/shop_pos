@@ -4,6 +4,8 @@ Owner authorized implementation and publication on 2026-11-13. In preparation;
 not yet live. Previous Android is 1.2.77 (94). Hosting rollback baseline is
 `cb06af000098f85d`. Release subject is all source after `17fd271` plus this change.
 Master is the source branch; Firebase Hosting is deployed explicitly by CLI.
+Release source commit: `7c67501`. Preflight verified exactly eight expected public
+path changes against the rollback version; runtime rewrites remain unchanged.
 
 ## Changes
 

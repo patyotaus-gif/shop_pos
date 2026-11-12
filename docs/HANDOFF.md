@@ -23,8 +23,9 @@ The 56-state pricing gate, 18-page marketing suite, 53 app regression tests and
 targeted Dart analysis passed locally. Fresh isolated source review is clean;
 screenshot review found no hard blocker. Signed Android build passed; artifact
 version, three native ABIs and certificate continuity passed. Final metadata
-review is clean after strengthening the fresh Hosting preflight guard. Commit,
-push and publication are the remaining steps.
+review is clean after strengthening the fresh Hosting preflight guard. Source
+commit `7c67501` is ready; Hosting preflight passed with exactly eight expected
+public paths changed and runtime routes unchanged. Push and publication remain.
 No new release is live yet.
 ADB currently lists no connected tablet; real-device verification is pending.
 
@@ -229,6 +230,16 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-13 — Commit 1.2.78 and pass Hosting preflight
+
+Release source committed as `7c67501`. Clean-tree Hosting preflight compared the
+current deployment `cb06af000098f85d` with the local public tree: exactly eight
+expected paths differ (APK/manifest, brand/home/pricing styles, home/pricing HTML,
+and shared pricing copy). Existing runtime rewrites are unchanged. All review
+and artifact gates passed. Push and explicit publication follow; the deployment
+helper will rerun preflight against the exact pushed commit immediately before
+upload. No production files have changed yet.
 
 ### 2026-11-13 — Release 1.2.78 checks complete; ready to publish
 
