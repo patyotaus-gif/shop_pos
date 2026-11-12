@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../theme/operational_colors.dart';
 import '../widgets/status_badge.dart';
 import '../widgets/shop_operation.dart';
+import '../widgets/content_width.dart';
 
 import '../models/table_order.dart';
 import '../services/table_service.dart';
@@ -163,10 +164,13 @@ class _KitchenScreenState extends State<KitchenScreen> {
                             ? null
                             : _changeOutput)),
               if (printer)
-                const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    child: Text(
-                        'เลือกเครื่องพิมพ์ครัวที่ระบบรองรับ แล้วตรวจรับกระดาษ • พิมพ์เฉพาะรายการใหม่ได้')),
+                const ContentWidth(
+                    maxWidth: 624,
+                    child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                            'เลือกเครื่องพิมพ์ครัวที่ระบบรองรับ แล้วตรวจรับกระดาษ • พิมพ์เฉพาะรายการใหม่ได้',
+                            textAlign: TextAlign.center))),
               Expanded(
                   child: StreamBuilder<DateTime?>(
                       stream: closeStream,
@@ -311,6 +315,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
 
                                       for (final o in ts) {
                                         final card = Column(
+                                            key: ValueKey('table-${o.id}'),
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.stretch,
                                             children: [
@@ -319,13 +324,14 @@ class _KitchenScreenState extends State<KitchenScreen> {
                                                   markReady: widget.markReady ??
                                                       TableService
                                                           .markItemReady),
-                                              if (printer)
+                                              if (printer) ...[
+                                                const SizedBox(height: 8),
                                                 _PrintActions(
                                                     source: 'table',
                                                     orderId: o.id,
                                                     job: jobs.data![
                                                         'table-${o.id}']),
-                                              const SizedBox(height: 12),
+                                              ],
                                             ]);
                                         if (o.status ==
                                                 TableOrderStatus.closed &&
@@ -365,60 +371,112 @@ class _KitchenScreenState extends State<KitchenScreen> {
                                         group.sort(
                                             (a, b) => a.at.compareTo(b.at));
                                       }
-                                      return ListView(
-                                          padding: const EdgeInsets.all(12),
-                                          children: [
-                                            if (previousCount > 0)
-                                              SwitchListTile(
-                                                  title: Text(
-                                                      'ดูใบงานรอบก่อน ($previousCount)'),
-                                                  subtitle: Text(
-                                                      'ปิดยอดล่าสุด ${DateFormat('dd/MM/yyyy HH:mm').format(cutoff!.toLocal())} น. • ตรวจใบเดิมก่อนพิมพ์ซ้ำ'),
-                                                  value: showPrevious,
-                                                  onChanged: (v) => setState(() =>
-                                                      _previousRoundsForClose =
-                                                          v ? cutoff : null)),
-                                            if (historyCount > 0 &&
-                                                !showPrevious)
-                                              SwitchListTile(
-                                                  title: Text(
-                                                      'ใบงานที่ปิดบิลหรือเสร็จแล้ว ($historyCount)'),
-                                                  subtitle: const Text(
-                                                      'ยังไม่ยืนยันพิมพ์ ไม่ใช่บิลค้างชำระ'),
-                                                  value: _showHistory,
-                                                  onChanged: (v) => setState(
-                                                      () => _showHistory = v)),
-                                            if (active.isEmpty && ready.isEmpty)
-                                              const Padding(
-                                                  padding: EdgeInsets.all(12),
-                                                  child: Text(
-                                                      'ไม่มีงานครัวที่กำลังดำเนินการ')),
-                                            if (active.isNotEmpty)
-                                              Text(
-                                                  'งานที่ต้องเตรียม (${active.length})',
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .titleMedium),
-                                            ...active.map((e) => e.child),
-                                            if (ready.isNotEmpty)
-                                              Text(
-                                                  'พร้อมรับ / พร้อมเสิร์ฟ (${ready.length})',
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .titleMedium),
-                                            ...ready.map((e) => e.child),
-                                            if (future.isNotEmpty)
-                                              ExpansionTile(
-                                                  title: Text(
-                                                      'นัดรับวันถัดไป (${future.length})'),
-                                                  subtitle: const Text(
-                                                      'ตรวจวันและเวลานัดก่อนเริ่มเตรียม'),
-                                                  children: future
-                                                      .map((e) => e.child)
-                                                      .toList()),
-                                            if (_showHistory || showPrevious)
-                                              ...history,
-                                          ]);
+                                      return LayoutBuilder(
+                                          builder: (context, constraints) {
+                                        // Use workspace width, not the full display behind the
+                                        // navigation. Large text gets a single readable column.
+                                        final available = constraints.maxWidth
+                                            .clamp(0.0, 1120.0);
+                                        final textScale =
+                                            MediaQuery.textScalerOf(context)
+                                                    .scale(14) /
+                                                14;
+                                        final columns = available >=
+                                                900 * textScale.clamp(1.0, 2.0)
+                                            ? 2
+                                            : 1;
+                                        return ContentWidth(
+                                            maxWidth: columns == 2 ? 1120 : 624,
+                                            child: ListView(
+                                                padding:
+                                                    const EdgeInsets.all(12),
+                                                children: [
+                                                  if (previousCount > 0)
+                                                    Align(
+                                                        alignment: Alignment
+                                                            .centerLeft,
+                                                        child: SizedBox(
+                                                            width: 600,
+                                                            child: SwitchListTile(
+                                                                title: Text(
+                                                                    'ดูใบงานรอบก่อน ($previousCount)'),
+                                                                subtitle: Text(
+                                                                    'ปิดยอดล่าสุด ${DateFormat('dd/MM/yyyy HH:mm').format(cutoff!.toLocal())} น. • ตรวจใบเดิมก่อนพิมพ์ซ้ำ'),
+                                                                value:
+                                                                    showPrevious,
+                                                                onChanged: (v) =>
+                                                                    setState(() =>
+                                                                        _previousRoundsForClose = v
+                                                                            ? cutoff
+                                                                            : null)))),
+                                                  if (historyCount > 0 &&
+                                                      !showPrevious)
+                                                    Align(
+                                                        alignment: Alignment
+                                                            .centerLeft,
+                                                        child: SizedBox(
+                                                            width: 600,
+                                                            child: SwitchListTile(
+                                                                title: Text(
+                                                                    'ใบงานที่ปิดบิลหรือเสร็จแล้ว ($historyCount)'),
+                                                                subtitle:
+                                                                    const Text(
+                                                                        'ยังไม่ยืนยันพิมพ์ ไม่ใช่บิลค้างชำระ'),
+                                                                value:
+                                                                    _showHistory,
+                                                                onChanged: (v) =>
+                                                                    setState(() =>
+                                                                        _showHistory =
+                                                                            v)))),
+                                                  if (active.isEmpty &&
+                                                      ready.isEmpty)
+                                                    const Padding(
+                                                        padding:
+                                                            EdgeInsets.all(12),
+                                                        child: Text(
+                                                            'ไม่มีงานครัวที่กำลังดำเนินการ')),
+                                                  if (active.isNotEmpty)
+                                                    Text(
+                                                        'งานที่ต้องเตรียม (${active.length})',
+                                                        style: Theme.of(context)
+                                                            .textTheme
+                                                            .titleMedium),
+                                                  _KitchenTickets(
+                                                      columns: columns,
+                                                      children: active
+                                                          .map((e) => e.child)
+                                                          .toList()),
+                                                  if (ready.isNotEmpty)
+                                                    Text(
+                                                        'พร้อมรับ / พร้อมเสิร์ฟ (${ready.length})',
+                                                        style: Theme.of(context)
+                                                            .textTheme
+                                                            .titleMedium),
+                                                  _KitchenTickets(
+                                                      columns: columns,
+                                                      children: ready
+                                                          .map((e) => e.child)
+                                                          .toList()),
+                                                  if (future.isNotEmpty)
+                                                    ExpansionTile(
+                                                        title: Text(
+                                                            'นัดรับวันถัดไป (${future.length})'),
+                                                        subtitle: const Text('ตรวจวันและเวลานัดก่อนเริ่มเตรียม'),
+                                                        children: [
+                                                          _KitchenTickets(
+                                                              columns: columns,
+                                                              children: future
+                                                                  .map((e) =>
+                                                                      e.child)
+                                                                  .toList())
+                                                        ]),
+                                                  if (_showHistory ||
+                                                      showPrevious)
+                                                    _KitchenTickets(
+                                                        columns: columns,
+                                                        children: history),
+                                                ]));
+                                      });
                                     })));
                       })),
             ]);
@@ -428,50 +486,84 @@ class _KitchenScreenState extends State<KitchenScreen> {
 
   Widget _onlineTicket(ShopOrder o, bool printer, Map<String, dynamic>? job) =>
       Card(
+          key: ValueKey('online-${o.id}'),
+          margin: EdgeInsets.zero,
           child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(
-              o.tableName == null
-                  ? 'ออนไลน์ • รับกลับบ้าน'
-                  : 'ออนไลน์ • โต๊ะ ${o.tableName}',
-              style: const TextStyle(fontWeight: FontWeight.bold)),
-          Text(o.displayLabel),
-          Text('${o.customerName} • ${o.status.label}'),
-          Text(
-              'รับออเดอร์ ${DateFormat('dd/MM/yyyy HH:mm').format(o.createdAt.toLocal())} น.'),
-          if (o.pickupDescription != null) Text(o.pickupDescription!),
-          for (final i in o.items)
-            ListTile(
-                dense: true,
-                title: Text('${i.productName} × ${i.quantity}'),
-                subtitle:
-                    i.preparationNote.isEmpty ? null : Text(i.preparationNote)),
-          if (printer) _PrintActions(source: 'online', orderId: o.id, job: job),
-          if ([OrderStatus.paid, OrderStatus.accepted, OrderStatus.ready]
-              .contains(o.status))
-            FilledButton(
-                onPressed: () => performShopOperation(
-                    context,
-                    () => (widget.updateOnlineStatus ??
-                            OrderService.updateStatus)(
-                        o.id,
-                        o.status == OrderStatus.paid
-                            ? OrderStatus.accepted
-                            : o.status == OrderStatus.accepted
-                                ? OrderStatus.ready
-                                : OrderStatus.completed),
-                    timeout: const Duration(seconds: 25),
-                    success: o.status == OrderStatus.ready
-                        ? 'ส่งมอบออเดอร์แล้ว'
-                        : 'บันทึกแล้ว'),
-                child: Text(o.status == OrderStatus.paid
-                    ? 'เริ่มเตรียม'
-                    : o.status == OrderStatus.accepted
-                        ? 'พร้อมรับ / เสิร์ฟแล้ว'
-                        : 'ส่งมอบแล้ว / เสร็จสิ้น')),
-        ]),
-      ));
+            padding: const EdgeInsets.all(12),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(
+                  o.tableName == null
+                      ? 'ออนไลน์ • รับกลับบ้าน'
+                      : 'ออนไลน์ • โต๊ะ ${o.tableName}',
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(o.displayLabel),
+              Text('${o.customerName} • ${o.status.label}'),
+              Text(
+                  'รับออเดอร์ ${DateFormat('dd/MM/yyyy HH:mm').format(o.createdAt.toLocal())} น.'),
+              if (o.pickupDescription != null) Text(o.pickupDescription!),
+              for (final i in o.items)
+                ListTile(
+                    dense: true,
+                    title: Text('${i.productName} × ${i.quantity}'),
+                    subtitle: i.preparationNote.isEmpty
+                        ? null
+                        : Text(i.preparationNote)),
+              if (printer) ...[
+                _PrintActions(source: 'online', orderId: o.id, job: job),
+                const SizedBox(height: 8),
+              ],
+              if ([OrderStatus.paid, OrderStatus.accepted, OrderStatus.ready]
+                  .contains(o.status))
+                FilledButton(
+                    onPressed: () => performShopOperation(
+                        context,
+                        () => (widget.updateOnlineStatus ??
+                                OrderService.updateStatus)(
+                            o.id,
+                            o.status == OrderStatus.paid
+                                ? OrderStatus.accepted
+                                : o.status == OrderStatus.accepted
+                                    ? OrderStatus.ready
+                                    : OrderStatus.completed),
+                        timeout: const Duration(seconds: 25),
+                        success: o.status == OrderStatus.ready
+                            ? 'ส่งมอบออเดอร์แล้ว'
+                            : 'บันทึกแล้ว'),
+                    child: Text(o.status == OrderStatus.paid
+                        ? 'เริ่มเตรียม'
+                        : o.status == OrderStatus.accepted
+                            ? 'พร้อมรับ / เสิร์ฟแล้ว'
+                            : 'ส่งมอบแล้ว / เสร็จสิ้น')),
+            ]),
+          ));
+}
+
+/// Tickets keep their natural height (including all notes) and their state when
+/// another ticket arrives or the workspace changes between one and two columns.
+class _KitchenTickets extends StatelessWidget {
+  const _KitchenTickets({required this.columns, required this.children});
+  final int columns;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    if (children.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 16),
+      child: LayoutBuilder(builder: (context, constraints) {
+        final width = (constraints.maxWidth - (columns - 1) * 12) / columns;
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            for (final child in children)
+              SizedBox(key: child.key, width: width, child: child),
+          ],
+        );
+      }),
+    );
+  }
 }
 
 class _PrintActions extends StatefulWidget {
@@ -515,6 +607,7 @@ class _PrintActionsState extends State<_PrintActions> {
   @override
   Widget build(BuildContext context) => Wrap(
           spacing: 8,
+          runSpacing: 8,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Text(switch (widget.job?['status']) {
@@ -598,6 +691,12 @@ class _TicketCard extends StatelessWidget {
                       : 'ชำระแล้ว • ยังมีอาหารที่ต้องเตรียม',
                   style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
             const Divider(height: 16),
+            if (!allReady)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text('แตะรายการอาหารเมื่อพร้อมเสิร์ฟ',
+                    style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
+              ),
             // No bill / close-table shortcut here: the kitchen only prepares
             // food. Bills are opened and closed by the cashier from โต๊ะ.
             for (final entry in kitchenItems) ...[

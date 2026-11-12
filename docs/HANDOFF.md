@@ -15,6 +15,16 @@ Rules:
 
 ## Current state (updated 2026-11-12)
 
+**Kitchen width fix (local only, not released):** SM-X900 confirmed that both
+kitchen modes stretched a single ticket across the tablet workspace. They now
+use up to two columns within 1120 logical pixels, or one centered column with
+tickets capped at 600 pixels on smaller workspaces / larger text. History
+controls and printer guidance are bounded; action spacing and a table-row tap
+hint improve readability. All 34 focused kitchen tests and targeted Dart
+analysis passed. See `docs/ui-layout.md`. The tablet still runs the released
+app; only the original defect was inspected there. No new APK, physical print,
+shop-data write, push or deployment was performed for this task.
+
 **Website direction fixes pushed and deployed:** all six
 approved items from `website-direction-review-2026-11-12.md` are implemented;
 see `website-direction-implementation-2026-11-12.md`. Full specifies owner 1 +
@@ -167,6 +177,33 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-12 — Bound kitchen tickets on tablet workspaces
+- Owner asked why kitchen display and kitchen-printer mode stretch across the
+  screen. Read-only capture of connected SM-X900 confirmed the defect; source
+  shared one unconstrained ListView between both modes. Standalone Bluetooth
+  settings already have a 760-pixel cap and did not need modification.
+- Added responsive bounded ticket groups for active, ready, future and history
+  work, preserving chronological order, natural heights, notes and keyed ticket
+  identity within each group. Large text and narrow remaining workspace use one
+  column. Printer controls wrap with spacing; history switches stay near their
+  labels. Added the visible hint for tapping table-food rows when ready.
+- Ran the new regression on the original source: exit 1, ticket width 1224
+  exceeded the 600-pixel limit at a 1440 viewport with a 192-pixel navigation
+  allowance. After correction, 34 kitchen tests passed with exit 0; targeted
+  Dart analysis exited 0 with no issues. Initial harness runs required the exact
+  displayed order label and hit-testable scroll targets; one run also exhausted
+  C-drive temporary space. Final tests used isolated D-drive TEMP/TMP and passed.
+- Captured 12 fixture screens at 390/768/1440 in both modes and themes under
+  `.remember/tmp/kitchen-layout/`. Visual review found adjacent print/progress
+  buttons and an over-wide history switch; both were corrected. A second fresh-
+  viewer walkthrough found no remaining layout obstacle in the shown screens.
+  Existing combined "พร้อมรับ / เสิร์ฟแล้ว" copy is a minor follow-up suggestion,
+  outside this width fix. Future/history access and scrolling passed widget
+  tests separately from the static visual review. These are local
+  widget captures, not screenshots of an updated installed APK.
+- No backend, payment, permission, printer transport or paper-width changes.
+  No order/settings mutations on the tablet, installation, push or deployment.
 
 ### 2026-11-12 — Push and publish website direction fixes
 - Owner explicitly requested push and update after the local implementation.
