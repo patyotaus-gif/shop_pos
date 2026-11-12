@@ -12,6 +12,9 @@ import '../utils/stock_quantity.dart';
 import 'modifier_picker_sheet.dart';
 import 'sale_product_grid.dart';
 import 'stock_quantity_dialog.dart';
+import 'sale_display_controls.dart';
+import '../services/sale_display_service.dart';
+import '../services/auth_service.dart';
 
 Future<void> showTableProductPicker(BuildContext context,
         {required String orderId}) =>
@@ -21,10 +24,12 @@ Future<void> showTableProductPicker(BuildContext context,
       useSafeArea: true,
       isDismissible: false,
       enableDrag: false,
-      builder: (_) => TableProductPicker(
-        save: (items, requestId) =>
-            TableService.addItems(orderId, items, requestId: requestId),
-      ),
+      builder: (_) => SaleDisplayScope(
+          controller: SaleDisplayService.forShop(AuthService.shopId),
+          child: TableProductPicker(
+            save: (items, requestId) =>
+                TableService.addItems(orderId, items, requestId: requestId),
+          )),
     );
 
 /// A local draft keeps the catalog open between selections. Nothing is sent
@@ -283,6 +288,9 @@ class _TableProductPickerState extends State<TableProductPicker> {
                     .toList();
                 return SliverMainAxisGroup(slivers: [
                   SliverToBoxAdapter(
+                      child: SaleDisplayControls(
+                          categories: categories.skip(1).toList())),
+                  SliverToBoxAdapter(
                       child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -316,9 +324,15 @@ class _TableProductPickerState extends State<TableProductPicker> {
                           gridDelegate:
                               SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: columns,
-                            mainAxisExtent: width * .78 +
-                                MediaQuery.textScalerOf(context).scale(66) +
-                                76,
+                            mainAxisExtent: SaleDisplayScope.of(context)
+                                        ?.value
+                                        .mode ==
+                                    SaleDisplayMode.names
+                                ? saleNameTileHeight(context, width, filtered,
+                                    footerExtent: 48)
+                                : width * .78 +
+                                    MediaQuery.textScalerOf(context).scale(66) +
+                                    76,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
                           ),
@@ -333,6 +347,7 @@ class _TableProductPickerState extends State<TableProductPicker> {
                               unavailableLabel: quantity > 0
                                   ? 'เลือก ${stockText(quantity)} ${product.unit}'
                                   : null,
+                              selected: quantity > 0,
                               onTap: _locked ? null : () => _pick(product),
                               footer: SizedBox(
                                   height: 48,

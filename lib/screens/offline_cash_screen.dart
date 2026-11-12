@@ -13,6 +13,8 @@ import '../models/modifier_group.dart';
 import '../services/offline_service.dart';
 import '../widgets/modifier_picker_sheet.dart';
 import '../widgets/sale_product_grid.dart';
+import '../widgets/sale_display_controls.dart';
+import '../services/sale_display_service.dart';
 import '../utils/operation_error.dart';
 
 class OfflineEntryButton extends StatelessWidget {
@@ -89,8 +91,13 @@ class _OfflineEntryState extends State<OfflineEntryScreen> {
           ? await OfflineService.prepare(pin)
           : await OfflineService.unlock(profile, pin);
       if (!mounted) return;
-      await Navigator.push(context,
-          MaterialPageRoute(builder: (_) => OfflineCashScreen(permit: p)));
+      await Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) => SaleDisplayScope(
+                  controller:
+                      SaleDisplayService.forShop(p['shopId'] as String?),
+                  child: OfflineCashScreen(permit: p))));
       OfflineService.lock();
     } catch (e) {
       if (mounted) setState(() => _error = operationError(e));
@@ -411,9 +418,14 @@ class _OfflineCashState extends State<OfflineCashScreen>
                           decoration: const InputDecoration(
                               labelText: 'ค้นหาสินค้าหรือบาร์โค้ด',
                               prefixIcon: Icon(Icons.search)))),
+                  SaleDisplayControls(
+                      categories:
+                          _products.map((p) => p.category).toSet().toList()
+                            ..sort()),
                   Expanded(
                       child: SaleProductGrid(
                           itemCount: products.length,
+                          products: products,
                           itemBuilder: (context, i) {
                             final p = products[i];
                             return SaleProductCard(

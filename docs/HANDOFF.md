@@ -15,6 +15,14 @@ Rules:
 
 ## Current state (updated 2026-11-12)
 
+**Sales display modes (local only, not released):** owner asked for an optional
+name-only sales view with configurable button colors. Added photo/name controls,
+category colors and shop-scoped device preferences to POS, table selection and
+offline entry. Cart/draft, prices, permissions and backend data are unchanged.
+All 34 focused tests and targeted Dart analysis passed. Two visual review rounds
+finished clean for the rendered fixtures. No push, release or device install;
+the new controls have not yet been exercised in the installed POS app.
+
 **Kitchen width fix (local only, not released):** SM-X900 confirmed that both
 kitchen modes stretched a single ticket across the tablet workspace. They now
 use up to two columns within 1120 logical pixels, or one centered column with
@@ -42,8 +50,8 @@ and 12 page/viewport states, segment pricing and installation-guide navigation.
 All 71 public files match Hosting; exactly the 25 reviewed files changed.
 APK installation and physical iOS were not retested in this website release.
 
-**Branch:** `master`. Kitchen layout source `c097378` is committed locally and
-not pushed or released. Website source `3fab693` is pushed and deployed; this includes
+**Branch:** `master`. Sales-display changes and kitchen layout source `c097378`
+are local only, not pushed or released. Website source `3fab693` is pushed and deployed; this includes
 the earlier denser desktop homepage `5714a72`.
 Android 1.2.76 remains the artifact released from commit `1913e1c`.
 
@@ -178,6 +186,30 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-12 — Optional name buttons in sales catalogs
+- Owner requested switchable image/name-only product buttons and suggestions.
+  Implemented photo-default and name-button modes with five soft category colors
+  plus reset. Names, prices and availability remain visible in both modes.
+- Presentation preferences are local to the shop/device; they do not mutate
+  product records or sync other tills. POS/table/offline entry share them;
+  inventory-management and customer-facing ordering are unchanged.
+- Added focused coverage for persistence/isolation, malformed saved preferences,
+  mode changes with an existing draft, price/disabled behavior and layout/contrast.
+  First focused run passed 26 tests. A capture-helper hang in FakeAsync was fixed
+  by moving image encoding into tester.runAsync; that initial run was interrupted,
+  not counted as passed. Final expanded run passed all 34 tests across
+  `sale_display_test`, `sale_product_grid_test`, `table_product_picker_test`,
+  `product_catalog_test` and `offline_access_test`; targeted Dart analysis passed.
+- Visual review round 1 identified weak completion/selection/unavailable cues.
+  Added a filled completion button, selected-table-item check/border and an
+  unavailable icon. Round 2 was clean for the four inspected fixtures. Layouts
+  cover 320/390/768/1440 widths, light/dark themes and 200% text. These are local
+  widget fixtures, not installed-app checkout or physical-device acceptance.
+- Evidence: `.remember/tmp/sale-display/` PNGs and
+  `D:/pokpok-kitchen-layout-temp/sale-display-final.log`. Tests used D-drive
+  TEMP/TMP because C-drive free space is low. No APK, push, deploy or shop write.
+- See `docs/ui-layout.md` for the jobs map, design decisions and scope.
 
 ### 2026-11-12 — Bound kitchen tickets on tablet workspaces
 - Committed local implementation and tests as `c097378`; working tree clean
