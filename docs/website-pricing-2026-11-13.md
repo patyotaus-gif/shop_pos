@@ -94,3 +94,22 @@ the visible note explicitly says selection happens during app registration.
 Plan persistence across website/download/app is separate functional work, not
 implied by these styling changes. No additional mobile summary or signup flow
 was added in this task.
+
+## Background treatment approved for publication
+
+On 2026-11-13 the owner authorized the pending app/website release and the proposed
+hero/pricing background direction. Keep `brand.css` as the shared token source;
+`marketing-background.css` composes only these two marketing surfaces.
+
+- Job: understand the product from the hero and start a trial; compare useful
+  features/prices on the homepage or `/pricing/` and choose a trial.
+- Pale rose bowl and rim reference Pokpok's mortar without painting over the
+  screenshot or body copy. The caption has an opaque light surface.
+- Rose pricing band separates the three white cards from the canvas. Content
+  widths, prices, billing controls and trial destinations are unchanged.
+- CSS decorations are noninteractive and hidden in forced colours. A 450 ms
+  device translation runs once only with no reduced-motion preference. No loop,
+  opacity-hidden content, new image payload or third-party dependency.
+- Local 1440/768/390 captures and motion/overflow checks passed; the 56-state
+  pricing regression suite passed again after this change. Final publication
+  status and release review are in `release-1.2.78.md` and `HANDOFF.md`.

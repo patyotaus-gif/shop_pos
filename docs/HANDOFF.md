@@ -15,11 +15,18 @@ Rules:
 
 ## Current state (updated 2026-11-13)
 
-**Website background ideas (advice only):** owner asked for more visual character
-using a competitor hero as reference. Proposed keeping the approved light canvas,
-adding mortar-inspired curves behind product imagery, alternating light section
-surfaces, a pale rose pricing backdrop and restrained interaction motion. No
-direction selected by the owner, implementation, publication or theme change.
+**Release 1.2.78 (95) in preparation:** owner authorized implementation and release
+of the pending sales workspace, pricing and background work. Hero now has a pale
+rose mortar-bowl motif behind the real app screenshot; pricing gets a pale rose
+band behind white cards. A single short device entrance respects reduced motion.
+The 56-state pricing gate, 18-page marketing suite, 53 app regression tests and
+targeted Dart analysis passed locally. Fresh isolated source review is clean;
+screenshot review found no hard blocker. Signed Android build passed; artifact
+version, three native ABIs and certificate continuity passed. Final metadata
+review is clean after strengthening the fresh Hosting preflight guard. Commit,
+push and publication are the remaining steps.
+No new release is live yet.
+ADB currently lists no connected tablet; real-device verification is pending.
 
 **Website pricing refinement verified locally (not published):** homepage
 and `/pricing/` use bounded, separate cards with darker/larger feature text and
@@ -222,6 +229,50 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-13 — Release 1.2.78 checks complete; ready to publish
+
+Final metadata review is clean after one deployment-helper finding was fixed:
+cached preflight evidence is invalidated, and deploy runs a new synchronous
+preflight bound to the commit. A local regression verified failure blocks the
+upload despite an older success record; no network/deployment occurred in that
+test. Full source and separate visual reviews remain accepted. Metadata, APK
+size/hash and version agree. Ready to commit/push and explicitly deploy Hosting;
+no iOS build or physical device test is included. See `release-1.2.78.md`.
+
+### 2026-11-13 — Android 1.2.78 (95) built and staged
+
+Signed universal APK is 92,469,169 bytes, SHA256
+`5db45df2aac60b3eed6fadbd98c9aa99e06a8bf1d4b75287100023e60754d951`.
+Package/version, all three native ABIs and matching 1.2.77 signing certificate
+passed. All 406 native inputs still match the reviewed workspace. The first
+PowerShell wrapper treated a compiler deprecation warning as a terminating error;
+an incremental rebuild captured native stdout/stderr separately and exited 0.
+APK and version manifest are staged locally; final metadata review is running.
+No production publication yet.
+
+### 2026-11-13 — Combined release checks passed; Android build running
+
+All 53 focused app tests across eight files and targeted analysis of 13 Dart files
+passed in the isolated release source copy. The 56-state pricing and 18-page /
+five-width marketing gates passed, with motion/overflow/forced-colour checks.
+Fresh ephemeral read-only Codex source review covered all outgoing code since
+`17fd271` and found no verified blocker; separate screenshot review found no
+definite hard blocker. 406 native inputs match the workspace; focused tracked-file
+credential/signing scan found no matches. Android release build is still running.
+No production deployment or real-device validation yet. Evidence is under
+`D:/pokpok-release-1.2.78/`; optional visual follow-ups are in the release record.
+
+### 2026-11-13 — Prepare authorized combined app/website update
+
+Owner requested implementation and release of all pending approved changes.
+Added CSS mortar-inspired hero decoration and pale rose pricing background while
+retaining the light brand canvas. Pricing gate passed all 56 states; local
+1440/768/390 captures and reduced-motion/forced-colour checks passed. Preparing
+1.2.78 (95) in an isolated D-drive build because C has limited free space. Fresh
+source and screenshot reviews and app/marketing gates are running. Remote has
+no divergent commits; four local commits await publication. ADB has no device.
+No deployment yet; previous 1.2.77 (94) and Hosting `cb06af000098f85d` remain live.
 
 ### 2026-11-13 — Discuss website background treatment (advice only)
 - Read the standing website direction and content standard, and compared the

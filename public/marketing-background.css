@@ -1,0 +1,67 @@
+/* Decorative only. Real content stays on opaque, readable surfaces. */
+.hero-visual {
+  isolation: isolate;
+  background: transparent;
+  border-color: transparent;
+}
+.hero-visual::before,
+.hero-visual::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  z-index: -1;
+}
+.hero-visual::before {
+  inset: 18% 0 0;
+  background: var(--rose);
+  border-radius: var(--motif-bowl-radius);
+}
+.hero-visual::after {
+  inset: 18% var(--space-sm) auto;
+  height: var(--motif-line-height);
+  background: var(--motif-rim);
+  border-radius: var(--radius);
+}
+.hero-visual .margin-note {
+  background: var(--rose);
+  color: var(--wine);
+  border: var(--hairline) solid var(--motif-rim);
+}
+.hero-visual img { box-shadow: var(--device-shadow); }
+.hero-visual figcaption {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+  padding: var(--pricing-small-gap) var(--space-sm);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+}
+/* Bleed the tint without changing content width or creating scrollable overflow. */
+.pricing,
+.pricing-intro { position: relative; isolation: isolate; }
+.pricing::before,
+.pricing-intro::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--rose);
+  box-shadow: 0 0 0 100vmax var(--rose);
+  clip-path: inset(0 -100vmax);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hero-visual > a { animation: device-enter var(--motion-enter) var(--motion-ease) both; }
+  @keyframes device-enter {
+    from { transform: translateY(var(--motif-lift)); }
+    to { transform: translateY(0); }
+  }
+}
+@media (forced-colors: active) {
+  .hero-visual::before,
+  .hero-visual::after,
+  .pricing::before,
+  .pricing-intro::before { display: none; }
+}

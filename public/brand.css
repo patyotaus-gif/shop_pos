@@ -42,6 +42,14 @@
   --pricing-heading-gap: 4px;
   --pricing-selected-border: 2px;
   --pricing-check-size: 18px;
+  /* Brand background motifs: a quiet mortar bowl behind the real app screen. */
+  --motif-rim: #dbc0c5;
+  --motif-bowl-radius: 0 0 48% 48%;
+  --motif-line-height: 8px;
+  --motif-lift: 8px;
+  --motion-enter: 450ms;
+  --motion-ease: cubic-bezier(.2,.65,.3,1);
+  --device-shadow: 0 16px 36px #30252618;
 }
 [hidden] { display: none !important; }
 h1, .heading, .eyebrow, .small-label { letter-spacing: normal; }
