@@ -15,6 +15,12 @@ Rules:
 
 ## Current state (updated 2026-11-13)
 
+**Website background ideas (advice only):** owner asked for more visual character
+using a competitor hero as reference. Proposed keeping the approved light canvas,
+adding mortar-inspired curves behind product imagery, alternating light section
+surfaces, a pale rose pricing backdrop and restrained interaction motion. No
+direction selected by the owner, implementation, publication or theme change.
+
 **Website pricing refinement verified locally (not published):** homepage
 and `/pricing/` use bounded, separate cards with darker/larger feature text and
 explicit Solo/Lite inheritance and user limits (1 / 1 / 3). Prices and entitlements
@@ -216,6 +222,15 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-13 — Discuss website background treatment (advice only)
+- Read the standing website direction and content standard, and compared the
+  existing palette/styles with the supplied hero reference. Recommend using
+  large mortar-inspired curves near the app image, alternating white/light-grey
+  surfaces, pale rose behind white pricing cards, and restrained motion with
+  reduced-motion support. Keep body text on clear surfaces and burgundy as accent.
+- Proposed starting with hero and pricing; these are recommendations, not an
+  approved visual direction. No website edits, tests, push or deployment.
 
 ### 2026-11-13 — Refine website pricing comparison (local)
 - Owner requested narrower pricing cards, darker text and clearer package
