@@ -18,6 +18,14 @@ Rules:
 **Branch:** `master`. Denser desktop homepage `5714a72` is pushed and deployed (Hosting `b7110c9b1acdcfe9`; rollback `06bd0506b99944b0`).
 Android 1.2.76 remains the artifact released from commit `1913e1c`.
 
+**Website content direction (recorded 2026-11-12, documentation only):**
+Owner supplied `POKPOK.PDF` (14 pages). Source preserved in
+`docs/references/pokpok-website-content-standard-2026-11-12.pdf`; its page-referenced
+summary is `docs/website-content-standard.md`. Read with the existing visual and
+structural core before website work. Example prices, entitlements and service
+conditions require factual checks; the new document records the two briefs'
+feature-heading and footer differences. This task changes no live website/app.
+
 **Live wording follow-up (2026-11-12):** additional marketing wording from
 `Recording 2026-11-12 2222.mp4`: plan feature lists, costs, FAQ and consistent
 Thai terminology. Hosting version `06bd0506b99944b0`, released at
@@ -62,8 +70,9 @@ or triggered; its Codemagic workflow does not run automatically on push.
   owner-approved naming direction in `docs/website-development-core.md`),
   separate `/retail/` and `/restaurant/` pages, real shop photography.
 - Website direction: owner approved the ten-part brief in
-  `docs/website-development-core.md` on 2026-11-11. Read it before website work;
-  it is the target direction, not a claim that all ten parts are implemented.
+  `docs/website-development-core.md` on 2026-11-11 and supplied the content
+  standard on 2026-11-12. Read the core and `docs/website-content-standard.md`
+  before website work; they are targets, not claims of completed implementation.
 
 ### Review backlog (Low, accepted for 1.2.75)
 - **L1** Staff can't unblock a table bill whose redeemed points no longer fit
@@ -134,6 +143,24 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-12 — Preserve owner's website copywriting and content standard
+
+- Request: record the supplied `POKPOK.PDF` as website development guidance.
+- Preserved the unmodified 14-page source in
+  `docs/references/pokpok-website-content-standard-2026-11-12.pdf` and summarized
+  all 11 content sections with page references in `docs/website-content-standard.md`.
+- Linked the standard from `AGENTS.md` and `docs/website-development-core.md`;
+  retained the earlier visual/structural brief and explicitly recorded differences
+  about English feature headings and three versus four footer groups.
+- Distinguished brand/writing rules from proposed copy and unverified product
+  claims, including the meaning of three staff accounts, offline behavior,
+  data retention, trial length, price and payment availability.
+- Verification: extracted and read all 14 pages; copied PDF SHA-256 matches source
+  (`d974371ff7e9802927cda5a25bf507ab501891067924864ed66ef040703ff996`).
+  Documentation links, instruction reachability from AGENTS, UTF-8 and the
+  1,800-word guidance budget passed; `git diff --check` passed. Stored in a local
+  documentation commit; no push, runtime code change, deployment or device test.
 
 ### 2026-11-12 — Denser desktop homepage published and verified
 

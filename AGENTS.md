@@ -29,14 +29,17 @@ data in it.
 
 ## Working conventions
 
-### Website direction (owner-approved 2026-11-11)
+### Website direction (owner-approved 2026-11-11; content standard 2026-11-12)
 
 Before planning, editing, reviewing, or releasing the marketing website, read
-`docs/website-development-core.md`. It is the owner's standing direction for
-website copy, visuals, navigation, segment pages, pricing, CTAs, mobile, and SEO;
-use it over older website proposals where they disagree. Recording this direction
-does not mean the website already implements it. Review with the owner when the
-positioning changes (review 2027-02).
+`docs/website-development-core.md` and `docs/website-content-standard.md`.
+The core covers visuals, navigation, segment pages, pricing, CTAs, mobile and SEO;
+the content standard records the owner's POKPOK.PDF for brand voice, terminology,
+page copy and factual checks. Use the newer content standard over older wording
+proposals; retain the core's structural direction and note the documented
+differences. Suggested prices/features are not verified product facts. Recording
+these directions does not mean the website already implements them. Review with
+the owner when the positioning changes (review 2027-02).
 
 - Preserve unrelated work in the working tree. Scope commits and deployments to
   the requested change and check current state before changing anything.
