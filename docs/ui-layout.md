@@ -28,3 +28,52 @@ Sales display validation: all 34 tests passed across `sale_display_test`, `sale_
 Validation includes signup step/back navigation, consent enforcement, settings category navigation and retained input at mobile/tablet sizes, plus the existing transaction/offline/access tests. Physical-device checkout, keyboard and printer acceptance remain separate from widget tests.
 
 Kitchen validation (2026-11-12): 34 tests passed across `kitchen_layout_test`, `kitchen_output_test`, `kitchen_regression_test` and `kitchen_chef_journey_test`; targeted Dart analysis passed. Real theme/font captures cover 390/768/1440, both output modes and light/dark themes. Geometry checks cover ticket widths, two-column ordering, narrow workspace, enlarged text, history and future groups; callbacks and scrolling are exercised with local fixtures. Existing tests include 320-pixel phones, 200% text and long tickets. On 2026-11-13, the corrected 1.2.77 (94) app was checked on SM-X900: both kitchen modes use bounded two-column tickets with usable history/guidance/print controls. Test-shop output mode restored to display. Physical printing was not performed.
+
+## Sales-screen space review (2026-11-13, recommendation only)
+
+Owner reports that too many controls compete with selling. This is a read-only
+assessment of released 1.2.77, not an approved redesign or implementation.
+Evidence: `pos_screen.dart`, `restaurant_sales_screen.dart`,
+`sale_display_controls.dart`, `pos_checkout_panel.dart`,
+`mobile_sales_workspace.dart`, `side_navigation_shell.dart`, and the release's
+SM-X900 screenshot/XML in `D:/pokpok-release-1.2.77/`. No device is connected in
+this turn. The 390px catalog fixture contains only catalog components, so it is
+not evidence of the complete mobile sales screen.
+
+The empty takeaway screenshot has eight stacked levels before product tiles:
+channel switch, page title/staff/scanner, offline entry, bundle action, search,
+display controls, categories and pinned products. First product starts at y=962
+on the 2960x1848 capture. This describes that state, not all shops or carts;
+offline entry already disappears once the cart has items.
+
+Recommended first pass, awaiting owner's implementation instruction:
+
+| Current control | Proposed placement | Reason / constraint |
+| --- | --- | --- |
+| Photo/name/color row | One labelled `จัดหน้าขาย` control beside search, opening display settings | Infrequent configuration should not occupy its own row throughout selling; keep mode/color available |
+| Separate bundle action above search | `ชุดสินค้า` tab alongside product categories when available | Keep active selling one tap away without another toolbar |
+| Pinned-product strip duplicates products | `รายการโปรด` tab in the category row | Keep fast access; the assumption that one extra tab choice is acceptable needs cashier feedback |
+| Separate offline entry in a healthy empty cart | `เพิ่มเติม` menu | Keep offline status, pending-sale recovery and no-double-payment warnings prominent when applicable |
+| Channel switch plus duplicate takeaway heading | A single compact contextual header with channel and cashier | Preserve channel clarity and safe user switching; retain readable staff identity |
+| Tablet discount/debt/payment button group | Payment primary; discount/debt in a bill-actions menu | Mobile already uses a secondary menu. Any applied discount remains visible in totals |
+
+Keep search with scanner, category navigation, full distinguishable names and
+prices, stock-unavailable state, selected quantities, total and next action easy
+to reach. Loyalty should be a compact `เพิ่มลูกค้า` action in the bill header,
+with selected customer/points visible once attached, rather than hidden deeply.
+On tablets retain catalog/cart side by side. Sidebar collapse and device-level
+remembering already exist; use those before adding a second navigation setting.
+On phones retain product/cart views and a fixed cart count/total; payment remains
+fixed in the cart. Do not shrink text or touch targets to solve toolbar clutter.
+
+Optional later refinement: show one total when subtotal equals net; expand the
+breakdown when discounts or other adjustments apply. Improve compact name-tile
+spacing while preserving full names, prices, availability and large-text support.
+
+The hierarchy follows progressive disclosure: keep frequent selling visible and
+defer occasional settings, with clearly labelled access (NN/g, read 2026-11-13):
+https://www.nngroup.com/articles/progressive-disclosure/
+Relative usage frequency is a design hypothesis; no cashier usage analytics were
+examined. A future implementation needs real-component phone/tablet previews,
+owner review and cart/checkout/accessibility regression checks. No runtime or
+deployment changes in this assessment.

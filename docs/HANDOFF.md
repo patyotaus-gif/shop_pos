@@ -15,6 +15,13 @@ Rules:
 
 ## Current state (updated 2026-11-13)
 
+**Sales-screen simplification advice (not implemented):** owner asked which
+controls to move and what to emphasize. Reviewed 1.2.77 source plus the recent
+SM-X900 capture; no tablet connected this turn. Recommendations are recorded in
+`docs/ui-layout.md` under Sales-screen space review. Main opportunity: combine
+the eight pre-catalog toolbar levels and move display configuration into a
+labelled secondary menu. Await implementation instruction; live build unchanged.
+
 **Android 1.2.77 (94) released:** sales-display and kitchen-width changes are
 pushed and live in Hosting `cb06af000098f85d` (2026-11-13 00:11:44 Sydney).
 All 68 focused tests, targeted analysis, fresh source/metadata reviews and SM-X900
@@ -199,6 +206,18 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-13 — Review clutter in sales screen (advice only)
+- Compared current source with 1.2.77 tablet screenshot/XML. Empty takeaway has
+  eight pre-catalog levels; first product begins at y=962 on 2960x1848 capture.
+- Proposed a compact header, display-settings menu, favorite/bundle category
+  tabs, contextual offline warnings and stronger product/cart/total emphasis.
+  Preserve cashier identity, loyalty access and payment-recovery warnings.
+- Confirmed sidebar collapse/persistence and mobile secondary checkout actions
+  already exist. Mobile was inspected through source/component fixtures, not a
+  newly connected physical device. No cashier-usage analytics or implementation.
+- Recorded findings and pending recommendations in `docs/ui-layout.md`; only
+  documentation changed. No tests rerun, data writes, push or deployment.
 
 ### 2026-11-13 — Android 1.2.77 (94) published and verified
 - Hosting-only deploy from pushed `d8e0ded` completed with exit 0. New version
