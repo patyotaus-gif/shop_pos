@@ -15,6 +15,18 @@ Rules:
 
 ## Current state (updated 2026-11-12)
 
+**Website direction fixes complete locally (not pushed/deployed):** all six
+approved items from `website-direction-review-2026-11-12.md` are implemented;
+see `website-direction-implementation-2026-11-12.md`. Full specifies owner 1 +
+staff 2, Retail/Restaurant pages preserve their pricing context, four homepage
+feature cards have real screenshots, and Android/iOS setup has illustrated steps.
+Local browser checks passed: 18 pages × 5 widths plus a focused 4-page × 4-width
+contrast/target/geometry check. Two newcomer visual rounds completed with no
+remaining dead end in the shown flows. SM-X900 app 1.2.76 (93) supplied Products
+and Kitchen captures from existing test data. No sales/inventory writes; density,
+fullscreen and S Pen settings restored (320, null, 1). Awaiting owner visual
+review/release instruction; APK installation and physical iOS were not retested.
+
 **Branch:** `master`. Denser desktop homepage `5714a72` is pushed and deployed (Hosting `b7110c9b1acdcfe9`; rollback `06bd0506b99944b0`).
 Android 1.2.76 remains the artifact released from commit `1913e1c`.
 
@@ -26,11 +38,10 @@ structural core before website work. Example prices, entitlements and service
 conditions require factual checks; the new document records the two briefs'
 feature-heading and footer differences. This task changes no live website/app.
 
-**Website direction review (2026-11-12, read-only):** live marketing pages match
-local source; see `docs/website-direction-review-2026-11-12.md`. First correction:
-Full's copy says three staff accounts, but app UI and Functions allow two staff
-plus the owner. Four homepage feature cards already exist; their real screenshots,
-separate Retail/Restaurant pages and illustrated setup guides remain outstanding.
+**Website direction review (2026-11-12, baseline):** the read-only findings in
+`docs/website-direction-review-2026-11-12.md` describe the pre-change live site.
+The six fixes are now local, so that baseline no longer matches the working tree.
+Production remains at the Hosting version above until a separate release.
 
 **Live wording follow-up (2026-11-12):** additional marketing wording from
 `Recording 2026-11-12 2222.mp4`: plan feature lists, costs, FAQ and consistent
@@ -72,9 +83,10 @@ or triggered; its Codemagic workflow does not run automatically on push.
 - Website (Gif's feedback 2026-11-09), branch `website-gif-2026-11`:
   round 1 merged to master and **deployed 2026-11-10**; refreshed app screenshots
   **deployed and verified 2026-11-11** (see `docs/website-screenshots-2026-11-11.md`).
-  Four feature cards are deployed; still to do: real screenshots for those cards
-  (follow the owner-approved direction in `docs/website-development-core.md`),
-  separate `/retail/` and `/restaurant/` pages, real shop photography.
+  Four feature cards are deployed; their real screenshots, separate `/retail/`
+  and `/restaurant/` pages and illustrated setup guides are now implemented and
+  verified locally. Owner visual review and website release remain pending.
+  Real shop photography / a dedicated retail demo image set remain optional work.
 - Website direction: owner approved the ten-part brief in
   `docs/website-development-core.md` on 2026-11-11 and supplied the content
   standard on 2026-11-12. Read the core and `docs/website-content-standard.md`
@@ -149,6 +161,28 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-12 — Implement six website direction fixes and capture tablet screens
+
+- Scope: website copy, two business landing pages, four homepage screenshot
+  cards, illustrated APK/TestFlight setup, footer links, sitemap and cache keys.
+  Full user wording matches owner 1 + staff 2; prices and actual entitlements
+  unchanged. Signup page edits are limited to those two plan descriptions.
+- Device: connected SM-X900, app 1.2.76 (93), existing test-shop Products and
+  Kitchen views. Added `inventory-1.2.76.png` and `kitchen-1.2.76.png`.
+  Existing 1.2.75 Sales/Reports remain accurately labelled. No record writes.
+  Restored density 320, no policy_control override and air_button_onoff 1.
+- Verification: `scripts/test_marketing_pages.cjs` passed 18 pages × 5 widths,
+  local links/assets/anchors, menu/Escape, segment-to-pricing, billing, guide
+  search, FAQ and no-JS content. Focused visual measurements passed at four
+  widths; minimum measured text contrast 5.08:1, changed control height 48px.
+  Newcomer feedback fixed signup guidance, iOS button order and plan/account
+  clarity; second review found no visible dead end. Syntax/diff checks passed.
+- Design evidence and limitations: `website-direction-implementation-2026-11-12.md`.
+  Retail uses food products from the test shop with an explicit caption.
+  No screen-reader, real-network CWV or physical iOS installation claim.
+- This work is a local commit only. No push, Hosting deployment, app release,
+  Functions/payment/security change or real sale was performed.
 
 ### 2026-11-12 — Review live website against both owner briefs
 

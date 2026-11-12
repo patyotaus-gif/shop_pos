@@ -37,7 +37,7 @@
         ]
       },
       {
-        "source": "/{features,pricing,marketplace,guides,blog,privacy,terms}{,/**}",
+        "source": "/{features,retail,restaurant,pricing,marketplace,guides,blog,privacy,terms}{,/**}",
         "headers": [
           {
             "key": "Cache-Control",

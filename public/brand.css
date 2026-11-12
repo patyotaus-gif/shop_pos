@@ -8,6 +8,17 @@
   --surface: #fff;
   --rose: #f5e8ea;
   --radius: 12px;
+  --space-sm: 12px;
+  --space-md: 24px;
+  --space-lg: 40px;
+  --type-caption: 13px;
+  --type-body: 16px;
+  --control-height: 48px;
+  --step-size: 36px;
+  --device-border: 4px;
+  --hairline: 1px;
+  --focus-ring: 3px;
+  --solution-heading: clamp(30px, 3.5vw, 44px);
 }
 [hidden] { display: none !important; }
 h1, .heading, .eyebrow, .small-label { letter-spacing: normal; }

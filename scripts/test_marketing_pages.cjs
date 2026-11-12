@@ -4,7 +4,7 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 const root = path.resolve(__dirname, '../public');
 const output = path.resolve(__dirname, '../.remember/tmp/brand-preview');
-const paths = ['/', '/features/', '/pricing/', '/marketplace/', '/guides/', '/blog/', '/privacy/', '/terms/',
+const paths = ['/', '/features/', '/retail/', '/restaurant/', '/pricing/', '/marketplace/', '/guides/', '/blog/', '/privacy/', '/terms/',
   '/blog/free-pos-thailand/', '/blog/manage-shop-credit/',
   ...fs.readdirSync(path.join(root, 'guides'), {withFileTypes:true}).filter(d=>d.isDirectory()).map(d=>'/guides/'+d.name+'/')];
 function localFile(url) {
@@ -33,10 +33,10 @@ function localFile(url) {
         const duplicates=await page.evaluate(()=>{const ids=[...document.querySelectorAll('[id]')].map(e=>e.id);return ids.filter((v,i)=>ids.indexOf(v)!==i);});assert.deepEqual(duplicates,[],url);
         const broken=await page.locator('img:not([loading="lazy"])').evaluateAll(imgs=>imgs.filter(i=>!i.complete||!i.naturalWidth).map(i=>i.src));assert.deepEqual(broken,[],url);
         const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1);assert.equal(overflow,false,`Overflow ${url} at ${width}`);
-        const hrefs=await page.locator('a[href^="/"]').evaluateAll(nodes=>nodes.map(n=>n.getAttribute('href')));for(const href of hrefs){const u=new URL(href,'https://pokpok-preview.test');assert.ok(fs.existsSync(localFile(u)),`Missing ${href} from ${url}`);}
+        const hrefs=await page.locator('a[href^="/"], a[href^="#"]').evaluateAll(nodes=>nodes.map(n=>n.getAttribute('href')));for(const href of hrefs){const u=new URL(href,page.url());const file=localFile(u);assert.ok(fs.existsSync(file),`Missing ${href} from ${url}`);const legacy=u.pathname==='/'&&['#features','#pricing','#how','#marketplace'].includes(u.hash);if(u.hash && !legacy && path.extname(file)==='.html'){const markup=fs.readFileSync(file,'utf8');assert.ok(markup.includes(`id="${decodeURIComponent(u.hash.slice(1))}"`),`Missing anchor ${href} from ${url}`);}}
         assert.equal(await page.locator('#mobileNav').isVisible(),false,'Menu starts closed '+url);
         if(width<=900){await page.locator('#hamburger').click();assert.equal(await page.locator('#mobileNav').isVisible(),true);await page.keyboard.press('Escape');assert.equal(await page.locator('#hamburger').getAttribute('aria-expanded'),'false');assert.equal(await page.locator('#mobileNav').isVisible(),false);}
-        if(width===390||width===1440){
+        if(width===390||width===768||width===1440){
           await page.evaluate(async()=>{const imgs=[...document.querySelectorAll('img')];for(const img of imgs)img.loading='eager';await Promise.all(imgs.map(img=>img.decode()));});
           await page.screenshot({path:path.join(output,`pages-${url.replace(/\//g,'_')}-${width}.png`),fullPage:true});
         }
@@ -49,8 +49,22 @@ function localFile(url) {
     await page.locator('#by').click();assert.equal(await page.locator('.p-amt').first().textContent(),'1,990');
     await page.locator('#bm').click();assert.equal(await page.locator('.p-amt').first().textContent(),'199');
     await page.locator('#type-retail').click();assert.match(await page.locator('#plan-desc-0').textContent(),/จัดการการขายและตรวจสอบยอดขายประจำวัน/);
+    for(const [shop,description] of [['retail',/จัดการการขายและตรวจสอบยอดขายประจำวัน/],['restaurant',/กลับบ้าน/]]) {
+      await page.goto('https://pokpok-preview.test/'+shop+'/');
+      assert.equal(await page.locator('link[rel="canonical"]').getAttribute('href'),'https://pok-pok.app/'+shop+'/');
+      await page.locator(`a[href="/pricing/?shop=${shop}"]`).first().click();
+      assert.match(await page.locator('#plan-desc-0').textContent(),description,'Segment choice survives navigation');
+      assert.match(await page.locator('#plan-features-2').textContent(),/เจ้าของ 1 คน และพนักงาน 2 คน/);
+      await page.locator('#by').click();assert.equal(await page.locator('.p-amt').first().textContent(),'1,990');
+    }
+    await page.goto('https://pokpok-preview.test/pricing/?shop=unknown');
+    assert.match(await page.locator('#plan-desc-0').textContent(),/จัดการการขายและตรวจสอบยอดขายประจำวัน/);
+    await page.goto('https://pokpok-preview.test/guides/getting-started/');
+    for(const platform of ['android','ios']) {await page.locator(`a[href="#${platform}"]`).click();assert.equal(await page.locator(`#${platform} .install-flow li`).count(),3);}
     await page.goto('https://pokpok-preview.test/');
     assert.match(await page.locator('h1').textContent(),/POS/);
+    assert.equal(await page.locator('.feature-card .feature-shot img').count(),4);
+    for(const platform of ['android','ios']) {assert.equal(await page.locator(`a[href="/guides/getting-started/#${platform}"]`).count(),1);}
     assert.equal(await page.locator('#plans .p-card').count(),3);
     assert.equal(await page.locator('.p-avg').first().isVisible(),false);
     await page.locator('#by').click();assert.equal(await page.locator('.p-amt').first().textContent(),'1,990');assert.match(await page.locator('.p-avg').first().textContent(),/฿166/);
