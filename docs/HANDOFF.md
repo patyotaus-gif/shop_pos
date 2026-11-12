@@ -26,6 +26,12 @@ structural core before website work. Example prices, entitlements and service
 conditions require factual checks; the new document records the two briefs'
 feature-heading and footer differences. This task changes no live website/app.
 
+**Website direction review (2026-11-12, read-only):** live marketing pages match
+local source; see `docs/website-direction-review-2026-11-12.md`. First correction:
+Full's copy says three staff accounts, but app UI and Functions allow two staff
+plus the owner. Four homepage feature cards already exist; their real screenshots,
+separate Retail/Restaurant pages and illustrated setup guides remain outstanding.
+
 **Live wording follow-up (2026-11-12):** additional marketing wording from
 `Recording 2026-11-12 2222.mp4`: plan feature lists, costs, FAQ and consistent
 Thai terminology. Hosting version `06bd0506b99944b0`, released at
@@ -66,8 +72,8 @@ or triggered; its Codemagic workflow does not run automatically on push.
 - Website (Gif's feedback 2026-11-09), branch `website-gif-2026-11`:
   round 1 merged to master and **deployed 2026-11-10**; refreshed app screenshots
   **deployed and verified 2026-11-11** (see `docs/website-screenshots-2026-11-11.md`).
-  Still to do: 3–4 feature blocks with real screenshots (follow the latest
-  owner-approved naming direction in `docs/website-development-core.md`),
+  Four feature cards are deployed; still to do: real screenshots for those cards
+  (follow the owner-approved direction in `docs/website-development-core.md`),
   separate `/retail/` and `/restaurant/` pages, real shop photography.
 - Website direction: owner approved the ten-part brief in
   `docs/website-development-core.md` on 2026-11-11 and supplied the content
@@ -143,6 +149,26 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-12 — Review live website against both owner briefs
+
+- Owner asked which website changes remain under the saved direction. Reviewed
+  the core and PDF content standard against current source and fresh live pages;
+  recorded findings in `docs/website-direction-review-2026-11-12.md`.
+- Confirmed an actionable entitlement-copy mismatch: Full advertises three staff
+  accounts, while `StaffScreen` and `staff_access.js` allow two staff plus owner.
+  No entitlement or website code was changed in this review.
+- Confirmed four homepage feature cards exist, without task screenshots; Retail
+  and Restaurant remain toggled stories rather than separate landing pages.
+  Also recorded terminology, illustrated installation, footer FAQ and sitemap gaps.
+- Verification: five live pages HTTP 200 with HTML matching local bytes at
+  `facfe51`, 390/1440 viewport checks without horizontal overflow or JS page errors,
+  pricing type/year toggles, selected screenshot inspection. `/retail/` and
+  `/restaurant/` return 404 (not existing broken navigation links).
+- Evidence: `D:/pokpok-website-direction-20261112/audit-live.json` and screenshots.
+  Browser viewport simulation only; no real-device, payment, full accessibility
+  or PageSpeed test. Documentation diff and AGENTS reachability checks passed.
+  Documentation only, no deployment or push.
 
 ### 2026-11-12 — Preserve owner's website copywriting and content standard
 
