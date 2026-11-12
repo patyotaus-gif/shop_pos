@@ -15,19 +15,25 @@ Rules:
 
 ## Current state (updated 2026-11-12)
 
-**Website direction fixes complete locally (not pushed/deployed):** all six
+**Website direction fixes pushed and deployed:** all six
 approved items from `website-direction-review-2026-11-12.md` are implemented;
 see `website-direction-implementation-2026-11-12.md`. Full specifies owner 1 +
 staff 2, Retail/Restaurant pages preserve their pricing context, four homepage
 feature cards have real screenshots, and Android/iOS setup has illustrated steps.
+Source `3fab693` is on GitHub and Firebase Hosting `b362e6435d006aad`, released
+2026-11-12 11:49:26 UTC (22:49:26 Sydney); rollback `b7110c9b1acdcfe9`.
 Local browser checks passed: 18 pages × 5 widths plus a focused 4-page × 4-width
 contrast/target/geometry check. Two newcomer visual rounds completed with no
 remaining dead end in the shown flows. SM-X900 app 1.2.76 (93) supplied Products
 and Kitchen captures from existing test data. No sales/inventory writes; density,
-fullscreen and S Pen settings restored (320, null, 1). Awaiting owner visual
-review/release instruction; APK installation and physical iOS were not retested.
+fullscreen and S Pen settings restored (320, null, 1). Owner authorized push and
+update. Independent static review passed; live checks passed 26 response hashes
+and 12 page/viewport states, segment pricing and installation-guide navigation.
+All 71 public files match Hosting; exactly the 25 reviewed files changed.
+APK installation and physical iOS were not retested in this website release.
 
-**Branch:** `master`. Denser desktop homepage `5714a72` is pushed and deployed (Hosting `b7110c9b1acdcfe9`; rollback `06bd0506b99944b0`).
+**Branch:** `master`. Website source `3fab693` is pushed and deployed; this includes
+the earlier denser desktop homepage `5714a72`.
 Android 1.2.76 remains the artifact released from commit `1913e1c`.
 
 **Website content direction (recorded 2026-11-12, documentation only):**
@@ -40,8 +46,8 @@ feature-heading and footer differences. This task changes no live website/app.
 
 **Website direction review (2026-11-12, baseline):** the read-only findings in
 `docs/website-direction-review-2026-11-12.md` describe the pre-change live site.
-The six fixes are now local, so that baseline no longer matches the working tree.
-Production remains at the Hosting version above until a separate release.
+The six fixes are now deployed, so that baseline no longer describes production.
+See the implementation report for release evidence and remaining limitations.
 
 **Live wording follow-up (2026-11-12):** additional marketing wording from
 `Recording 2026-11-12 2222.mp4`: plan feature lists, costs, FAQ and consistent
@@ -83,9 +89,9 @@ or triggered; its Codemagic workflow does not run automatically on push.
 - Website (Gif's feedback 2026-11-09), branch `website-gif-2026-11`:
   round 1 merged to master and **deployed 2026-11-10**; refreshed app screenshots
   **deployed and verified 2026-11-11** (see `docs/website-screenshots-2026-11-11.md`).
-  Four feature cards are deployed; their real screenshots, separate `/retail/`
-  and `/restaurant/` pages and illustrated setup guides are now implemented and
-  verified locally. Owner visual review and website release remain pending.
+  Four feature cards with real screenshots, separate `/retail/` and
+  `/restaurant/` pages and illustrated setup guides are deployed and verified
+  on the live website (2026-11-12, source `3fab693`).
   Real shop photography / a dedicated retail demo image set remain optional work.
 - Website direction: owner approved the ten-part brief in
   `docs/website-development-core.md` on 2026-11-11 and supplied the content
@@ -161,6 +167,36 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-12 — Push and publish website direction fixes
+- Owner explicitly requested push and update after the local implementation.
+  Pushed source `3fab693` to `patyotaus-gif/shop_pos` master and verified the
+  remote SHA. No force push, app build, Codemagic trigger or backend deployment.
+- Fresh isolated Claude Opus 4.6 review of `5714a72..3fab693` completed clean:
+  read-only Read/Grep/Glob, no MCP, hooks, project settings, saved session or
+  auto-memory; 6,457-character report, no permission denials. Binary images and
+  rendered behavior were verified separately by local/live browser checks.
+- Re-ran 18 marketing pages × 5 widths, the 48-URL cache-policy test and its
+  real-browser stale-cache fixture; all passed. JavaScript syntax and outgoing
+  ref check for private-key/payment/GitHub token patterns passed.
+- Hosting-only deployment `b362e6435d006aad` released at 11:49:26 UTC
+  (22:49:26 Sydney), stamped with full source SHA. Previous version
+  `b7110c9b1acdcfe9` retained as rollback.
+- Hosting API readback confirms all 71 local public files, exactly 25 changed
+  paths, expected headers and unchanged runtime rewrites. Public HTTP checks
+  confirm 26 response hashes (including unchanged app version.json). Live Edge
+  checks passed 4 pages × 3 widths, images, menu/Escape, guide steps and segment
+  pricing/monthly/yearly navigation. Inspected the resulting live captures.
+- Two initial probe failures were investigated: subscribe was incorrectly
+  expected to use marketing no-cache headers; an immediate annual-price check
+  still read monthly values. Isolated navigation/click tracing passed without a
+  second click or page error. The final smoke explicitly waits for page/fonts
+  and the resulting price state; it passed. No website-source fix was needed.
+- Evidence: `D:/pokpok-direction-release-20261112/` (review, deployment log,
+  Hosting/HTTP readback, pricing trace and live browser captures). The report
+  `website-direction-implementation-2026-11-12.md` records public release status.
+  Android remains 1.2.76 (93); Functions, rules and payment/security settings
+  were unchanged. No physical device installation test in this release.
 
 ### 2026-11-12 — Implement six website direction fixes and capture tablet screens
 
