@@ -48,9 +48,10 @@
   }
   </script>
 <link rel="stylesheet" href="/site-base.css">
-  <link rel="stylesheet" href="/brand.css?v=20261112-direction">
+  <link rel="stylesheet" href="/brand.css?v=20261113-pricing">
   <link rel="stylesheet" href="/brand/wordmark.css?v=20261105">
-<link rel="stylesheet" href="/site-pages.css?v=20261112-direction"><script src="/js/site.js?v=20261112-direction" defer></script><noscript><style>.mobile-nav{display:block;position:static;max-height:none}.hamburger{display:none}.guide-tools{display:none}</style></noscript></head>
+<link rel="stylesheet" href="/site-pages.css?v=20261112-direction"><script src="/js/site.js?v=20261113-pricing" defer></script><noscript><style>.mobile-nav{display:block;position:static;max-height:none}.hamburger{display:none}.guide-tools{display:none}</style></noscript><link rel="stylesheet" href="/pricing.css?v=20261113">
+</head>
 <body>
 <a class="skip-link" href="#main">ข้ามไปเนื้อหา</a>
 <nav class="site-nav" aria-label="เมนูหลัก"><a href="/" class="logo" aria-label="Pokpok หน้าแรก"><span class="logo-symbol"><img src="/brand/pokpok-icon.svg" width="40" height="40" alt=""></span><img src="/brand/pokpok-wordmark.svg" class="pokpok-wordmark" width="2022" height="548" alt="pokpok"></a><ul class="nav-links">
@@ -155,67 +156,73 @@
 </section>
 <!-- PRICING -->
 <section class="pricing" id="plans" aria-labelledby="plans-heading">
-  <div class="eyebrow">ราคา</div>
-  <h2 class="heading" id="plans-heading">เลือกแพ็กเกจให้พอดีกับร้าน</h2>
-  <p class="subtext">ทุกแพ็กเกจทดลองฟรี 60 วัน ไม่ต้องผูกบัตร · ราคาต่อร้าน</p>
-  <div class="billing-switch">
-    <button class="bill-btn on" aria-pressed="true" id="bm" onclick="setBill('m')">รายเดือน</button>
-    <button class="bill-btn" aria-pressed="false" id="by" onclick="setBill('y')">รายปี <span class="save-pill">ประหยัด 17%</span></button>
+  <div class="pricing-heading"><p class="eyebrow">แพ็กเกจและราคา</p><h2 class="heading" id="plans-heading">เลือกแพ็กเกจให้พอดีกับร้าน</h2><p class="subtext">เลือกฟีเจอร์ตามงานที่ร้านต้องใช้ · ราคาต่อร้าน</p></div>
+  <div class="pricing-controls">
+    <div class="pricing-choice">
+      <p id="shop-type-label">ประเภทร้าน</p>
+      <div class="bill-toggle" role="group" aria-labelledby="shop-type-label">
+        <button type="button" class="bill-btn on" id="type-retail" aria-pressed="true" onclick="setShopType('retail')">ร้านค้าปลีก</button>
+        <button type="button" class="bill-btn" id="type-restaurant" aria-pressed="false" onclick="setShopType('restaurant')">ร้านอาหาร</button>
+      </div>
+    </div>
+    <div class="pricing-choice">
+      <p id="billing-label">รอบชำระเงิน</p>
+      <div class="billing-switch" role="group" aria-labelledby="billing-label">
+        <button type="button" class="bill-btn on" aria-pressed="true" id="bm" onclick="setBill('m')">รายเดือน</button>
+        <button type="button" class="bill-btn" aria-pressed="false" id="by" onclick="setBill('y')">รายปี <span class="save-pill">ประหยัด 17%</span></button>
+      </div>
+    </div>
   </div>
-  <div class="bill-toggle" role="group" aria-label="ประเภทร้าน">
-    <button class="bill-btn on" id="type-retail" aria-pressed="true" onclick="setShopType('retail')">ร้านค้าปลีก</button>
-    <button class="bill-btn" id="type-restaurant" aria-pressed="false" onclick="setShopType('restaurant')">ร้านอาหาร</button>
-  </div>
+  <p class="pricing-trial"><strong>ทดลองใช้งานฟรี 60 วัน</strong><span>ไม่ต้องผูกบัตร · เลือกแพ็กเกจที่ต้องการทดลองตอนสมัครในแอป</span></p>
   <div class="pricing-cards">
-    <div class="p-card">
-
-      <div class="p-plan">Solo</div>
+    <article class="p-card" aria-labelledby="plan-name-0">
+      <div class="p-card-head"><h3 class="p-plan" id="plan-name-0">Solo</h3></div>
+      <p class="p-desc" id="plan-desc-0">ขายหน้าร้านและสรุปยอดขาย</p>
+      <p class="p-fit" id="plan-fit-0">สำหรับร้านเล็กที่เจ้าของดูแลการขายเอง</p>
+      <p class="p-users">ผู้ใช้งาน 1 คน</p>
       <div class="p-price"><span class="currency">฿</span><span class="p-amt" data-m="199" data-y="1,990">199</span><span class="period p-per"> /เดือน</span></div>
-      <div class="p-avg" data-avg="166" hidden>เฉลี่ย ฿166/เดือน เมื่อจ่ายรายปี</div>
-      <div class="p-desc" id="plan-desc-0">จัดการการขายและตรวจสอบยอดขายประจำวัน</div>
-      <div class="p-fit" id="plan-fit-0">เหมาะสำหรับร้านค้าขนาดเล็กที่เจ้าของดูแลการขายด้วยตนเอง</div>
-      <hr class="p-sep">
+      <p class="p-avg" data-avg="166" hidden>เฉลี่ย ฿166/เดือน เมื่อจ่ายรายปี</p>
+      <a href="/#download" class="p-btn">เริ่มทดลองใช้งานฟรี</a>
+      <h4 class="p-feature-title">ฟีเจอร์หลักใน Solo</h4>
       <ul class="p-list" id="plan-features-0">
         <li>ระบบขายสินค้าและรับชำระเงิน</li>
         <li>รายงานสรุปยอดขายประจำวัน</li>
         <li>QR พร้อมเพย์</li>
         <li>สั่งซื้อสินค้าจากผู้จำหน่าย</li>
       </ul>
-      <a href="/#download" class="p-btn">เริ่มทดลองฟรี Solo</a>
-    </div>
-    <div class="p-card">
-
-      <div class="p-plan">Lite</div>
+    </article>
+    <article class="p-card" aria-labelledby="plan-name-1">
+      <div class="p-card-head"><h3 class="p-plan" id="plan-name-1">Lite</h3></div>
+      <p class="p-desc" id="plan-desc-1">ดูแลสต็อกและยอดค้างชำระ</p>
+      <p class="p-fit" id="plan-fit-1">สำหรับร้านที่ต้องติดตามสินค้าคงเหลือและยอดค้างชำระ</p>
+      <p class="p-users">ผู้ใช้งาน 1 คน</p>
       <div class="p-price"><span class="currency">฿</span><span class="p-amt" data-m="399" data-y="3,990">399</span><span class="period p-per"> /เดือน</span></div>
-      <div class="p-avg" data-avg="333" hidden>เฉลี่ย ฿333/เดือน เมื่อจ่ายรายปี</div>
-      <div class="p-desc" id="plan-desc-1">จัดการสินค้าคงเหลือและติดตามยอดค้างชำระ</div>
-      <div class="p-fit" id="plan-fit-1">เหมาะสำหรับร้านค้าที่ต้องการจัดการสินค้าคงเหลือและติดตามยอดค้างชำระ</div>
-      <hr class="p-sep">
+      <p class="p-avg" data-avg="333" hidden>เฉลี่ย ฿333/เดือน เมื่อจ่ายรายปี</p>
+      <a href="/#download" class="p-btn">เริ่มทดลองใช้งานฟรี</a>
+      <h4 class="p-feature-title">รวมฟีเจอร์ Solo และเพิ่ม</h4>
       <ul class="p-list" id="plan-features-1">
-        <li>รวมฟังก์ชันใน Solo</li>
         <li>จัดการสินค้าคงเหลือและแจ้งเตือนสินค้าใกล้หมด</li>
         <li>จัดการยอดค้างชำระและบันทึกการรับชำระ</li>
         <li>พิมพ์ใบเสร็จด้วยอุปกรณ์ที่รองรับ</li>
       </ul>
-      <a href="/#download" class="p-btn">เริ่มทดลองฟรี Lite</a>
-    </div>
-    <div class="p-card featured">
-      <div class="p-card-badge">แนะนำ</div>
-      <div class="p-plan">Full</div>
+    </article>
+    <article class="p-card featured" aria-labelledby="plan-name-2">
+      <div class="p-card-head"><h3 class="p-plan" id="plan-name-2">Full</h3><span class="p-card-badge">แนะนำ</span></div>
+      <p class="p-desc" id="plan-desc-2">ทีมงาน สมาชิก และรายงาน</p>
+      <p class="p-fit" id="plan-fit-2">สำหรับร้านที่มีทีมงานและต้องการดูแลสมาชิก</p>
+      <p class="p-users">ผู้ใช้งานรวม 3 คน</p>
       <div class="p-price"><span class="currency">฿</span><span class="p-amt" data-m="599" data-y="5,990">599</span><span class="period p-per"> /เดือน</span></div>
-      <div class="p-avg" data-avg="499" hidden>เฉลี่ย ฿499/เดือน เมื่อจ่ายรายปี</div>
-      <div class="p-desc" id="plan-desc-2">บริหารร้านด้วยข้อมูลและรายงาน</div>
-      <div class="p-fit" id="plan-fit-2">เหมาะสำหรับร้านค้าที่มีพนักงานและต้องการข้อมูลประกอบการบริหารธุรกิจ</div>
-      <hr class="p-sep">
+      <p class="p-avg" data-avg="499" hidden>เฉลี่ย ฿499/เดือน เมื่อจ่ายรายปี</p>
+      <a href="/#download" class="p-btn ruby">เริ่มทดลองใช้งานฟรี</a>
+      <h4 class="p-feature-title">รวมฟีเจอร์ Lite และเพิ่ม</h4>
       <ul class="p-list" id="plan-features-2">
-        <li>รวมฟังก์ชันใน Lite</li>
         <li>รองรับผู้ใช้งานรวม 3 คน (เจ้าของ 1 คน และพนักงาน 2 คน)</li>
         <li>ระบบสมาชิกและสะสมคะแนน</li>
         <li>รายงานวิเคราะห์ข้อมูลการขาย</li>
       </ul>
-      <a href="/#download" class="p-btn ruby">เริ่มทดลองฟรี Full</a>
-    </div>
+    </article>
   </div>
+  <p class="pricing-terms">ค่าบริการซอฟต์แวร์ต่อร้าน ไม่รวมอุปกรณ์และค่าธรรมเนียมผู้ให้บริการรับชำระเงินภายนอก</p>
   <div class="section-links"><a class="text-link" href="/pricing/">ดูรายละเอียดแพ็กเกจและคำถามเรื่องค่าใช้จ่าย ↗</a></div>
 </section>
 

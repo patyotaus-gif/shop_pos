@@ -1,0 +1,60 @@
+/* Shared by the homepage comparison and /pricing/; tokens live in brand.css. */
+main > .pricing,
+main > .pricing-intro { max-width: var(--pricing-width); margin-inline: auto; }
+main > .pricing-intro { padding-block: var(--pricing-block-gap); }
+.pricing-intro + .pricing { padding-top: 0; }
+.pricing-intro + .pricing .pricing-controls { margin-top: 0; }
+.pricing,
+.pricing-intro { overflow-wrap: anywhere; }
+.pricing-heading { max-width: var(--pricing-copy-width); margin-inline: auto; text-align: center; }
+.pricing-heading .subtext { margin-inline: auto; color: var(--ink); }
+.pricing-intro { text-align: center; }
+.pricing-intro h1,
+.pricing-intro > p { margin-inline: auto; }
+.pricing-intro .subtext { color: var(--ink); }
+.pricing-controls { display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--pricing-gap) var(--pricing-block-gap); margin-block: var(--pricing-block-gap) var(--pricing-gap); }
+.pricing-choice { min-width: 0; }
+.pricing-choice > p { font-size: var(--pricing-note); font-weight: var(--pricing-weight); margin-bottom: var(--pricing-small-gap); }
+.pricing .billing-switch,
+.pricing .bill-toggle { display: flex; flex-wrap: wrap; gap: var(--pricing-small-gap); margin: 0; }
+.pricing .bill-btn { border-color: var(--muted); background: var(--surface); color: var(--ink); padding: var(--pricing-small-gap) var(--pricing-gap); font-size: var(--pricing-note); gap: var(--pricing-small-gap); }
+.pricing .bill-btn.on { border-color: var(--wine); background: var(--wine); color: var(--surface); }
+.pricing .bill-btn:hover:not(.on) { background: var(--rose); border-color: var(--wine); }
+.pricing .save-pill { font-size: var(--pricing-note); margin: 0; }
+.pricing-trial { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--pricing-heading-gap) var(--pricing-small-gap); margin-block: var(--pricing-padding); color: var(--ink); font-size: var(--pricing-note); text-align: center; }
+.pricing-trial strong { font-weight: var(--pricing-weight); }
+.pricing .pricing-cards { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: var(--pricing-gap); border: 0; background: transparent; border-radius: 0; overflow: visible; margin-top: 0; }
+.pricing .p-card { padding: var(--pricing-padding); border: var(--hairline) solid var(--line); border-radius: var(--pricing-radius); background: var(--surface); color: var(--ink); }
+.pricing .p-card.featured { border: var(--pricing-selected-border) solid var(--wine); padding: calc(var(--pricing-padding) - var(--hairline)); }
+.p-card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--pricing-small-gap); }
+.pricing .p-plan { margin: 0; font-size: var(--pricing-plan); font-weight: var(--pricing-weight); }
+.pricing .p-card-badge { position: static; border-radius: var(--radius); padding: var(--pricing-heading-gap) var(--space-sm); background: var(--rose); color: var(--wine); font-size: var(--pricing-note); font-weight: var(--pricing-weight); }
+.pricing .p-desc { font-size: var(--pricing-benefit); font-weight: var(--pricing-weight); color: var(--ink); line-height: var(--pricing-heading-leading); min-height: var(--pricing-benefit-height); margin-top: var(--pricing-small-gap); }
+.pricing .p-fit { color: var(--ink); font-size: var(--pricing-body); line-height: var(--pricing-leading); min-height: var(--pricing-fit-height); margin-top: var(--pricing-small-gap); }
+.pricing .p-users { color: var(--ink); font-size: var(--pricing-body); font-weight: var(--pricing-weight); line-height: var(--pricing-leading); margin-top: var(--pricing-small-gap); }
+.pricing .p-price { display: flex; align-items: baseline; flex-wrap: wrap; column-gap: var(--pricing-heading-gap); margin-top: var(--pricing-gap); line-height: var(--pricing-heading-leading); }
+.pricing .p-amt { font-size: var(--pricing-price); font-weight: var(--pricing-price-weight); letter-spacing: normal; }
+.pricing .currency { font-size: var(--pricing-plan); }
+.pricing .period { display: inline; font-size: var(--pricing-body); color: var(--ink); }
+.pricing .p-avg { color: var(--ink); font-size: var(--pricing-note); font-weight: normal; margin-top: 0; }
+.pricing .p-btn { font-size: var(--pricing-body); margin-top: var(--pricing-gap); border-color: var(--wine); color: var(--wine); }
+.pricing .p-btn.ruby,
+.pricing .p-btn:hover { background: var(--wine); color: var(--surface); }
+.pricing .p-btn.ruby:hover { background: var(--ink); }
+.p-feature-title { font-size: var(--pricing-note); font-weight: var(--pricing-weight); padding-top: var(--pricing-gap); margin-top: var(--pricing-padding); margin-bottom: var(--pricing-small-gap); border-top: var(--hairline) solid var(--line); }
+.pricing .p-list { font-size: var(--pricing-body); line-height: var(--pricing-leading); color: var(--ink); }
+.pricing .p-list li { display: grid; grid-template-columns: var(--pricing-check-size) minmax(0,1fr); gap: var(--pricing-small-gap); padding-block: var(--pricing-small-gap); }
+.pricing .p-list li::before { content: '✓'; content: '✓' / ''; color: var(--wine); font-weight: var(--pricing-price-weight); }
+.pricing-terms { margin-top: var(--pricing-gap); font-size: var(--pricing-note); line-height: var(--pricing-leading); color: var(--ink); text-align: center; }
+.pricing .section-links { justify-content: center; }
+.pricing :focus-visible { outline: var(--focus-ring) solid var(--wine); outline-offset: var(--pricing-heading-gap); }
+@media (max-width: 1000px) {
+  .pricing .pricing-cards { grid-template-columns: minmax(0,1fr); max-width: var(--pricing-stacked-width); margin-inline: auto; }
+  .pricing-controls { justify-content: center; }
+  .pricing .p-desc,
+  .pricing .p-fit { min-height: 0; }
+}
+@media (forced-colors: active) {
+  .pricing .bill-btn.on { border-width: var(--pricing-selected-border); }
+  .pricing .bill-btn.on::before { content: '✓'; content: '✓' / ''; }
+}

@@ -19,6 +19,29 @@
   --hairline: 1px;
   --focus-ring: 3px;
   --solution-heading: clamp(30px, 3.5vw, 44px);
+  /* Pricing: compact comparison, readable Thai, and one shared card primitive. */
+  --pricing-width: 1060px;
+  --pricing-stacked-width: 480px;
+  --pricing-copy-width: 720px;
+  --pricing-gap: 16px;
+  --pricing-small-gap: 8px;
+  --pricing-padding: 24px;
+  --pricing-block-gap: 32px;
+  --pricing-radius: 16px;
+  --pricing-body: 16px;
+  --pricing-note: 14px;
+  --pricing-benefit: 18px;
+  --pricing-plan: 24px;
+  --pricing-price: 42px;
+  --pricing-leading: 1.65;
+  --pricing-heading-leading: 1.5;
+  --pricing-weight: 600;
+  --pricing-price-weight: 700;
+  --pricing-benefit-height: 54px;
+  --pricing-fit-height: 53px;
+  --pricing-heading-gap: 4px;
+  --pricing-selected-border: 2px;
+  --pricing-check-size: 18px;
 }
 [hidden] { display: none !important; }
 h1, .heading, .eyebrow, .small-label { letter-spacing: normal; }
@@ -116,7 +139,6 @@ main > .online { width: 100%; }
 }
 .p-fit { font-size: 13px; color: var(--muted); margin-top: 4px; line-height: 1.6; }
 .p-avg { font-size: 13px; color: var(--wine); font-weight: 600; margin-top: -4px; }
-#plans .pricing-cards { margin-top: 20px; }
 
 /* Homepage feature grid and paired cards: fill the desktop width. */
 .feature-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; }

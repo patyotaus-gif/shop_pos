@@ -15,6 +15,14 @@ Rules:
 
 ## Current state (updated 2026-11-13)
 
+**Website pricing refinement verified locally (not published):** homepage
+and `/pricing/` use bounded, separate cards with darker/larger feature text and
+explicit Solo/Lite inheritance and user limits (1 / 1 / 3). Prices and entitlements
+are unchanged. All 56 focused pricing states and the 18-page/five-width marketing
+suite passed locally. Final source review is clean; screenshot review has no
+P0/P1 blocker. Scoped component audit: 18/20. Not pushed/deployed; see
+`docs/website-pricing-2026-11-13.md`.
+
 **Sales-screen simplification implemented locally (not released):** restaurant
 owner/staff Sales starts with dine-in / takeaway, keeping visited workflow/cart
 state. Display settings, favorites, bundles, offline access and secondary bill
@@ -208,6 +216,27 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-13 — Refine website pricing comparison (local)
+- Owner requested narrower pricing cards, darker text and clearer package
+  differences, using the supplied competitor layout as a reference. Updated
+  homepage pricing and `/pricing/` with a shared 1,060px comparison, separate
+  cards, readable 16px feature text, stronger benefit headings and explicit
+  Solo/Lite inheritance. Full retains the existing recommendation treatment.
+- Preserved prices, entitlements and destinations. Exposed existing user limits
+  for every plan (1 / 1 / 3), verified against the app's entitlement map. Trial
+  copy explains selection during app registration; buttons still open download.
+- Local checks passed: 56 pricing states across seven widths, both business
+  types and billing cycles; 18 marketing pages at five widths. Includes target
+  sizes, text contrast, keyboard activation, 200% text, forced colours, pricing
+  switches and links. Rendered 1440/768/390px captures inspected.
+- Fresh isolated source and screenshot-only reviews led to spacing and copy
+  refinements and explicit Solo/Lite user limits. Final source review is clean;
+  screenshot walkthrough found no visible P0/P1 blocker. Scoped component audit
+  is 18/20; optional mobile comparison/plan-handoff suggestions and evidence
+  paths are in `docs/website-pricing-2026-11-13.md`.
+- No physical device test, production data changes, push or deployment. Earlier
+  unpublished app changes remain separate. Website changes await publication.
 
 ### 2026-11-13 — Implement sales channel chooser and simplify POS (local)
 - Owner approved the preceding space review, requiring an initial dine-in /

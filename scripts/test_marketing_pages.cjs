@@ -48,8 +48,8 @@ function localFile(url) {
     await page.locator('#type-restaurant').click();assert.match(await page.locator('#plan-desc-0').textContent(),/กลับบ้าน/);
     await page.locator('#by').click();assert.equal(await page.locator('.p-amt').first().textContent(),'1,990');
     await page.locator('#bm').click();assert.equal(await page.locator('.p-amt').first().textContent(),'199');
-    await page.locator('#type-retail').click();assert.match(await page.locator('#plan-desc-0').textContent(),/จัดการการขายและตรวจสอบยอดขายประจำวัน/);
-    for(const [shop,description] of [['retail',/จัดการการขายและตรวจสอบยอดขายประจำวัน/],['restaurant',/กลับบ้าน/]]) {
+    await page.locator('#type-retail').click();assert.match(await page.locator('#plan-desc-0').textContent(),/ขายหน้าร้านและสรุปยอดขาย/);
+    for(const [shop,description] of [['retail',/ขายหน้าร้านและสรุปยอดขาย/],['restaurant',/กลับบ้าน/]]) {
       await page.goto('https://pokpok-preview.test/'+shop+'/');
       assert.equal(await page.locator('link[rel="canonical"]').getAttribute('href'),'https://pok-pok.app/'+shop+'/');
       await page.locator(`a[href="/pricing/?shop=${shop}"]`).first().click();
@@ -58,7 +58,7 @@ function localFile(url) {
       await page.locator('#by').click();assert.equal(await page.locator('.p-amt').first().textContent(),'1,990');
     }
     await page.goto('https://pokpok-preview.test/pricing/?shop=unknown');
-    assert.match(await page.locator('#plan-desc-0').textContent(),/จัดการการขายและตรวจสอบยอดขายประจำวัน/);
+    assert.match(await page.locator('#plan-desc-0').textContent(),/ขายหน้าร้านและสรุปยอดขาย/);
     await page.goto('https://pokpok-preview.test/guides/getting-started/');
     for(const platform of ['android','ios']) {await page.locator(`a[href="#${platform}"]`).click();assert.equal(await page.locator(`#${platform} .install-flow li`).count(),3);}
     await page.goto('https://pokpok-preview.test/');
