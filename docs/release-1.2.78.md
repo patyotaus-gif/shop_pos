@@ -1,7 +1,7 @@
 # Android 1.2.78 (95) and website refinement
 
-Owner authorized implementation and publication on 2026-11-13. In preparation;
-not yet live. Previous Android is 1.2.77 (94). Hosting rollback baseline is
+Owner authorized implementation and publication on 2026-11-13. Released and
+verified live. Previous Android is 1.2.77 (94). Hosting rollback baseline is
 `cb06af000098f85d`. Release subject is all source after `17fd271` plus this change.
 Master is the source branch; Firebase Hosting is deployed explicitly by CLI.
 Release source commit: `7c67501`. Preflight verified exactly eight expected public
@@ -36,9 +36,17 @@ path changes against the rollback version; runtime rewrites remain unchanged.
 - [x] Signed APK built from isolated native input copy; all 406 inputs match.
   Package/version, three ABIs and existing signing certificate verified.
 - [x] Final metadata review clean after one deployment-helper fix and regression check.
-- [ ] Clean reviewed source committed and pushed; remote SHA read back.
-- [ ] Hosting file/config preflight; explicit `shop-pos-89294` deployment stamped with commit.
-- [ ] Live file hashes, APK download and version manifest verified.
+- [x] Clean reviewed source committed and pushed; remote SHA `193ef23` read back.
+- [x] Hosting file/config preflight; explicit `shop-pos-89294` deployment stamped with commit.
+- [x] Live file hashes, APK download and version manifest verified.
+
+Published Hosting `98a6ffde29a23f7e` at 2026-11-12 16:44:40 UTC / 2026-11-13
+03:44:40 Sydney, stamped with `193ef23ef7f5778a8d3ea03230d18e207509f48e`.
+All 73 public files and the exact eight expected changes verified through Hosting;
+rewrites and cache/download headers match. Twelve public response hashes and a
+full APK download match local bytes. Live browser smoke passed 24 states on
+homepage and `/pricing/`, both shop types/cycles at 390/768/1440 widths, without
+horizontal overflow or page errors. These are browser checks, not a physical tablet.
 
 ADB currently lists no device. Physical-device validation is not claimed.
 No backend, payment/security configuration or customer data change is required.

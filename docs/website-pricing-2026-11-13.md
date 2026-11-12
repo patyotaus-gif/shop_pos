@@ -1,6 +1,7 @@
 # Pricing comparison — 13 November 2026
 
-Status: implemented locally, not pushed or deployed. Owner asked for a narrower
+Status: published and live with Android 1.2.78 on 2026-11-13; see
+`release-1.2.78.md` for the source, Hosting version and verification. Owner asked for a narrower
 comparison, clearer type and more prominent differences between packages.
 The supplied competitor image is a layout reference, not a new brand palette.
 
@@ -68,7 +69,9 @@ The supplied competitor image is a layout reference, not a new brand palette.
   walkthrough found no visible P0/P1 blocker and correctly distinguished prices,
   user limits and upgrade features. Final local browser suites passed again.
   Isolated evidence: `D:/pokpok-pricing-review-20261113/`.
-- No physical device test or deployment in this task.
+- Initial local implementation did not deploy or test on a physical device.
+  Publication and live browser checks subsequently passed in release 1.2.78;
+  physical-device validation remains separate.
 
 ## Component audit
 

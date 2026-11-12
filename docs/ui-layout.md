@@ -146,4 +146,7 @@ dine-in captures. Search rows are fully tappable; quantity controls retain their
 in the existing color dialog remain optional polish, not verified functional
 failures. These are local widget journeys, not authenticated checkout, real
 keyboard/scanner, or physical-device acceptance. No device was connected, and
-no push, app build, backend change or deployment was performed for this change.
+no push, app build, backend change or deployment was performed during the initial
+implementation. Subsequently released in Android 1.2.78 (95): 53 relevant tests
+and targeted analysis reran successfully; signed APK and public download verified.
+No physical device was connected for that release. See `release-1.2.78.md`.

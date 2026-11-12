@@ -15,39 +15,36 @@ Rules:
 
 ## Current state (updated 2026-11-13)
 
-**Release 1.2.78 (95) in preparation:** owner authorized implementation and release
-of the pending sales workspace, pricing and background work. Hero now has a pale
-rose mortar-bowl motif behind the real app screenshot; pricing gets a pale rose
-band behind white cards. A single short device entrance respects reduced motion.
-The 56-state pricing gate, 18-page marketing suite, 53 app regression tests and
-targeted Dart analysis passed locally. Fresh isolated source review is clean;
-screenshot review found no hard blocker. Signed Android build passed; artifact
-version, three native ABIs and certificate continuity passed. Final metadata
-review is clean after strengthening the fresh Hosting preflight guard. Source
-commit `7c67501` is ready; Hosting preflight passed with exactly eight expected
-public paths changed and runtime routes unchanged. Push and publication remain.
-No new release is live yet.
-ADB currently lists no connected tablet; real-device verification is pending.
+**Android 1.2.78 (95) and website released:** source `7c67501` is pushed; Hosting
+`98a6ffde29a23f7e` stamps commit `193ef23` and went live 2026-11-13 03:44:40 Sydney.
+All 73 public files match the reviewed upload; exactly eight expected paths
+changed. Public APK download matches the signed artifact and manifest. Existing
+runtime rewrites and download/cache headers verified. Rollback: `cb06af000098f85d`.
+Local gates passed: 53 app tests, targeted analysis, 56 pricing states, 18-page /
+five-width marketing checks, fresh source/visual/final metadata reviews. Live
+browser checks passed 24 pricing states at 390/768/1440 widths and 12 response
+hash checks. ADB still lists no device; no physical-device test or iOS/TestFlight
+build in this release. See `docs/release-1.2.78.md`.
 
-**Website pricing refinement verified locally (not published):** homepage
+**Website pricing/background refinement published:** homepage
 and `/pricing/` use bounded, separate cards with darker/larger feature text and
 explicit Solo/Lite inheritance and user limits (1 / 1 / 3). Prices and entitlements
-are unchanged. All 56 focused pricing states and the 18-page/five-width marketing
-suite passed locally. Final source review is clean; screenshot review has no
-P0/P1 blocker. Scoped component audit: 18/20. Not pushed/deployed; see
-`docs/website-pricing-2026-11-13.md`.
+are unchanged. Pale rose mortar curves frame the real app screenshot and a rose
+band sits behind white pricing cards. A short one-time device entrance respects
+reduced motion. Scoped component audit: 18/20; see `docs/website-pricing-2026-11-13.md`.
 
-**Sales-screen simplification implemented locally (not released):** restaurant
+**Sales-screen simplification released in 1.2.78:** restaurant
 owner/staff Sales starts with dine-in / takeaway, keeping visited workflow/cart
 state. Display settings, favorites, bundles, offline access and secondary bill
 actions are reorganized. Payment/recovery warnings remain prominent. All 70
 focused tests passed, with 18 affected tests rerun after the final refinement;
 targeted analysis passed. Fresh source review is clean; visual review found no
 hard stop, with optional layout polish documented in `docs/ui-layout.md`.
-No real-device test, push, build or deployment; live remains 1.2.77 (94).
+The release reran 53 relevant tests, built and published Android; physical-device
+acceptance of this new workflow remains pending.
 
-**Android 1.2.77 (94) released:** sales-display and kitchen-width changes are
-pushed and live in Hosting `cb06af000098f85d` (2026-11-13 00:11:44 Sydney).
+**Previous Android 1.2.77 (94) release:** sales-display and kitchen-width changes
+were published in Hosting `cb06af000098f85d` (2026-11-13 00:11:44 Sydney).
 All 68 focused tests, targeted analysis, fresh source/metadata reviews and SM-X900
 device checks passed. Public APK download matches the signed, tested artifact.
 Only APK/version.json changed; all 71 public files verified. Rollback Hosting
@@ -91,12 +88,10 @@ and 12 page/viewport states, segment pricing and installation-guide navigation.
 All 71 public files match Hosting; exactly the 25 reviewed files changed.
 APK installation and physical iOS were not retested in this website release.
 
-**Branch:** `master`. Release source `2d1cbce`, including sales display `f1427dc`
-and kitchen layout `c097378`, is pushed. Hosting release records `d8e0ded`
-(release source plus its preflight handoff).
-Website source `3fab693` is pushed and deployed; this includes
-the earlier denser desktop homepage `5714a72`.
-Android 1.2.77 replaces the 1.2.76 artifact from `1913e1c`.
+**Branch:** `master`. Release source `7c67501` is pushed, including sales workspace
+`c7bab30` and website pricing `8084306`. Hosting stamps `193ef23` (source plus
+preflight records). Android 1.2.78 replaces 1.2.77. Earlier kitchen/display changes
+and website direction fixes remain included; final publication records follow.
 
 **Website content direction (recorded 2026-11-12, documentation only):**
 Owner supplied `POKPOK.PDF` (14 pages). Source preserved in
@@ -230,6 +225,20 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-13 — Publish and verify Android 1.2.78 plus website
+
+Pushed `193ef23` and read the same SHA back from GitHub. Explicit Hosting-only
+deployment succeeded as `98a6ffde29a23f7e` at 03:44:40 Sydney, stamped with that
+commit. Fresh preflight passed inside the deploy path. All 73 public-file hashes,
+the exact eight changed paths, runtime rewrites and cache/download headers match.
+Twelve public response hashes and the downloaded APK/manifest passed; artifact
+SHA256 is `5db45df2aac60b3eed6fadbd98c9aa99e06a8bf1d4b75287100023e60754d951`,
+92,469,169 bytes. Live browser checks passed 24 homepage/pricing states across
+390/768/1440 widths, both shop types and billing cycles. Rollback Hosting is
+`cb06af000098f85d`. ADB rechecked: no connected device. No iOS/TestFlight build,
+physical checkout/print, backend, payment or security-enforcement change.
+Final publication records are committed/pushed after these checks.
 
 ### 2026-11-13 — Commit 1.2.78 and pass Hosting preflight
 
