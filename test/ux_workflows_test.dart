@@ -13,6 +13,7 @@ import 'package:shop_pos/widgets/cash_close_blockers_dialog.dart';
 import 'package:shop_pos/theme/pokpok_theme.dart';
 import 'package:shop_pos/screens/restaurant_sales_screen.dart';
 import 'package:shop_pos/screens/pos_screen.dart';
+import 'package:shop_pos/widgets/sales_channel_scope.dart';
 import 'package:shop_pos/models/sale.dart';
 
 ShopOrder order(OrderStatus status,
@@ -40,12 +41,18 @@ void main() {
         home: Scaffold(
             body: RestaurantSalesScreen(
                 dineIn: Text('รายการโต๊ะ'), takeaway: _CounterCart()))));
-    expect(find.text('รายการโต๊ะ'), findsOneWidget);
+    expect(find.text('รายการโต๊ะ'), findsNothing);
+    expect(find.text('เลือกรูปแบบการขาย'), findsOneWidget);
     await tester.tap(find.text('สั่งกลับบ้าน'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('เพิ่มรายการ 0'));
     await tester.pump();
+    SalesChannelScope.of(tester.element(find.text('เพิ่มรายการ 1')))!.call();
+    await tester.pumpAndSettle();
     await tester.tap(find.text('ทานที่ร้าน'));
+    await tester.pumpAndSettle();
+    expect(find.text('รายการโต๊ะ'), findsOneWidget);
+    SalesChannelScope.of(tester.element(find.text('รายการโต๊ะ')))!.call();
     await tester.pumpAndSettle();
     await tester.tap(find.text('สั่งกลับบ้าน'));
     await tester.pumpAndSettle();

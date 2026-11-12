@@ -9,10 +9,12 @@ class SaleDisplaySettings {
   const SaleDisplaySettings({
     this.mode = SaleDisplayMode.photos,
     this.categoryColors = const {},
+    this.catalogTab = 'all',
   });
 
   final SaleDisplayMode mode;
   final Map<String, String> categoryColors;
+  final String catalogTab;
   static const colorNames = ['wine', 'blue', 'teal', 'amber', 'purple'];
 
   factory SaleDisplaySettings.decode(String? raw) {
@@ -24,6 +26,8 @@ class SaleDisplaySettings {
       mode: data['mode'] == 'names'
           ? SaleDisplayMode.names
           : SaleDisplayMode.photos,
+      catalogTab:
+          data['catalogTab'] is String ? data['catalogTab'] as String : 'all',
       categoryColors: Map.unmodifiable({
         if (colors is Map)
           for (final entry in colors.entries)
@@ -33,17 +37,25 @@ class SaleDisplaySettings {
     );
   }
 
-  String encode() =>
-      jsonEncode({'mode': mode.name, 'categoryColors': categoryColors});
+  String encode() => jsonEncode({
+        'mode': mode.name,
+        'categoryColors': categoryColors,
+        'catalogTab': catalogTab
+      });
 
-  SaleDisplaySettings withMode(SaleDisplayMode mode) =>
-      SaleDisplaySettings(mode: mode, categoryColors: categoryColors);
+  SaleDisplaySettings withMode(SaleDisplayMode mode) => SaleDisplaySettings(
+      mode: mode, categoryColors: categoryColors, catalogTab: catalogTab);
+
+  SaleDisplaySettings withCatalogTab(String tab) => SaleDisplaySettings(
+      mode: mode, categoryColors: categoryColors, catalogTab: tab);
 
   SaleDisplaySettings withColor(String category, String? color) {
     final next = Map<String, String>.of(categoryColors)..remove(category);
     if (colorNames.contains(color)) next[category] = color!;
     return SaleDisplaySettings(
-        mode: mode, categoryColors: Map.unmodifiable(next));
+        mode: mode,
+        categoryColors: Map.unmodifiable(next),
+        catalogTab: catalogTab);
   }
 }
 

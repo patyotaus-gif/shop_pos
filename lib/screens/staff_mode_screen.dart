@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/staff_access_service.dart';
 import '../models/staff_member.dart';
 import '../utils/operation_error.dart';
-import 'pos_screen.dart';
+import '../widgets/staff_sales_entry.dart';
 import 'user_switch_screen.dart';
 import 'tables_screen.dart';
 import 'orders_screen.dart';
@@ -65,7 +65,7 @@ class StaffModeScreen extends StatelessWidget {
                 ]),
                 const Expanded(
                     child: TabBarView(children: [
-                  PosScreen(),
+                  StaffSalesEntry(),
                   TablesScreen(),
                   OrdersScreen(),
                   KitchenScreen(),

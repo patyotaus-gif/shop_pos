@@ -7,10 +7,12 @@ class PosBasket extends StatelessWidget {
       {super.key,
       required this.itemCount,
       required this.itemBuilder,
-      this.loyalty});
+      this.loyalty,
+      this.customerAction});
   final int itemCount;
   final IndexedWidgetBuilder itemBuilder;
   final Widget? loyalty;
+  final Widget? customerAction;
 
   @override
   Widget build(BuildContext context) {
@@ -19,15 +21,18 @@ class PosBasket extends StatelessWidget {
       SliverToBoxAdapter(
           child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-        child: Row(children: [
-          const Icon(Icons.shopping_cart_outlined, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-              child: Text('รายการขาย',
-                  style: Theme.of(context).textTheme.titleMedium)),
-          Flexible(child: Text('$itemCount รายการ', textAlign: TextAlign.end)),
-        ]),
+        child: OverflowBar(
+            alignment: MainAxisAlignment.spaceBetween,
+            overflowAlignment: OverflowBarAlignment.start,
+            spacing: 8,
+            overflowSpacing: 4,
+            children: [
+              Text('รายการขาย · $itemCount รายการ',
+                  style: Theme.of(context).textTheme.titleMedium),
+              if (customerAction != null) customerAction!,
+            ]),
       )),
+      if (loyalty != null) SliverToBoxAdapter(child: loyalty!),
       if (itemCount == 0)
         SliverFillRemaining(
             hasScrollBody: false,
@@ -48,7 +53,6 @@ class PosBasket extends StatelessWidget {
             sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(itemBuilder,
                     childCount: itemCount))),
-      if (loyalty != null) SliverToBoxAdapter(child: loyalty!),
     ]);
   }
 }

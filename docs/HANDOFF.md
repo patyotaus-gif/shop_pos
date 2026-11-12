@@ -15,12 +15,14 @@ Rules:
 
 ## Current state (updated 2026-11-13)
 
-**Sales-screen simplification advice (not implemented):** owner asked which
-controls to move and what to emphasize. Reviewed 1.2.77 source plus the recent
-SM-X900 capture; no tablet connected this turn. Recommendations are recorded in
-`docs/ui-layout.md` under Sales-screen space review. Main opportunity: combine
-the eight pre-catalog toolbar levels and move display configuration into a
-labelled secondary menu. Await implementation instruction; live build unchanged.
+**Sales-screen simplification implemented locally (not released):** restaurant
+owner/staff Sales starts with dine-in / takeaway, keeping visited workflow/cart
+state. Display settings, favorites, bundles, offline access and secondary bill
+actions are reorganized. Payment/recovery warnings remain prominent. All 70
+focused tests passed, with 18 affected tests rerun after the final refinement;
+targeted analysis passed. Fresh source review is clean; visual review found no
+hard stop, with optional layout polish documented in `docs/ui-layout.md`.
+No real-device test, push, build or deployment; live remains 1.2.77 (94).
 
 **Android 1.2.77 (94) released:** sales-display and kitchen-width changes are
 pushed and live in Hosting `cb06af000098f85d` (2026-11-13 00:11:44 Sydney).
@@ -206,6 +208,36 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-13 — Implement sales channel chooser and simplify POS (local)
+- Owner approved the preceding space review, requiring an initial dine-in /
+  takeaway choice for restaurant sales. Implemented lazy, retained workflows
+  with a return-to-choice action. Retail still opens its catalog directly.
+- Consolidated search/categories/favorites into one catalog stream; moved display
+  controls into a dialog, bundles into the category row, offline entry into the
+  header menu and tablet discount/debt into the bill menu. Kept selected customer,
+  payment recovery warning, cart state, total and payment action visible.
+- Local verification: 70 focused widget tests and targeted Dart analysis passed.
+  Includes real catalog, cart item controls, tables, dialogs and checkout layout
+  with fixture data at 320/390/768/1440 widths and normal/200% text. After the
+  search-result affordance refinement, 18 affected tests and analysis passed.
+- Independent reviews identified staff entry classification, offline access on
+  workspace failure, search details/scanner access, and pending category saves
+  across rotation. Fixed those, preserving the catalog's state across breakpoints.
+  Staff restaurant sales now get the same chooser, with retry and prepared-only
+  offline access while the workspace is unavailable. No new offline permission.
+- Visual review confirmed scrolling reaches lower prices/stock at enlarged text.
+  Replaced placeholder basket rows with real CartItemTile controls in previews;
+  forced retained layers to repaint to avoid omitted AppBars in test captures.
+  Initial stream-test teardown stall and retry Future-return assertion are fixed.
+  Claude reviews were unavailable (usage limit); fresh isolated read-only Codex
+  CLI sessions reviewed source and screenshots. Source round 3 found no concrete
+  regression; visual round 3 found no hard stop. Entire search result rows are
+  tappable, quantity controls retain 48-pixel targets, and the repeated Favorites
+  label is a deliberate fixture category. No claim of measured color contrast or
+  authenticated/device checkout is made. Evidence: `D:/pokpok-sales-workspace-review/`.
+- ADB listed no device. No real checkout, scanner, backend/data/payment changes,
+  push or deployment. Live Android remains 1.2.77 (94). See `docs/ui-layout.md`.
 
 ### 2026-11-13 — Review clutter in sales screen (advice only)
 - Compared current source with 1.2.77 tablet screenshot/XML. Empty takeaway has

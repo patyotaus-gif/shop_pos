@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'compact_action.dart';
 
 /// Presentation only; checkout and permission checks remain in the POS flow.
 class PosCheckoutPanel extends StatelessWidget {
@@ -43,7 +42,7 @@ class PosCheckoutPanel extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: totalTexts);
-    // One row on phones: secondary actions live behind a menu so the bar
+    // Secondary actions live behind a menu on phones and tablets so the bar
     // stays short enough to keep the basket visible.
     final actions = Wrap(
         alignment: WrapAlignment.end,
@@ -90,65 +89,25 @@ class PosCheckoutPanel extends StatelessWidget {
           decoration: BoxDecoration(
               color: cs.surface,
               border: Border(top: BorderSide(color: cs.outlineVariant))),
-          child: compact
-              ? Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                      OverflowBar(
-                        spacing: 8,
-                        overflowSpacing: 4,
-                        alignment: MainAxisAlignment.spaceBetween,
-                        overflowAlignment: OverflowBarAlignment.end,
-                        children: [totalLabel, actions],
-                      ),
-                      if (discount > 0) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                            'รวม ฿${baht.format(subtotal)} · ส่วนลด ฿${baht.format(discount)}',
-                            style: TextStyle(
-                                fontSize: 12, color: cs.onSurfaceVariant)),
-                      ],
-                    ])
-              : Column(mainAxisSize: MainAxisSize.min, children: [
-                  _amount('รวม', '฿${baht.format(subtotal)}'),
-                  if (discount > 0)
-                    _amount('ส่วนลด', '-฿${baht.format(discount)}'),
-                  const Divider(),
-                  Row(children: [
-                    const Expanded(
-                        child: Text('ยอดสุทธิ',
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold))),
-                    Flexible(
-                        child: Text('฿${baht.format(total)}',
-                            textAlign: TextAlign.end,
-                            style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: cs.primary))),
-                  ]),
-                  const SizedBox(height: 12),
-                  ActionButtons(children: [
-                    OutlinedButton.icon(
-                        onPressed: canDiscount ? onDiscount : null,
-                        icon: const Icon(Icons.discount_outlined, size: 18),
-                        label: const Text('ส่วนลด')),
-                    OutlinedButton.icon(
-                        onPressed: canDebt && hasItems ? onDebt : null,
-                        icon: const Icon(Icons.person_outline, size: 18),
-                        label: const Text('ค้างชำระ')),
-                    FilledButton.icon(
-                        onPressed: hasItems ? onCheckout : null,
-                        icon: const Icon(Icons.payments_outlined, size: 18),
-                        label: const Text('ชำระเงิน')),
-                  ]),
-                ]),
+          child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                OverflowBar(
+                  spacing: 8,
+                  overflowSpacing: 4,
+                  alignment: MainAxisAlignment.spaceBetween,
+                  overflowAlignment: OverflowBarAlignment.end,
+                  children: [totalLabel, actions],
+                ),
+                if (discount > 0) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                      'รวม ฿${baht.format(subtotal)} · ส่วนลด ฿${baht.format(discount)}',
+                      style:
+                          TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+                ],
+              ]),
         ));
   }
-
-  Widget _amount(String label, String value) => Row(children: [
-        Expanded(child: Text(label)),
-        Flexible(child: Text(value, textAlign: TextAlign.end)),
-      ]);
 }

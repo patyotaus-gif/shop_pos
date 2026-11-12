@@ -79,6 +79,39 @@ class SaleDisplayControls extends StatelessWidget {
   }
 }
 
+/// Secondary configuration for the sales workspace.
+class SaleDisplayButton extends StatelessWidget {
+  const SaleDisplayButton({super.key, required this.categories});
+  final List<String> categories;
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = SaleDisplayScope.of(context);
+    if (controller == null) return const SizedBox.shrink();
+    return OutlinedButton.icon(
+      key: const ValueKey('sale-display-settings'),
+      onPressed: () => showDialog<void>(
+          context: context,
+          builder: (context) => SaleDisplayScope(
+              controller: controller,
+              child: AlertDialog(
+                title: const Text('จัดหน้าขาย'),
+                content: SizedBox(
+                    width: 420,
+                    child: SingleChildScrollView(
+                        child: SaleDisplayControls(categories: categories))),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('เสร็จ'))
+                ],
+              ))),
+      icon: const Icon(Icons.tune, size: 18),
+      label: const Text('จัดหน้าขาย'),
+    );
+  }
+}
+
 class _CategoryColors extends StatefulWidget {
   const _CategoryColors({required this.controller, required this.categories});
   final SaleDisplayController controller;

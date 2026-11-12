@@ -37,11 +37,11 @@ import '../widgets/modifier_picker_sheet.dart';
 import '../models/order_modifier.dart';
 import '../widgets/shop_operation.dart';
 import '../utils/operation_error.dart';
-import '../widgets/product_image.dart';
-import '../widgets/sale_product_grid.dart';
+import '../widgets/pos_catalog.dart';
+import '../widgets/pos_sales_header.dart';
 import '../widgets/sale_display_controls.dart';
 import '../services/sale_display_service.dart';
-import '../widgets/mobile_sales_workspace.dart';
+import '../widgets/pos_sales_workspace.dart';
 
 class PosScreen extends StatefulWidget {
   const PosScreen({super.key, this.initialChannel = SalesChannel.storefront});
@@ -76,7 +76,6 @@ class _PosScreenState extends State<PosScreen> {
   bool _checkingPending = true;
   Sale? _pendingSale;
   PaymentMethod _paymentMethod = PaymentMethod.cash;
-  String _selectedCategory = 'ทั้งหมด';
 
   // Staff attribution (Full/Restaurant). `_staffEnabled` gates the app-bar
   // chip; `_activeStaffName` rides along on each sale.
@@ -691,40 +690,6 @@ class _PosScreenState extends State<PosScreen> {
         context, MaterialPageRoute(builder: (_) => const UserSwitchScreen()));
   }
 
-  Widget _productCatalog() => StreamBuilder<List<Product>>(
-      stream: ProductService.watchAll(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return const Center(
-              child: Text('โหลดสินค้าไม่สำเร็จ กรุณาตรวจการเชื่อมต่อ'));
-        }
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final products = snapshot.data!
-            .where((p) =>
-                _selectedCategory == 'ทั้งหมด' ||
-                p.category == _selectedCategory)
-            .toList()
-          ..sort((a, b) => a.name.compareTo(b.name));
-        if (products.isEmpty) {
-          return const Center(child: Text('ยังไม่มีสินค้าในหมวดนี้'));
-        }
-        return SaleProductGrid(
-          itemCount: products.length,
-          products: products,
-          itemBuilder: (_, i) => SaleProductCard(
-            product: products[i],
-            unavailableLabel:
-                !products[i].isRecipeMode && products[i].saleable <= 0
-                    ? 'หมด'
-                    : null,
-            onTap: !products[i].isRecipeMode && products[i].saleable <= 0
-                ? null
-                : () => _addToCart(products[i]),
-          ),
-        );
-      });
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -732,34 +697,35 @@ class _PosScreenState extends State<PosScreen> {
     return SaleDisplayScope(
         controller: SaleDisplayService.forShop(AuthService.shopId),
         child: Scaffold(
-          appBar: AppBar(
-            title: Text(widget.initialChannel == SalesChannel.takeaway
+          appBar: posSalesHeader(
+            context,
+            title: widget.initialChannel == SalesChannel.takeaway
                 ? 'ขายกลับบ้าน'
-                : 'ขายหน้าร้าน'),
-            centerTitle: true,
-            actions: [
-              if (_staffEnabled)
-                Padding(
-                  padding: const EdgeInsets.only(right: 4),
-                  child: ActionChip(
-                    avatar:
-                        Icon(Icons.person_outline, size: 18, color: cs.primary),
-                    label: Text(_activeStaffName ?? 'เลือกพนักงาน',
-                        style: const TextStyle(fontSize: 12)),
-                    onPressed: _switchStaff,
-                  ),
-                ),
-              IconButton(
-                // Barcode scanner — was incorrectly using a QR icon.
-                icon: const Icon(Icons.barcode_reader),
-                tooltip: 'สแกนบาร์โค้ด',
-                onPressed: _openScanner,
-              ),
-            ],
+                : 'ขายหน้าร้าน',
+            cashier: _activeStaffName,
+            busy: _checkoutBusy || _redeeming,
+            onSwitchStaff: _staffEnabled ? _switchStaff : null,
+            canOpenOffline: !_checkoutBusy &&
+                !_checkingPending &&
+                _pendingSale == null &&
+                _cart.isEmpty &&
+                !_redeeming,
+            onOffline: () {
+              if (_checkoutBusy ||
+                  _checkingPending ||
+                  _pendingSale != null ||
+                  _cart.isNotEmpty ||
+                  _redeeming) {
+                return;
+              }
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          const OfflineEntryScreen(allowPrepare: true)));
+            },
           ),
           body: Column(children: [
-            if (!_checkoutBusy && _pendingSale == null && _cart.isEmpty)
-              const OfflineEntryButton(allowPrepare: true),
             if (_checkingPending) const LinearProgressIndicator(),
             if (_pendingSale != null)
               Padding(
@@ -783,104 +749,12 @@ class _PosScreenState extends State<PosScreen> {
                         _pendingSale != null,
                     child: LayoutBuilder(builder: (context, constraints) {
                       final wide = constraints.maxWidth >= 900;
-                      final controls = <Widget>[
-                        Align(
-                            alignment: Alignment.centerLeft,
-                            child: Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 12),
-                                child: OutlinedButton.icon(
-                                    onPressed: _chooseBundle,
-                                    icon:
-                                        const Icon(Icons.inventory_2_outlined),
-                                    label: const Text('เลือกชุดสินค้า')))),
-                        // Product search
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
-                          child: _ProductSearch(
-                            onSelected: _addToCart,
-                            selectedCategory: _selectedCategory,
-                          ),
-                        ),
-                        // Category filter chips
-                        StreamBuilder<List<Product>>(
-                          stream: ProductService.watchAll(),
-                          builder: (ctx, snap) {
-                            final cats = [
-                              'ทั้งหมด',
-                              ...ProductService.categoriesFor(
-                                  snap.data ?? const []),
-                            ];
-                            return Column(children: [
-                              SaleDisplayControls(
-                                  categories: cats.skip(1).toList()),
-                              SizedBox(
-                                height: max(
-                                    48,
-                                    MediaQuery.textScalerOf(context).scale(18) +
-                                        24),
-                                child: ListView(
-                                  scrollDirection: Axis.horizontal,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12),
-                                  children: cats.map((cat) {
-                                    final sel = cat == _selectedCategory;
-                                    return Padding(
-                                      padding: const EdgeInsets.only(right: 8),
-                                      child: ChoiceChip(
-                                        label: Text(cat,
-                                            style:
-                                                const TextStyle(fontSize: 12)),
-                                        selected: sel,
-                                        onSelected: (_) => setState(
-                                            () => _selectedCategory = cat),
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                              ),
-                            ]);
-                          },
-                        ),
-                        const SizedBox(height: 4),
-                        // Pinned products (always horizontal, always visible)
-                        StreamBuilder<List<Product>>(
-                          stream: ProductService.watchAll(),
-                          builder: (ctx, snap) {
-                            final all = snap.data ?? [];
-                            final pinned = all
-                                .where((p) =>
-                                    p.isPinned &&
-                                    (_selectedCategory == 'ทั้งหมด' ||
-                                        p.category == _selectedCategory))
-                                .toList();
-                            if (pinned.isEmpty) return const SizedBox.shrink();
-                            return SizedBox(
-                              height: max(
-                                  48,
-                                  MediaQuery.textScalerOf(context).scale(18) +
-                                      24),
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 12),
-                                itemCount: pinned.length,
-                                itemBuilder: (ctx, i) => Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: ActionChip(
-                                    label: Text(pinned[i].name,
-                                        style: const TextStyle(fontSize: 12)),
-                                    avatar:
-                                        const Icon(Icons.push_pin, size: 14),
-                                    onPressed: () => _addToCart(pinned[i]),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ];
+                      final catalog = PosCatalog(
+                        loadProducts: ProductService.watchAll,
+                        onAdd: _addToCart,
+                        onScan: _openScanner,
+                        onChooseBundle: _chooseBundle,
+                      );
                       final basket = PosBasket(
                         itemCount: _cart.length,
                         itemBuilder: (ctx, i) => CartItemTile(
@@ -890,7 +764,26 @@ class _PosScreenState extends State<PosScreen> {
                         ),
                         // Loyalty customer strip (Full/Restaurant). Tap to attach a
                         // customer by phone so the sale accrues points.
-                        loyalty: _loyaltyEnabled
+                        customerAction:
+                            _loyaltyEnabled && _loyaltyCustomer == null
+                                ? TextButton.icon(
+                                    onPressed: _redeeming
+                                        ? _loyaltyBusyMessage
+                                        : _attachCustomer,
+                                    icon: _redeeming
+                                        ? const SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                                strokeWidth: 2))
+                                        : const Icon(Icons.person_add_outlined,
+                                            size: 18),
+                                    label: Text(_redeeming
+                                        ? 'กำลังโหลดลูกค้า'
+                                        : 'เพิ่มลูกค้า'),
+                                  )
+                                : null,
+                        loyalty: _loyaltyEnabled && _loyaltyCustomer != null
                             ? Material(
                                 color: _loyaltyCustomer != null
                                     ? cs.primary.withValues(alpha: 0.06)
@@ -954,10 +847,12 @@ class _PosScreenState extends State<PosScreen> {
                                           ),
                                         if (_loyaltyCustomer != null)
                                           GestureDetector(
-                                            onTap: () => setState(() {
-                                              _loyaltyCustomer = null;
-                                              _redeemBaht = 0;
-                                            }),
+                                            onTap: _redeeming
+                                                ? null
+                                                : () => setState(() {
+                                                      _loyaltyCustomer = null;
+                                                      _redeemBaht = 0;
+                                                    }),
                                             child: Icon(Icons.close,
                                                 size: 18,
                                                 color: cs.onSurface
@@ -986,150 +881,17 @@ class _PosScreenState extends State<PosScreen> {
                         onDebt: () => _checkout(isDebt: true),
                         hasItems: _cart.isNotEmpty,
                       );
-                      if (wide) {
-                        return Row(children: [
-                          Expanded(
-                              child: Column(children: [
-                            ...controls,
-                            Expanded(child: _productCatalog())
-                          ])),
-                          const VerticalDivider(width: 1),
-                          SizedBox(
-                              width: 380,
-                              child: Material(
-                                  color: cs.surface,
-                                  child: Column(children: [
-                                    Expanded(child: basket),
-                                    checkout,
-                                  ]))),
-                        ]);
-                      }
-                      return MobileSalesWorkspace(
+                      return PosSalesWorkspace(
                         itemCount: _cart.fold<num>(
                             0, (sum, item) => sum + item.quantity),
                         total: _total,
-                        catalog: CustomScrollView(slivers: [
-                          SliverToBoxAdapter(child: Column(children: controls)),
-                          SliverFillRemaining(child: _productCatalog()),
-                        ]),
+                        catalog: catalog,
                         basket: basket,
                         checkout: checkout,
                       );
                     }))),
           ]),
         ));
-  }
-}
-
-// --- Sub-widgets ---
-
-class _ProductSearch extends StatefulWidget {
-  final ValueChanged<Product> onSelected;
-  final String selectedCategory;
-  const _ProductSearch(
-      {required this.onSelected, this.selectedCategory = 'ทั้งหมด'});
-
-  @override
-  State<_ProductSearch> createState() => _ProductSearchState();
-}
-
-class _ProductSearchState extends State<_ProductSearch> {
-  final _ctrl = TextEditingController();
-  List<Product> _allProducts = [];
-  List<Product> _results = [];
-  StreamSubscription<List<Product>>? _sub;
-
-  @override
-  void initState() {
-    super.initState();
-    _sub = ProductService.watchAll().listen((products) {
-      setState(() => _allProducts = products);
-    });
-  }
-
-  @override
-  void dispose() {
-    _sub?.cancel();
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  void _search(String q) {
-    if (q.isEmpty) {
-      setState(() => _results = []);
-      return;
-    }
-    setState(() {
-      _results = _allProducts
-          .where((p) =>
-              (widget.selectedCategory == 'ทั้งหมด' ||
-                  p.category == widget.selectedCategory) &&
-              (p.name.toLowerCase().contains(q.toLowerCase()) ||
-                  p.barcode.contains(q)))
-          .take(5)
-          .toList();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        TextField(
-          controller: _ctrl,
-          onChanged: _search,
-          decoration: InputDecoration(
-            hintText: 'ค้นหาสินค้า...',
-            prefixIcon: const Icon(Icons.search),
-            suffixIcon: _ctrl.text.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: () {
-                      _ctrl.clear();
-                      _search('');
-                    },
-                  )
-                : null,
-            border: const OutlineInputBorder(),
-            isDense: true,
-          ),
-        ),
-        if (_results.isNotEmpty)
-          Card(
-            margin: EdgeInsets.zero,
-            child: Column(
-              children: _results
-                  .map((p) => ListTile(
-                        dense: true,
-                        leading: SaleDisplayScope.of(context)?.value.mode !=
-                                    SaleDisplayMode.names &&
-                                (p.imagePath != null ||
-                                    (p.imageUrl ?? '').isNotEmpty)
-                            ? ProductImage(
-                                product: p,
-                                width: 40,
-                                height: 40,
-                                borderRadius: BorderRadius.circular(6),
-                              )
-                            : null,
-                        title: Text(p.name),
-                        subtitle: Text(p.isOnSale
-                            ? '${formatBaht(p.effectivePrice)} (ปกติ ${formatBaht(p.price)}) · สต็อก ${p.saleable}'
-                            : '${formatBaht(p.price)} · สต็อก ${p.saleable}'),
-                        trailing: Text(p.barcode,
-                            style: const TextStyle(
-                                fontSize: 11, color: Colors.grey)),
-                        onTap: () {
-                          widget.onSelected(p);
-                          _ctrl.clear();
-                          _search('');
-                        },
-                      ))
-                  .toList(),
-            ),
-          ),
-      ],
-    );
   }
 }
 

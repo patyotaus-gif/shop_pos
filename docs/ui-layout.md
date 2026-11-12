@@ -29,7 +29,7 @@ Validation includes signup step/back navigation, consent enforcement, settings c
 
 Kitchen validation (2026-11-12): 34 tests passed across `kitchen_layout_test`, `kitchen_output_test`, `kitchen_regression_test` and `kitchen_chef_journey_test`; targeted Dart analysis passed. Real theme/font captures cover 390/768/1440, both output modes and light/dark themes. Geometry checks cover ticket widths, two-column ordering, narrow workspace, enlarged text, history and future groups; callbacks and scrolling are exercised with local fixtures. Existing tests include 320-pixel phones, 200% text and long tickets. On 2026-11-13, the corrected 1.2.77 (94) app was checked on SM-X900: both kitchen modes use bounded two-column tickets with usable history/guidance/print controls. Test-shop output mode restored to display. Physical printing was not performed.
 
-## Sales-screen space review (2026-11-13, recommendation only)
+## Sales-screen space review (2026-11-13, original recommendation)
 
 Owner reports that too many controls compete with selling. This is a read-only
 assessment of released 1.2.77, not an approved redesign or implementation.
@@ -46,7 +46,7 @@ display controls, categories and pinned products. First product starts at y=962
 on the 2960x1848 capture. This describes that state, not all shops or carts;
 offline entry already disappears once the cart has items.
 
-Recommended first pass, awaiting owner's implementation instruction:
+Recommended first pass (owner subsequently approved; implementation below):
 
 | Current control | Proposed placement | Reason / constraint |
 | --- | --- | --- |
@@ -77,3 +77,73 @@ Relative usage frequency is a design hypothesis; no cashier usage analytics were
 examined. A future implementation needs real-component phone/tablet previews,
 owner review and cart/checkout/accessibility regression checks. No runtime or
 deployment changes in this assessment.
+
+## Sales entry and workspace (2026-11-13, local implementation)
+
+The owner approved the space-review changes and changed the entry requirement:
+restaurant sales must start with `ทานที่ร้าน` / `สั่งกลับบ้าน`. Retail continues
+directly to its catalog. The staff Sales tab selects the same entry from the
+authenticated workspace's shop type/tier, with loading and retry states and
+access to previously prepared offline profiles while unavailable. Its
+separate Tables tab remains available as a shortcut.
+
+| Cashier job | Screen | Question answered | Primary action |
+| --- | --- | --- | --- |
+| Start a restaurant sale | Sales entry | Dine-in or takeaway? | Choose one of the two channels |
+| Serve a seated customer | Table grid | Which table? | Open its bill |
+| Add takeaway/retail products | Product catalog | Which item and quantity? | Tap products / scan a barcode |
+| Finish a sale | Basket | What is being charged? | Check total and pay |
+| Adjust the sales layout | Display dialog | Photos, names or category colors? | Choose the display preference |
+
+- The entry chooser is bounded to 640 logical pixels, with two choices side by
+  side on wide screens and stacked on phones/large text. Workflows mount on first
+  use and remain mounted when returning via `เลือกประเภทการขาย`; returning does
+  not clear the takeaway cart. The chooser is the initial state of the restaurant
+  workspace, not a forced reset after every transaction or main-navigation tap.
+- The active catalog has two header rows: search/display settings and a horizontal
+  category row. `จัดหน้าขาย` opens the existing mode/color controls. At narrow
+  widths with enlarged text, its button wraps instead of shrinking the search.
+- `รายการโปรด` replaces the separate duplicate pinned-product strip. The last
+  chosen catalog tab is remembered per shop/device, including rapid tab changes.
+  Catalog state, search and pending preference writes survive crossing the
+  phone/tablet breakpoint. Removed categories fall back to All. Internal tab IDs cannot collide with real
+  category names. A real category named `รายการโปรด` remains a separate category.
+- `ชุดสินค้า` is an action in the category row and opens the existing validated
+  bundle chooser. It remains reachable even if no bundles exist; that chooser
+  already provides the empty state, without an additional availability fetch.
+- Typed name/barcode search respects the selected category/favorites. Results
+  use selectable cards with full names, current/original price, barcode and stock
+  quantity. Selecting a result clears the query. The scanner remains available
+  while typing and preserves the query when opened. Stock
+  and recipe availability still come from the product model; unavailable products
+  cannot add to the cart. Empty search returns to the selected category's grid.
+- Cashier identity is in the compact header; the account icon changes user.
+  `เพิ่มเติม` contains `ขายออฟไลน์ / บิลค้าง`, disabled while the cart has items
+  or recovery/payment/loyalty work is pending. Pending-sale recovery and the
+  no-double-payment warning remain above the workspace.
+- Tablet catalog/cart remain side by side; mobile retains product/cart navigation.
+  `เพิ่มลูกค้า` is in the bill header. Attached customer/points remain above items.
+  Payment is primary; discount/debt are in the bill menu at all widths with existing
+  permission checks. Only net total is shown without a discount; an applied
+  discount reveals subtotal/discount underneath. Payment processing is unchanged.
+
+Verification: 70 focused tests passed across 8 test files, followed by an 18-test
+rerun after the search-result visual refinement. Targeted Dart analysis passed.
+Real Flutter catalog/table/cart/checkout components use injected fixture data at
+320/390/768/1440 logical pixels, normal/200% text, and light/dark themes. Coverage
+includes chooser/cart retention, quantity edits, search/scanner callbacks,
+availability, display/color dialogs, error/retry, staff entry, disabled actions,
+and a queued category write across wide-to-narrow rotation. A real drag reaches
+lower product prices/stock at 200% text. Captures explicitly repaint retained
+layers; the earlier omitted AppBar was a widget-test snapshot artifact.
+
+Fresh isolated read-only Codex CLI reviews were used after Claude's usage limit.
+Source review round 3 found no concrete regression after the fixes. Visual round
+3 found an understandable search add cue and no hard stop, including the updated
+dine-in captures. Search rows are fully tappable; quantity controls retain their
+48-pixel targets despite small glyphs. Local evidence: `D:/pokpok-sales-workspace-review/` and
+`.remember/tmp/sales-workspace/`. Category-scroll cues and immediate-save wording
+in the existing color dialog remain optional polish, not verified functional
+failures. These are local widget journeys, not authenticated checkout, real
+keyboard/scanner, or physical-device acceptance. No device was connected, and
+no push, app build, backend change or deployment was performed for this change.

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../theme/operational_colors.dart';
 import '../widgets/status_badge.dart';
+import '../widgets/sales_channel_scope.dart';
 
 import '../models/restaurant_table.dart';
 import '../models/table_order.dart';
@@ -94,7 +95,12 @@ class _TablesScreenState extends State<TablesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('โต๊ะ'),
+        leading: SalesChannelScope.of(context) != null
+            ? const SalesChannelBackButton()
+            : null,
+        title: Text(SalesChannelScope.of(context) != null
+            ? 'ทานที่ร้าน · เลือกโต๊ะ'
+            : 'โต๊ะ'),
         centerTitle: true,
         actions: [
           if (!AuthService.isStaff)
