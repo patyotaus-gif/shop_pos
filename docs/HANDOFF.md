@@ -15,7 +15,7 @@ Rules:
 
 ## Current state (updated 2026-11-12)
 
-**Branch:** `master`. Denser desktop homepage (branch `website-desktop-density`) merged; see the Log for its deploy status.
+**Branch:** `master`. Denser desktop homepage `5714a72` is pushed and deployed (Hosting `b7110c9b1acdcfe9`; rollback `06bd0506b99944b0`).
 Android 1.2.76 remains the artifact released from commit `1913e1c`.
 
 **Live wording follow-up (2026-11-12):** additional marketing wording from
@@ -103,6 +103,9 @@ or triggered; its Codemagic workflow does not run automatically on push.
   checkout still blocks a negative total.
 
 ### Known issues and leftovers
+- Entitlement gap (found 2026-11-12 by website review, not changed): the product edit
+  form opens the stock screen, including "สแกนรับสินค้าเข้า", with no tier check, so
+  Solo may scan-receive although the website lists it from Lite.
 - **Historical 1.2.74 bug:** refunds started from the sales report did nothing.
   The fix in `0de7903` shipped in 1.2.75; this release does not re-test refunds.
 - Test data left in the owner's test shop: loyalty customer `TEST-CLAUDE`
@@ -132,8 +135,24 @@ or triggered; its Codemagic workflow does not run automatically on push.
 
 ## Log
 
-### 2026-11-12 — Denser desktop homepage (owner approved release)
+### 2026-11-12 — Denser desktop homepage published and verified
 
+- **Published:**
+  - Master was fast-forwarded to `5714a72` and pushed with the branch.
+  - Deployed Firebase Hosting only (`--project shop-pos-89294`). Live version
+    `b7110c9b1acdcfe9`, released 2026-11-12 08:12:59 UTC.
+  - Rollback: `06bd0506b99944b0`.
+  - Three files were uploaded: the homepage, the pricing page and `brand.css`.
+  - Before the deploy, the ignored local `public/app/pokpok.apk` was confirmed to
+    match the live 1.2.76 APK (sha256 `afb8f92f…a9ad`, 97,532,155 bytes).
+- **Live checks:**
+  - `/`, `/pricing/` and `brand.css?v=20261112-density` match local bytes.
+  - The homepage serves `no-cache`.
+  - `version.json` is unchanged.
+  - The live CTA visibility check passed at 7 widths.
+  - Inspected a live 1440 px capture.
+- **Not done:** no app, Functions, rules or payment/security changes; no physical-device
+  browser check.
 - Owner feedback: the website feels empty ("โล่งๆ") on a computer. Live captures at
   1440/1920 px showed that the three middle sections (features, supplier orders,
   guides) were a heading, a paragraph and a button each, leaving about 60% of the
