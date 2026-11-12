@@ -57,8 +57,9 @@ and 12 page/viewport states, segment pricing and installation-guide navigation.
 All 71 public files match Hosting; exactly the 25 reviewed files changed.
 APK installation and physical iOS were not retested in this website release.
 
-**Branch:** `master`. Sales-display source `f1427dc` and kitchen layout source `c097378`
-are local only, not pushed or released. Website source `3fab693` is pushed and deployed; this includes
+**Branch:** `master`. Release source `2d1cbce`, including sales display `f1427dc`
+and kitchen layout `c097378`, is pushed; Hosting publication is pending.
+Website source `3fab693` is pushed and deployed; this includes
 the earlier denser desktop homepage `5714a72`.
 Android 1.2.76 remains the artifact released from commit `1913e1c`.
 
@@ -193,6 +194,12 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-13 — Release source pushed; Hosting preflight passed
+- Committed and pushed `2d1cbce` to master; remote SHA read back matches.
+- Hosting preflight confirms current version `b362e6435d006aad` and exactly two
+  pending public changes: APK and version manifest. Website bytes and runtime
+  rewrites are unchanged. Publication and public-download verification pending.
 
 ### 2026-11-13 — Android 1.2.77 device gate passed, ready to publish
 - Correct signed APK cold-started successfully, preserving existing shop/login.

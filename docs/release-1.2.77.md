@@ -42,7 +42,9 @@ from an isolated clean build on D; normal local build-directory behavior restore
 - Manifest: https://pok-pok.app/app/version.json
 - Previous Android: 1.2.76 (93).
 - Hosting rollback target: `b362e6435d006aad`.
-- Source push, Hosting deployment and public download verification: pending.
+- Release source `2d1cbce` pushed to master and remote SHA verified.
+- Hosting preflight passed: only APK and version manifest differ from live.
+- Hosting deployment and public download verification: pending.
 
 Local evidence: `D:/pokpok-release-1.2.77/` (test/analyzer logs, isolated reviews,
 clean build log, APK validation, tablet screenshots/XML). Device captures remain
