@@ -15,6 +15,15 @@ Rules:
 
 ## Current state (updated 2026-11-13)
 
+**Kitchen screenshot correction (prepared, awaiting publication):** the owner
+noticed that the tablet shows two columns while the website image shows one.
+The preceding capture used density 540, which reduced logical workspace width
+below the app's responsive threshold. A fresh unedited SM-X900 1.2.78 (95)
+capture at its normal density 320 shows the two table tickets side by side.
+Homepage/restaurant image links now use `kitchen-1.2.78-tablet.png` to avoid
+reusing the cached one-column image. Device settings restored; no order state
+or shop data changed. Local image checks passed two pages x three widths.
+
 **Website screenshots published and verified:** source `920e23b` is pushed;
 Hosting `42e39d68841be565` went live 2026-11-13 14:54:12 Sydney. Five fresh SM-X900
 captures from installed Android 1.2.78 (95) replace older Sales, Products,
