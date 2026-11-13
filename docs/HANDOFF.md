@@ -15,6 +15,16 @@ Rules:
 
 ## Current state (updated 2026-11-13)
 
+**Website screenshots refreshed locally (not published):** five fresh SM-X900
+captures from installed Android 1.2.78 (95) replace older Sales, Products,
+Orders, Overview and Kitchen images across nine pages, including full-size links
+and social/structured metadata. Local 18-page / five-width marketing checks and
+9-page / three-width image geometry checks passed; all images match raw device
+captures. Fresh screenshot-only review has no blocking finding. Demo order
+removed and absence verified, temporary cart emptied,
+device density/fullscreen/S Pen restored. No payment, sale, stock or kitchen
+status changed. See `docs/website-screenshots-2026-11-13.md`.
+
 **Payment keyboard follow-up (fixed locally, not released):** reproduced
 keyboard/search-focus restoration after cancel, route back and confirmation in
 six Android/iOS widget cases. Clearing the focused input before opening the
@@ -241,6 +251,29 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-13 — Refresh website app screenshots from installed 1.2.78
+
+- Owner reported website app images still showed old layouts. Replaced five
+  screenshots referenced by nine marketing/guide/blog pages; captions now name
+  the actual 1.2.78 (95) build and capture date where a date is displayed.
+- Captured original 2960 x 1848 PNGs on SM-X900. Sales shows the simplified
+  takeaway workspace and display settings; Products uses the approved pasta
+  photos; Kitchen shows the bounded ticket layout. No synthetic UI or numbers.
+- Created one unpaid DEMO-001 only in the authorized test shop, removed it with
+  guarded cleanup and verified absence. Cart restored to zero items. No payment,
+  sale, inventory or kitchen status mutations. Restored density 320, fullscreen
+  policy null and S Pen setting 1; returned to the sales-channel chooser.
+- Passed 18 pages x 5 widths with the existing marketing browser suite, plus
+  9 pages x 3 widths for new image dimensions/aspect/link targets and a real
+  click to open the hero image. Raw/copy hashes match for all five assets.
+- Fresh newcomer review checked 18 rendered specimens. A sticky-header/focus
+  artifact in two automated captures was removed by capturing from scroll zero
+  without locator auto-scroll; re-review found no blocking visual issue.
+- Committed the nine HTML changes, five images, provenance and this handoff
+  together; earlier image files remain available for cached pages.
+- Source-only website change; no Hosting deployment, app release or push yet.
+  Prior keyboard fix remains a separate local commit awaiting app release.
 
 ### 2026-11-13 — Fix and verify payment keyboard focus after tablet feedback
 
