@@ -15,17 +15,22 @@ Rules:
 
 ## Current state (updated 2026-11-13)
 
-**Website screenshots refreshed locally (not published):** five fresh SM-X900
+**Website screenshots published and verified:** source `920e23b` is pushed;
+Hosting `42e39d68841be565` went live 2026-11-13 14:54:12 Sydney. Five fresh SM-X900
 captures from installed Android 1.2.78 (95) replace older Sales, Products,
 Orders, Overview and Kitchen images across nine pages, including full-size links
-and social/structured metadata. Local 18-page / five-width marketing checks and
-9-page / three-width image geometry checks passed; all images match raw device
-captures. Fresh screenshot-only review has no blocking finding. Demo order
+and social/structured metadata. All 78 public files match the reviewed upload;
+exactly nine HTML files and five PNGs changed. Live checks passed 15 response
+hashes, 12 browser states at 390/768/1440 and a full-size image click. Local
+18-page / five-width marketing and 9-page / three-width image checks passed;
+all images match raw device captures. Fresh visual and source reviews found no
+blocking defect. Rollback Hosting: `98a6ffde29a23f7e`. Demo order
 removed and absence verified, temporary cart emptied,
 device density/fullscreen/S Pen restored. No payment, sale, stock or kitchen
-status changed. See `docs/website-screenshots-2026-11-13.md`.
+status changed. APK, version manifest, runtime rewrites and headers are unchanged.
+See `docs/website-screenshots-2026-11-13.md`.
 
-**Payment keyboard follow-up (fixed locally, not released):** reproduced
+**Payment keyboard follow-up (source pushed, not in released app):** reproduced
 keyboard/search-focus restoration after cancel, route back and confirmation in
 six Android/iOS widget cases. Clearing the focused input before opening the
 shared payment sheet passes eight exit/focus cases (including swipe dismissal)
@@ -35,7 +40,7 @@ passed cancel/back dismissal with Samsung's keyboard hidden, search text and
 the 220-baht mock cart retained, and amount autofocus working on reopening.
 This fix is not in the published APK; installed production app remains 1.2.78 (95).
 
-**Android 1.2.78 (95) and website released:** source `7c67501` is pushed; Hosting
+**Android 1.2.78 (95) release (website superseded above):** source `7c67501` is pushed; Hosting
 `98a6ffde29a23f7e` stamps commit `193ef23` and went live 2026-11-13 03:44:40 Sydney.
 All 73 public files match the reviewed upload; exactly eight expected paths
 changed. Public APK download matches the signed artifact and manifest. Existing
@@ -251,6 +256,31 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-13 — Publish and verify refreshed website screenshots
+
+- Owner still saw 1.2.75 / 1.2.76 on the live homepage. Confirmed that the
+  preceding screenshot commit had not been deployed; published its actual files.
+- Reran the marketing gate on exact source `920e23b`: 18 pages x five widths
+  passed. A fresh isolated read-only Codex CLI review of `193ef23..920e23b`,
+  publication guards and relevant callers found no verified introduced defects.
+  Codex was the available fallback; Python/Claude/Grok were unavailable. The
+  first report was below the required evidence length, so a second fresh review
+  completed with a detailed 5,752-character report before acceptance.
+- Verified the GitHub push destination, pushed the three pending commits, and
+  read back remote HEAD `920e23b`. This also pushes the separate keyboard fix's
+  source; it does not release that Flutter change or rebuild the APK.
+- Hosting-only deployment completed successfully at 14:54:12 Sydney, version
+  `42e39d68841be565`, stamped with full commit `920e23b`. Preflight and postflight
+  verified exactly 14 changed paths, all 78 public file hashes, unchanged
+  runtime rewrites/cache/download headers and the existing 1.2.78 (95) APK.
+- Live `pok-pok.app` verification passed nine page bodies, five new PNGs and
+  version.json against local SHA-256, four routes x three viewport widths,
+  image decoding/dimensions, no horizontal overflow and hero image enlargement.
+  Inspected the live feature-card screenshot with 1.2.78 (95) captions.
+- Evidence: `D:/pokpok-website-screens-release-20261113/`; original device
+  captures remain in `D:/pokpok-website-screens-20261113/`. Rollback Hosting:
+  `98a6ffde29a23f7e`. No new app build, backend, payment or security deployment.
 
 ### 2026-11-13 — Refresh website app screenshots from installed 1.2.78
 
