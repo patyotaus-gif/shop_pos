@@ -48,7 +48,8 @@ full APK download match local bytes. Live browser smoke passed 24 states on
 homepage and `/pricing/`, both shop types/cycles at 390/768/1440 widths, without
 horizontal overflow or page errors. These are browser checks, not a physical tablet.
 
-ADB currently lists no device. Physical-device validation is not claimed.
+No device was connected at publication. The subsequent physical-tablet pass is
+recorded below; it does not replace the publication-time browser evidence.
 No backend, payment/security configuration or customer data change is required.
 This local Windows build publishes Android; iOS/TestFlight needs its existing
 Codemagic workflow and is tracked separately, not inferred from a Git push.
@@ -77,4 +78,56 @@ Plan selection happens explicitly during app signup as stated beside the cards.
 The screenshot reviewer saw retail/monthly; the browser gate independently tested
 both types/cycles. Scoped design score 18/20: accessibility 3, performance 3,
 theming 4, responsive 4, integrity 4. This is not a full WCAG/PageSpeed certification;
-no physical keyboard, screen-reader or device pass is claimed.
+no physical keyboard or screen-reader pass is claimed. Subsequent device checks
+are limited to the flows below.
+
+## Physical-tablet acceptance — 2026-11-13
+
+Installed Android **1.2.78 (95)** verified on Samsung **SM-X900** (2960×1848
+landscape, DPR 2). Existing owner session in the explicitly authorized test shop;
+no reinstall, app-data clear, security change or live-payment test.
+
+| Journey | Observed result |
+| --- | --- |
+| Open Sales | Centered dine-in/takeaway chooser; takeaway catalog and cart fit landscape |
+| Create temporary cart | Pasta 80 × 2 plus crepe 60 × 1 = 220; quantity controls work |
+| Switch workflows | Dine-in table grid opens; returning to takeaway retains the cart |
+| Display preferences | Photo/name switching and category colour work; favourites filter the catalog without changing the cart |
+| Rotation/search | Portrait product grid and cart button fit; basket retains quantities/total; no-match search clears correctly; landscape returns to side-by-side layout |
+| Checkout entry | Opens without permission error; cash/transfer available; admin Omise option explicitly marked Test Mode |
+| Cash and keyboard | 500 cash against 220 total yields 280 change; scrolling brings confirm/cancel fully above the keyboard |
+| Kitchen | Display and printer modes show bounded two-column tickets; history/guidance/print controls fit |
+| Cleanup | Checkout cancelled, temporary cart emptied; photo/default colour, display kitchen mode and original auto-rotation restored; app returned to Products |
+
+Minor follow-up: after cancelling cash checkout while the software keyboard is
+open, it remains on the sales screen until Back is pressed. This was observed,
+not fixed here. The portrait photo grid also wraps one long food name onto a short
+second line; it remains readable and is optional typography polish.
+
+Live website tested in **Chrome 157.0.8103.51 on this tablet**, not an emulated
+viewport. Native rotation produced 1480×750 and 924×1306 CSS viewports. Sixteen
+states covered `/` and `/pricing/`, retail/restaurant and monthly/yearly. Verified
+199/399/599 monthly, 1,990/3,990/5,990 yearly, annual-average visibility, selected
+shop type, three cards, CTA height >=44 CSS px, unbroken rendered images, no
+horizontal overflow and no page errors. Trial CTA reached `/#download` from both
+orientations. Device and browser captures inspected: three cards across landscape,
+one centered column in portrait, legible feature hierarchy and visible hero image.
+Chrome's own tab-help bubble appears on some device captures; it is browser UI.
+Closed the test tab only and removed the temporary ADB port forwarding.
+
+Evidence under `D:/pokpok-release-1.2.78/device/`: `sales-entry`, `cart-returned`,
+`names-colored`, `restored-photo-confirmed`, `portrait-catalog-settled`,
+`portrait-basket`, `payment-scroll-end`, `final-empty`, `kitchen-first`,
+`kitchen-printer-settled`, `reconnected-state`, `device-finished`, `web-*.png`
+and `web-results.json`. Screenshot/XML capture is sequential, so transitional
+captures are not visual acceptance evidence. A brief USB disconnection interrupted
+the final capture; connection and restored kitchen mode were verified afterwards.
+The sampled recent app-process log contained no fatal, unhandled Flutter or layout
+overflow markers; logs are not a complete functional test.
+
+**Not exercised:** final payment/sale persistence, actual printing/Bluetooth,
+staff or account switching, offline recovery, scanner hardware, bundle addition,
+iOS, screen reader or physical keyboard. Existing kitchen orders were viewed;
+their statuses were not changed. The kitchen output preference was briefly saved
+and restored, but no sales/product/customer records were changed. This task adds
+test evidence only and does not produce another release.

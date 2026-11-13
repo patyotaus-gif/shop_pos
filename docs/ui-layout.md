@@ -149,4 +149,10 @@ keyboard/scanner, or physical-device acceptance. No device was connected, and
 no push, app build, backend change or deployment was performed during the initial
 implementation. Subsequently released in Android 1.2.78 (95): 53 relevant tests
 and targeted analysis reran successfully; signed APK and public download verified.
-No physical device was connected for that release. See `release-1.2.78.md`.
+No physical device was connected at publication. A subsequent SM-X900 test of
+installed 1.2.78 (95) passed owner-mode chooser/cart retention, photo/name/colour
+controls, favourites/search, portrait/landscape, and cash/change entry with the
+software keyboard. Checkout was cancelled and its draft cleared; a completed
+sale, staff/offline/scanner journey and physical print were not tested. Both
+kitchen layouts were inspected and display mode restored. Minor follow-up:
+cancel payment should also dismiss its keyboard. See `release-1.2.78.md`.

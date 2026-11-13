@@ -23,8 +23,11 @@ runtime rewrites and download/cache headers verified. Rollback: `cb06af000098f85
 Local gates passed: 53 app tests, targeted analysis, 56 pricing states, 18-page /
 five-width marketing checks, fresh source/visual/final metadata reviews. Live
 browser checks passed 24 pricing states at 390/768/1440 widths and 12 response
-hash checks. ADB still lists no device; no physical-device test or iOS/TestFlight
-build in this release. See `docs/release-1.2.78.md`.
+hash checks. A subsequent SM-X900 test of installed 1.2.78 (95) passed the sales
+chooser/cart/rotation/display and checkout-entry checks, both kitchen layouts,
+and 16 live website pricing states in tablet Chrome. Checkout was cancelled;
+no completed payment, physical print or iOS/TestFlight test is claimed. Minor
+follow-up: dismiss the keyboard when cancelling payment. See `docs/release-1.2.78.md`.
 
 **Website pricing/background refinement published:** homepage
 and `/pricing/` use bounded, separate cards with darker/larger feature text and
@@ -40,8 +43,10 @@ actions are reorganized. Payment/recovery warnings remain prominent. All 70
 focused tests passed, with 18 affected tests rerun after the final refinement;
 targeted analysis passed. Fresh source review is clean; visual review found no
 hard stop, with optional layout polish documented in `docs/ui-layout.md`.
-The release reran 53 relevant tests, built and published Android; physical-device
-acceptance of this new workflow remains pending.
+The release reran 53 relevant tests, built and published Android. Subsequent
+SM-X900 owner-mode acceptance covered channel switching, cart retention, display
+settings, portrait/landscape and cash/change entry. Staff, offline recovery,
+scanner hardware and completed checkout remain outside that device pass.
 
 **Previous Android 1.2.77 (94) release:** sales-display and kitchen-width changes
 were published in Hosting `cb06af000098f85d` (2026-11-13 00:11:44 Sydney).
@@ -225,6 +230,33 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-13 — Test released 1.2.78 on the connected tablet
+
+Owner requested a physical-tablet test. Verified installed Android 1.2.78 (95)
+on SM-X900, using the previously authorized test shop and existing owner session.
+Sales starts with dine-in/takeaway; a temporary cart survived switching workflows,
+photo/name modes, category colour, favourites, search and portrait/landscape.
+Two products / three units totalled 220; cash 500 produced change 280. Checkout
+opened without an access error, and scrolling reached both buttons above the
+software keyboard. Cancelled without recording a sale; removed the temporary cart.
+Payment cancellation left the keyboard visible until Back: recorded as minor UX
+follow-up, not fixed or released in this test-only task.
+
+Both kitchen output modes showed bounded two-column tickets with usable print
+controls. No ticket status or print action was invoked. Restored display mode,
+photo/default category colour and original auto-rotation; returned to Products.
+USB briefly disconnected during final capture, then reconnected; restoration was
+read back from the device. Recent app-process log sample had no fatal/unhandled
+Flutter/overflow matches; this is not proof that every path is error-free.
+
+Real tablet Chrome 157 passed 16 pricing states across homepage and `/pricing/`,
+both shop types and billing cycles at 1480×750 / 924×1306 CSS viewports, DPR 2.
+Prices, annual-average visibility, minimum CTA height, download navigation, images
+and horizontal overflow checked; no page errors. Inspected device/browser captures.
+Only the test browser tab was closed. No source, deployment, backend security or
+payment-mode change. Evidence: `D:/pokpok-release-1.2.78/device/`; scope and limits
+are recorded in `docs/release-1.2.78.md`.
 
 ### 2026-11-13 — Publish and verify Android 1.2.78 plus website
 
