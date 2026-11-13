@@ -19,6 +19,8 @@ void main() {
       double scale = 1,
       double total = 75.91,
       bool showOmiseSandbox = false,
+      bool searchBeforePayment = false,
+      TargetPlatform platform = TargetPlatform.android,
       ValueChanged<PaymentResult?>? onResult}) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -29,26 +31,95 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(MaterialApp(
-      theme: PokpokTheme.light(),
+      theme: PokpokTheme.light().copyWith(platform: platform),
       builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context)
               .copyWith(textScaler: TextScaler.linear(scale)),
           child: AppViewport(child: child!)),
       home: Scaffold(
           body: Builder(
-              builder: (context) => FilledButton(
-                    onPressed: () async {
-                      final result = await showPaymentSheet(context,
-                          showOmiseSandbox: showOmiseSandbox,
-                          total: total,
-                          initialChannel: SalesChannel.takeaway);
-                      onResult?.call(result);
-                    },
-                    child: const Text('ชำระเงิน'),
-                  ))),
+              builder: (context) => Column(children: [
+                    if (searchBeforePayment)
+                      const TextField(
+                          key: ValueKey('catalog-search'),
+                          decoration:
+                              InputDecoration(labelText: 'ค้นหาสินค้า')),
+                    FilledButton(
+                      onPressed: () async {
+                        final result = await showPaymentSheet(context,
+                            showOmiseSandbox: showOmiseSandbox,
+                            total: total,
+                            initialChannel: SalesChannel.takeaway);
+                        onResult?.call(result);
+                      },
+                      child: const Text('ชำระเงิน'),
+                    ),
+                  ]))),
     ));
+    if (searchBeforePayment) {
+      await tester.enterText(
+          find.byKey(const ValueKey('catalog-search')), 'ชา');
+      await tester.pumpAndSettle();
+      expect(tester.testTextInput.isVisible, isTrue);
+    }
     await tester.tap(find.text('ชำระเงิน'));
     await tester.pumpAndSettle();
+  }
+
+  for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
+    for (final exit in ['cancel', 'back', 'drag', 'confirm']) {
+      testWidgets(
+          'payment $exit leaves keyboard closed after search on $platform',
+          (tester) async {
+        var returned = false;
+        PaymentResult? result;
+        await openPayment(tester,
+            size: const Size(1480, 924),
+            total: 220,
+            searchBeforePayment: true,
+            platform: platform, onResult: (value) {
+          returned = true;
+          result = value;
+        });
+        final cash = find.widgetWithText(TextField, 'จำนวนเงินที่รับ');
+        await tester.enterText(cash, '500');
+        await tester.pumpAndSettle();
+        expect(tester.testTextInput.isVisible, isTrue);
+        expect(find.text('฿280.00'), findsOneWidget);
+
+        if (exit == 'back') {
+          await tester.binding.handlePopRoute();
+        } else if (exit == 'drag') {
+          await tester.dragFrom(
+              tester.getTopLeft(find.byType(DraggableScrollableSheet)) +
+                  const Offset(100, 16),
+              const Offset(0, 800));
+        } else {
+          final action =
+              find.text(exit == 'confirm' ? 'ยืนยันการชำระเงิน' : 'ยกเลิก');
+          await tester.ensureVisible(action);
+          await tester.tap(action);
+        }
+        await tester.pumpAndSettle();
+
+        expect(returned, isTrue);
+        expect(result?.paid, exit == 'confirm' ? 500 : isNull);
+        expect(cash, findsNothing);
+        final search = tester.widget<EditableText>(find.descendant(
+            of: find.byKey(const ValueKey('catalog-search')),
+            matching: find.byType(EditableText)));
+        expect(search.focusNode.hasFocus, isFalse);
+        expect(tester.testTextInput.isVisible, isFalse);
+        expect(search.controller.text, 'ชา');
+
+        // Reopening checkout must still focus the amount for the next attempt.
+        await tester.tap(find.text('ชำระเงิน'));
+        await tester.pumpAndSettle();
+        expect(cash, findsOneWidget);
+        expect(tester.testTextInput.isVisible, isTrue);
+        expect(tester.takeException(), isNull);
+      });
+    }
   }
 
   testWidgets('sandbox is hidden by default', (tester) async {

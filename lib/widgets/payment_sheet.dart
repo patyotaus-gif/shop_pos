@@ -603,6 +603,9 @@ Future<PaymentResult?> showPaymentSheet(
   String? summary,
   bool showOmiseSandbox = false,
 }) {
+  // Clear the caller's focus history before opening the sheet. Otherwise the
+  // catalog search regains focus (and reopens the keyboard) when this route pops.
+  FocusManager.instance.primaryFocus?.unfocus();
   return showModalBottomSheet<PaymentResult>(
     context: context,
     isScrollControlled: true,

@@ -154,5 +154,20 @@ installed 1.2.78 (95) passed owner-mode chooser/cart retention, photo/name/colou
 controls, favourites/search, portrait/landscape, and cash/change entry with the
 software keyboard. Checkout was cancelled and its draft cleared; a completed
 sale, staff/offline/scanner journey and physical print were not tested. Both
-kitchen layouts were inspected and display mode restored. Minor follow-up:
-cancel payment should also dismiss its keyboard. See `release-1.2.78.md`.
+kitchen layouts were inspected and display mode restored. That pass found a
+keyboard left open after cancelling checkout. See `release-1.2.78.md`.
+
+Payment keyboard follow-up (2026-11-13, local): the shared payment entry now
+unfocuses the active input before opening the sheet, so closing it does not
+restore the catalog search's focus and keyboard. Search text and cancelled
+cart contents remain intact; reopening cash payment still focuses the amount.
+Six new regressions failed before the fix. All 50 focused checkout/cart/workspace
+tests and targeted analysis pass; eight exit/focus cases cover cancel, route
+back, swipe and confirmation on Android/iOS widget configurations. An isolated
+native fixture using the actual payment sheet passed on SM-X900: Samsung's
+keyboard closed after cancel/system back, search and the 220-baht mock cart
+remained intact, and reopening focused the cash field. The fixture had no
+Firebase initialization and was removed after testing; production 1.2.78 (95)
+was restored to the foreground unchanged. This fix is not yet in the published
+APK. No completed real sale or physical iOS test is claimed. Evidence:
+`D:/pokpok-payment-keyboard-20261113/`.

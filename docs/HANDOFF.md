@@ -15,6 +15,16 @@ Rules:
 
 ## Current state (updated 2026-11-13)
 
+**Payment keyboard follow-up (fixed locally, not released):** reproduced
+keyboard/search-focus restoration after cancel, route back and confirmation in
+six Android/iOS widget cases. Clearing the focused input before opening the
+shared payment sheet passes eight exit/focus cases (including swipe dismissal)
+and preserves search text/reopening. All 50 focused checkout/cart/workspace
+tests and targeted Dart analysis passed. An isolated native SM-X900 fixture also
+passed cancel/back dismissal with Samsung's keyboard hidden, search text and
+the 220-baht mock cart retained, and amount autofocus working on reopening.
+This fix is not in the published APK; installed production app remains 1.2.78 (95).
+
 **Android 1.2.78 (95) and website released:** source `7c67501` is pushed; Hosting
 `98a6ffde29a23f7e` stamps commit `193ef23` and went live 2026-11-13 03:44:40 Sydney.
 All 73 public files match the reviewed upload; exactly eight expected paths
@@ -27,7 +37,8 @@ hash checks. A subsequent SM-X900 test of installed 1.2.78 (95) passed the sales
 chooser/cart/rotation/display and checkout-entry checks, both kitchen layouts,
 and 16 live website pricing states in tablet Chrome. Checkout was cancelled;
 no completed payment, physical print or iOS/TestFlight test is claimed. Minor
-follow-up: dismiss the keyboard when cancelling payment. See `docs/release-1.2.78.md`.
+follow-up fixed locally: dismiss the keyboard when cancelling payment; it awaits
+the next app release. See `docs/release-1.2.78.md`.
 
 **Website pricing/background refinement published:** homepage
 and `/pricing/` use bounded, separate cards with darker/larger feature text and
@@ -230,6 +241,33 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-13 — Fix and verify payment keyboard focus after tablet feedback
+
+- Owner asked to fix the previous tablet finding. Six new widget regressions
+  failed before the fix: cash checkout returns to the focused catalog search,
+  reopening the keyboard after cancel, route back or confirmation.
+- Unfocus the actual primary input before pushing the shared payment sheet.
+  Unfocusing the caller's scope alone did not fix its remembered child focus;
+  this candidate was rejected by the regression tests. All six cases now pass.
+- All 50 tests in payment_journey, pos_basket_checkout, pos_checkout_panel and
+  sales_workspace passed (exit 0); targeted analysis passed (exit 0). Eight new
+  Android/iOS widget cases include cancel, route back, swipe and confirmation,
+  retaining search text and allowing the amount input to focus on reopening.
+- Built and installed a separate `app.pokpok.keyboardtest` native fixture with
+  the actual payment sheet and mock cart, without Firebase initialization.
+  On SM-X900, typed search then cash 500 for a 220-baht cart (change 280).
+  Cancel returned to the intact cart/search with inset 0 and Android reporting
+  `mInputShown=false`. Reopening focused the cash amount and showed Samsung's
+  numeric keyboard. System Back first hid the keyboard, then closed the sheet;
+  search and cart stayed intact and the keyboard remained hidden.
+- Removed only the temporary fixture and returned to production app 1.2.78 (95),
+  whose package/version stayed unchanged. No shop writes, completed real sale,
+  printer or physical iOS test. Widget iOS configuration is not iOS acceptance.
+- Evidence: `D:/pokpok-payment-keyboard-20261113/` contains test/analyze/build
+  logs and `device/` captures (search, payment, entered, cancelled, reopened,
+  back-dismissed). Fix and verification are recorded with this commit; no push,
+  version bump, release, deployment, payment mode or security change.
 
 ### 2026-11-13 — Test released 1.2.78 on the connected tablet
 
