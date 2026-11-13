@@ -15,16 +15,22 @@ Rules:
 
 ## Current state (updated 2026-11-13)
 
-**Kitchen screenshot correction (prepared, awaiting publication):** the owner
+**Kitchen screenshot correction (published and verified):** source `a1f4fbe`
+is pushed; Hosting `427f2873006b59f9` went live 2026-11-13 15:17:39 Sydney. The owner
 noticed that the tablet shows two columns while the website image shows one.
 The preceding capture used density 540, which reduced logical workspace width
 below the app's responsive threshold. A fresh unedited SM-X900 1.2.78 (95)
 capture at its normal density 320 shows the two table tickets side by side.
 Homepage/restaurant image links now use `kitchen-1.2.78-tablet.png` to avoid
 reusing the cached one-column image. Device settings restored; no order state
-or shop data changed. Local image checks passed two pages x three widths.
+or shop data changed. Local and live image checks passed two pages x three widths;
+18-page/five-width marketing checks and fresh source/visual reviews passed.
+All 79 public files match the reviewed upload, with only two HTML files and one
+new PNG changed. Four live response hashes match; every full-image link opens.
+No app release; APK, backend routes and headers unchanged. Rollback Hosting:
+`42e39d68841be565`. Evidence: `D:/pokpok-kitchen-two-columns-20261113/`.
 
-**Website screenshots published and verified:** source `920e23b` is pushed;
+**Earlier website screenshot refresh (kitchen corrected above):** source `920e23b` is pushed;
 Hosting `42e39d68841be565` went live 2026-11-13 14:54:12 Sydney. Five fresh SM-X900
 captures from installed Android 1.2.78 (95) replace older Sales, Products,
 Orders, Overview and Kitchen images across nine pages, including full-size links
@@ -265,6 +271,31 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-13 — Publish native two-column kitchen screenshot
+
+- Owner reported two columns on their tablet versus one in the website image.
+  Confirmed the earlier density-540 capture reduced logical width and triggered
+  the app's one-column layout. It was not an old app build or website CSS reflow.
+- Captured installed SM-X900 1.2.78 (95) at its normal density 320. Raw PNG is
+  byte-identical to the published asset; UI hierarchy confirms the two table
+  tickets occupy the same row without overlap. Restored device settings and
+  changed no order, sale, stock or shop data.
+- Updated homepage/restaurant image and full-size links to a fresh filename.
+  Kept the old image available for cached HTML. Source `a1f4fbe` was committed,
+  pushed and remote-verified before publication.
+- Local: image checks passed both pages at 390/768/1440; marketing gate passed
+  18 pages at five widths. Fresh visual and isolated source reviews found no
+  blocking defect. Mobile image text remains small; full-size links work.
+- Deployed Hosting only: `427f2873006b59f9`, 15:17:39 Sydney. Postflight verified
+  all 79 public files, exactly three expected changed paths and unchanged
+  runtime routes/cache headers. Live body hashes passed four URLs; browser
+  checks passed all six image states and enlargement links. Visually checked
+  the live homepage image. These browser checks used simulated viewport sizes;
+  the underlying screenshot came from the physical tablet.
+- APK/version manifest remain 1.2.78 (95); no app or backend deployment.
+  Rollback: `42e39d68841be565`. Evidence:
+  `D:/pokpok-kitchen-two-columns-20261113/`.
 
 ### 2026-11-13 — Publish and verify refreshed website screenshots
 
