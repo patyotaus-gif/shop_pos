@@ -23,14 +23,18 @@ Existing passing tests invent that field; the internal future-live verifier
 has the same assumption. Four THB 100 test charges were created (three successful,
 one deliberately failed); provider-backed checks used in-memory DB/auth, with
 no live sale or production Firestore writes. Unit/browser/emulator/widget checks
-pass; the real-shaped three-channel reproduction fails as expected. Authenticated
-deployed end-to-end and tablet payment testing remain unverified. ADB launch was
-rejected by automatic approval review (`blocked by policy`). No app/backend
-deployment or security-setting change. See `docs/omise-sandbox-audit-2026-11-14.md`.
-Login follow-up: live signed-out Edge verified the homepage login goes to
-`/subscribe/`, while direct `/payment-test/` stays on its separate sandbox login.
-The owner's exact tablet click/authenticated result is not observed; direct
-sandbox login guidance given. No subscription purchase required for the sandbox.
+pass; the real-shaped three-channel reproduction fails as expected. Successful
+deployed end-to-end payment confirmation remains unverified and blocked by that
+defect. No app/backend deployment or security-setting change. See
+`docs/omise-sandbox-audit-2026-11-14.md`.
+Login follow-up: after the owner manually opened and signed into `/payment-test/`,
+the SM-X900 screen verified authenticated sandbox access. Tapped only the existing
+attempt's status refresh; config/status calls returned HTTP 200 in server logs.
+The old PromptPay attempt now reconciles to `expired` / `payment_failed` in both
+tablet UI and isolated Firestore data. No new charge or real shop transaction.
+The earlier ADB launch/forward rejection was not retried; this follow-up read the
+already-open screen and used the observed refresh control. Homepage login remains
+the separate `/subscribe/` entry; no package purchase is required for this sandbox.
 
 **Kitchen screenshot correction (published and verified):** source `a1f4fbe`
 is pushed; Hosting `427f2873006b59f9` went live 2026-11-13 15:17:39 Sydney. The owner
@@ -288,6 +292,19 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-14 — Verify authenticated sandbox access on the tablet
+
+- Owner reported login complete. Read the already-open SM-X900 Chrome page at
+  `/payment-test/`; authenticated account controls and the old THB 100 expired
+  attempt are visible. No navigation/port-forward workaround was used.
+- Tapped the observed **ตรวจสถานะล่าสุด** button only. UI remains `expired`,
+  with the new-attempt action available. Server logs corroborate config/status
+  HTTP 200 and the refresh POST at 04:44:52 UTC; Firestore's isolated old attempt
+  is now `expired` / `payment_failed`. Foreground expiry reconciliation works.
+- No new charge, real sale, stock change, code fix or deployment. Success predicate
+  bug remains pending; this proves authenticated access/status refresh, not a
+  successful end-to-end payment. Updated the audit with the device evidence.
 
 ### 2026-11-14 — Check reported Subscribe navigation during sandbox login
 

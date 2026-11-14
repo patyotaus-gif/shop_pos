@@ -103,7 +103,8 @@ Official test references: [API testing](https://docs.omise.co/api-testing),
    processing; the reproduction above must turn green after the fix.
 3. Verify authenticated deployed polling and real webhook delivery with isolated
    sandbox attempts, then complete all three journeys on the tablet.
-4. Reconcile the old expired attempt and verify reopening does not leave it stuck.
+4. Old expired-attempt foreground reconciliation: **verified below**. A successful
+   payment's polling/webhook confirmation still needs the predicate fix and retest.
 
 ## Login navigation follow-up
 
@@ -118,6 +119,27 @@ The exact button the owner tapped and the authenticated tablet result were not
 observed, so this is a verified navigation explanation, not a reproduced OAuth
 redirect defect. Open the sandbox URL directly and sign in there; no subscription
 purchase is required for the founder-only sandbox. No source change or deployment.
+
+## Tablet login and status refresh verified — subsequent check
+
+After the owner reported login complete, read the already-open SM-X900 Chrome
+page at `/payment-test/`. The authenticated sandbox controls were visible with
+the old THB 100 PromptPay attempt now shown as expired. Tapped only the observed
+**ตรวจสถานะล่าสุด** control; the UI retained the correct expired result and
+offered **เริ่มรายการทดลองใหม่**.
+
+Server logs corroborate authenticated config/status HTTP 200, including the
+refresh POST at `2026-11-14T04:44:52Z`. A read-only Firestore check confirms the
+old isolated attempt is `expired` / `payment_failed`, resolving the earlier
+stale-status observation through foreground reconciliation. No new charge was
+created. The existing sandbox status handler updated the isolated attempt during
+reconciliation; real order, stock and sales collections were not changed.
+
+This follow-up used screen inspection and the existing refresh button, not the
+previously rejected browser-launch/port-forward command. It proves tablet login,
+founder access and expired-attempt status retrieval. It does not prove successful
+payment confirmation: the missing-`captured` predicate defect is still unfixed.
+Sanitized corroboration: `.remember/tmp/omise-tablet-server-check-20261114-results.json`.
 
 Local sanitized audit evidence is under `.remember/tmp/` in
 `omise-audit-20261114-results.json`, `omise-provider-probe-20261114-results.json`
