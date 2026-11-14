@@ -46,6 +46,8 @@ Actual provider callbacks returned HTTP 200. The THB 80 POS cart stayed unpaid;
 removed only the temporary item and restored zero items and the channel chooser.
 All three payment methods now have native Android sandbox success/failure evidence.
 iOS, real debits and settling a real POS cart through Omise remain untested.
+Native card/TrueMoney evidence is committed and pushed in `af6de8e`; remote
+master was read back and matched it exactly, with a clean working tree.
 Minor pre-existing sandbox UI follow-up: the previous success label briefly
 remains visible while a new attempt is being created. The new attempt correctly
 becomes pending; no incorrect backend confirmation was observed.
@@ -354,6 +356,8 @@ or triggered; its Codemagic workflow does not run automatically on push.
   to the sales channel chooser. No actual POS sale was submitted.
 - Updated `docs/omise-sandbox-audit-2026-11-14.md`; raw captures remain ignored
   local evidence. This pass changes documentation only; no deploy/version bump.
+- Committed/pushed evidence as `af6de8e`; remote read-back matched exactly and
+  working tree was clean. The follow-up handoff records that completed push.
 
 ### 2026-11-14 — Verify Omise from the installed Android app
 
