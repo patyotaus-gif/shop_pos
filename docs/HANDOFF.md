@@ -15,18 +15,22 @@ Rules:
 
 ## Current state (updated 2026-11-14)
 
-**Omise sandbox audit (blocking defect reproduced, not fixed/deployed):** actual
-Omise Test Mode card, TrueMoney and PromptPay charges succeeded, but the current
-local backend handler leaves all three `pending` / `awaiting_payment` because
-`functions/omise_sandbox.js:59` requires an absent `captured` response field.
-Existing passing tests invent that field; the internal future-live verifier
-has the same assumption. Four THB 100 test charges were created (three successful,
-one deliberately failed); provider-backed checks used in-memory DB/auth, with
-no live sale or production Firestore writes. Unit/browser/emulator/widget checks
-pass; the real-shaped three-channel reproduction fails as expected. Successful
-deployed end-to-end payment confirmation remains unverified and blocked by that
-defect. No app/backend deployment or security-setting change. See
-`docs/omise-sandbox-audit-2026-11-14.md`.
+**Omise confirmation correction (fixed and verified locally, not deployed):**
+removed the nonexistent `captured` response requirement from sandbox reconciliation
+and the internal future-live evidence verifier. Confirmation requires verified
+successful/paid status, no refund/reversal, matching amount/currency/bindings and,
+when returned, full captured_amount. Auto-capture configuration is not evidence.
+Refund/reversal cannot be undone by stale success. Fixtures now match actual
+provider responses. Tests first reproduced 14 failures, then all 27 passed;
+Firestore emulator, mocked browser and the three-channel audit reproduction pass.
+Read back the four existing THB 100 TEST charges from Omise (16 GETs, no new
+charges): card, TrueMoney and PromptPay now confirm through the corrected local
+status/webhook handlers; failed card remains payment_failed; duplicate callbacks
+retain confirmation time. DB/auth were in-memory fixtures, not deployed endpoints.
+No production Firestore writes, live sales, deployment or security-setting changes.
+The tablet/server still use the earlier backend until a scoped release. Successful
+deployed polling and actual webhook delivery still need verification after release.
+See `docs/omise-sandbox-audit-2026-11-14.md`.
 Login follow-up: after the owner manually opened and signed into `/payment-test/`,
 the SM-X900 screen verified authenticated sandbox access. Tapped only the existing
 attempt's status refresh; config/status calls returned HTTP 200 in server logs.
@@ -292,6 +296,28 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-14 — Correct Omise paid-charge confirmation locally
+
+- Owner authorized fixing the sandbox issue. Updated sandbox and internal
+  future-live verification to use documented successful/paid evidence instead of
+  the absent captured flag, retaining mode/account/order/instrument/amount guards.
+- Do not interpret capture=true as paid. Missing/invalid refund evidence and
+  explicitly incomplete captured amounts cannot confirm. Verified refunds and
+  reversals cancel the test order; delayed success cannot reconfirm it.
+- Replaced invented provider fixtures in unit/emulator tests. Red run: 14 of 27
+  failed on old code; green run: all 27 pass. Added actual-shaped all-channel
+  webhook/polling, refund/reversal and duplicate timestamp checks.
+- Actual provider read-back at 05:11 UTC: four existing TEST charges, 16 GETs,
+  zero new charges; local handlers confirm all three paid methods and retain the
+  failed-card result. Duplicate callbacks keep confirmation time. In-memory
+  database/auth only; no production collection writes or real transactions.
+- Firestore emulator passes concurrency/isolation/client-denial checks (Java 21;
+  transaction-contention retries completed). Mocked mobile/tablet browser suite
+  and the original three-case provider-contract reproduction also pass.
+- No app version bump, push or deployment. Device success and real webhook delivery
+  remain release follow-ups; tablet access/expired reconciliation were verified
+  earlier. Updated audit report. Scoped source/docs commit only.
 
 ### 2026-11-14 — Verify authenticated sandbox access on the tablet
 

@@ -6,7 +6,8 @@ const {client, handlers, validateCharge, PUBLIC_KEY} = require('./omise_sandbox'
 const id = '00000000-0000-4000-8000-000000000001';
 const nonce = 'tokn_test_123', instrumentId = 'card_test_123';
 const charge = (overrides = {}) => ({object:'charge', id:'chrg_test_123', livemode:false, amount:10000,
-  currency:'THB', status:'successful', paid:true, captured:true, card:{id:instrumentId},
+  // Omise-Version 2019-05-29 returns `capture`, not a `captured` flag.
+  currency:'THB', status:'successful', paid:true, capture:true, refunded_amount:0, reversed:false, card:{id:instrumentId},
   metadata:{pokpokSandboxAttempt:id, actor:'founder'}, ...overrides});
 const request = (data = {}, uid = 'founder') => ({auth:{uid, token:{founder:uid === 'founder'}},
   data:{attemptId:id, method:'card', nonce, ...data}});
@@ -95,8 +96,24 @@ test('provider response must match test mode, amount, currency, actor, instrumen
     {metadata:{pokpokSandboxAttempt:id,actor:'other'}},{metadata:{pokpokSandboxAttempt:'wrong',actor:'founder'}},
     {card:{id:'card_test_other'}}]) assert.throws(()=>validateCharge(charge(overrides),attempt,id));
   assert.equal(validateCharge(charge({paid:false}),attempt,id).status,'pending');
-  assert.equal(validateCharge(charge({captured:false}),attempt,id).status,'pending');
+  assert.equal(validateCharge(charge({status:'pending'}),attempt,id).status,'pending');
   assert.equal(validateCharge(charge({refunded_amount:1}),attempt,id).status,'refunded');
+});
+
+test('settlement uses paid/status, not auto-capture configuration or a nonexistent captured flag', () => {
+  const attempt={actor:'founder',method:'card',instrumentId};
+  assert.equal(Object.hasOwn(charge(),'captured'),false);
+  assert.equal(validateCharge(charge(),attempt,id).status,'successful');
+  assert.equal(validateCharge(charge({capture:false}),attempt,id).status,'successful');
+  for (const change of [{paid:false},{status:'pending'},{status:'pending',paid:false},
+    {captured_amount:5000},{captured_amount:null}]) {
+    assert.equal(validateCharge(charge(change),attempt,id).status,'pending');
+  }
+  assert.equal(validateCharge(charge({captured_amount:10000}),attempt,id).status,'successful');
+  assert.equal(validateCharge(charge({reversed:true}),attempt,id).status,'reversed');
+  for (const refunded_amount of [undefined,null,-1,'0',NaN]) {
+    assert.notEqual(validateCharge(charge({refunded_amount}),attempt,id).status,'successful');
+  }
 });
 test('redirects reject non-HTTPS, credentials and lookalike domains', () => {
   for (const url of ['http://api.omise.co/a','https://omise.co.evil.test/a','https://evil.test/a','https://user@api.omise.co/a']) {
@@ -105,7 +122,7 @@ test('redirects reject non-HTTPS, credentials and lookalike domains', () => {
 });
 test('webhook verifies provider GET; forged posted success cannot mark payment successful', async () => {
   const h=setup(async path=>path.startsWith('/tokens') ? {object:'token',id:nonce,livemode:false,used:false,card:{id:instrumentId}}
-    : charge({status:'pending',paid:false,captured:false}));
+    : charge({status:'pending',paid:false}));
   await h.create(request());
   const res=response();
   await h.webhook({method:'POST',query:{attempt:id},body:{data:{id:'chrg_test_123',status:'successful',paid:true}}},res);
@@ -141,8 +158,11 @@ for (const method of ['card','truemoney','promptpay']) {
     const h = setup(async path => {
       if (path.startsWith('/tokens')) return {object:'token',id:nonce,livemode:false,used:false,card:{id:instrumentId}};
       if (path.startsWith('/sources')) return {object:'source',...source,livemode:false,amount:10000,currency:'THB'};
-      return charge({source, status:paid?'successful':'pending', paid, captured:paid});
+      return charge({card:method==='card'?{id:instrumentId}:null,
+        source:method==='card'?null:source, status:paid?'successful':'pending', paid});
     });
+    let clock=1000;
+    h.FieldValue.serverTimestamp=()=>++clock;
     const req = request({method,nonce:method==='card'?nonce:source.id});
     const initial = await h.create(req);
     assert.equal(initial.orderStatus,'awaiting_payment');
@@ -151,11 +171,14 @@ for (const method of ['card','truemoney','promptpay']) {
     await h.webhook(event,response());
     assert.equal((await h.status(req)).orderStatus,'awaiting_payment');
     paid=true;
+    await h.webhook(event,response());
+    const confirmedAt=h.docs.get(`omiseSandboxAttempts/${id}`).confirmedAt;
+    assert(confirmedAt>1000);
     const replies=[response(),response()];
     await Promise.all(replies.map(res=>h.webhook(event,res)));
     assert(replies.every(res=>res.code===200));
     assert.equal((await h.status(req)).orderStatus,'confirmed');
-    assert.equal(h.docs.get(`omiseSandboxAttempts/${id}`).confirmedAt,1000);
+    assert.equal(h.docs.get(`omiseSandboxAttempts/${id}`).confirmedAt,confirmedAt);
     paid=false;
     assert.equal((await h.status(req)).orderStatus,'confirmed');
     assert.equal(h.calls.filter(c=>c.body).length,1);
@@ -164,12 +187,29 @@ for (const method of ['card','truemoney','promptpay']) {
   });
 }
 
-test('failed, expired and refunded payments do not leave a confirmed test order', async () => {
-  for (const status of ['failed','expired','refunded']) {
+test('failed, expired, reversed and refunded payments do not leave a confirmed test order', async () => {
+  for (const status of ['failed','expired','reversed','refunded']) {
     const h=setup(async path=>path.startsWith('/tokens')
       ? {object:'token',id:nonce,livemode:false,used:false,card:{id:instrumentId}}
-      : charge(status==='refunded'?{refunded_amount:10000}:{status,paid:false,captured:false}));
-    assert.equal((await h.create(request())).orderStatus,status==='refunded'?'cancelled':'payment_failed');
+      : charge(status==='refunded'?{refunded_amount:10000}:{status,paid:false}));
+    assert.equal((await h.create(request())).orderStatus,['refunded','reversed'].includes(status)?'cancelled':'payment_failed');
+  }
+});
+
+test('verified refund or reversal cancels a test order and stale success cannot reconfirm it', async () => {
+  for (const change of [{refunded_amount:100},{reversed:true}]) {
+    let state={};
+    const h=setup(async path=>path.startsWith('/tokens')
+      ? {object:'token',id:nonce,livemode:false,used:false,card:{id:instrumentId}}
+      : charge(state));
+    assert.equal((await h.create(request())).orderStatus,'confirmed');
+    state=change;
+    assert.equal((await h.status(request())).orderStatus,'cancelled');
+    state={};
+    const res=response();
+    await h.webhook({method:'POST',query:{attempt:id},body:{data:{id:'chrg_test_123'}}},res);
+    assert.equal(res.code,200);
+    assert.equal((await h.status(request())).orderStatus,'cancelled');
   }
 });
 

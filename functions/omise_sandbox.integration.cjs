@@ -17,7 +17,7 @@ const {handlers}=require('./omise_sandbox');
       api:async(p,form)=>{
         if(p.startsWith('/tokens'))return {object:'token',id:'tokn_test_fixture',livemode:false,used:false,card:{id:'card_test_fixture'}};
         if(form)charges++;
-        return {object:'charge',id:'chrg_test_fixture',livemode:false,amount:10000,currency:'THB',status:'successful',paid:true,captured:true,
+        return {object:'charge',id:'chrg_test_fixture',livemode:false,amount:10000,currency:'THB',status:'successful',paid:true,capture:true,refunded_amount:0,
           card:{id:'card_test_fixture'},metadata:{pokpokSandboxAttempt:id,actor:'founder'}};
       }});
     const req={auth:{uid:'founder',token:{founder:true}},data:{attemptId:id,method:'card',nonce:'tokn_test_fixture'}};

@@ -4,7 +4,11 @@ Scope: inspect and test the existing sandbox. Source baseline: `55d187e`.
 No application/backend code change or deployment was made during this audit.
 No real sale, stock change, live payment or security-enforcement change occurred.
 
-## Result: automatic confirmation is blocked
+**Update after owner-authorized correction:** the defect below is now fixed and
+verified locally. It is **not deployed**. The original audit evidence is preserved
+below; see the final correction section for current results and remaining checks.
+
+## Original audit result: automatic confirmation was blocked
 
 **P1 — `functions/omise_sandbox.js:59` requires a field absent from actual Omise
 charge responses.** A successful charge must satisfy `charge.captured === true`
@@ -97,10 +101,10 @@ Official test references: [API testing](https://docs.omise.co/api-testing),
 
 ## Required follow-up
 
-1. Correct the success predicate and replace invented response fields in fixtures
-   with actual provider-shaped examples, preserving all binding checks.
-2. Prove success, pending/unpaid, failed/expired, refunded/reversed and duplicate
-   processing; the reproduction above must turn green after the fix.
+1. **Completed locally below:** correct the success predicate and replace invented
+   response fields in fixtures, preserving all binding checks.
+2. **Completed locally below:** prove success, pending/unpaid, failed/expired,
+   refunded/reversed and duplicate processing; reproduction now passes.
 3. Verify authenticated deployed polling and real webhook delivery with isolated
    sandbox attempts, then complete all three journeys on the tablet.
 4. Old expired-attempt foreground reconciliation: **verified below**. A successful
@@ -145,3 +149,54 @@ Local sanitized audit evidence is under `.remember/tmp/` in
 `omise-audit-20261114-results.json`, `omise-provider-probe-20261114-results.json`
 and `omise-reconcile-probe-20261114-results.json`. No credentials or customer
 identifiers are included in this report.
+
+## Correction verified locally — 2026-11-14
+
+Owner authorized the fix after tablet login was verified. The implementation uses
+`status === 'successful'` and `paid === true`, not `capture` (automatic-capture
+configuration), and no longer requires the nonexistent `captured` field. The same
+correction applies to the internal future-live verifier; live payments remain
+unavailable and were not exercised.
+
+Mode, account/actor, exact attempt/order, instrument, amount and currency checks
+are retained. A nonzero refund or reversal cannot confirm. Missing/invalid refund
+evidence leaves a sandbox attempt pending; the live verifier rejects it. If
+`captured_amount` is returned, it must equal the charge amount to confirm; older
+observed responses omit it. Refunded/reversed test orders cannot be reconfirmed by
+an older successful response.
+
+Verification performed:
+
+- Updated provider fixtures first: `npm.cmd run test:omise` failed **14/27** on
+  the old production code. After the correction, **27/27 pass**. Coverage includes
+  all three methods, manual-vs-automatic capture configuration, unpaid/pending,
+  explicit partial capture, failed/expired, refunds/reversals, binding failures,
+  duplicate callbacks and no duplicate confirmation timestamp.
+- Firestore emulator integration with real-shaped provider fixture: **pass**.
+  Concurrent claim produces one charge; writes remain isolated; direct client
+  reads/writes are denied. Emulator transaction-lock retries resolved; exit 0.
+- Existing mocked browser suite at mobile/tablet sizes: **pass**. This is a
+  frontend regression check, not an actual tablet payment or provider UI test.
+- Original minimized three-channel contract reproduction: **3/3 pass**, unchanged.
+- Actual Omise Test Mode **read-back only** at `2026-11-14T05:11:36Z`: 16 GET
+  requests across four existing audit charges, no new charge or payment-state
+  mutation. Each local status handler and two duplicate local webhook invocations
+  fetched the actual provider result. In-memory DB/auth; zero production writes.
+
+| Existing TEST charge | Provider result | Corrected local handler |
+| --- | --- | --- |
+| Card paid | successful / paid | successful / confirmed |
+| Card insufficient funds | failed / unpaid | failed / payment_failed |
+| TrueMoney paid | successful / paid | successful / confirmed |
+| PromptPay paid | successful / paid | successful / confirmed |
+
+All duplicate callbacks preserved confirmation time. Sanitized read-back evidence:
+`.remember/tmp/omise-fixed-readback-20261114-results.json`. Real test identifiers,
+keys and customer details are not included here.
+
+**Release status:** local code/docs only; no push, backend deployment, app build,
+mode change or App Check change. The deployed backend still has the original
+predicate. Before claiming tablet payment completion, deploy the scoped backend
+fix, verify authenticated polling and actual provider webhook delivery, and run
+the three isolated sandbox journeys on the device. Do not use real shop sales or
+enable Live Mode for these checks.

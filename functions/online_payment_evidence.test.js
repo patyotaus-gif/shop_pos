@@ -10,7 +10,7 @@ const binding={mode:'live',merchantId:'merchant-shop',chargeId:'chrg_live_fixtur
 const order={status:'pendingPayment',paymentMethod:'omise',omise:binding,total:100,finalAmount:100,
   items:[{productId:'tea',productName:'Tea',price:50,quantity:2}]};
 const payment={merchantId:'merchant-shop',charge:{object:'charge',id:'chrg_live_fixture',livemode:true,
-  amount:10000,currency:'THB',status:'successful',paid:true,captured:true,refunded_amount:0,
+  amount:10000,currency:'THB',status:'successful',paid:true,capture:true,refunded_amount:0,
   metadata:{pokpokShopId:'shop',pokpokOrderId:'order'}}};
 const setup=()=>fixture({'shops/shop/orders/order':structuredClone(order),'shops/shop/products/tea':{stock:10}});
 const args=f=>({...f,shopId:'shop',orderId:'order',actor:'omise',omisePayment:structuredClone(payment)});
@@ -28,13 +28,23 @@ test('verified live Omise evidence writes one online sale and deducts stock once
   assert.equal([...f.docs.keys()].filter(k=>k.includes('/sales/')).length,1);
 });
 test('test payments and mismatched settlement evidence never change real shop records',async()=>{
-  const invalid=[{livemode:false},{paid:false},{captured:false},{status:'pending'},{amount:9999},{currency:'USD'},
+  const invalid=[{livemode:false},{paid:false},{status:'pending'},{amount:9999},{currency:'USD'},
+    {captured_amount:5000},{captured_amount:null},
     {refunded_amount:1},{refunded_amount:undefined},{reversed:true},{id:'chrg_live_other'},
     {metadata:{pokpokShopId:'other',pokpokOrderId:'order'}},{metadata:{pokpokShopId:'shop',pokpokOrderId:'other'}}];
   for(const change of invalid){
     const f=setup(),input=args(f);Object.assign(input.omisePayment.charge,change);
     const before=structuredClone([...f.docs]);await assert.rejects(confirmOrder(input));
     assert.deepEqual([...f.docs],before);
+  }
+});
+
+test('verified paid evidence accepts automatic or later manual capture without a captured flag',()=>{
+  assert.equal(Object.hasOwn(payment.charge,'captured'),false);
+  for(const change of [{},{capture:false},{captured_amount:10000}]) {
+    const evidence=structuredClone(payment);Object.assign(evidence.charge,change);
+    assert.deepEqual(verifyOmisePayment({order,shopId:'shop',orderId:'order',payment:evidence}),
+      {chargeId:binding.chargeId,merchantId:binding.merchantId,amountMinor:10000});
   }
 });
 test('merchant account and server-side live binding are mandatory',()=>{

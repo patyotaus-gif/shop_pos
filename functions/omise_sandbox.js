@@ -56,9 +56,15 @@ function validateCharge(charge, attempt, id) {
     fail('failed-precondition', 'ข้อมูลการชำระไม่ตรงกับรายการทดลอง');
   }
   let status = 'pending';
-  if (charge.status === 'successful' && charge.paid === true && charge.captured === true) status = 'successful';
+  // Omise uses `paid` for settlement. `capture` only requests auto-capture;
+  // observed 2019-05-29 responses have no `captured` flag or captured_amount.
+  if (charge.reversed === true) status = 'reversed';
+  else if (charge.status === 'successful' && charge.paid === true) {
+    if (Number.isSafeInteger(charge.refunded_amount) && charge.refunded_amount > 0) status = 'refunded';
+    else if (charge.refunded_amount === 0 &&
+        (charge.captured_amount === undefined || charge.captured_amount === charge.amount)) status = 'successful';
+  }
   else if (['failed','expired','reversed'].includes(charge.status)) status = charge.status;
-  if (status === 'successful' && charge.refunded_amount > 0) status = 'refunded';
   let authorizeUri = null;
   if (status === 'pending' && charge.authorize_uri) {
     const url = new URL(charge.authorize_uri);
@@ -101,7 +107,7 @@ function handlers({db, FieldValue, assertFounder, api}) {
       const update = validateCharge(charge, data, id);
       // Concurrent status/webhook responses must not undo a verified terminal result.
       if (['successful','refunded','reversed','failed','expired'].includes(data.status) && update.status === 'pending' ||
-          data.status === 'refunded' && update.status === 'successful') return view(id, data);
+          ['refunded','reversed'].includes(data.status) && update.status === 'successful') return view(id, data);
       const orderStatus = update.status === 'successful' ? 'confirmed'
         : ['refunded','reversed'].includes(update.status) ? 'cancelled'
         : ['failed','expired'].includes(update.status) ? 'payment_failed' : 'awaiting_payment';

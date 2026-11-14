@@ -20,7 +20,10 @@ function verifyOmisePayment({order, shopId, orderId, payment}) {
       charge?.metadata?.pokpokShopId !== shopId || charge?.metadata?.pokpokOrderId !== orderId) {
     throw new Error('Omise merchant, order or live payment evidence mismatch');
   }
-  if (charge.status !== 'successful' || charge.paid !== true || charge.captured !== true ||
+  // `paid` proves capture; `capture` is configuration, not payment evidence.
+  // Older Omise API responses omit captured_amount (and have no captured flag).
+  if (charge.status !== 'successful' || charge.paid !== true ||
+      (charge.captured_amount !== undefined && charge.captured_amount !== charge.amount) ||
       charge.reversed === true || charge.refunded_amount !== 0 ||
       String(charge.currency).toUpperCase() !== 'THB' || !Number.isSafeInteger(charge.amount) ||
       charge.amount <= 0 || charge.amount !== minor(order.total) ||
