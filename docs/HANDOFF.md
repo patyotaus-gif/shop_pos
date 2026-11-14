@@ -30,6 +30,14 @@ provider webhooks returned HTTP 200; PromptPay confirmed while Chrome was in the
 background, before the next status poll. Source and audit are pushed through
 `ae9421a`; remote master was read back and matched that commit exactly.
 No APK, Hosting or security changes; native app remains 1.2.78 (95).
+Native follow-up on the same SM-X900 now passed: takeaway payment sheet ->
+founder-only Omise sandbox -> Android Custom Tab -> back to the installed app.
+Two new PromptPay THB 100 TEST attempts covered success and failure. The app
+automatically showed the matching confirmed/payment_failed result on return;
+no manual refresh or new login was needed. Provider webhook deliveries were
+HTTP 200. The original one-item THB 80 cart remained unpaid and intact; cancelled
+the payment sheet and removed only the temporary cart item, restoring zero.
+Card/TrueMoney device proof remains Chrome-only; iOS and real debits untested.
 Minor pre-existing sandbox UI follow-up: the previous success label briefly
 remains visible while a new attempt is being created. The new attempt correctly
 becomes pending; no incorrect backend confirmation was observed.
@@ -50,8 +58,9 @@ status/webhook handlers; failed card remains payment_failed; duplicate callbacks
 retain confirmation time. DB/auth were in-memory fixtures, not deployed endpoints.
 Those earlier local checks made no production Firestore writes or deployment.
 The subsequent release/device checks above wrote only isolated sandbox attempts,
-not real shop orders, stock, sales or live payments. Native/iOS checkout and real
-bank/wallet debits were not tested; Live Mode remains unavailable.
+not real shop orders, stock, sales or live payments. Native PromptPay sandbox
+return is now verified above; iOS and real bank/wallet debits remain untested.
+Live Mode remains unavailable.
 See `docs/omise-sandbox-audit-2026-11-14.md`.
 Login follow-up: after the owner manually opened and signed into `/payment-test/`,
 the SM-X900 screen verified authenticated sandbox access. Tapped only the existing
@@ -318,6 +327,28 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-14 — Verify Omise from the installed Android app
+
+- Owner asked whether testing had started from the app. Previous three-method
+  tablet evidence was Chrome-only; this pass used installed 1.2.78 (95), SM-X900,
+  and the already-authorized test shop/founder session.
+- Opened takeaway checkout with one temporary THB 80 cart item, then the
+  founder-only Omise TEST entry. Its separate THB 100 order opened in a Custom
+  Tab using the native attempt ID and existing browser login.
+- Generated PromptPay TEST QR, used the provider's TEST-only mark-as-paid API,
+  and closed the Custom Tab. Native app automatically showed confirmation;
+  server confirmed at 05:50:08.253 UTC; provider webhook HTTP 200.
+- Created a second native attempt and simulated failed payment. Native return
+  showed payment_failed, with no confirmation timestamp in isolated read-back.
+  Provider failure webhook at 05:51:18.989 UTC returned HTTP 200.
+- Returned to checkout: original THB 80/quantity-one cart and unpaid state were
+  intact. Cancelled checkout, removed only our item, verified zero cart, and
+  restored the sales channel chooser. No real sale, stock or live payment write.
+- Captures are local ignored evidence under `.remember/tmp/omise-native-*`;
+  no account details or test identifiers added to tracked docs. Updated audit
+  and handoff for commit; no source changes or new deployment in this pass.
+- Card/TrueMoney native-return journeys and iOS remain outside this pass.
 
 ### 2026-11-14 — Push Omise release source and device evidence
 

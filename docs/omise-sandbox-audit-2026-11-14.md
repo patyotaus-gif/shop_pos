@@ -269,3 +269,46 @@ TrueMoney test result; no pending attempt remains from these four journeys.
   is a separate frontend follow-up; no new attempt was incorrectly confirmed.
 - Previous revisions/source were retained for rollback: create `00007-xod`,
   status `00007-tik`, webhook `00006-xew`. No rollback was needed.
+
+## Installed Android app follow-up — 2026-11-14
+
+After the owner asked whether the app itself had been tested, used installed
+`app.pokpok.pos` 1.2.78 (95) on the same SM-X900 and the authorized test-shop
+founder session. No APK, Hosting, backend or security changes in this pass.
+
+Started in Sales -> Takeaway with an initially empty cart. Added one temporary
+THB 80 item and opened the native payment sheet. The founder-only Omise test
+entry opened its separate THB 100 test-order screen, then Android Chrome Custom
+Tab. The existing browser session worked without sign-in or Subscribe redirect.
+
+| Native-started journey | Result after closing Custom Tab |
+| --- | --- |
+| Generate PromptPay TEST QR, simulate paid with official TEST API | Native app automatically displayed confirmed; exact native attempt matched backend |
+| Create another native attempt, generate TEST QR, simulate failure | Native app automatically displayed payment_failed; no confirmation timestamp |
+
+The first attempt was created at 05:49:33.527 UTC and confirmed at
+05:50:08.253 UTC. Its actual provider webhook at 05:50:08.001 UTC returned 200.
+The second was created at 05:51:00.966 UTC. Its failure webhook at
+05:51:18.989 UTC returned 200; isolated Firestore read-back showed failed /
+payment_failed. Both simulations validated TEST mode, THB 100 and matching
+attempt/instrument bindings before using the provider's TEST-only action.
+No native refresh button was tapped; returning to the app updated the result.
+
+Returning from sandbox to the payment sheet preserved the one-item THB 80 cart
+and unpaid state. Cancelled payment, removed only the temporary item, verified
+zero items/THB 0, and restored the sales channel chooser. No actual shop sale,
+stock adjustment, cash-round entry or real debit was submitted.
+
+Local ignored evidence: `.remember/tmp/omise-native-test-start-20261114.json`,
+`omise-native-promptpay-qr-20261114.png`,
+`omise-native-promptpay-success-20261114.png`,
+`omise-native-promptpay-failure-20261114.png`,
+`omise-native-cart-preserved-20261114.png`, and
+`omise-native-cart-cleaned-20261114.png` in the same scratch directory.
+Backend results are in `.remember/tmp/omise-deployed-test-results.json`.
+Raw captures may contain the signed-in account, so are not tracked/public assets.
+
+Scope: this proves the native Android sandbox entry/return and two PromptPay
+outcomes. Earlier card and TrueMoney evidence remains **Chrome-only**. It does
+not prove native card/TrueMoney return, iOS, live payments or completing the
+real POS cart through Omise; the sandbox deliberately cannot settle that cart.
