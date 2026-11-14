@@ -309,6 +309,60 @@ Backend results are in `.remember/tmp/omise-deployed-test-results.json`.
 Raw captures may contain the signed-in account, so are not tracked/public assets.
 
 Scope: this proves the native Android sandbox entry/return and two PromptPay
-outcomes. Earlier card and TrueMoney evidence remains **Chrome-only**. It does
-not prove native card/TrueMoney return, iOS, live payments or completing the
-real POS cart through Omise; the sandbox deliberately cannot settle that cart.
+outcomes. The next pass extends native coverage to card and TrueMoney. Neither
+pass proves iOS, live payments or completing the real POS cart through Omise;
+the sandbox deliberately cannot settle that cart.
+
+## Native card and TrueMoney follow-up — 2026-11-14
+
+Completed the owner's requested tests on the same installed Android app
+1.2.78 (95), using the authorized test-shop session. Started from the native
+takeaway payment sheet, then its separate THB 100 sandbox. Each attempt opened
+Android Chrome Custom Tab with its own native-generated identifier.
+
+| Native-started journey | Native result on return | Backend confirmation (UTC) |
+| --- | --- | --- |
+| Official successful test card submitted in checkout | Automatically confirmed | 06:00:02.501 |
+| TrueMoney TEST authorization page: paid | Automatically confirmed | 06:03:58.263 |
+| New TrueMoney attempt: failed | Payment failed; order unconfirmed | No confirmation timestamp |
+| Official insufficient-funds test card | Payment failed; order unconfirmed | No confirmation timestamp |
+
+The failure card is from the provider's [official testing documentation](https://docs.omise.co/api-testing).
+All card and wallet details used were provider test fixtures. Browser prompts
+to save test cards were declined; no saved real payment instrument was selected.
+
+Closed Custom Tab using its X control after each outcome. Every native screen
+displayed the result for the same original identifier automatically, with no
+manual refresh, login or Subscribe redirect. Exact-ID backend read-back after
+the fourth test verified all four attempts had testMode true, amount 10000
+satang, THB currency and the expected method/status/orderStatus. Both failures
+had no confirmedAt value. The TrueMoney failure attempt was created at
+06:05:21.738 UTC; the card failure at 06:10:52.885 UTC.
+
+Actual provider webhook requests returned HTTP 200: card success at
+06:00:02.605 UTC, TrueMoney paid at 06:03:57.990 UTC, TrueMoney failed at
+06:05:50.193 UTC and card failure at 06:10:53.754 UTC. Card confirmation may
+also be reconciled from its synchronous create response; these timestamps do
+not imply its webhook was the first confirmation path.
+
+Returned to the native payment sheet and verified the original one-item THB 80
+cart stayed unpaid and intact. Cancelled payment, removed only the temporary
+item, verified zero items/THB 0, and restored the sales channel chooser.
+No actual shop sale, stock adjustment, cash-round entry or real debit was submitted.
+This pass required no code changes, APK, Hosting or backend deployment.
+
+Local ignored screenshots in `.remember/tmp/`:
+
+- `omise-native-card-success-20261114.png`
+- `omise-native-card-failure-20261114.png`
+- `omise-native-truemoney-success-20261114.png`
+- `omise-native-truemoney-failure-20261114.png`
+- `omise-native-card-wallet-cart-preserved-20261114.png`
+- `omise-native-card-wallet-cart-cleaned-20261114.png`
+
+Together with the earlier native PromptPay pass, success and failure are now
+verified for all three sandbox channels on physical Android. This verifies
+app entry, provider TEST handling and automatic native status on return; it
+does not establish iOS behavior, Live Mode readiness or settlement of a real
+POS cart. The previously documented transient label during new-attempt creation
+remains a separate UI follow-up.

@@ -37,7 +37,15 @@ automatically showed the matching confirmed/payment_failed result on return;
 no manual refresh or new login was needed. Provider webhook deliveries were
 HTTP 200. The original one-item THB 80 cart remained unpaid and intact; cancelled
 the payment sheet and removed only the temporary cart item, restoring zero.
-Card/TrueMoney device proof remains Chrome-only; iOS and real debits untested.
+Native card and TrueMoney follow-up completed on 2026-11-14 at 06:12 UTC.
+Four new THB 100 TEST attempts passed: card success, card insufficient funds,
+TrueMoney paid and TrueMoney failed. Returning from Custom Tab automatically
+displayed each matching native attempt's result without refresh or new login.
+Exact-ID backend read-back agrees; both failures have no confirmation timestamp.
+Actual provider callbacks returned HTTP 200. The THB 80 POS cart stayed unpaid;
+removed only the temporary item and restored zero items and the channel chooser.
+All three payment methods now have native Android sandbox success/failure evidence.
+iOS, real debits and settling a real POS cart through Omise remain untested.
 Minor pre-existing sandbox UI follow-up: the previous success label briefly
 remains visible while a new attempt is being created. The new attempt correctly
 becomes pending; no incorrect backend confirmation was observed.
@@ -58,8 +66,8 @@ status/webhook handlers; failed card remains payment_failed; duplicate callbacks
 retain confirmation time. DB/auth were in-memory fixtures, not deployed endpoints.
 Those earlier local checks made no production Firestore writes or deployment.
 The subsequent release/device checks above wrote only isolated sandbox attempts,
-not real shop orders, stock, sales or live payments. Native PromptPay sandbox
-return is now verified above; iOS and real bank/wallet debits remain untested.
+not real shop orders, stock, sales or live payments. Native Android sandbox
+return for all three methods is now verified above; iOS and real debits remain untested.
 Live Mode remains unavailable.
 See `docs/omise-sandbox-audit-2026-11-14.md`.
 Login follow-up: after the owner manually opened and signed into `/payment-test/`,
@@ -327,6 +335,25 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-14 — Complete native card and TrueMoney sandbox testing
+
+- Owner requested testing in the installed app. On SM-X900 1.2.78 (95), opened
+  the sandbox from the takeaway payment sheet and used Android Custom Tabs.
+- Card TEST success confirmed at 06:00:02.501 UTC; TrueMoney TEST success at
+  06:03:58.263 UTC. TrueMoney TEST failure and the official insufficient-funds
+  test card stayed failed/payment_failed with no confirmation timestamp.
+- All four native screens showed the exact original attempt's result on return,
+  without another login or a manual status refresh. Exact-ID read-back verified
+  testMode true, THB 100, method, status and confirmation timestamps.
+- Actual provider webhook requests for all four outcomes returned HTTP 200.
+  Together with the earlier native PromptPay pair, all three channels now have
+  success and failure coverage on physical Android. iOS and live debits are untested.
+- The original THB 80 cart remained unpaid and intact. Cancelled the payment
+  sheet, removed only the temporary item, verified zero items/THB 0 and returned
+  to the sales channel chooser. No actual POS sale was submitted.
+- Updated `docs/omise-sandbox-audit-2026-11-14.md`; raw captures remain ignored
+  local evidence. This pass changes documentation only; no deploy/version bump.
 
 ### 2026-11-14 — Verify Omise from the installed Android app
 
