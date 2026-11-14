@@ -13,7 +13,20 @@ Rules:
 
 ---
 
-## Current state (updated 2026-11-13)
+## Current state (updated 2026-11-14)
+
+**Omise sandbox audit (blocking defect reproduced, not fixed/deployed):** actual
+Omise Test Mode card, TrueMoney and PromptPay charges succeeded, but the current
+local backend handler leaves all three `pending` / `awaiting_payment` because
+`functions/omise_sandbox.js:59` requires an absent `captured` response field.
+Existing passing tests invent that field; the internal future-live verifier
+has the same assumption. Four THB 100 test charges were created (three successful,
+one deliberately failed); provider-backed checks used in-memory DB/auth, with
+no live sale or production Firestore writes. Unit/browser/emulator/widget checks
+pass; the real-shaped three-channel reproduction fails as expected. Authenticated
+deployed end-to-end and tablet payment testing remain unverified. ADB launch was
+rejected by automatic approval review (`blocked by policy`). No app/backend
+deployment or security-setting change. See `docs/omise-sandbox-audit-2026-11-14.md`.
 
 **Kitchen screenshot correction (published and verified):** source `a1f4fbe`
 is pushed; Hosting `427f2873006b59f9` went live 2026-11-13 15:17:39 Sydney. The owner
@@ -271,6 +284,31 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-14 — Audit Omise Test Mode with actual provider responses
+
+- Requested inspection only; recorded findings without changing application or
+  backend code, payment mode, App Check, real orders or stock.
+- Existing 24 Node tests, mocked browser flow, Java 21 Firestore integration and
+  20 Flutter payment widget tests passed with exit 0. Initial emulator startup
+  with Java 17 failed; corrected PATH to the existing JBR 21 and reran successfully.
+- Used actual Omise Test Mode keys to create four THB 100 charges with isolated
+  in-memory DB/auth. Card, TrueMoney and PromptPay succeeded at the provider;
+  insufficient-funds card correctly failed. No production attempt writes or
+  real financial movement. Test history retains these four charges.
+- Reproduced missing-`captured` schema mismatch in both local polling and webhook
+  handling: all three successful payments remain awaiting payment. Three minimal
+  provider-shaped assertions exit 1. Passing old fixtures use an invented field.
+  Same assumption found in the internal future-live verifier; no live endpoint
+  incident is claimed. Fix and provider-shaped regression coverage are pending.
+- Read-only deployed checks passed page hashes, signed-out rejection, function
+  availability and test-key/channel availability. One old pending attempt is
+  expired at Omise; reconciliation needs follow-up. Deployed backend byte identity
+  and authenticated webhook/polling end-to-end were not established.
+- Automatic approval review blocked the ADB launch/forward command, stating only
+  `blocked by policy`; no workaround attempted. No physical tablet payment result
+  claimed. Detailed scope, evidence and next steps are in
+  `docs/omise-sandbox-audit-2026-11-14.md`.
 
 ### 2026-11-13 — Publish native two-column kitchen screenshot
 
