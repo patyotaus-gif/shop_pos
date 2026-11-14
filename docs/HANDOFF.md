@@ -15,14 +15,21 @@ Rules:
 
 ## Current state (updated 2026-11-15)
 
-**Paperclip connection request:** owner asked to connect the GitHub project named
-Paperclip. GitHub connector search works and returns several projects with that
-name; `paperclipai/paperclip` is the likely AI-team orchestration candidate. Read
-its README and official installation guide. Asked the owner to identify whether
-they want a new installation of this project or to connect GitHub to an existing
-Paperclip instance; reply pending. Plugin catalog search returned no Paperclip
-match. Local Node is v22.18.0; current Paperclip docs require at least v24.11.0.
-No installation, account connection, credential change or agent run performed.
+**Paperclip installed locally:** owner confirmed `paperclipai/paperclip` for
+Pokpok on 2026-11-15. Version `2026.1106.0` is installed separately at
+`D:\PokpokTools\paperclip`, using checksum-verified portable Node v24.22.3;
+Pokpok's system Node v22.18.0 is unchanged. Dashboard is
+http://127.0.0.1:3100 in loopback-only `local_trusted` mode. Company `Pokpok` and
+project `Pokpok POS` point to `C:\Users\Dav\shop_pos` and its GitHub repository.
+API, UI HTML/assets, project persistence after restart and graceful shutdown were
+verified locally. Desktop shortcuts open/stop the instance. Initial database
+backup was created; local backups run hourly while Paperclip is running.
+There are no agents/provider credentials configured; automatic heartbeats are
+disabled. GitHub OAuth and AI execution are not connected/tested. The bundled
+Copilot runtime installer reports Windows unsupported. Automated browser capture
+was policy-blocked, so no rendered-UI verification is claimed. Initial C: install
+ran out of space; its partial files are retained on D: as `incomplete-node_modules`.
+See `docs/paperclip-local-setup.md`. No production changes or paid AI runs.
 
 **Payment-provider research:** reviewed all 46 pages of the sales-supplied
 `Payment.pdf` on 2026-11-15. It is an INET e-Payment sales training deck, not a
@@ -366,6 +373,33 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-15 - Install isolated Paperclip for Pokpok
+
+- Confirmed owner-requested repository and installed pinned npm release
+  `2026.1106.0` with official Node v24.22.3, verified against its SHA256 manifest.
+  Kept Pokpok's global Node/runtime and application code unchanged.
+- Initial C: installation hit `ENOSPC`. Stopped that installer and moved only
+  the new Paperclip directory to `D:\PokpokTools\paperclip`. Preserved the partial
+  dependency tree and completed a fresh installation with D: cache/temp paths.
+- Onboarded a separate local PostgreSQL instance, restricted data ACLs, created
+  company `Pokpok` and project `Pokpok POS`, and verified the checkout/repository
+  mapping. No agents were created; board approval is required for new agents and
+  the launcher's heartbeat scheduler is disabled.
+- Added external local start/stop scripts and Desktop shortcuts. The first stop
+  implementation terminated Node before PostgreSQL could shut down; replaced it
+  with a local PID-bound stop request that invokes Paperclip's SIGINT handler.
+  Verified company/project persistence, clean shutdown logs and closed HTTP/DB
+  ports. Started the instance again for the owner.
+- Local verification: CLI version; 11 critical doctor checks; actual Windows
+  encryption-key ACL; HTTP 200 for UI HTML/JS/CSS; healthy API; loopback listeners;
+  matching workspace path; zero agents; database backup created. The doctor's
+  POSIX-mode warning does not reflect the restrictive Windows ACL.
+- Automatic approval review blocked browser screenshot capture with only
+  `blocked by policy`; rendered UI was not verified. Copilot bundled runtime
+  reports `unsupported-platform (win32-x64)`; no AI adapter execution is claimed.
+- Documentation only inside the Pokpok repository. No GitHub push, app release,
+  Firebase deployment, payment changes or production data access.
 
 ### 2026-11-15 - Identify requested Paperclip integration
 
