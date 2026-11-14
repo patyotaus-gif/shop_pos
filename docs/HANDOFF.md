@@ -13,13 +13,27 @@ Rules:
 
 ---
 
-## Current state (updated 2026-11-14)
+## Current state (updated 2026-11-15)
 
-**Payment-provider research:** owner asked about Thai Dot Com Payment.
-Public company pages describe a payment gateway, REST API and sandbox; INET's
-2024 annual report identifies it as an associate. Pricing, platform/submerchant
-onboarding, settlement terms and current regulatory scope remain unverified.
-No provider change or contact was authorized; Omise sandbox state is unchanged.
+**Payment-provider research:** reviewed all 46 pages of the sales-supplied
+`Payment.pdf` on 2026-11-15. It is an INET e-Payment sales training deck, not a
+Pokpok quotation. Page 11 lists QR THB 2/transaction, cards 3.00-3.50%, and no
+integration or settlement transfer fee; VAT, minimums and TrueMoney fees remain
+unspecified. API/dynamic QR, wallets and real-time payment notification are
+advertised, but separate-shop onboarding, merchant bindings and settlement terms
+need provider confirmation and current API/sandbox documentation. Page 5 names
+Internet Thailand PCL as licensee; the official BOT provider list confirms its
+payment-acceptance support and payment-on-behalf listings. This does not establish
+which entity will contract with Pokpok/shops. The PCI certificate reproduced on
+page 13 expires 2026-09-13; request an updated document, without inferring that
+current certification has lapsed. Pages 8/35 identify existing POS partnerships.
+Public company pages and INET's 2024 annual report previously identified Thai Dot
+Com Payment as an associate. Compared deck fees against Omise's current official
+Thailand pricing (PromptPay 1.65%, cards 3.65%, standard TrueMoney 2.65%, excluding
+7% VAT; transfer THB 20 for amounts up to THB 2 million). Neither public pricing
+nor deck pricing confirms platform-specific commercial terms.
+No provider change or external contact; Omise sandbox state is unchanged. The
+source PDF and its case-study customer details were not added to the repository.
 
 **Omise confirmation correction (backend deployed; tablet testing passed):**
 Owner authorized release and testing. Source `d262183` deployed on 2026-11-14
@@ -343,6 +357,21 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-15 - Review INET payment sales deck
+
+- Read the sales-supplied PDF locally: extracted text and visually inspected all
+  46 rendered pages, with enlarged checks of pricing, licence and PCI pages.
+- Verified Internet Thailand PCL entries on the official BOT provider list and
+  current comparison fees on Omise's Thailand pricing page. Page references and
+  provider-confirmation gaps are included in the owner's response.
+- Key unresolved questions: multi-merchant contracts and separate settlement,
+  tax/minimum/refund/wallet fees, settlement cutoffs, current PCI evidence and
+  API callback verification/status lookup. No inference that a generic merchant
+  payment diagram proves support for Pokpok's independent shop accounts.
+- Documentation only; no app/backend edits, payment requests, provider contact,
+  deployment or device test. Source PDF stays outside git; local renderings are
+  ignored temporary review files. Handoff committed locally; no push requested.
 
 ### 2026-11-14 — Research Thai Dot Com Payment for the owner
 
