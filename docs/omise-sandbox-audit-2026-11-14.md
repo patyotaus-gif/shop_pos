@@ -105,6 +105,20 @@ Official test references: [API testing](https://docs.omise.co/api-testing),
    sandbox attempts, then complete all three journeys on the tablet.
 4. Reconcile the old expired attempt and verify reopening does not leave it stuck.
 
+## Login navigation follow-up
+
+The owner reported reaching Subscribe when trying to log in for the tablet test.
+On 2026-11-14, live signed-out Edge reproduced the homepage's **เข้าสู่ระบบ**
+link opening `/subscribe/` (subscription management). Direct `/payment-test/`
+stayed on the sandbox page and displayed its own **เข้าสู่ระบบด้วย Google**
+button. Both the sandbox HTML and JS still matched local hashes; `/payment-test`
+without a trailing slash canonicalized to `/payment-test/`, not Subscribe.
+The sandbox uses popup/email sign-in and contains no Subscribe redirect.
+The exact button the owner tapped and the authenticated tablet result were not
+observed, so this is a verified navigation explanation, not a reproduced OAuth
+redirect defect. Open the sandbox URL directly and sign in there; no subscription
+purchase is required for the founder-only sandbox. No source change or deployment.
+
 Local sanitized audit evidence is under `.remember/tmp/` in
 `omise-audit-20261114-results.json`, `omise-provider-probe-20261114-results.json`
 and `omise-reconcile-probe-20261114-results.json`. No credentials or customer

@@ -27,6 +27,10 @@ pass; the real-shaped three-channel reproduction fails as expected. Authenticate
 deployed end-to-end and tablet payment testing remain unverified. ADB launch was
 rejected by automatic approval review (`blocked by policy`). No app/backend
 deployment or security-setting change. See `docs/omise-sandbox-audit-2026-11-14.md`.
+Login follow-up: live signed-out Edge verified the homepage login goes to
+`/subscribe/`, while direct `/payment-test/` stays on its separate sandbox login.
+The owner's exact tablet click/authenticated result is not observed; direct
+sandbox login guidance given. No subscription purchase required for the sandbox.
 
 **Kitchen screenshot correction (published and verified):** source `a1f4fbe`
 is pushed; Hosting `427f2873006b59f9` went live 2026-11-13 15:17:39 Sydney. The owner
@@ -284,6 +288,15 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-14 — Check reported Subscribe navigation during sandbox login
+
+- Live signed-out Edge reproduced homepage login opening `/subscribe/`; direct
+  `/payment-test/` remained on sandbox login with Google available. Sandbox HTML
+  and JS match source; slashless route canonicalizes correctly. Check exited 0.
+- Sandbox source has no Subscribe redirect; owner's exact tablet click and
+  authenticated flow remain unobserved. Explained the separate login entry and
+  directed the owner to `/payment-test/`. No code, payment or deployment change.
 
 ### 2026-11-14 — Audit Omise Test Mode with actual provider responses
 
