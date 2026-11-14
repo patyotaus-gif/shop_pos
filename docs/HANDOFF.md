@@ -15,6 +15,15 @@ Rules:
 
 ## Current state (updated 2026-11-15)
 
+**Paperclip connection request:** owner asked to connect the GitHub project named
+Paperclip. GitHub connector search works and returns several projects with that
+name; `paperclipai/paperclip` is the likely AI-team orchestration candidate. Read
+its README and official installation guide. Asked the owner to identify whether
+they want a new installation of this project or to connect GitHub to an existing
+Paperclip instance; reply pending. Plugin catalog search returned no Paperclip
+match. Local Node is v22.18.0; current Paperclip docs require at least v24.11.0.
+No installation, account connection, credential change or agent run performed.
+
 **Payment-provider research:** reviewed all 46 pages of the sales-supplied
 `Payment.pdf` on 2026-11-15. It is an INET e-Payment sales training deck, not a
 Pokpok quotation. Page 11 lists QR THB 2/transaction, cards 3.00-3.50%, and no
@@ -357,6 +366,18 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-15 - Identify requested Paperclip integration
+
+- Verified public repository access through the connected GitHub plugin and read
+  https://github.com/paperclipai/paperclip/blob/master/README.md plus
+  https://docs.paperclip.ing/reference/cli/installation/.
+- Several unrelated repositories share the Paperclip name. Clarification about
+  the intended project and new versus existing installation is pending; do not
+  treat the candidate as an owner-confirmed choice yet.
+- Plugin discovery returned no Paperclip match. Read-only prerequisite check
+  found Node v22.18.0 versus documented minimum v24.11.0. No tool installation,
+  project modification, account permission change, deployment or agent execution.
 
 ### 2026-11-15 - Review INET payment sales deck
 
