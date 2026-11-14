@@ -27,11 +27,14 @@ THB 100 TEST journeys passed for card, PromptPay and TrueMoney. TrueMoney failur
 remains payment_failed without confirmation. Six repeated webhook requests (two
 per successful method) preserve the original confirmation timestamps. Actual
 provider webhooks returned HTTP 200; PromptPay confirmed while Chrome was in the
-background, before the next status poll. Git push is the remaining release step.
+background, before the next status poll. Source and audit are pushed through
+`ae9421a`; remote master was read back and matched that commit exactly.
 No APK, Hosting or security changes; native app remains 1.2.78 (95).
 Minor pre-existing sandbox UI follow-up: the previous success label briefly
 remains visible while a new attempt is being created. The new attempt correctly
 becomes pending; no incorrect backend confirmation was observed.
+Credential follow-up: origin now uses a clean HTTPS URL and credential manager;
+the previously exposed GitHub token still needs replacement by the owner.
 
 Implementation and earlier local verification:
 removed the nonexistent `captured` response requirement from sandbox reconciliation
@@ -315,6 +318,15 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-14 — Push Omise release source and device evidence
+
+- Committed release/device evidence as `ae9421a` and pushed all five outgoing
+  commits, including fix `d262183`, to origin/master. Read-back matched the full
+  local commit SHA; working tree was clean after the push.
+- Backend deployment and isolated tablet/provider checks are complete as
+  documented below. This final handoff records the verified push; the small
+  sandbox UI follow-up and GitHub token replacement remain outstanding.
 
 ### 2026-11-14 — Complete deployed Omise tablet and webhook verification
 
