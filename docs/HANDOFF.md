@@ -15,7 +15,25 @@ Rules:
 
 ## Current state (updated 2026-11-14)
 
-**Omise confirmation correction (fixed and verified locally, not deployed):**
+**Omise confirmation correction (backend deployed; tablet testing passed):**
+Owner authorized release and testing. Source `d262183` deployed on 2026-11-14
+05:26 UTC to the three sandbox functions only: create `00008-vit`, status
+`00008-pos`, webhook `00007-men`. All are ACTIVE; secret version 3 and instance
+limits unchanged. Downloaded all three deployed source archives; five reviewed
+runtime/package files match local SHA-256 hashes for each function.
+27 focused tests and mocked browser checks passed again, and fresh read-only
+Codex review of `55d187e..d262183` found no findings. On SM-X900 Chrome, isolated
+THB 100 TEST journeys passed for card, PromptPay and TrueMoney. TrueMoney failure
+remains payment_failed without confirmation. Six repeated webhook requests (two
+per successful method) preserve the original confirmation timestamps. Actual
+provider webhooks returned HTTP 200; PromptPay confirmed while Chrome was in the
+background, before the next status poll. Git push is the remaining release step.
+No APK, Hosting or security changes; native app remains 1.2.78 (95).
+Minor pre-existing sandbox UI follow-up: the previous success label briefly
+remains visible while a new attempt is being created. The new attempt correctly
+becomes pending; no incorrect backend confirmation was observed.
+
+Implementation and earlier local verification:
 removed the nonexistent `captured` response requirement from sandbox reconciliation
 and the internal future-live evidence verifier. Confirmation requires verified
 successful/paid status, no refund/reversal, matching amount/currency/bindings and,
@@ -27,9 +45,10 @@ Read back the four existing THB 100 TEST charges from Omise (16 GETs, no new
 charges): card, TrueMoney and PromptPay now confirm through the corrected local
 status/webhook handlers; failed card remains payment_failed; duplicate callbacks
 retain confirmation time. DB/auth were in-memory fixtures, not deployed endpoints.
-No production Firestore writes, live sales, deployment or security-setting changes.
-The tablet/server still use the earlier backend until a scoped release. Successful
-deployed polling and actual webhook delivery still need verification after release.
+Those earlier local checks made no production Firestore writes or deployment.
+The subsequent release/device checks above wrote only isolated sandbox attempts,
+not real shop orders, stock, sales or live payments. Native/iOS checkout and real
+bank/wallet debits were not tested; Live Mode remains unavailable.
 See `docs/omise-sandbox-audit-2026-11-14.md`.
 Login follow-up: after the owner manually opened and signed into `/payment-test/`,
 the SM-X900 screen verified authenticated sandbox access. Tapped only the existing
@@ -296,6 +315,41 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-14 — Complete deployed Omise tablet and webhook verification
+
+- Source `d262183` is deployed to create `00008-vit`, status `00008-pos` and
+  webhook `00007-men`. Downloaded exact-generation source archives for all three;
+  runtime/package SHA-256 checks match the reviewed local files.
+- SM-X900 Chrome `/payment-test/`: card, PromptPay and TrueMoney each confirmed
+  an isolated THB 100 TEST attempt. TrueMoney's provider failure action returned
+  payment_failed, with no confirmation timestamp. No real money or shop writes.
+- Actual provider webhooks returned HTTP 200. PromptPay confirmed at 05:28:34 UTC
+  while Chrome was on Android HOME, before the next foreground status request.
+- Replayed each successful charge callback twice; all six returned HTTP 200 and
+  retained original confirmation times. Read-only Firestore checks corroborate
+  all four final attempt states. Tablet left on the completed failed-test result.
+- Local 27-test suite, mocked browser checks and fresh source review passed.
+  No APK/Hosting release; native/iOS/real-payment journeys were not exercised.
+- Recorded the transient stale-success-label issue in the sandbox UI as a
+  separate follow-up. Audit updated; source and evidence are ready for Git push.
+
+### 2026-11-14 — Omise sandbox correction deployed; tablet tests started
+
+- Owner requested release and testing. Deployed only create/status/webhook from
+  `d262183`; all three report ACTIVE at 05:26 UTC. Secret version and limits
+  unchanged; no app/Hosting/Live Mode/App Check changes. Prior revisions and
+  source archive saved locally for rollback.
+- Fresh Codex read-only review of four outgoing commits found no findings.
+  Focused 27-test suite and mocked browser regression rerun passed (exit 0).
+- First actual SM-X900 Chrome card journey returned successful/confirmed at
+  05:27 UTC. Hosted form used only provider test card data; declined browser's
+  offer to save that card. PromptPay/TrueMoney and real webhook checks ongoing.
+- Credential incident: an existing token-bearing Git remote URL was exposed by
+  a status command. Removed credentials from the URL and stored via configured
+  credential manager. Owner notified to replace the exposed token; rotation is
+  not verified. No secret value recorded here. Outgoing-ref secret check passed.
+
 
 ### 2026-11-14 — Correct Omise paid-charge confirmation locally
 

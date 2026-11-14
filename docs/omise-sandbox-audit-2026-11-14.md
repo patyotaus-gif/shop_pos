@@ -1,12 +1,14 @@
 # Omise sandbox audit — 2026-11-14
 
-Scope: inspect and test the existing sandbox. Source baseline: `55d187e`.
-No application/backend code change or deployment was made during this audit.
-No real sale, stock change, live payment or security-enforcement change occurred.
+Original audit scope: inspect and test the existing sandbox at source `55d187e`.
+The original audit made no code change or deployment; the owner subsequently
+authorized the correction and release documented below. No real sale, stock
+change, live payment or security-enforcement change occurred.
 
 **Update after owner-authorized correction:** the defect below is now fixed and
-verified locally. It is **not deployed**. The original audit evidence is preserved
-below; see the final correction section for current results and remaining checks.
+verified locally and **deployed as source `d262183`**. All three payment methods
+passed on the physical tablet in Test Mode. The original audit evidence is
+preserved below; see the final release section for current results and limits.
 
 ## Original audit result: automatic confirmation was blocked
 
@@ -194,9 +196,76 @@ All duplicate callbacks preserved confirmation time. Sanitized read-back evidenc
 `.remember/tmp/omise-fixed-readback-20261114-results.json`. Real test identifiers,
 keys and customer details are not included here.
 
-**Release status:** local code/docs only; no push, backend deployment, app build,
-mode change or App Check change. The deployed backend still has the original
-predicate. Before claiming tablet payment completion, deploy the scoped backend
-fix, verify authenticated polling and actual provider webhook delivery, and run
-the three isolated sandbox journeys on the device. Do not use real shop sales or
-enable Live Mode for these checks.
+**Status at the end of local verification:** code/docs only. Deployment and
+device verification were subsequently authorized and completed as follows.
+
+## Release and physical tablet verification — 2026-11-14
+
+Deployed only `omiseSandboxCreate`, `omiseSandboxStatus` and
+`omiseSandboxWebhook` to `shop-pos-89294`, `asia-southeast1`, at 05:26 UTC.
+All three are ACTIVE on Node.js 22:
+
+| Function | Deployed revision |
+| --- | --- |
+| Create | `omisesandboxcreate-00008-vit` |
+| Status | `omisesandboxstatus-00008-pos` |
+| Webhook | `omisesandboxwebhook-00007-men` |
+
+Downloaded each function's exact-generation deployment source archive and
+compared `omise_sandbox.js`, `online_payment_evidence.js`, `index.js`,
+`package.json` and `package-lock.json` with reviewed local source. All match.
+All archives have SHA-256
+`c2d8671b28e818caf62970a4a5ee4e8194635ff5c2328d9f46b5f2e3dad89661`.
+Test secret version 3, instance limits, authentication and App Check settings
+were unchanged. No Hosting deployment, APK build or version bump was required;
+the native app remains 1.2.78 (95).
+
+Before deployment, the 27 focused tests and mocked browser checks passed again.
+A fresh read-only Codex review of `55d187e..d262183` found no defects. This was
+source review; the following provider/device evidence is separate.
+
+### Device and provider results
+
+Used the owner's already-authenticated Samsung SM-X900 Chrome page at
+`/payment-test/`. Each new attempt uses THB 100 of simulated money and writes
+only `omiseSandboxAttempts`.
+
+| Physical tablet journey | Observed final result | Confirmation time (UTC) |
+| --- | --- | --- |
+| Official successful test card entered in the form | successful / confirmed | 05:27:08.627 |
+| PromptPay QR generated; official TEST API marks it paid | successful / confirmed | 05:28:34.451 |
+| TrueMoney redirects to provider TEST page; select paid and return | successful / confirmed | 05:32:55.528 |
+| Second TrueMoney attempt; select failed and return | failed / payment_failed | No confirmation timestamp |
+
+For PromptPay, moved Chrome to the background using Android HOME before the
+official test-payment action. The provider webhook reached the deployed revision
+at 05:28:34.195 UTC (HTTP 200), and the attempt confirmed at 05:28:34.451 UTC.
+The prior status poll was 05:28:25.319 UTC and the next was 05:31:29.170 UTC.
+This proves the deployed webhook confirmed independently of browser polling.
+Returning to Chrome displayed success without a manual status-refresh tap.
+
+Actual provider webhook deliveries also returned HTTP 200 for card and both
+TrueMoney outcomes. TrueMoney success arrived at 05:32:55.300 UTC; failure at
+05:37:03.896 UTC. The return page restored the signed-in session and displayed
+the matching result. Failed payment did not confirm an order.
+
+Repeated each successful charge callback twice against the deployed webhook.
+All six requests returned HTTP 200; read-back by exact attempt ID verified all
+three original confirmation timestamps were unchanged. Posted callbacks contain
+only the charge ID; the backend fetches payment evidence from Omise itself.
+
+Sanitized machine results: `.remember/tmp/omise-deployed-test-results.json`.
+Raw device captures and identifier-bearing audit files remain in ignored local
+scratch storage, not in the repository. Tablet is left on the completed failed
+TrueMoney test result; no pending attempt remains from these four journeys.
+
+### Limits and follow-up
+
+- These are physical-tablet **Chrome sandbox** tests, not native app/iOS checkout
+  tests or actual bank/card/wallet debits. Live Mode remains unavailable.
+- No real shop order, stock, sales, accounting or cash-round data was created.
+- Existing sandbox UI briefly retains the previous success label while creating
+  a new attempt, then correctly displays pending. This transient display issue
+  is a separate frontend follow-up; no new attempt was incorrectly confirmed.
+- Previous revisions/source were retained for rollback: create `00007-xod`,
+  status `00007-tik`, webhook `00006-xew`. No rollback was needed.
