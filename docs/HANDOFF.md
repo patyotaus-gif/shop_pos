@@ -15,6 +15,12 @@ Rules:
 
 ## Current state (updated 2026-11-14)
 
+**Payment-provider research:** owner asked about Thai Dot Com Payment.
+Public company pages describe a payment gateway, REST API and sandbox; INET's
+2024 annual report identifies it as an associate. Pricing, platform/submerchant
+onboarding, settlement terms and current regulatory scope remain unverified.
+No provider change or contact was authorized; Omise sandbox state is unchanged.
+
 **Omise confirmation correction (backend deployed; tablet testing passed):**
 Owner authorized release and testing. Source `d262183` deployed on 2026-11-14
 05:26 UTC to the three sandbox functions only: create `00008-vit`, status
@@ -337,6 +343,22 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-14 — Research Thai Dot Com Payment for the owner
+
+- Checked public company information: payment channels/services and API sandbox
+  are advertised at https://www.thaidotcompayment.co.th/ and
+  https://www.thaidotcompayment.co.th/th/connection. Direct fetches timed out;
+  search-indexed official page content was available. No sandbox account tested.
+- INET 2024 One Report, printed page 148, identifies the company as an associate
+  held by Mandala Communication (30.98%) and Thai Dot Com (7.50%); historical
+  disclosure, not verification of today's shareholder register. Source:
+  https://ir.inet.co.th/api/v1/file/cdc5abef-5c3b-4849-b77d-43c91387d516.pdf
+- Public evidence reviewed does not establish an applicable price quotation,
+  PromptPay/TrueMoney-specific contract terms, submerchant support, settlement
+  destination or current regulatory scope. Recommend obtaining these before
+  comparing total cost with Omise. No contact, integration, deployment, payment
+  or security configuration change performed; this is research only.
 
 ### 2026-11-14 — Complete native card and TrueMoney sandbox testing
 
