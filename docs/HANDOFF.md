@@ -50,7 +50,8 @@ See `docs/paperclip-local-setup.md`. No production changes or paid AI runs.
 Later on 2026-11-15 the API showed CEO `ready`/`idle` (setup finished) with
 default instructions only and still no tasks. The owner asked for a CEO role
 plan: `docs/paperclip-ceo-role.md` (duties, authority limits, phased agent team,
-first tasks, Instructions text to paste). Not applied to Paperclip yet.
+first tasks, Instructions text to paste). The Instructions block is now written
+into CEO`s managed AGENTS.md (owner confirmed); execution settings unchanged.
 
 **Payment-provider research:** reviewed all 46 pages of the sales-supplied
 `Payment.pdf` on 2026-11-15. It is an INET e-Payment sales training deck, not a
@@ -394,6 +395,21 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-15 — CEO instructions written into Paperclip (owner confirmed)
+
+- Owner answered "ยืนยัน" to applying the Instructions block. Wrote the §8 text
+  of `docs/paperclip-ceo-role.md` to CEO's managed bundle entry file
+  `AGENTS.md` via `PUT /api/agents/<id>/instructions-bundle/file` on loopback,
+  guarded by the previous 41-byte default and its `baseHash`.
+- Result: 5,118 bytes, 42 lines; API read-back equals the source block and the
+  file on disk under `D:\PokpokTools\paperclip\data\...\instructions\` matches.
+  Paperclip records this as an instruction revision (board source), so it can
+  be restored from the agent's Revisions page.
+- Unchanged and still the owner's call: `dangerouslyBypassApprovalsAndSandbox`
+  (true), 20 concurrent runs, budget 0 = unlimited. No agent, task or run was
+  created; GitHub push of the docs commits was blocked by the local permission
+  classifier and is pending.
 
 ### 2026-11-15 — CEO agent role plan for Paperclip (docs only)
 
