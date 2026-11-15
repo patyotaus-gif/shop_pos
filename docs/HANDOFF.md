@@ -379,6 +379,13 @@ or triggered; its Codemagic workflow does not run automatically on push.
 
 ## Log
 
+### 2026-11-15 — Identify the AI account connection control
+
+- Owner runtime screenshots show an empty Connection selector under Codex.
+  Installed UI source confirms its `Connect an account...` menu action and the
+  OpenAI `ChatGPT subscription` label. Added that navigation to the setup guide.
+- Guidance only; sign-in, saved connection and agent execution remain unverified.
+
 ### 2026-11-15 — Clarify CEO configuration navigation
 
 - Owner screenshot shows CEO Overview with a Harness / Runtime navigation item

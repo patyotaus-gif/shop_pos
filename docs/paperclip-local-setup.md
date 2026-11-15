@@ -99,7 +99,11 @@ The owner subsequently created a `CEO` agent. A read-only API check found:
   `Logged in using ChatGPT`; this is not proof of a successful Paperclip run.
 
 Open **CEO** -> **Harness / Runtime** (or **Configure** in the Overview runtime
-card) to review its configuration and AI account choice, then use **Resume**
+card). Under **Adapter**, open **Connection** -> **Choose a connection** ->
+**Connect an account...**. The installed account chooser identifies the OpenAI
+subscription option as **ChatGPT subscription**. Complete sign-in in the provider
+window, select the saved connection and use **Save changes**. Review the agent's
+execution settings, then use **Resume**
 when ready. Create a **New Task**, select **Pokpok POS**, and assign **CEO**.
 For an initial task, request a read-only summary of `AGENTS.md`, `docs/HANDOFF.md`
 and the project structure; explicitly exclude code changes, commits, pushes,
