@@ -411,6 +411,9 @@ or triggered; its Codemagic workflow does not run automatically on push.
   the main workflows, a four-phase activation plan with gates, standard agent
   settings (1 run, no heartbeat, bypass off for file-editing agents), and open
   decisions (worktree split, GitHub connector, field person, AI spend cap).
+- Owner decided the AI spend question: stay on the existing ChatGPT Pro
+  subscription for every agent, no pay-per-use API key unless the Board says so;
+  the shared Codex usage quota, not money, is the limit. Recorded in the doc.
 - Linked from `docs/paperclip-ceo-role.md` §5. No agent, skill, task or setting
   was created or changed in Paperclip. Also gave the owner the copy-paste text
   for CEO task 1 (read-only company summary) in chat; it is not yet created.
