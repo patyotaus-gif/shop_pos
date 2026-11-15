@@ -98,7 +98,8 @@ The owner subsequently created a `CEO` agent. A read-only API check found:
 - No saved Paperclip AI connections were returned. The host Codex CLI reports
   `Logged in using ChatGPT`; this is not proof of a successful Paperclip run.
 
-Open **CEO**, review its configuration and AI account choice, then use **Resume**
+Open **CEO** -> **Harness / Runtime** (or **Configure** in the Overview runtime
+card) to review its configuration and AI account choice, then use **Resume**
 when ready. Create a **New Task**, select **Pokpok POS**, and assign **CEO**.
 For an initial task, request a read-only summary of `AGENTS.md`, `docs/HANDOFF.md`
 and the project structure; explicitly exclude code changes, commits, pushes,

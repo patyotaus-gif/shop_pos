@@ -379,6 +379,13 @@ or triggered; its Codemagic workflow does not run automatically on push.
 
 ## Log
 
+### 2026-11-15 — Clarify CEO configuration navigation
+
+- Owner screenshot shows CEO Overview with a Harness / Runtime navigation item
+  and a Configure link. Installed UI code confirms Configure routes to `runtime`.
+- Corrected the setup guide to use those visible labels. No settings changed
+  and no account connection or AI run was initiated.
+
 ### 2026-11-15 — Paperclip first-use guidance
 
 - Read-only local API checks confirm the owner-created CEO is paused, uses
