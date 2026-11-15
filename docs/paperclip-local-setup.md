@@ -43,8 +43,9 @@ Pokpok's Firebase database, payment environment, hosting or production keys.
 - Browser screenshot capture was rejected by automatic approval review with
   `blocked by policy`. The owner's subsequent screenshot shows the dashboard
   rendering; an actual AI task has not been verified.
-- No AI agent run, provider API request, GitHub write or production deploy has
-  been performed by this setup.
+- The initial installation did not run an AI agent, make a provider API request,
+  write to GitHub, or deploy production. The later login repair below contacts
+  OpenAI only for unauthorised device sign-in prompts.
 
 ## Open and close
 
@@ -59,9 +60,10 @@ Pokpok's Firebase database, payment environment, hosting or production keys.
 The server does not start automatically when Windows starts. Closing the browser
 does not stop it. Start/stop logs are in `D:\PokpokTools\paperclip\logs`.
 
-The helper scripts, runtime, package lock and application data stay outside the
-Pokpok repository. The launcher changes environment variables only for its own
-process and does not replace the system-wide Node executable.
+The running helper scripts, runtime, package lock and application data stay
+outside the Pokpok repository. Reproducible Windows login repair/check scripts
+are kept under `scripts/paperclip/`. The launcher changes environment variables
+only for its own process and does not replace the system-wide Node executable.
 
 ## Operating model
 
@@ -113,6 +115,62 @@ by the setup assistant. No agent was resumed or task launched during this check.
 
 Codex authentication reference: https://learn.chatgpt.com/docs/auth?surface=cli
 
+## Windows Codex login repair (2026-11-15)
+
+The disabled Connect button was accompanied by an actual launcher failure.
+Desktop-launched Paperclip did not inherit VS Code's Codex PATH. After resolving
+Codex, the installed login driver still tried to run Python's POSIX PTY bridge,
+which does not work on native Windows.
+
+The pinned external install now has these local compatibility changes:
+
+- `Start-Paperclip.ps1` discovers native `codex.exe` from PATH, or the installed
+  `openai.chatgpt-*-win32-x64` VS Code extension. Its directory is added only to
+  Paperclip's process PATH, including when opened from the Desktop.
+- Windows OpenAI login starts the native executable directly with pipes, without
+  a shell or Python. It preserves Paperclip's isolated `CODEX_HOME`; the existing
+  VS Code account/credential file is not copied. Provider stdout/stderr go only
+  to Paperclip's bounded in-memory device-prompt parser.
+- Temporary login cleanup retries transient filesystem locks for a bounded
+  period. The child does not use its temporary login home as its working
+  directory, avoiding a Windows directory lock during cancellation.
+
+To reconnect: refresh the page, open **CEO -> Harness / Runtime -> Connection
+-> Connect an account...**, choose **OpenAI Subscription**, and follow the
+displayed OpenAI sign-in link/code. Complete authorization yourself. Then use
+**Connect** and **Save changes**. If an old attempt is shown, use **Start sign-in
+again**. Connect remains disabled until account authorization is ready.
+
+The version-guarded repair is reproducible with:
+
+```powershell
+& 'D:\PokpokTools\paperclip\runtime\node-v24.22.3-win-x64\node.exe' scripts/paperclip/repair-windows-codex-login.mjs 'D:\PokpokTools\paperclip'
+```
+
+It validates known patch sites before writing, refuses different Paperclip
+versions, and is idempotent. Original launcher and two service modules are under
+`D:\PokpokTools\paperclip\local-fixes\windows-codex-login-20261115` as
+`*.original`. Stop gracefully before restoring those exact files; restart after
+applying/restoring. Reinstalling/upgrading Paperclip can replace the modified
+service modules: review upstream Windows support before reapplying this fix.
+
+Verification (local only):
+
+- `codex-login-smoke.mjs` failed with the original Desktop PATH error and then
+  the Python error; with the fix, the real CLI device prompt was parsed.
+- Restarted Paperclip with only Machine + User PATH, matching a Desktop launch.
+  Two `codex-login-api-smoke.mjs` start/prompt/cancel cycles passed through the
+  running server. A cancelled attempt reports expired; no device-auth process
+  remained. API sign-in responses contained a prompt and no error.
+- Repair re-run changed zero files; runtime route returned HTTP 200; health was
+  `ok` on `127.0.0.1:3100`; CEO stayed paused; saved AI connections stayed zero.
+- These are opt-in local checks, outside app CI. They contact OpenAI for a device
+  prompt but never authorize it, print its code, create a connection, or invoke
+  a model. The API check requires a company UUID and the explicit
+  `--restart-pending-sign-in` flag because it replaces a stuck sign-in attempt.
+- Owner authorization, actual agent execution, and final UI interaction remain
+  unverified. The CLI used was `0.164.0-alpha.11.1` bundled with VS Code.
+
 ## Local backups
 
 Created initial database backup
@@ -137,3 +195,4 @@ allows only the current Windows user, SYSTEM and Administrators.
 | --- | --- | --- |
 | 2026-11-15 | Isolated installation authorized; runtime prepared; C: disk shortage encountered | Official npm version/engine metadata, Node SHA256, local disk inventory |
 | 2026-11-15 | Fresh D: installation; local company/project created; launchers and backup ready | Healthy API, UI assets, loopback binding, workspace mapping, restart persistence and graceful shutdown |
+| 2026-11-15 | Repair native Windows Codex discovery, device login and cancellation | Original failures reproduced; real prompt check and two server API login/cancel cycles passed; owner sign-in pending |

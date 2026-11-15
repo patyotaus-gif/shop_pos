@@ -24,9 +24,16 @@ project `Pokpok POS` point to `C:\Users\Dav\shop_pos` and its GitHub repository.
 API, UI HTML/assets, project persistence after restart and graceful shutdown were
 verified locally. Desktop shortcuts open/stop the instance. Initial database
 backup was created; local backups run hourly while Paperclip is running.
-The owner has since created a paused `CEO` agent using `codex_local`. The host
-Codex CLI reports ChatGPT login, but Paperclip lists no saved AI connections;
-AI execution is still untested. Timer heartbeats are disabled; CEO on-demand
+The owner has since created a paused `CEO` agent using `codex_local`. The local
+Windows login fix passed: desktop PATH omitted Codex and Paperclip's
+Python POSIX PTY login bridge cannot run on Windows. The launcher now discovers
+the installed native Codex binary; Windows OpenAI login uses it directly with
+an isolated login home. A real device-auth prompt smoke check failed before the
+fix and passed after it, without authorizing an account. Restarted with the
+Desktop PATH; two real API start/prompt/cancel cycles passed. Cleanup retries
+handle transient Windows file locks. Paperclip has no saved AI connection;
+the owner still needs to authorize OpenAI through the UI. AI execution is
+still untested. Timer heartbeats are disabled; CEO on-demand
 wake is enabled. Agent configuration currently bypasses approvals/sandbox and
 allows 20 concurrent runs; review permissions and start with one run for a trial.
 No agent was resumed or task created by this check. GitHub OAuth remains unverified.
@@ -378,6 +385,29 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-15 — Repair Paperclip Windows Codex sign-in
+
+- Reproduced the screenshot error with the Desktop PATH, then reproduced the
+  second Python/PTY failure with Codex available. This is separate from the
+  existing VS Code ChatGPT login.
+- Added a version-guarded, idempotent repair script and real login-prompt smoke
+  check under `scripts/paperclip/`. Applied to the external pinned install only.
+  Original launcher and login module are backed up under its `local-fixes/`.
+- Post-fix real Codex device-auth prompt was parsed successfully; no account
+  authorized, credential copied, agent resumed, or model task executed.
+- The first API cancellation exposed `EBUSY` on Windows. Removed the temporary
+  login directory as the child process's working directory and added bounded
+  cleanup retries. After graceful restart from Desktop-equivalent PATH, two
+  real API start/prompt/cancel cycles passed, including rejection of reuse after
+  cancellation. No orphan device-auth processes remained. No provider output,
+  codes or credentials are logged by the checks.
+- Repair re-run changed zero files. Runtime page returned HTTP 200; API is
+  healthy on loopback; CEO remains paused; saved AI connection count is zero.
+  Codex binary used: VS Code extension's `0.164.0-alpha.11.1`.
+- Owner action remaining: refresh Paperclip, reconnect, authorize in OpenAI,
+  then Connect / Save changes. Actual authorized account/agent execution and
+  visual UI confirmation remain untested. No production changes or push.
 
 ### 2026-11-15 — Identify the AI account connection control
 
