@@ -406,10 +406,13 @@ or triggered; its Codemagic workflow does not run automatically on push.
   file on disk under `D:\PokpokTools\paperclip\data\...\instructions\` matches.
   Paperclip records this as an instruction revision (board source), so it can
   be restored from the agent's Revisions page.
-- Unchanged and still the owner's call: `dangerouslyBypassApprovalsAndSandbox`
-  (true), 20 concurrent runs, budget 0 = unlimited. No agent, task or run was
-  created; GitHub push of the docs commits was blocked by the local permission
-  classifier and is pending.
+- Owner then saved the runtime form (API `updatedAt` 2026-11-15 05:07:50 UTC):
+  max concurrent runs is now **1**. `dangerouslyBypassApprovalsAndSandbox` stays
+  **true** by the owner's decision, so Codex runs with no Paperclip approval
+  prompt or sandbox. Until that changes, each task must state what the agent may
+  touch, and the first tasks stay read-only. Budget 0 = unlimited is unchanged.
+  No agent, task or run was created; GitHub push of the docs commits was blocked
+  by the local permission classifier and is pending.
 
 ### 2026-11-15 — CEO agent role plan for Paperclip (docs only)
 
