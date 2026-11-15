@@ -24,10 +24,15 @@ project `Pokpok POS` point to `C:\Users\Dav\shop_pos` and its GitHub repository.
 API, UI HTML/assets, project persistence after restart and graceful shutdown were
 verified locally. Desktop shortcuts open/stop the instance. Initial database
 backup was created; local backups run hourly while Paperclip is running.
-There are no agents/provider credentials configured; automatic heartbeats are
-disabled. GitHub OAuth and AI execution are not connected/tested. The bundled
-Copilot runtime installer reports Windows unsupported. Automated browser capture
-was policy-blocked, so no rendered-UI verification is claimed. Initial C: install
+The owner has since created a paused `CEO` agent using `codex_local`. The host
+Codex CLI reports ChatGPT login, but Paperclip lists no saved AI connections;
+AI execution is still untested. Timer heartbeats are disabled; CEO on-demand
+wake is enabled. Agent configuration currently bypasses approvals/sandbox and
+allows 20 concurrent runs; review permissions and start with one run for a trial.
+No agent was resumed or task created by this check. GitHub OAuth remains unverified.
+The bundled Copilot runtime installer reports Windows unsupported. The owner's
+screenshot verifies dashboard rendering; automated capture was policy-blocked.
+Initial C: install
 ran out of space; its partial files are retained on D: as `incomplete-node_modules`.
 See `docs/paperclip-local-setup.md`. No production changes or paid AI runs.
 
@@ -373,6 +378,17 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-15 — Paperclip first-use guidance
+
+- Read-only local API checks confirm the owner-created CEO is paused, uses
+  `codex_local`, has timer heartbeat off and on-demand wake on. Health remains ok.
+- No saved AI connections returned; host `codex login status` reports ChatGPT
+  authentication. This does not verify Paperclip can execute an AI task.
+- Updated the local setup guide with configuration review, Resume, New Task,
+  project/assignee selection and a read-only first-task example. Recorded the
+  existing unrestricted execution and concurrency settings without changing them.
+- No AI run, configuration mutation, GitHub push or production change.
 
 ### 2026-11-15 - Install isolated Paperclip for Pokpok
 

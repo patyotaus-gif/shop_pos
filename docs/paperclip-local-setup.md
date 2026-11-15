@@ -35,13 +35,14 @@ Pokpok's Firebase database, payment environment, hosting or production keys.
   startup recovery `ready`. Actual listeners were `127.0.0.1:3100` for HTTP and
   loopback only for PostgreSQL on 54329.
 - The company/project and exact checkout/repository mapping were verified through
-  the API, including after restarting. Agent count remained zero.
+  the API, including after restarting. Agent count was zero at installation.
 - Start/stop scripts passed local execution. Shutdown invokes Paperclip's own
   SIGINT handler through `shutdown-bridge.mjs`, using a PID-bound request in the
   restricted data directory. HTTP and PostgreSQL ports closed after stopping.
   Do not use `Stop-Process` as the normal shutdown method.
 - Browser screenshot capture was rejected by automatic approval review with
-  `blocked by policy`. Rendered UI and an actual AI task have not been verified.
+  `blocked by policy`. The owner's subsequent screenshot shows the dashboard
+  rendering; an actual AI task has not been verified.
 - No AI agent run, provider API request, GitHub write or production deploy has
   been performed by this setup.
 
@@ -74,15 +75,38 @@ GitHub plugin. A repository URL/workspace link is different from authorizing
 Paperclip's GitHub connector or signing in to an AI provider. Those connections
 must be configured explicitly when needed.
 
-No AI agents or routine jobs are enabled during installation. Automatic heartbeat
-scheduling is disabled in the local launcher. A zero budget field must not be
-treated as a spending block: no provider/agent is configured at this stage.
+No AI agents or routine jobs were enabled during installation. Automatic heartbeat
+scheduling is disabled in the local launcher. A zero budget field means unlimited,
+not a spending block.
 New agents require board approval. Creating this workspace does not authorize
 an AI to deploy Pokpok or change production/payment settings.
 
 The bundled GitHub Copilot runtime installer reports `unsupported-platform
 (win32-x64)` in this version. Do not assume every AI adapter works on native
 Windows; provider login and a separately authorized agent run need their own test.
+
+## First-use check (2026-11-15)
+
+The owner subsequently created a `CEO` agent. A read-only API check found:
+
+- Adapter `codex_local`, status `paused`; no explicit adapter model or directory.
+  Assign a first task to `Pokpok POS` to identify its project workspace.
+- Timer heartbeat disabled; on-demand wake enabled. Maximum concurrent runs is
+  currently 20; start with one run at a time for the first trial.
+- `dangerouslyBypassApprovalsAndSandbox` is enabled in this agent's configuration.
+  Review execution permissions before assigning tasks against the real checkout.
+- No saved Paperclip AI connections were returned. The host Codex CLI reports
+  `Logged in using ChatGPT`; this is not proof of a successful Paperclip run.
+
+Open **CEO**, review its configuration and AI account choice, then use **Resume**
+when ready. Create a **New Task**, select **Pokpok POS**, and assign **CEO**.
+For an initial task, request a read-only summary of `AGENTS.md`, `docs/HANDOFF.md`
+and the project structure; explicitly exclude code changes, commits, pushes,
+deployments and production-data access. Check the task's run result before
+assigning implementation work. These are operator steps, not actions performed
+by the setup assistant. No agent was resumed or task launched during this check.
+
+Codex authentication reference: https://learn.chatgpt.com/docs/auth?surface=cli
 
 ## Local backups
 
