@@ -47,6 +47,10 @@ screenshot verifies dashboard rendering; automated capture was policy-blocked.
 Initial C: install
 ran out of space; its partial files are retained on D: as `incomplete-node_modules`.
 See `docs/paperclip-local-setup.md`. No production changes or paid AI runs.
+Later on 2026-11-15 the API showed CEO `ready`/`idle` (setup finished) with
+default instructions only and still no tasks. The owner asked for a CEO role
+plan: `docs/paperclip-ceo-role.md` (duties, authority limits, phased agent team,
+first tasks, Instructions text to paste). Not applied to Paperclip yet.
 
 **Payment-provider research:** reviewed all 46 pages of the sales-supplied
 `Payment.pdf` on 2026-11-15. It is an INET e-Payment sales training deck, not a
@@ -390,6 +394,22 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-15 — CEO agent role plan for Paperclip (docs only)
+
+- Owner asked for the CEO position's duties within the company. Wrote
+  `docs/paperclip-ceo-role.md` in Thai: Board (owner) decides, CEO agent manages
+  daily work; six duty areas; a do / ask Board / never table (no deploy,
+  payment, production data, external messages, secrets); a phased team (CEO ->
+  Engineer + Reviewer -> Website, Field Ops -> Finance); no timer heartbeat;
+  three read-only first tasks; and the Instructions block to paste.
+- Read-only API check: CEO is now `ready`/`idle`, pause reason null, model
+  `gpt-6-astra`, managed instructions file = default one line,
+  `dangerouslyBypassApprovalsAndSandbox` still true, 20 concurrent runs,
+  monthly budget 0 (unlimited), zero issues. Recommended the owner turn the
+  bypass off and use one run before any file-touching task.
+- Linked the plan from `docs/paperclip-local-setup.md`. No Paperclip settings,
+  instructions, agents or tasks were changed or created; no AI run started.
 
 ### 2026-11-15 — Correct first-agent activation instructions
 
