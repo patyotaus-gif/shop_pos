@@ -51,7 +51,7 @@ Later on 2026-11-15 the API showed CEO `ready`/`idle` (setup finished) with
 default instructions only and still no tasks. The owner asked for a CEO role
 plan: `docs/paperclip-ceo-role.md` (duties, authority limits, phased agent team,
 first tasks, Instructions text to paste). The Instructions block is now written
-into CEO`s managed AGENTS.md (owner confirmed); execution settings unchanged.
+into the CEO agent managed AGENTS.md (owner confirmed); execution settings unchanged.
 
 **Payment-provider research:** reviewed all 46 pages of the sales-supplied
 `Payment.pdf` on 2026-11-15. It is an INET e-Payment sales training deck, not a
