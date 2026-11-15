@@ -51,7 +51,11 @@ Later on 2026-11-15 the API showed CEO `ready`/`idle` (setup finished) with
 default instructions only and still no tasks. The owner asked for a CEO role
 plan: `docs/paperclip-ceo-role.md` (duties, authority limits, phased agent team,
 first tasks, Instructions text to paste). The Instructions block is now written
-into the CEO agent managed AGENTS.md (owner confirmed); execution settings unchanged.
+into the CEO agent managed AGENTS.md (owner confirmed). Owner then set max
+concurrent runs to 1 and kept bypass sandbox on. On 2026-11-16 the owner asked
+for a company-wide AI staff structure: `docs/paperclip-org-structure.md`
+(12 positions, phases, shared prohibitions). Documented only; no agents created,
+no task run yet.
 
 **Payment-provider research:** reviewed all 46 pages of the sales-supplied
 `Payment.pdf` on 2026-11-15. It is an INET e-Payment sales training deck, not a
@@ -395,6 +399,21 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-16 — AI staff structure for the company (docs only)
+
+- Owner asked to design the company's staff as AI agents, one per position,
+  company-wide, documented first. Wrote `docs/paperclip-org-structure.md` (Thai):
+  principles (owner decides; human-only roles listed), a 12-position org chart
+  mapped to Paperclip `role` values (ceo, cto, engineer x2, qa, devops, cmo, pm,
+  general, cfo, security, researcher), per-position duties / deliverables /
+  sources / do-ask-never, ten shared prohibitions, a responsibility table for
+  the main workflows, a four-phase activation plan with gates, standard agent
+  settings (1 run, no heartbeat, bypass off for file-editing agents), and open
+  decisions (worktree split, GitHub connector, field person, AI spend cap).
+- Linked from `docs/paperclip-ceo-role.md` §5. No agent, skill, task or setting
+  was created or changed in Paperclip. Also gave the owner the copy-paste text
+  for CEO task 1 (read-only company summary) in chat; it is not yet created.
 
 ### 2026-11-15 — CEO instructions written into Paperclip (owner confirmed)
 
