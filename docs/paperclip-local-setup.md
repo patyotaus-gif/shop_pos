@@ -115,6 +115,14 @@ by the setup assistant. No agent was resumed or task launched during this check.
 
 Codex authentication reference: https://learn.chatgpt.com/docs/auth?surface=cli
 
+### Owner connection follow-up
+
+After the Windows repair, the owner's screenshot shows **Connection successful**
+and **You have unsaved changes**. A read-only API check now lists one saved AI
+connection; CEO remains paused. Save the runtime form before starting a task.
+Then follow the first-task steps above. The successful runtime check verifies
+connection readiness; a completed task against Pokpok POS is still untested.
+
 ## Windows Codex login repair (2026-11-15)
 
 The disabled Connect button was accompanied by an actual launcher failure.

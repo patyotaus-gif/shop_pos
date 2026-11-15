@@ -31,9 +31,11 @@ the installed native Codex binary; Windows OpenAI login uses it directly with
 an isolated login home. A real device-auth prompt smoke check failed before the
 fix and passed after it, without authorizing an account. Restarted with the
 Desktop PATH; two real API start/prompt/cancel cycles passed. Cleanup retries
-handle transient Windows file locks. Paperclip has no saved AI connection;
-the owner still needs to authorize OpenAI through the UI. AI execution is
-still untested. Timer heartbeats are disabled; CEO on-demand
+handle transient Windows file locks. The owner subsequently completed provider
+connection: the read-only API now lists one saved AI connection. The owner's
+screenshot shows a successful runtime check with unsaved CEO settings; CEO
+remains paused. An actual project-agent task is still untested. Timer heartbeats
+are disabled; CEO on-demand
 wake is enabled. Agent configuration currently bypasses approvals/sandbox and
 allows 20 concurrent runs; review permissions and start with one run for a trial.
 No agent was resumed or task created by this check. GitHub OAuth remains unverified.
@@ -385,6 +387,17 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-15 — OpenAI connection saved; first Paperclip task pending
+
+- Owner screenshot shows `Connection successful` and `You have unsaved changes`
+  on CEO's runtime page. Read-only API confirms one saved AI connection and
+  CEO still paused; a runtime check is not verification of a project task.
+- Next operator steps: Save changes, resume CEO when ready, then create one
+  task assigned to CEO under Pokpok POS. Suggested first task reads project
+  guidance and summarizes the checkout without edits, commits, push, deploy,
+  or production-data access. Keep timer heartbeats off during the first trial.
+- No agent resumed, task launched, production changes, or push by this check.
 
 ### 2026-11-15 — Repair Paperclip Windows Codex sign-in
 
