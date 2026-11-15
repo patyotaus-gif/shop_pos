@@ -105,8 +105,12 @@ card). Under **Adapter**, open **Connection** -> **Choose a connection** ->
 **Connect an account...**. The installed account chooser identifies the OpenAI
 subscription option as **ChatGPT subscription**. Complete sign-in in the provider
 window, select the saved connection and use **Save changes**. Review the agent's
-execution settings, then use **Resume**
-when ready. Create a **New Task**, select **Pokpok POS**, and assign **CEO**.
+execution settings. If Overview shows **Finish setup** next to **Run now**,
+click it and complete the existing agent's setup wizard, ending with
+**Finish setup**. This button replaces Resume when `pauseReason` is `setup`;
+Run now cannot invoke the agent in that state. For a normally paused agent
+after setup, use **Resume** when ready. Create a **New Task**, select
+**Pokpok POS**, and assign **CEO**.
 For an initial task, request a read-only summary of `AGENTS.md`, `docs/HANDOFF.md`
 and the project structure; explicitly exclude code changes, commits, pushes,
 deployments and production-data access. Check the task's run result before
@@ -119,8 +123,9 @@ Codex authentication reference: https://learn.chatgpt.com/docs/auth?surface=cli
 
 After the Windows repair, the owner's screenshot shows **Connection successful**
 and **You have unsaved changes**. A read-only API check now lists one saved AI
-connection; CEO remains paused. Save the runtime form before starting a task.
-Then follow the first-task steps above. The successful runtime check verifies
+connection; CEO remains paused with pause reason `setup`. Save the runtime form
+and complete **Finish setup** before starting a task, as described above.
+The successful runtime check verifies
 connection readiness; a completed task against Pokpok POS is still untested.
 
 ## Windows Codex login repair (2026-11-15)

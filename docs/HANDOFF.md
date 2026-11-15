@@ -33,8 +33,11 @@ fix and passed after it, without authorizing an account. Restarted with the
 Desktop PATH; two real API start/prompt/cancel cycles passed. Cleanup retries
 handle transient Windows file locks. The owner subsequently completed provider
 connection: the read-only API now lists one saved AI connection. The owner's
-screenshot shows a successful runtime check with unsaved CEO settings; CEO
-remains paused. An actual project-agent task is still untested. Timer heartbeats
+screenshot shows a successful runtime check. A subsequent read-only API check
+confirms CEO is paused specifically with `pauseReason: setup`: the installed UI
+shows **Finish setup** instead of Resume until setup is completed. Run now in
+this state is rejected as not invokable. An actual project-agent task is still
+untested. Timer heartbeats
 are disabled; CEO on-demand
 wake is enabled. Agent configuration currently bypasses approvals/sandbox and
 allows 20 concurrent runs; review permissions and start with one run for a trial.
@@ -387,6 +390,16 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-15 — Correct first-agent activation instructions
+
+- Owner could not find Resume and saw `Agent is not invokable in its current
+  state`. API confirms CEO has lifecycle/status paused and pause reason setup.
+- Checked the installed AgentActionButtons UI: setup-paused agents show
+  Finish setup in place of Pause/Resume, not in the overflow menu. It opens
+  the existing agent's setup wizard; the wizard also ends with Finish setup.
+- Corrected the local guide: finish setup first; Resume applies only to a
+  normally paused agent afterward. No agent activated or run by this check.
 
 ### 2026-11-15 — OpenAI connection saved; first Paperclip task pending
 
