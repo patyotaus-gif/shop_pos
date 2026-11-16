@@ -193,6 +193,46 @@ Verification (local only):
 - Owner authorization, actual agent execution, and final UI interaction remain
   unverified. The CLI used was `0.164.0-alpha.11.1` bundled with VS Code.
 
+## Windows Codex sandbox repair (2026-11-17)
+
+New agents created with **Bypass sandbox** off failed Paperclip's lifecycle check
+(`harness_test_failed`, "Codex hello probe failed"). With bypass on, the same probe
+passed. Diagnosis on this machine (Windows 11 25H2, build 26200.9974, Codex CLI
+0.169.0-alpha.11.1):
+
+- Managed AI connections write a fresh per-run Codex home whose `config.toml` holds
+  only `cli_auth_credentials_store = "file"` (by design it never copies the
+  operator's settings). With no Windows sandbox mode, Codex uses the legacy
+  **elevated** sandbox.
+- A headless sandboxed `codex exec` that runs a shell command failed under elevated
+  with `ShellExecuteExW failed to launch setup helper: 1223`. The helper needs an
+  Administrator/UAC prompt that unattended runs cannot answer.
+- The **MXC** sandbox (OpenAI's recommended Windows mode; needs build x.9278+, no
+  Administrator setup) passed the official probe (`MXC_OK`). Headless, it ran a
+  workspace command (`SANDBOX_CMD_OK`, exit 0), still worked when the Codex home was
+  inside TEMP, and blocked a write to `C:\Users\Dav\` (exit 1, no file created).
+- Paperclip's "Refusing to create helper binaries under temporary dir" message is
+  only the first stderr line that Paperclip shows. It is a warning, not the cause.
+
+Fix: `scripts/paperclip/repair-windows-codex-sandbox.mjs` (version-guarded and
+idempotent) appends `[windows] sandbox = "mxc"` on Windows at both places that write
+the managed Codex `config.toml` in `server/dist/services/ai-connection-runtime.js`.
+The original file is saved in
+`D:\PokpokTools\paperclip\local-fixes\windows-codex-sandbox-20261117\`. Re-running
+the script changes nothing; `node --check` passes. Restart Paperclip to load it.
+Reinstalling or upgrading Paperclip removes the change; review upstream before
+reapplying.
+
+```powershell
+& 'D:\PokpokTools\paperclip\runtime\node-v24.22.3-win-x64\node.exe' scripts/paperclip/repair-windows-codex-sandbox.mjs 'D:\PokpokTools\paperclip'
+```
+
+Separately, at the owner's approval, the owner's own `C:\Users\Dav\.codex\config.toml`
+was changed from `sandbox = "elevated"` to `sandbox = "mxc"`. The backup is
+`config.toml.bak-20261117-elevated`. This affects Codex in VS Code only. Paperclip
+agents do not read this file, so it is not required for the fix above. Restore the
+backup to undo it.
+
 ## Local backups
 
 Created initial database backup

@@ -221,10 +221,10 @@ Board / CEO ตัวจริง = เจ้าของ (คน)
 
 | เรื่อง | สถานะ |
 | --- | --- |
-| สร้าง agent 11 ตัว | สร้างแล้วเป็น **pending approval** ทุกตัว (Paperclip บังคับให้ Board อนุมัติ agent ใหม่) เจ้าของกดอนุมัติที่ Inbox/Approvals จึงจะใช้งานได้ ตั้งค่า run = 1, heartbeat ปิด, bypass sandbox ปิด, `canCreateAgents` ปิด |
+| สร้าง agent 11 ตัว | สร้างเป็น pending approval แล้ว **เจ้าของอนุมัติครบ 16 พ.ย. 2026** หลังอนุมัติทุกตัวติดสถานะ paused / `verifying` เพราะ sandbox แบบ elevated ของ Codex บน Windows ต้องกด Admin (UAC) ซึ่ง agent ทำเองไม่ได้ แก้แล้ว 17 พ.ย. ด้วย patch ให้ใช้ sandbox แบบ MXC (ดู paperclip-local-setup.md) รอเจ้าของรีสตาร์ต Paperclip แล้วตรวจซ้ำ ตั้งค่า run = 1, heartbeat ปิด, bypass sandbox ปิด, `canCreateAgents` ปิด |
 | โฟลเดอร์แยกบน D: | ตั้งนโยบาย execution workspace ของโปรเจกต์เป็น isolated git worktree ใต้ `D:\PokpokWork\worktrees\` สาขา `{{issue.identifier}}-{{slug}}` จาก `master` ทดสอบสร้าง worktree ข้ามไดรฟ์แล้วสำเร็จ worktree ไม่มี `flutter/` และ `node_modules` (อยู่ใน .gitignore) Instructions ของ Engineer บอกทางแก้ไว้แล้ว |
 | สิทธิ์ merge | ให้ Engineer – App / Web ตามเงื่อนไข 3 ข้อ (Reviewer อนุมัติ, CTO "merge ได้", ไม่แตะของต้องห้าม) deploy ยังเป็นของเจ้าของ |
-| GitHub connector | **เจ้าของต้องทำเอง** เพราะต้องสร้าง token: Connectors → GitHub → "Personal access token (advanced)" → ใช้ fine-grained token ที่จำกัดเฉพาะ repo `shop_pos` สิทธิ์ Contents และ Pull requests แบบอ่าน/เขียน Metadata อ่าน ไม่ให้สิทธิ์ Administration หรือ Actions ตั้งวันหมดอายุ และเก็บ token ไว้ใน Paperclip เท่านั้น ไม่วางในแชตหรือเอกสาร |
+| GitHub connector | **เชื่อมแล้ว 16 พ.ย. 2026** โดยเจ้าของผ่านหน้า Connectors → GitHub (การอนุญาตฝั่ง GitHub ด้วยบัญชี `patyotaus-gif`) ชื่อ "Board's GitHub" สถานะ active จำกัดเฉพาะ repo `shop_pos` 49 actions เปิดให้ทุก agent ใช้ (Paperclip ไม่ให้เลือกรายตัวในโหมดนี้) ไม่มี token ถูกวางในแชตหรือเอกสาร |
 | คุณ Gif | บันทึกเป็นคนจริงที่รับงานภาคสนามจาก COO ผ่านเจ้าของ (ดู `docs/paperclip-agents/coo-field-ops.md`) ไม่เก็บข้อมูลติดต่อใน repo |
 
 ข้อสังเกต: การสร้างครบทุกตำแหน่งทันทีต่างจากแผนเปิดทีละเฟสในหัวข้อ 6 เป็นการตัดสินใจของเจ้าของ

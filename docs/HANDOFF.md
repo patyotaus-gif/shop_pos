@@ -55,12 +55,15 @@ into the CEO agent managed AGENTS.md (owner confirmed). Owner then set max
 concurrent runs to 1 and kept bypass sandbox on. On 2026-11-16 the owner asked
 for a company-wide AI staff structure: `docs/paperclip-org-structure.md`
 (12 positions, phases, shared prohibitions). Later the same day the owner ordered
-all positions created: 11 agent hires now exist in Paperclip as **pending
-approval** (owner approves in Inbox), each with instructions from
-`docs/paperclip-agents/`, 1 run, heartbeat off, bypass off. The project now runs
-tasks in isolated git worktrees under `D:\PokpokWork\worktrees\`; Engineers may
-merge PRs after Reviewer + CTO approval; deploys stay with the owner. GitHub
-connector still needs the owner's token. No task has run yet.
+all positions created: 11 agents exist in Paperclip, all approved by the owner,
+each with instructions from `docs/paperclip-agents/`, 1 run, heartbeat off,
+bypass off. The project now runs tasks in isolated git worktrees under
+`D:\PokpokWork\worktrees\`. Engineers may merge PRs after Reviewer and CTO
+approval; deploys stay with the owner. GitHub is connected (repo `shop_pos`
+only). On 2026-11-17 the 11 agents were stuck in `verifying`. Cause: Codex's
+elevated Windows sandbox needs a UAC prompt. The Paperclip MXC sandbox patch is
+applied, but Paperclip must be restarted (owner) and the agents re-checked.
+No task has run yet.
 
 **Payment-provider research:** reviewed all 46 pages of the sales-supplied
 `Payment.pdf` on 2026-11-15. It is an INET e-Payment sales training deck, not a
@@ -404,6 +407,34 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-17 — Paperclip agents: Windows sandbox fixed (restart pending)
+
+- The owner approved all 11 agents and connected GitHub ("Board's GitHub":
+  `patyotaus-gif`, repo `shop_pos` only, status active, available to any agent).
+  Every new agent then stayed `paused` / lifecycle `verifying` with
+  `harness_test_failed`. CEO works only because its bypass sandbox is on.
+- Root cause and evidence are in `docs/paperclip-local-setup.md` under "Windows
+  Codex sandbox repair":
+  - Managed AI runs get a minimal per-run Codex config with no Windows sandbox
+    mode, so Codex uses the legacy elevated sandbox.
+  - That sandbox's setup helper needs a UAC prompt, so headless commands fail
+    with error 1223.
+  - MXC (no Administrator needed) runs commands and blocks writes outside the
+    workspace on this machine.
+- Owner chose "fix the sandbox" over turning bypass on. Added and applied
+  `scripts/paperclip/repair-windows-codex-sandbox.mjs`. It writes `[windows]
+  sandbox = "mxc"` into Paperclip's managed Codex config on Windows. The patch
+  is version-guarded and idempotent, `node --check` passes, and the original is
+  backed up under `local-fixes/`.
+- With the owner's approval, also switched the owner's own `~/.codex/config.toml`
+  to `mxc` (backup `config.toml.bak-20261117-elevated`). It turned out
+  Paperclip ignores this file; the change affects VS Code Codex only.
+- **Pending:** Paperclip restart. My graceful-stop command was blocked by the
+  local permission classifier, so the owner restarts with the Desktop
+  shortcuts. Then re-run the adapter test with sandbox on and retry the 11
+  agents' lifecycle checks. Agents stay paused until then. No task has run.
+- Merging 2026-11-16 decision: GitHub connector is now done (doc §8 updated).
 
 ### 2026-11-16 — Paperclip staff created (pending approval), D: worktrees, merge rights
 
