@@ -77,7 +77,9 @@ Board / CEO ตัวจริง = เจ้าของ (คน)
 - **ทำเองได้:** สร้างสาขา/worktree ของตัวเอง, แก้โค้ดในขอบเขต issue, รัน `flutter test` และ
   ชุดทดสอบ Functions ที่กำหนดใน `functions/package.json` (emulator เท่านั้น), commit ในสาขาตัวเอง
 - **ต้องเสนอ:** แตะไฟล์นอกขอบเขต issue, เพิ่ม dependency, เปลี่ยน Firestore rules หรือ schema
-- **ห้าม:** push, merge, deploy, สร้าง APK ปล่อยจริง, แตะ `master` หรือข้อมูลร้านจริง
+- **merge ได้ (สิทธิ์จากเจ้าของ 16 พ.ย. 2026):** เมื่อ Reviewer อนุมัติ + CTO ว่า "merge ได้" +
+  PR ไม่แตะ `public/app/`, rules, การชำระเงิน หรือ deploy; push สาขาและ merge ผ่าน PR บน GitHub
+- **ห้าม:** deploy, สร้าง APK ปล่อยจริง, merge โดยไม่ครบเงื่อนไข, แตะ `C:\Users\Dav\shop_pos` หรือข้อมูลร้านจริง
 - **ลำดับงานแรกที่รออยู่:** บิลขายหน้าร้านที่ยืนยันแล้วไม่ขึ้นรายงาน และหน้าขายกระโดดไปหน้าโต๊ะ
   (ดู Known issues ใน HANDOFF)
 
@@ -162,7 +164,8 @@ Board / CEO ตัวจริง = เจ้าของ (คน)
 ## 4. ข้อห้ามร่วมทุกตำแหน่ง
 
 1. ห้าม deploy Functions, Hosting, rules หรือปล่อย APK/TestFlight
-2. ห้าม push หรือ merge เข้า `master` (เจ้าของหรือ AI ใน VS Code ที่เจ้าของสั่งเป็นผู้ทำ)
+2. ห้าม merge เข้า `master` ยกเว้น Engineer – App / Engineer – Web ตามเงื่อนไขในหัวข้อ 3.3–3.4
+   (Reviewer อนุมัติ + CTO ว่า "merge ได้" + ไม่แตะ `public/app/`, rules, การชำระเงิน, deploy)
 3. ห้ามเปลี่ยนโหมดหรือคีย์ชำระเงิน, App Check, หรือการบังคับความปลอดภัยใดๆ
 4. ห้ามอ่านหรือเขียนข้อมูลร้านจริงและข้อมูลลูกค้า เว้นแต่ Board อนุมัติเป็นรายงาน
 5. ห้ามติดต่อบุคคลหรือบริการภายนอกในนามบริษัท และห้ามโพสต์สาธารณะ
@@ -176,7 +179,7 @@ Board / CEO ตัวจริง = เจ้าของ (คน)
 
 | งาน | ลงมือ | ตรวจ | ยืนยันพร้อม | อนุมัติและกดทำ |
 | --- | --- | --- | --- | --- |
-| แก้ข้อบกพร่องที่กระทบยอดเงิน | Engineer – App | Reviewer | CTO (ก่อนเฟส 2: CEO) | เจ้าของ |
+| แก้ข้อบกพร่องที่กระทบยอดเงิน | Engineer – App | Reviewer | CTO ("merge ได้") | Engineer merge; เจ้าของ deploy |
 | ปล่อยแอป Android | Release Coordinator เตรียม | Reviewer | CTO | เจ้าของ deploy และติดตั้งบนแท็บเล็ต |
 | เปลี่ยนเว็บไซต์ | Engineer – Web + CMO | Reviewer | CEO | เจ้าของ deploy Hosting |
 | นำร่องร้านศรีสะเกษ | COO เตรียม + คนหน้างานทำ | CEO | เจ้าของ | เจ้าของ |
@@ -208,15 +211,24 @@ Board / CEO ตัวจริง = เจ้าของ (คน)
 - Skills จาก catalog ของ Paperclip ที่เข้ากัน: `software-development` และ `quality` ให้ทีมเทคนิค,
   `content` ให้ CMO, `finance` ให้ CFO, `research` ให้ Researcher, `docs` ให้ทุกตัว
   ตรวจเนื้อหา skill ก่อนเปิดใช้ เพราะบางตัวเขียนสำหรับสแต็กอื่น
-- Instructions ของแต่ละตัว: ข้อห้ามร่วม (หัวข้อ 4) + รายละเอียดตำแหน่ง (หัวข้อ 3) + บรรทัด
-  "เริ่มงานทุกครั้งให้อ่าน `AGENTS.md` และ `docs/HANDOFF.md`" ผมจะเขียนฉบับวางได้จริงให้ทีละตัว
-  เมื่อ Board อนุมัติเฟสนั้น
+- Instructions ของแต่ละตัวอยู่ใน `docs/paperclip-agents/<ตำแหน่ง>.md` (ต้นฉบับที่ส่งเข้า Paperclip)
+  ทุกไฟล์มีกติการ่วมชุดเดียวกันบวกรายละเอียดตำแหน่ง
 
-## 8. สิ่งที่ยังไม่ได้ตัดสินใจ
+## 8. การตัดสินใจของเจ้าของ (16 พ.ย. 2026) และสถานะการสร้าง
 
-- วิธีแยก working tree ให้ Engineer (git worktree บน C: หรือโฟลเดอร์บน D:) และใครเป็นคน merge
-- จะเชื่อม GitHub connector ของ Paperclip หรือให้การ push/merge อยู่กับเจ้าของต่อไป
-- ผู้รับผิดชอบหน้างานศรีสะเกษที่เป็นคนจริง ซึ่งเป็นเงื่อนไขของ COO ในเฟส 2
+เจ้าของสั่ง 4 ข้อ: สร้าง agent ให้ครบ, Engineer แยกโฟลเดอร์ไป D: และให้สิทธิ์ merge,
+เชื่อม GitHub connector, คุณ Gif เป็นหุ้นส่วนที่รับผิดชอบหน้างานศรีสะเกษ
+
+| เรื่อง | สถานะ |
+| --- | --- |
+| สร้าง agent 11 ตัว | สร้างแล้วเป็น **pending approval** ทุกตัว (Paperclip บังคับให้ Board อนุมัติ agent ใหม่) เจ้าของกดอนุมัติที่ Inbox/Approvals จึงจะใช้งานได้ ตั้งค่า run = 1, heartbeat ปิด, bypass sandbox ปิด, `canCreateAgents` ปิด |
+| โฟลเดอร์แยกบน D: | ตั้งนโยบาย execution workspace ของโปรเจกต์เป็น isolated git worktree ใต้ `D:\PokpokWork\worktrees\` สาขา `{{issue.identifier}}-{{slug}}` จาก `master` ทดสอบสร้าง worktree ข้ามไดรฟ์แล้วสำเร็จ worktree ไม่มี `flutter/` และ `node_modules` (อยู่ใน .gitignore) Instructions ของ Engineer บอกทางแก้ไว้แล้ว |
+| สิทธิ์ merge | ให้ Engineer – App / Web ตามเงื่อนไข 3 ข้อ (Reviewer อนุมัติ, CTO "merge ได้", ไม่แตะของต้องห้าม) deploy ยังเป็นของเจ้าของ |
+| GitHub connector | **เจ้าของต้องทำเอง** เพราะต้องสร้าง token: Connectors → GitHub → "Personal access token (advanced)" → ใช้ fine-grained token ที่จำกัดเฉพาะ repo `shop_pos` สิทธิ์ Contents และ Pull requests แบบอ่าน/เขียน Metadata อ่าน ไม่ให้สิทธิ์ Administration หรือ Actions ตั้งวันหมดอายุ และเก็บ token ไว้ใน Paperclip เท่านั้น ไม่วางในแชตหรือเอกสาร |
+| คุณ Gif | บันทึกเป็นคนจริงที่รับงานภาคสนามจาก COO ผ่านเจ้าของ (ดู `docs/paperclip-agents/coo-field-ops.md`) ไม่เก็บข้อมูลติดต่อใน repo |
+
+ข้อสังเกต: การสร้างครบทุกตำแหน่งทันทีต่างจากแผนเปิดทีละเฟสในหัวข้อ 6 เป็นการตัดสินใจของเจ้าของ
+ความเสี่ยงต่ำเพราะทุกตัว heartbeat ปิด จะทำงานเมื่อได้รับ task เท่านั้น แนะนำให้ยังมอบงานตามลำดับเฟส
 - ~~เพดานค่าใช้จ่าย AI~~ **ตัดสินใจแล้ว 16 พ.ย. 2026:** ใช้ ChatGPT Pro ที่เจ้าของจ่ายอยู่แล้ว
   (Connection แบบ subscription) สำหรับ agent ทุกตัว ไม่เพิ่ม API key แบบจ่ายตามใช้จนกว่า Board
   จะสั่ง ดังนั้นไม่มีค่าใช้จ่ายต่อ run ข้อจำกัดคือโควตาการใช้ที่แชร์กับ Codex ใน VS Code

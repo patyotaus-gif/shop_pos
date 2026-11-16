@@ -54,8 +54,13 @@ first tasks, Instructions text to paste). The Instructions block is now written
 into the CEO agent managed AGENTS.md (owner confirmed). Owner then set max
 concurrent runs to 1 and kept bypass sandbox on. On 2026-11-16 the owner asked
 for a company-wide AI staff structure: `docs/paperclip-org-structure.md`
-(12 positions, phases, shared prohibitions). Documented only; no agents created,
-no task run yet.
+(12 positions, phases, shared prohibitions). Later the same day the owner ordered
+all positions created: 11 agent hires now exist in Paperclip as **pending
+approval** (owner approves in Inbox), each with instructions from
+`docs/paperclip-agents/`, 1 run, heartbeat off, bypass off. The project now runs
+tasks in isolated git worktrees under `D:\PokpokWork\worktrees\`; Engineers may
+merge PRs after Reviewer + CTO approval; deploys stay with the owner. GitHub
+connector still needs the owner's token. No task has run yet.
 
 **Payment-provider research:** reviewed all 46 pages of the sales-supplied
 `Payment.pdf` on 2026-11-15. It is an INET e-Payment sales training deck, not a
@@ -399,6 +404,36 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-16 — Paperclip staff created (pending approval), D: worktrees, merge rights
+
+- Owner's four orders: create every agent; Engineers work in a separate folder
+  on D: and may merge; connect the GitHub connector; Gif is the partner on site
+  in Sisaket.
+- Wrote `docs/paperclip-agents/*.md` (11 Thai instruction files + README) with
+  one shared ten-rule block plus per-position duties, do / ask / never lists and
+  source documents. Engineers' files include the merge conditions (Reviewer
+  approval + CTO "merge ได้" + no `public/app/`, rules, payment or deploy
+  changes) and the worktree facts (no `flutter/` or `node_modules` there).
+- Created the 11 agents through `POST /api/companies/<id>/agent-hires` (direct
+  creation is refused while the company requires board approval). All are
+  `pending_approval`; reportsTo chain CEO -> CTO -> App/Web/QA/Release,
+  CEO -> CMO/COO/CFO/Security/Researcher, COO -> Support Desk. Settings:
+  codex_local `gpt-6-astra`, subscription connection, 1 concurrent run,
+  heartbeat off, wake on demand, bypass sandbox off, `canCreateAgents` false.
+  Read-back of the Engineer – App bundle equals its source file. The
+  self-approval step was not run; the owner approves in Paperclip.
+- Project `Pokpok POS` execution workspace policy set via API: enabled,
+  `isolated_workspace`, `git_worktree`, base `master`, branch
+  `{{issue.identifier}}-{{slug}}`, parent `D:\PokpokWork\worktrees` (created;
+  a cross-drive worktree add/remove test from the C: checkout passed).
+- CEO instructions re-synced from `docs/paperclip-ceo-role.md` §8 with a new
+  team section (6,507 bytes, read-back matches, baseHash-guarded).
+- Updated `docs/paperclip-org-structure.md` §3.3, §4, §5, §7, §8 (decisions and
+  creation status; GitHub connector steps for the owner: fine-grained token
+  limited to `shop_pos`, Contents + Pull requests read/write, Metadata read).
+- Not done: no approval clicked, no GitHub token created, no task created or
+  run, no Flutter/Functions test run by any agent, nothing deployed.
 
 ### 2026-11-16 — AI staff structure for the company (docs only)
 
