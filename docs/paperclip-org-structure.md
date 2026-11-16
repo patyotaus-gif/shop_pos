@@ -221,7 +221,7 @@ Board / CEO ตัวจริง = เจ้าของ (คน)
 
 | เรื่อง | สถานะ |
 | --- | --- |
-| สร้าง agent 11 ตัว | สร้างเป็น pending approval แล้ว **เจ้าของอนุมัติครบ 16 พ.ย. 2026** หลังอนุมัติทุกตัวติดสถานะ paused / `verifying` เพราะ sandbox แบบ elevated ของ Codex บน Windows ต้องกด Admin (UAC) ซึ่ง agent ทำเองไม่ได้ แก้แล้ว 17 พ.ย. ด้วย patch ให้ใช้ sandbox แบบ MXC (ดู paperclip-local-setup.md) รอเจ้าของรีสตาร์ต Paperclip แล้วตรวจซ้ำ ตั้งค่า run = 1, heartbeat ปิด, bypass sandbox ปิด, `canCreateAgents` ปิด |
+| สร้าง agent 11 ตัว | สร้างเป็น pending approval แล้ว **เจ้าของอนุมัติครบ 16 พ.ย. 2026** หลังอนุมัติทุกตัวเคยติด `verifying` เพราะ sandbox ของ Codex บน Windows แก้แล้ว 17 พ.ย. (patch MXC + `--skip-git-repo-check` ดู paperclip-local-setup.md) **ตอนนี้ทั้ง 12 ตัว ready** ตั้งค่า run = 1, heartbeat ปิด, bypass sandbox ปิด, `canCreateAgents` ปิด |
 | โฟลเดอร์แยกบน D: | ตั้งนโยบาย execution workspace ของโปรเจกต์เป็น isolated git worktree ใต้ `D:\PokpokWork\worktrees\` สาขา `{{issue.identifier}}-{{slug}}` จาก `master` ทดสอบสร้าง worktree ข้ามไดรฟ์แล้วสำเร็จ worktree ไม่มี `flutter/` และ `node_modules` (อยู่ใน .gitignore) Instructions ของ Engineer บอกทางแก้ไว้แล้ว |
 | สิทธิ์ merge | ให้ Engineer – App / Web ตามเงื่อนไข 3 ข้อ (Reviewer อนุมัติ, CTO "merge ได้", ไม่แตะของต้องห้าม) deploy ยังเป็นของเจ้าของ |
 | GitHub connector | **เชื่อมแล้ว 16 พ.ย. 2026** โดยเจ้าของผ่านหน้า Connectors → GitHub (การอนุญาตฝั่ง GitHub ด้วยบัญชี `patyotaus-gif`) ชื่อ "Board's GitHub" สถานะ active จำกัดเฉพาะ repo `shop_pos` 49 actions เปิดให้ทุก agent ใช้ (Paperclip ไม่ให้เลือกรายตัวในโหมดนี้) ไม่มี token ถูกวางในแชตหรือเอกสาร |

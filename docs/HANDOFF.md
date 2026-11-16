@@ -60,10 +60,9 @@ each with instructions from `docs/paperclip-agents/`, 1 run, heartbeat off,
 bypass off. The project now runs tasks in isolated git worktrees under
 `D:\PokpokWork\worktrees\`. Engineers may merge PRs after Reviewer and CTO
 approval; deploys stay with the owner. GitHub is connected (repo `shop_pos`
-only). On 2026-11-17 the 11 agents were stuck in `verifying`. Cause: Codex's
-elevated Windows sandbox needs a UAC prompt. The Paperclip MXC sandbox patch is
-applied, but Paperclip must be restarted (owner) and the agents re-checked.
-No task has run yet.
+only). On 2026-11-17 the Windows sandbox was fixed with a local Paperclip MXC
+patch and `--skip-git-repo-check` on the 11 agents. All 12 agents are `idle` /
+`ready`, and only CEO has bypass on. No task has run yet.
 
 **Payment-provider research:** reviewed all 46 pages of the sales-supplied
 `Payment.pdf` on 2026-11-15. It is an INET e-Payment sales training deck, not a
@@ -407,6 +406,20 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-17 — All 12 Paperclip agents ready with sandbox on
+
+- The owner restarted Paperclip (server started 2026-11-16 16:02:43 UTC). A capture of
+  the per-run config confirmed that the MXC patch is live. The probe still failed, on
+  a second cause: Codex's untrusted-directory check. The adapter test runs in a
+  non-git folder, and Paperclip adds `--skip-git-repo-check` only for remote
+  sandboxes.
+- Added `extraArgs: ["--skip-git-repo-check"]` to the 11 new agents, leaving all
+  other adapter keys unchanged and bypass still off, then retried their lifecycle
+  checks. Sandbox-on adapter test: pass. All 12 agents are `idle` / `ready`. CEO
+  keeps bypass on by the owner's earlier choice.
+- Not yet verified: a real task run. The first planned task is CEO task 1, a
+  read-only company summary. No task has been created.
 
 ### 2026-11-17 — Paperclip agents: Windows sandbox fixed (restart pending)
 

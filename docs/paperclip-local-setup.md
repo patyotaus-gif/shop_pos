@@ -227,6 +227,19 @@ reapplying.
 & 'D:\PokpokTools\paperclip\runtime\node-v24.22.3-win-x64\node.exe' scripts/paperclip/repair-windows-codex-sandbox.mjs 'D:\PokpokTools\paperclip'
 ```
 
+After the owner restarted Paperclip, the per-run config contained `[windows]
+sandbox = "mxc"` (captured during a test; `auth.json` was not read), but the probe
+still failed. Reproducing Paperclip's exact environment (`HOME`/`CODEX_HOME` under
+TEMP, same config and flags, no credentials) showed the remaining error:
+`Not inside a trusted directory and --skip-git-repo-check was not specified`.
+The adapter check runs in `D:\PokpokTools\paperclip`, which is not a git repo, and
+Paperclip adds that flag only for remote sandboxes. Real tasks run in git worktrees
+that pass this check anyway. The 11 sandboxed agents now carry
+`adapterConfig.extraArgs = ["--skip-git-repo-check"]` (other keys unchanged). The
+sandbox-on adapter test passed (`hello`), and after a lifecycle retry all 12 agents
+became `idle` / `ready`. Managed connections reject `-c` overrides in `extraArgs`
+(HTTP 422), so the sandbox mode itself must come from the patch above.
+
 Separately, at the owner's approval, the owner's own `C:\Users\Dav\.codex\config.toml`
 was changed from `sandbox = "elevated"` to `sandbox = "mxc"`. The backup is
 `config.toml.bak-20261117-elevated`. This affects Codex in VS Code only. Paperclip
