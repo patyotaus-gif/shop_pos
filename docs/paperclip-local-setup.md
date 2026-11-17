@@ -240,6 +240,26 @@ sandbox-on adapter test passed (`hello`), and after a lifecycle retry all 12 age
 became `idle` / `ready`. Managed connections reject `-c` overrides in `extraArgs`
 (HTTP 422), so the sandbox mode itself must come from the patch above.
 
+### First real task run (POK-1, 2026-11-17)
+
+- The run failed in 12 seconds with `acpx_session_init_failed`: "failed to initialize
+  sqlite state runtime". Codex's state folder under the per-run home
+  (`<TEMP>\paperclip-ai-…\provider\paperclip-observability\<agent>\<hash>`) is
+  258 characters. With the SQLite file name it exceeds Windows MAX_PATH (260), and
+  `LongPathsEnabled` is 0. Fix: `scripts/paperclip/repair-windows-short-temp.mjs`
+  sets the launcher's TEMP/TMP to `D:\pt`, which brings the longest path to about
+  253 characters. It changes only the Paperclip process environment and needs no
+  Administrator rights. The original launcher is in
+  `local-fixes\windows-short-temp-20261117\`. It is idempotent, and the PowerShell
+  parse reports no errors. A restart is required.
+- The run's execution workspace was `shared_workspace` in `C:\Users\Dav\shop_pos`,
+  not a D: worktree, because the instance's experimental
+  `enableIsolatedWorkspaces` setting was off, so the project's worktree policy was
+  ignored. Enabled `enableIsolatedWorkspaces` and
+  `enableIsolatedWorkspacesByDefault` through `PATCH /api/instance/settings/experimental`.
+  POK-1 stays bound to the shared workspace, so it should be cancelled and a new
+  task created. The owner's checkout stayed clean.
+
 Separately, at the owner's approval, the owner's own `C:\Users\Dav\.codex\config.toml`
 was changed from `sandbox = "elevated"` to `sandbox = "mxc"`. The backup is
 `config.toml.bak-20261117-elevated`. This affects Codex in VS Code only. Paperclip

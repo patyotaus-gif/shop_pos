@@ -407,6 +407,22 @@ or triggered; its Codemagic workflow does not run automatically on push.
 
 ## Log
 
+### 2026-11-17 — First Paperclip task (POK-1) failed; two fixes applied
+
+- POK-1 (CEO, read-only summary) failed at start (`acpx_session_init_failed`).
+  Cause: Codex's SQLite state path under Paperclip's TEMP is longer than Windows
+  MAX_PATH. Fix: `scripts/paperclip/repair-windows-short-temp.mjs` sets TEMP to
+  `D:\pt`. It is applied; Paperclip still needs a restart.
+- POK-1 also ran in the shared `C:\Users\Dav\shop_pos` checkout, because the
+  instance experimental setting `enableIsolatedWorkspaces` was off. Turned it on
+  (also ByDefault) so new tasks use the D: worktree policy. `git status` of the
+  owner checkout is still clean (the agent never got past start-up).
+- Owner actions pending:
+  - Cancel POK-1. My cancel API call was blocked by the permission classifier.
+  - Restart Paperclip.
+  - Create the task again as a new task.
+- Details are in `docs/paperclip-local-setup.md` under "First real task run".
+
 ### 2026-11-17 — All 12 Paperclip agents ready with sandbox on
 
 - The owner restarted Paperclip (server started 2026-11-16 16:02:43 UTC). A capture of
