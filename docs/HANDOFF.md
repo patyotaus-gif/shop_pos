@@ -416,6 +416,15 @@ or triggered; its Codemagic workflow does not run automatically on push.
 
 ## Log
 
+### 2026-11-18 — Discover plugins for Instagram links
+
+- Queried the current plugin directory: vidIQ describes Instagram Reels visual
+  analysis; TinyFish describes browser access and social-media extraction.
+  Suggested these two candidates to the owner; neither connection is confirmed.
+- No Instagram URL was supplied or tested. General browser capability does not
+  establish access to every Instagram link. No Paperclip connector or agent
+  settings changed and no external messages were sent.
+
 ### 2026-11-18 — Confirm current Paperclip agents for owner
 
 - Read-only loopback health and company agents requests succeeded. All 12
