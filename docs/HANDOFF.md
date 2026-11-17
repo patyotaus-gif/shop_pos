@@ -15,6 +15,13 @@ Rules:
 
 ## Current state (updated 2026-11-18)
 
+**Latest Paperclip status (2026-11-18):** read-only local API check returned
+healthy and 12 agents, all `idle` / `ready`, with no pause reason. They are CEO,
+CTO, CFO / Finance, CMO / Growth, COO / Field Ops, Engineer - App,
+Engineer - Web, Reviewer / QA, Security & Data, Release Coordinator,
+Support Desk and Researcher. The earlier POK-2 log records a completed first
+task; this status check did not start any agent or change its configuration.
+
 **Paperclip installed locally:** owner confirmed `paperclipai/paperclip` for
 Pokpok on 2026-11-15. Version `2026.1106.0` is installed separately at
 `D:\PokpokTools\paperclip`, using checksum-verified portable Node v24.22.3;
@@ -62,7 +69,8 @@ bypass off. The project now runs tasks in isolated git worktrees under
 approval; deploys stay with the owner. GitHub is connected (repo `shop_pos`
 only). On 2026-11-17 the Windows sandbox was fixed with a local Paperclip MXC
 patch and `--skip-git-repo-check` on the 11 agents. All 12 agents are `idle` /
-`ready`, and only CEO has bypass on. No task has run yet.
+`ready`, and only CEO has bypass on. At that point no task had run; the
+2026-11-18 POK-2 log below records the subsequent first completed task.
 
 **Payment-provider research:** reviewed all 46 pages of the sales-supplied
 `Payment.pdf` on 2026-11-15. It is an INET e-Payment sales training deck, not a
@@ -407,6 +415,14 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-18 — Confirm current Paperclip agents for owner
+
+- Read-only loopback health and company agents requests succeeded. All 12
+  agents report idle / ready with no pause reason and use codex_local.
+- Confirmed the roster and corrected the stale no-task-yet statement using
+  the existing POK-2 completion log. This check did not inspect task output,
+  invoke agents, change settings, push, or deploy.
 
 ### 2026-11-18 — POK-2 done: first complete Paperclip task
 
