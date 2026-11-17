@@ -271,6 +271,15 @@ became `idle` / `ready`. Managed connections reject `-c` overrides in `extraArgs
   home's SQLite fails on Windows is not confirmed. Keep `engine = "cli"` until it
   is.
 
+- On the CLI engine, the first CEO run succeeded but could not call the Paperclip
+  API ("connect UNKNOWN") or start PowerShell (error 8009001d). Paperclip passes
+  `shell_environment_policy.include_only` built from its own launch environment,
+  which lacks Windows' core variables. Every agent now has `adapterConfig.env` with
+  `SystemRoot`, `WINDIR`, `COMSPEC`, `PATHEXT`, `USERPROFILE`, `APPDATA`,
+  `LOCALAPPDATA`, `ProgramData` and `ProgramFiles`. Saving an agent re-runs the AI
+  connection check, which can fail transiently; retry after a short wait.
+  Include these keys when creating new agents.
+
 Separately, at the owner's approval, the owner's own `C:\Users\Dav\.codex\config.toml`
 was changed from `sandbox = "elevated"` to `sandbox = "mxc"`. The backup is
 `config.toml.bak-20261117-elevated`. This affects Codex in VS Code only. Paperclip

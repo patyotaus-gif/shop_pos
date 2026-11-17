@@ -407,6 +407,35 @@ or triggered; its Codemagic workflow does not run automatically on push.
 
 ## Log
 
+### 2026-11-18 — First successful CEO run; Windows env vars added to all agents
+
+- **CEO run `e112e610` (owner "Run now") succeeded on the CLI engine.**
+  - Took 2.6 min, about 72k input / 4.3k output tokens. It read `AGENTS.md`,
+    HANDOFF and the plans from the POK-2 worktree and wrote the summary as its
+    run result.
+  - It could not post the summary to POK-2: `fetch` to `PAPERCLIP_API_URL`
+    failed with "connect UNKNOWN 127.0.0.1:3100", and PowerShell failed with
+    error 8009001d.
+  - The owner checkout, the POK-2 worktree and the GitHub branches are
+    unchanged.
+  - One stray empty file named `r.text()).then(console.log)` was left in CEO's
+    fallback workspace by a mis-quoted shell redirect. It sits outside the repo
+    and was left in place.
+- **Cause.** Paperclip runs Codex shell commands with
+  `shell_environment_policy.include_only`, and that list holds only
+  Paperclip-built env keys, so Windows' `SystemRoot` and related keys are dropped.
+  A direct Codex reproduction showed PowerShell failing (exit 1) with the narrow
+  list and working with the Windows keys added.
+- **Fix.** Added `adapterConfig.env` with this machine's `SystemRoot`, `WINDIR`,
+  `COMSPEC`, `PATHEXT`, `USERPROFILE`, `APPDATA`, `LOCALAPPDATA`, `ProgramData`
+  and `ProgramFiles` (plain values, no secrets) to all 12 agents. Only `env`
+  changed.
+  - Saving re-runs Paperclip's AI connection check. It failed transiently
+    twice (Engineer – Web, Security & Data) and passed on retry.
+  - All 12 agents are `idle` / `ready`.
+- Not yet verified: that the agent can now post a comment to Paperclip. The
+  owner should retry POK-2.
+
 ### 2026-11-17 — POK-2: isolated D: worktree works; agents moved to Codex CLI engine
 
 - POK-2 (owner-created, CEO read-only summary) runs in isolated worktree
