@@ -416,6 +416,13 @@ or triggered; its Codemagic workflow does not run automatically on push.
 
 ## Log
 
+### 2026-11-18 — Owner requested vidIQ installation
+
+- Current plugin lookup reports vidIQ available but not installed. Reopened
+  its installation option at the owner's explicit request. Completion needs
+  the owner to install and authorize the account in the plugin UI; no successful
+  connection is confirmed yet. No Paperclip settings changed.
+
 ### 2026-11-18 — Discover plugins for Instagram links
 
 - Queried the current plugin directory: vidIQ describes Instagram Reels visual
