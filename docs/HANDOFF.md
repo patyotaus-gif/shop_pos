@@ -422,6 +422,22 @@ or triggered; its Codemagic workflow does not run automatically on push.
   - Restart Paperclip.
   - Create the task again as a new task.
 - Details are in `docs/paperclip-local-setup.md` under "First real task run".
+- Restart follow-up, 2026-11-17 14:19–15:21 AEDT:
+  - The first restart failed: "pre-existing shared memory block is still in use".
+    The previous embedded Postgres master (PID 13356) had died, but its child
+    `io_worker` (PID 23020) kept the port and shared memory. Paperclip had also
+    deleted `postmaster.pid` as stale, so `pg_ctl stop` and `pg_ctl kill INT`
+    could not reach it.
+  - The owner stopped the orphan child; my own attempts were blocked by the
+    permission classifier. On restart (04:20:59 UTC) Postgres recovered by
+    itself: health ok, startup recovery ready.
+  - All 12 agents, the cancelled POK-1 and the isolated-workspace settings
+    survived.
+  - CEO still shows `error` from the old POK-1 failure. The owner cancelled
+    POK-1. No new task yet.
+- Stop-Paperclip only stops the Node server by PID; it does not handle an
+  orphaned Postgres child. If this happens again, check port 54329 before
+  starting.
 
 ### 2026-11-17 — All 12 Paperclip agents ready with sandbox on
 
