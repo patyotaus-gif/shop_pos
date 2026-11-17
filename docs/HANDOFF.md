@@ -13,7 +13,7 @@ Rules:
 
 ---
 
-## Current state (updated 2026-11-15)
+## Current state (updated 2026-11-18)
 
 **Paperclip installed locally:** owner confirmed `paperclipai/paperclip` for
 Pokpok on 2026-11-15. Version `2026.1106.0` is installed separately at
@@ -301,14 +301,14 @@ hard refresh or expiry before receiving this policy.
 See `docs/website-copy-2026-11-12.md`. The 2026-11-11 read-only website audit
 is recorded below; its performance/accessibility/analytics fixes remain pending.
 
-**Live app (released 2026-11-13):** Android **1.2.77 (build 94)**, served at
+**Superseded — previous live app (released 2026-11-13; replaced by 1.2.78 (95), see above):** Android **1.2.77 (build 94)**, served at
 `pok-pok.app/app/version.json` (sha256 `045d56ca…d9b6`, 92,403,745 bytes, signed
 with the existing release key `f7dc70e0…`). Website screenshots are unchanged.
 Hosting rollback: `b362e6435d006aad`. Functions `tablePromotions`, `staffWork`,
 `staffCheckout`, `createRefund` remain at their 2026-11-10 deployment;
 this release changed no Functions, rules or payment/security settings.
 
-**Test tablet (SM-X900):** installed and verified **1.2.77 (94)** on 2026-11-13.
+**Superseded — test tablet as of 2026-11-13 (now 1.2.78 (95), see above):** installed and verified **1.2.77 (94)** on 2026-11-13.
 Kitchen table tickets have no bill shortcut; table billing remains reachable
 from Sales > dine-in > table. Fresh website screenshots retain their real capture
 version, 1.2.75 (92); they were not refreshed in this Android release.
@@ -375,6 +375,7 @@ or triggered; its Codemagic workflow does not run automatically on push.
   checkout still blocks a negative total.
 
 ### Known issues and leftovers
+- **Unverified since 1.2.78 (open, money-related):** on 1.2.75 the owner tablet showed (1) the sale screen jumping from สั่งกลับบ้าน to the tables view, once losing the cart, and (2) a confirmed counter cash sale (฿190, received ฿200) with no receipt while รายงาน showed 0 bills; unknown whether it was queued offline or lost (Log entry for the 2026-11-10 demo shop). 1.2.78 redesigned the sales entry (`c7bab30`), but nobody has retested either case. Retest on the tablet before closing; first candidate for Engineer – App.
 - Entitlement gap (found 2026-11-12 by website review, not changed): the product edit
   form opens the stock screen, including "สแกนรับสินค้าเข้า", with no tier check, so
   Solo may scan-receive although the website lists it from Lite.
@@ -406,6 +407,31 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-18 — POK-2 done: first complete Paperclip task
+
+- CEO run `47bde557` (3 min 9 s, 67.3k input / 4.6k output tokens) posted a
+  seven-section read-only company summary as a POK-2 comment and set POK-2 to
+  `done`.
+- Afterwards the owner checkout and the POK-2 worktree are clean, and GitHub
+  still has the same 5 branches. The stray empty file from the previous run is
+  still in CEO's fallback workspace, outside the repo.
+- The stderr line "Connection requests require a task-bound heartbeat run" is
+  not an error in the work. "Run now" runs are not bound to a task, so the
+  managed tool gateways refused them.
+- CEO correctly flagged stale and contradictory docs. Fixed:
+  - Current-state date.
+  - The 1.2.77 "Live app" / "Test tablet" blocks, now marked superseded by
+    1.2.78.
+  - The org doc intro, which still said no agents existed.
+  - The two money-related POS bugs from 1.2.75 (screen jumps to tables; ฿190
+    cash sale missing from the report) were only in an old Log entry. They are
+    now in Known issues as "unverified since 1.2.78".
+- CEO's questions to the Board are open:
+  1. Has the exposed GitHub token been revoked?
+  2. Are those POS bugs still happening?
+  3. Sisaket pilot zone, start date and budget.
+  4. Anonymised KPI and live-version data.
 
 ### 2026-11-18 — First successful CEO run; Windows env vars added to all agents
 

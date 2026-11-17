@@ -1,6 +1,6 @@
 # โครงสร้างพนักงาน AI ของ Pokpok ใน Paperclip
 
-บันทึกวันที่ 16 พฤศจิกายน 2026 เป็นข้อเสนอให้เจ้าของพิจารณา ยังไม่ได้สร้าง agent ใดเพิ่ม
+บันทึกวันที่ 16 พฤศจิกายน 2026 เจ้าของอนุมัติและสร้าง agent ครบทุกตำแหน่งแล้ว (สถานะล่าสุดดูหัวข้อ 8 และ `docs/HANDOFF.md`)
 ต่อยอดจาก [paperclip-ceo-role.md](paperclip-ceo-role.md) (บทบาท CEO) และ
 [paperclip-local-setup.md](paperclip-local-setup.md) (การติดตั้ง)
 
