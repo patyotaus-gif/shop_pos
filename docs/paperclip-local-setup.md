@@ -260,6 +260,17 @@ became `idle` / `ready`. Managed connections reject `-c` overrides in `extraArgs
   POK-1 stays bound to the shared workspace, so it should be cancelled and a new
   task created. The owner's checkout stayed clean.
 
+- After the restart, POK-2 ran in an isolated D: worktree as intended, but its
+  runs still failed with the same SQLite error under `D:\pt`. The failing folder
+  is built only by the default **ACP** engine
+  (`prepareAcpxCodexObservabilityHome`: a per-agent Codex home containing an
+  `auth.json` file symlink and `sessions`/`skills` directory symlinks). The
+  adapter hello test uses the Codex **CLI** lane, which never builds it, so the
+  test passed while real runs failed. All agents now use
+  `adapterConfig.engine = "cli"`, and CLI-lane tests pass. The exact reason the ACP
+  home's SQLite fails on Windows is not confirmed. Keep `engine = "cli"` until it
+  is.
+
 Separately, at the owner's approval, the owner's own `C:\Users\Dav\.codex\config.toml`
 was changed from `sandbox = "elevated"` to `sandbox = "mxc"`. The backup is
 `config.toml.bak-20261117-elevated`. This affects Codex in VS Code only. Paperclip

@@ -407,6 +407,23 @@ or triggered; its Codemagic workflow does not run automatically on push.
 
 ## Log
 
+### 2026-11-17 — POK-2: isolated D: worktree works; agents moved to Codex CLI engine
+
+- POK-2 (owner-created, CEO read-only summary) runs in isolated worktree
+  `D:\PokpokWork\worktrees\POK-2-pokpok-board-1-w` on its own branch. The
+  owner's `C:\Users\Dav\shop_pos` stays clean.
+- Its runs still failed with "failed to initialize sqlite state runtime",
+  now under `D:\pt\...`. So the short TEMP alone did not fix it. The failing
+  folder (`paperclip-observability\<agent>\<key>`, with `auth.json` and dir
+  symlinks) is created only by the default ACP engine
+  (`adapter-utils/dist/acpx-engine/execute.js`). The adapter test uses the
+  Codex CLI lane, which is why it passed. Root cause inside that ACP home is
+  not confirmed.
+- Set `adapterConfig.engine = "cli"` on all 12 agents; no other key changed.
+  CLI-lane adapter test passed with sandbox on and with bypass on. A real
+  task run on the CLI lane is not yet verified. The owner needs to clear
+  CEO's error and retry POK-2.
+
 ### 2026-11-17 — First Paperclip task (POK-1) failed; two fixes applied
 
 - POK-1 (CEO, read-only summary) failed at start (`acpx_session_init_failed`).
