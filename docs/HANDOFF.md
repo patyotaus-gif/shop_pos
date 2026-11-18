@@ -16,8 +16,8 @@ Rules:
 ## Current state (updated 2026-11-18)
 
 **vidIQ plugin (2026-11-18):** the latest directory lookup now confirms
-`installed: true`. Instagram link access has not yet been tested; no vidIQ
-execution tools are exposed in this session at this check. No Paperclip
+`installed: true`. Public Instagram Reel playback data was retrieved directly
+and sampled locally; vidIQ execution tools were unavailable. No Paperclip
 connection was configured.
 
 **Latest Paperclip status (2026-11-18):** read-only local API check returned
@@ -420,6 +420,10 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-18: Verified direct access to the supplied public Bunny Knocks Reel
+  through Instagram's embed. Inspected frames at four samples per second.
+  This verifies this link only; vidIQ account access remains unverified.
 
 ### 2026-11-18 — Explain how to activate installed vidIQ in a conversation
 
