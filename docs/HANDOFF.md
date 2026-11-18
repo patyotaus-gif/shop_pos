@@ -42,7 +42,10 @@ The previous release on 2026-11-18 published the website and signed Android APK 
 and sampled locally; vidIQ execution tools were unavailable. No Paperclip
 connection was configured.
 
-**Latest Paperclip status (2026-11-18):** read-only local API check returned
+**Latest Paperclip status (2026-11-19):** Pokpok has 13 agents. Content Marketer
+reports to CMO / Growth and is ready for on-demand campaign briefs.
+
+**Earlier Paperclip check (2026-11-18):** read-only local API check returned
 healthy and 12 agents, all `idle` / `ready`, with no pause reason. They are CEO,
 CTO, CFO / Finance, CMO / Growth, COO / Field Ops, Engineer - App,
 Engineer - Web, Reviewer / QA, Security & Data, Release Coordinator,
@@ -442,6 +445,8 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-19 — Added Content Marketer under CMO / Growth in the local Pokpok Paperclip organization. Verified the approved hire is idle/ready with public search enabled, sandbox bypass off, timer off, and live instructions matching `docs/paperclip-agents/content-marketer.md`. CMO reviews campaign drafts and the owner controls publication and spend. No campaign assigned during setup.
 
 - 2026-11-19 — Checked the live Paperclip roster against the IG draft handoff. CMO / Growth reports to CEO and has no direct reports. A hands-on content marketer reporting to CMO was suggested for producing campaign assets and tracking trial signups; this is a proposal, not an approved hire.
 

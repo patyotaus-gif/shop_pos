@@ -13,6 +13,7 @@
 | reviewer-qa.md | Reviewer / QA | qa | CTO |
 | release-coordinator.md | Release Coordinator | devops | CTO |
 | cmo-growth.md | CMO / Growth | cmo | CEO |
+| [content-marketer.md](content-marketer.md) | Content Marketer | general | CMO / Growth |
 | coo-field-ops.md | COO / Field Ops | pm | CEO |
 | support-desk.md | Support Desk | general | COO / Field Ops |
 | cfo-finance.md | CFO / Finance | cfo | CEO |

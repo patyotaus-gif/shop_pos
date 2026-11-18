@@ -36,6 +36,7 @@ Board / CEO ตัวจริง = เจ้าของ (คน)
     │   ├── Reviewer / QA          [qa]        เฟส 1  ตรวจอิสระ ทดสอบ ยืนยันหลักฐาน
     │   └── Release Coordinator    [devops]    เฟส 2  เช็กลิสต์ปล่อย ตรวจ hash ไม่ deploy เอง
     ├── CMO / Growth               [cmo]       เฟส 2  เว็บ เนื้อหา ช่องทางหาร้าน
+    │   └── Content Marketer       [general]   ผลิตโพสต์และ Reels จากกระแสที่เหมาะกับร้านไทย
     ├── COO / Field Ops            [pm]        เฟส 2  นำร่องศรีสะเกษ คู่มือ ตารางติดตาม
     │   └── Support Desk           [general]   เฟส 3  ร่างคำตอบ จัดกลุ่มปัญหาร้าน
     ├── CFO / Finance              [cfo]       เฟส 3  ราคา ต้นทุน ค่าธรรมเนียม กระทบยอด
