@@ -21,7 +21,7 @@ impact reveals part of the wordmark; the app also shows expanding rings,
 then a 680ms right-to-left wave reveals the sales screen.
 Optional sound replay pairs the two mortar knocks with a soft stereo surf
 sweep that moves right to left during the 1.50–2.18s transition.
-Owner approved publication on 2026-11-18. Website and Android 1.2.79 (96) release sources are integrated. Local regression checks passed. Publication and verification are in progress.
+Owner approved publication on 2026-11-18. Website and signed Android APK 1.2.79 (96) are live at pok-pok.app from commit 8c12e19. The downloaded APK and all 79 Hosting files matched the release. iOS TestFlight publication and physical device playback are pending.
 
 **vidIQ plugin (2026-11-18):** the latest directory lookup now confirms
 `installed: true`. Public Instagram Reel playback data was retrieved directly
@@ -201,7 +201,7 @@ device density/fullscreen/S Pen restored. No payment, sale, stock or kitchen
 status changed. APK, version manifest, runtime rewrites and headers are unchanged.
 See `docs/website-screenshots-2026-11-13.md`.
 
-**Payment keyboard follow-up (source pushed, not in released app):** reproduced
+**Payment keyboard follow-up (included in Android 1.2.79):** reproduced
 keyboard/search-focus restoration after cancel, route back and confirmation in
 six Android/iOS widget cases. Clearing the focused input before opening the
 shared payment sheet passes eight exit/focus cases (including swipe dismissal)
@@ -209,7 +209,7 @@ and preserves search text/reopening. All 50 focused checkout/cart/workspace
 tests and targeted Dart analysis passed. An isolated native SM-X900 fixture also
 passed cancel/back dismissal with Samsung's keyboard hidden, search text and
 the 220-baht mock cart retained, and amount autofocus working on reopening.
-This fix is not in the published APK; installed production app remains 1.2.78 (95).
+Android 1.2.79 includes this fix. Installation on the tablet has not been verified.
 
 **Android 1.2.78 (95) release (website superseded above):** source `7c67501` is pushed; Hosting
 `98a6ffde29a23f7e` stamps commit `193ef23` and went live 2026-11-13 03:44:40 Sydney.
@@ -428,6 +428,8 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-18: Pushed release 8c12e19 to master and published Android 1.2.79 (96) and the homepage to Firebase Hosting 043a086f7689f87e. All 79 hosted file hashes matched. Downloaded the signed APK from pok-pok.app and verified its byte count and SHA-256. On live Edge a mobile width check detected overflow at DOMContentLoaded. After page and font load all six viewport/motion checks passed with JavaScript disabled. No physical device was connected. The manual iOS Codemagic TestFlight build is pending.
 
 - 2026-11-18: Built and signed Android APK 1.2.79 (96), 93,001,460 bytes, SHA-256 43e43a08d91096c08fdbe799cadf9a53741b5b0afcc7d288ac6ed63b019f9c58. Packaging checks verified the previous release signer, three native ABIs and byte-identical approved stereo WAV. Hosting preflight found four expected file changes against version 427f2873006b59f9.
 - 2026-11-18: Launch audio preparation has a 500ms deadline and falls back to silence. The foreground animation and playback request start together. The wave spans the 680ms reveal and recovery details follow the selected theme. Thirty targeted Flutter tests passed and Dart analysis reported no issues.
