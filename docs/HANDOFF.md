@@ -16,8 +16,9 @@ Rules:
 ## Current state (updated 2026-11-18)
 
 Local motion study for review: `docs/previews/pokpok-loading-motion.html`
-compares a compact 880ms masthead animation with a 1480ms splash. Each
-impact reveals part of the wordmark; the app also shows expanding rings.
+compares a compact 880ms masthead animation with a 1500ms splash. Each
+impact reveals part of the wordmark; the app also shows expanding rings,
+then a 680ms right-to-left wave reveals the sales screen.
 Production integration is pending owner review.
 
 **vidIQ plugin (2026-11-18):** the latest directory lookup now confirms
@@ -425,6 +426,11 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-18: Added the app preview's wave exit and immediate destination
+  for reduced motion. Edge pixel checks at 1100px and 360px confirmed the
+  splash at 1499ms, right side revealed at 1800ms and exit complete at
+  2181ms. Inspected the intermediate frame. Local prototype only.
 
 - 2026-11-18: Revised the local motion preview with angled pestle lifts,
   asymmetric strikes, impact accents and a two-stage wordmark reveal. In
