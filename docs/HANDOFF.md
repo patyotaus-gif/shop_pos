@@ -429,6 +429,8 @@ or triggered; its Codemagic workflow does not run automatically on push.
 
 ## Log
 
+- 2026-11-18: Reviewed public Instagram Reel Dfw1xFBHAqY from ui_motion_prompts using its caption and 12 sampled video frames. It illustrates six paper-cut tab transitions. Suggested a sliding active indicator for mobile POS navigation as a concept for owner review.
+
 - 2026-11-18: Pushed release 8c12e19 to master and published Android 1.2.79 (96) and the homepage to Firebase Hosting 043a086f7689f87e. All 79 hosted file hashes matched. Downloaded the signed APK from pok-pok.app and verified its byte count and SHA-256. On live Edge a mobile width check detected overflow at DOMContentLoaded. After page and font load all six viewport/motion checks passed with JavaScript disabled. No physical device was connected. The manual iOS Codemagic TestFlight build is pending.
 
 - 2026-11-18: Built and signed Android APK 1.2.79 (96), 93,001,460 bytes, SHA-256 43e43a08d91096c08fdbe799cadf9a53741b5b0afcc7d288ac6ed63b019f9c58. Packaging checks verified the previous release signer, three native ABIs and byte-identical approved stereo WAV. Hosting preflight found four expected file changes against version 427f2873006b59f9.
