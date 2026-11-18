@@ -14,3 +14,42 @@
 @media (max-width: 600px) {
   nav .logo > .pokpok-wordmark { width: 96px; }
 }
+
+/* The homepage masthead strikes twice on entry. Keep the final frame as the
+   normal markup so reduced motion and browsers with CSS animation off get it. */
+.masthead-motion { --masthead-duration: 880ms; }
+@media (prefers-reduced-motion: no-preference) {
+  .masthead-pestle {
+    transform-origin: 50% 45%;
+    animation: masthead-knock var(--masthead-duration) ease-in-out;
+  }
+  .masthead-bowl {
+    transform-origin: 50% 77%;
+    animation: masthead-impact var(--masthead-duration) ease-out;
+  }
+  .masthead-flecks { animation: masthead-flecks var(--masthead-duration) ease-out; }
+  .masthead-motion .pokpok-wordmark { animation: masthead-reveal var(--masthead-duration) ease-out; }
+}
+@keyframes masthead-knock {
+  0%, 77%, 100% { transform: none; }
+  13% { transform: translate(-3%, -13%) rotate(-18deg); }
+  25% { transform: translate(0, 9%) rotate(5deg); }
+  41% { transform: translate(4%, -18%) rotate(22deg); }
+  54% { transform: translate(0, 11%) rotate(-6deg); }
+  65% { transform: translateY(-5%) rotate(4deg); }
+}
+@keyframes masthead-impact {
+  0%, 21%, 38%, 49%, 79%, 100% { transform: none; }
+  25% { transform: scale(1.07, .90) rotate(3deg); }
+  54% { transform: scale(1.12, .84) rotate(-5deg); }
+  64% { transform: scale(.97, 1.05) rotate(2deg); }
+}
+@keyframes masthead-flecks {
+  0%, 24%, 38%, 53%, 75%, 100% { opacity: 0; }
+  26%, 55% { opacity: .95; }
+}
+@keyframes masthead-reveal {
+  0%, 25% { clip-path: inset(-5% 100% -5% 0); transform: translateY(3px); }
+  42%, 52% { clip-path: inset(-5% 50% -5% 0); transform: none; }
+  78%, 100% { clip-path: inset(-5% 0 -5% 0); transform: none; }
+}

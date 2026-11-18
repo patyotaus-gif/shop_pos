@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -36,8 +35,7 @@ import 'services/order_service.dart';
 import 'services/shop_service.dart';
 import 'services/theme_service.dart';
 import 'theme/pokpok_theme.dart';
-import 'widgets/pounding_pokpok_mark.dart';
-import 'widgets/pokpok_brand.dart';
+import 'widgets/pokpok_launch_motion.dart';
 import 'services/update_service.dart';
 import 'widgets/subscription_gate.dart';
 import 'widgets/update_prompt.dart';
@@ -70,100 +68,67 @@ void autoPrintMain() async {
   }
 }
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  runApp(const ShopPosApp());
+}
 
-  // Render the splash immediately so we know the Flutter engine booted —
-  // a frozen white screen on iOS first launch usually means main() is
-  // blocked on an await before runApp ever runs.
-  runApp(const _BootingApp());
-
-  // Hold the splash for a minimum beat so the brand remains visible
-  // even on fast cold starts. Init runs concurrently
-  // underneath; we wait on whichever finishes last.
-  final minSplash = Future<void>.delayed(const Duration(seconds: 3));
-
+Future<void> _initializeApp() async {
+  await initializeDateFormatting('th_TH', null);
+  themeNotifier.value = await ThemeService.load();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)
+      .timeout(const Duration(seconds: 15));
+  // App Check (monitoring) — attests the app to Firebase backends so we
+  // can later enforce that requests come from the real app. Release uses
+  // Play Integrity / App Attest; debug builds use the debug provider.
+  // Wrapped so an attestation hiccup never blocks startup.
   try {
-    await initializeDateFormatting('th_TH', null);
-    themeNotifier.value = await ThemeService.load();
-    await Firebase.initializeApp(
-            options: DefaultFirebaseOptions.currentPlatform)
-        .timeout(const Duration(seconds: 15));
-    // App Check (monitoring) — attests the app to Firebase backends so we
-    // can later enforce that requests come from the real app. Release uses
-    // Play Integrity / App Attest; debug builds use the debug provider.
-    // Wrapped so an attestation hiccup never blocks startup.
-    try {
-      await FirebaseAppCheck.instance.activate(
-        androidProvider:
-            kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
-        appleProvider:
-            kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
-      );
-    } catch (_) {}
-    await NotificationService.init().timeout(const Duration(seconds: 10));
-    // Subscribe to bank notifications (Android only; no-op elsewhere).
-    // Does not request permission — user enables that explicitly from
-    // settings — but if it's already granted we start matching right away.
-    await BankNotificationService.init().timeout(const Duration(seconds: 5));
-    await minSplash;
-    OfflineService.start();
-    runApp(const ShopPosApp());
-  } catch (e, st) {
-    runApp(_BootErrorApp(message: '$e', stack: '$st'));
-  }
-}
-
-class _BootingApp extends StatelessWidget {
-  const _BootingApp();
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      builder: AppViewport.builder,
-      home: _PokpokSplash(),
+    await FirebaseAppCheck.instance.activate(
+      androidProvider:
+          kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
+      appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
     );
-  }
+  } catch (_) {}
+  await NotificationService.init().timeout(const Duration(seconds: 10));
+  // Subscribe to bank notifications (Android only; no-op elsewhere).
+  // Does not request permission — user enables that explicitly from
+  // settings — but if it's already granted we start matching right away.
+  await BankNotificationService.init().timeout(const Duration(seconds: 5));
+  OfflineService.start();
 }
 
-class _BootErrorApp extends StatelessWidget {
-  const _BootErrorApp({required this.message, required this.stack});
+class _BootErrorScreen extends StatelessWidget {
+  const _BootErrorScreen({required this.message, required this.stack});
   final String message;
   final String stack;
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      builder: AppViewport.builder,
-      home: Scaffold(
-        backgroundColor: const Color(0xFFF5F1EC),
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'Pokpok POS — startup failed',
-                  style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF7A1F2B)),
-                ),
-                const SizedBox(height: 12),
-                SelectableText(message),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: SelectableText(
-                      stack,
-                      style:
-                          const TextStyle(fontSize: 11, fontFamily: 'Courier'),
-                    ),
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Pokpok POS — startup failed',
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary),
+              ),
+              const SizedBox(height: 12),
+              SelectableText(message),
+              const SizedBox(height: 12),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: SelectableText(
+                    stack,
+                    style: const TextStyle(fontSize: 11, fontFamily: 'Courier'),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -171,8 +136,21 @@ class _BootErrorApp extends StatelessWidget {
   }
 }
 
-class ShopPosApp extends StatelessWidget {
-  const ShopPosApp({super.key});
+class ShopPosApp extends StatefulWidget {
+  const ShopPosApp({super.key, this.initialize = _initializeApp});
+  final Future<void> Function() initialize;
+
+  @override
+  State<ShopPosApp> createState() => _ShopPosAppState();
+}
+
+class _ShopPosAppState extends State<ShopPosApp> {
+  late final _initialization = Future<void>.sync(widget.initialize);
+
+  Route<void> _rootRoute() => MaterialPageRoute<void>(
+        settings: const RouteSettings(name: '/'),
+        builder: (_) => _BootHome(initialization: _initialization),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -187,46 +165,21 @@ class ShopPosApp extends StatelessWidget {
         themeMode: mode,
         theme: PokpokTheme.light(),
         darkTheme: PokpokTheme.dark(),
-        builder: AppViewport.builder,
-        home: RecoverableAuthBuilder<User?>(
-          streamFactory: () => AuthService.authStateStream,
-          builder: (context, snap, retry) {
-            if (snap.connectionState == ConnectionState.waiting) {
-              return const _PokpokSplash();
-            }
-            if (snap.hasError) {
-              return Scaffold(
-                  body: Center(
-                      child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Text(AuthService.sessionErrorMessage(snap.error)),
-                FilledButton.icon(
-                    onPressed: retry,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('ลองตรวจสิทธิ์อีกครั้ง')),
-                const OfflineEntryButton(),
-                TextButton(
-                    onPressed: AuthService.signOut,
-                    child: const Text('ออกจากระบบ')),
-              ])));
-            }
-            if (snap.data == null) return const LoginScreen();
-            // Load the founder custom claim for an already-signed-in user (app
-            // relaunch); signIn() covers the fresh-login path. Fire-and-forget —
-            // UI gates on the cached value once it resolves.
-            AuthService.refreshFounderClaim();
-            if (!AuthService.isStaff && !AuthService.ownerUnlocked) {
-              return UserSwitchScreen(key: ValueKey(snap.data!.uid));
-            }
-            return AuthService.isStaff
-                ? StaffModeScreen(key: ValueKey(snap.data!.uid))
-                : SubscriptionGate(
-                    child: MainShell(key: ValueKey(snap.data!.uid)));
-          },
+        builder: (context, child) => AppViewport(
+          child: PokpokLaunchMotion(child: child ?? const SizedBox.shrink()),
         ),
+        // Always enter through initialization and account selection on cold start.
+        // Internal navigation can still open named routes after owner sign-in.
+        onGenerateInitialRoutes: (_) => [_rootRoute()],
         onGenerateRoute: (settings) {
-          if (settings.name == '/product-form' && !AuthService.isStaff) {
+          if (settings.name == '/') return _rootRoute();
+          if (settings.name == '/product-form' &&
+              AuthService.ownerUnlocked &&
+              !AuthService.isStaff &&
+              AuthService.currentUser != null) {
             final barcode = settings.arguments as String?;
             return MaterialPageRoute(
+              settings: settings,
               builder: (_) => ProductFormScreen(initialBarcode: barcode),
             );
           }
@@ -237,132 +190,72 @@ class ShopPosApp extends StatelessWidget {
   }
 }
 
-class _PokpokSplash extends StatefulWidget {
-  const _PokpokSplash();
+class _BootHome extends StatelessWidget {
+  const _BootHome({required this.initialization});
+  final Future<void> initialization;
+
   @override
-  State<_PokpokSplash> createState() => _PokpokSplashState();
+  Widget build(BuildContext context) => FutureBuilder<void>(
+        future: initialization,
+        builder: (context, boot) {
+          if (boot.hasError) {
+            return _BootErrorScreen(
+                message: '${boot.error}', stack: '${boot.stackTrace}');
+          }
+          if (boot.connectionState != ConnectionState.done) {
+            return const _StartingScreen();
+          }
+          return RecoverableAuthBuilder<User?>(
+            streamFactory: () => AuthService.authStateStream,
+            builder: (context, snap, retry) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const _StartingScreen();
+              }
+              if (snap.hasError) {
+                return Scaffold(
+                    body: Center(
+                        child:
+                            Column(mainAxisSize: MainAxisSize.min, children: [
+                  Text(AuthService.sessionErrorMessage(snap.error)),
+                  FilledButton.icon(
+                      onPressed: retry,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('ลองตรวจสิทธิ์อีกครั้ง')),
+                  const OfflineEntryButton(),
+                  TextButton(
+                      onPressed: AuthService.signOut,
+                      child: const Text('ออกจากระบบ')),
+                ])));
+              }
+              if (snap.data == null) return const LoginScreen();
+              // Load the founder custom claim for an already-signed-in user (app
+              // relaunch); signIn() covers the fresh-login path. Fire-and-forget —
+              // UI gates on the cached value once it resolves.
+              AuthService.refreshFounderClaim();
+              if (!AuthService.isStaff && !AuthService.ownerUnlocked) {
+                return UserSwitchScreen(key: ValueKey(snap.data!.uid));
+              }
+              return AuthService.isStaff
+                  ? StaffModeScreen(key: ValueKey(snap.data!.uid))
+                  : SubscriptionGate(
+                      child: MainShell(key: ValueKey(snap.data!.uid)));
+            },
+          );
+        },
+      );
 }
 
-class _PokpokSplashState extends State<_PokpokSplash>
-    with TickerProviderStateMixin {
-  late final AnimationController _loop; // Shared logo and loading-dot loop
-  late final AnimationController _intro; // one-shot wordmark fade-in
+class _StartingScreen extends StatelessWidget {
+  const _StartingScreen();
 
   @override
-  void initState() {
-    super.initState();
-    _loop = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat();
-    _intro = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 700),
-    )..forward();
-  }
-
-  @override
-  void dispose() {
-    _loop.dispose();
-    _intro.dispose();
-    super.dispose();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (MediaQuery.disableAnimationsOf(context)) {
-      _loop.stop();
-      _intro.value = 1;
-    } else if (!_loop.isAnimating) {
-      _loop.repeat();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    const burgundy = Color(0xFF7A1F2B);
-    const cream = Color(0xFFF5F1EC);
-    final reduceMotion = MediaQuery.disableAnimationsOf(context);
-
-    return Scaffold(
-      backgroundColor: burgundy,
-      body: Stack(
-        children: [
-          Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  width: 200,
-                  height: 168,
-                  child: AnimatedBuilder(
-                    animation: _loop,
-                    builder: (_, __) => RepaintBoundary(
-                      child: PoundingPokpokMark(
-                        progress: _loop.value,
-                        reduceMotion: reduceMotion,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                FadeTransition(
-                  opacity:
-                      CurvedAnimation(parent: _intro, curve: Curves.easeOut),
-                  child: Column(
-                    children: [
-                      const PokpokWordmark(width: 160, color: Colors.white),
-                      const SizedBox(height: 5),
-                      Text(
-                        'POINT OF SALE',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: cream.withValues(alpha: 0.85),
-                          letterSpacing: 5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Three pulsing loader dots near the bottom edge.
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 56,
-            child: AnimatedBuilder(
-              animation: _loop,
-              builder: (_, __) => Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(3, (i) {
-                  final phase = (_loop.value + i * 0.12) % 1.0;
-                  final o = reduceMotion
-                      ? 0.65
-                      : (0.25 +
-                              0.75 *
-                                  (0.5 + 0.5 * math.sin(phase * 2 * math.pi)))
-                          .clamp(0.0, 1.0);
-                  return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: cream.withValues(alpha: o),
-                    ),
-                  );
-                }),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Scaffold(
+        body: Center(
+          child: MediaQuery.disableAnimationsOf(context)
+              ? const Text('กำลังเปิดแอป')
+              : const CircularProgressIndicator(semanticsLabel: 'กำลังเปิดแอป'),
+        ),
+      );
 }
 
 class MainShell extends StatefulWidget {

@@ -21,7 +21,7 @@ impact reveals part of the wordmark; the app also shows expanding rings,
 then a 680ms right-to-left wave reveals the sales screen.
 Optional sound replay pairs the two mortar knocks with a soft stereo surf
 sweep that moves right to left during the 1.50–2.18s transition.
-Production integration is pending owner review.
+Owner approved publication on 2026-11-18. Website and Android 1.2.79 (96) release sources are integrated. Local regression checks passed. Publication and verification are in progress.
 
 **vidIQ plugin (2026-11-18):** the latest directory lookup now confirms
 `installed: true`. Public Instagram Reel playback data was retrieved directly
@@ -428,6 +428,11 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-18: Built and signed Android APK 1.2.79 (96), 93,001,460 bytes, SHA-256 43e43a08d91096c08fdbe799cadf9a53741b5b0afcc7d288ac6ed63b019f9c58. Packaging checks verified the previous release signer, three native ABIs and byte-identical approved stereo WAV. Hosting preflight found four expected file changes against version 427f2873006b59f9.
+- 2026-11-18: Launch audio preparation has a 500ms deadline and falls back to silence. The foreground animation and playback request start together. The wave spans the 680ms reveal and recovery details follow the selected theme. Thirty targeted Flutter tests passed and Dart analysis reported no issues.
+- 2026-11-18: Local marketing regression passed across 18 pages at five widths. Eleven native launch, recovery and smoke checks passed. Independent review prompted a final cold-audio timing and once-per-process bootstrap refinement before publication.
+- 2026-11-18: Owner approved release of the two-strike loading motion and wave audio. Live Android baseline 1.2.78 (95); no ADB device at preflight.
 
 - 2026-11-18: Added a synthesized wave tail to the splash preview audio.
   Checked PCM knock preservation, stereo direction and the fade to silence,

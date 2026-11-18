@@ -1,72 +1,86 @@
 import 'package:flutter/material.dart';
 
-/// Two mortar strikes per loop, using separate layers of the team's artwork.
+/// Two strikes and two ripples, drawn with the team's transparent logo layers.
 class PoundingPokpokMark extends StatelessWidget {
   const PoundingPokpokMark({
     super.key,
     required this.progress,
     this.size = 200,
-    this.reduceMotion = false,
   });
 
   final double progress;
   final double size;
-  final bool reduceMotion;
 
-  static double _sample(double t, List<double> stops, List<double> values) {
-    if (t <= stops.first) return values.first;
+  double _sample(List<double> stops, List<double> values) {
     for (var i = 1; i < stops.length; i++) {
-      if (t <= stops[i]) {
-        final f = (t - stops[i - 1]) / (stops[i] - stops[i - 1]);
-        return values[i - 1] + (values[i] - values[i - 1]) * f;
+      if (progress <= stops[i]) {
+        final t = (progress - stops[i - 1]) / (stops[i] - stops[i - 1]);
+        return values[i - 1] +
+            (values[i] - values[i - 1]) *
+                Curves.easeInOut.transform(t.clamp(0, 1));
       }
     }
     return values.last;
   }
 
+  Widget _ripple(double start, double end) {
+    final t = Interval(start, end, curve: Curves.easeOut).transform(progress);
+    final alpha = t < .16 ? t / .16 : (1 - t) / .84;
+    return Positioned(
+      left: 0,
+      right: 0,
+      top: size * .05,
+      height: size,
+      child: Transform.scale(
+        scale: .36 + 1.36 * t,
+        child: DecoratedBox(
+            decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                    color: Colors.white.withValues(alpha: alpha * .32),
+                    width: 1.5))),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final dy = reduceMotion
-        ? 0.0
-        : _sample(progress, [0, .10, .19, .26, .35, .41, .48, .70, 1],
-            [-64, -64, 80, -32, 80, 16, 0, 0, -64]);
-    final squash = reduceMotion
-        ? 0.0
-        : _sample(progress, [0, .16, .19, .25, .32, .35, .41, 1],
-            [0, 0, 1, 0, 0, .7, 0, 0]);
+    const strikes = [0.0, .13, .25, .41, .54, .65, .77, 1.0];
+    final dy = _sample(strikes, [0, -.13, .09, -.18, .11, -.05, 0, 0]);
+    final dx = _sample(strikes, [0, -.03, 0, .04, 0, 0, 0, 0]);
+    final angle = _sample(strikes, [0, -.31, .087, .38, -.105, .07, 0, 0]);
+    final squash = _sample([0, .21, .25, .38, .49, .54, .64, .79, 1],
+        [0, 0, .7, 0, 0, 1, -.3, 0, 0]);
     Widget layer(String name) =>
         Image.asset('assets/icon/splash/white-$name.png',
             width: size, height: size, excludeFromSemantics: true);
-    return Semantics(
-      label: 'Pokpok',
-      image: true,
-      child: SizedBox(
-        width: size,
-        height: size * .84,
-        child: Stack(clipBehavior: Clip.none, children: [
-          Positioned(
+
+    return SizedBox(
+      width: size,
+      height: size * .84,
+      child: Stack(clipBehavior: Clip.none, children: [
+        _ripple(.247, .534),
+        _ripple(.533, .967),
+        Positioned(
             top: 0,
-            left: 0,
             width: size,
             height: size,
             child: Transform.translate(
-                offset: Offset(0, dy * size / 1024), child: layer('pestle')),
-          ),
-          Positioned(
+                offset: Offset(dx * size, dy * size),
+                child: Transform.rotate(
+                    angle: angle,
+                    alignment: const Alignment(0, -.1),
+                    child: layer('pestle')))),
+        Positioned(
             top: 0,
-            left: 0,
             width: size,
             height: size,
             child: Transform(
-              // Keep the base (y=786 of the source's 1024 units) stationary.
-              alignment: const Alignment(0, .53515625),
-              transform: Matrix4.diagonal3Values(
-                  1 + .025 * squash, 1 - .035 * squash, 1),
-              child: layer('bowl'),
-            ),
-          ),
-        ]),
-      ),
+                alignment: const Alignment(0, .53515625),
+                transform: Matrix4.diagonal3Values(
+                    1 + .12 * squash, 1 - .16 * squash, 1),
+                child: layer('bowl'))),
+      ]),
     );
   }
 }
