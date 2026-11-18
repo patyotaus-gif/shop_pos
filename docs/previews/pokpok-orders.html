@@ -7,43 +7,67 @@
 <style>
 @font-face{font-family:Plex;src:url('../../assets/fonts/IBMPlexSansThai-Regular.ttf')}
 @font-face{font-family:Plex;font-weight:600;src:url('../../assets/fonts/IBMPlexSansThai-SemiBold.ttf')}
-*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 Plex,sans-serif;font-variant-numeric:tabular-nums}
-button,input{font:inherit}button,a{touch-action:manipulation}button{cursor:pointer;color:inherit}
+:root{--primary-text:white;--chip:#e5ded5;--border:#85776e;--paid:#295d4a;--pending:#80500e;--rail:192px}
+@media(prefers-color-scheme:dark){
+  :root{color-scheme:dark;--paper:#191716;--surface:#211e1d;--ink:#f0e9e4;--muted:#ccc1ba;--line:#514841;--border:#9b8d84;--wine:#f2adb7;--primary-text:#48101a;--rose:#50232b;--chip:#3b3533;--paid:#9bd8bc;--pending:#f4ca89}
+  .wordmark{filter:brightness(0) invert(1)}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.45 Plex,sans-serif;font-variant-numeric:tabular-nums}
+button,input{font:inherit;color:inherit}button{cursor:pointer}button,a{touch-action:manipulation}
 :focus-visible{outline:3px solid var(--wine);outline-offset:2px}
-header{background:var(--surface);border-bottom:1px solid var(--line)}.wrap{width:min(1140px,94%);margin:auto}
-.mast,.line,.tools,.detail-head,.total{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.mast{min-height:66px}.mast img{width:104px}.mast a{color:var(--wine);padding:10px 0}
-h1,h2,h3,p{margin:0}h1{font-size:clamp(30px,4vw,42px)}h2{font-size:21px}h3{font-size:16px}
-main{padding:24px 0 44px}.line{margin-bottom:14px}small,.sub{color:var(--muted);font-size:14px}
-.queues{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.queue,.panel{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius)}
-.queue{padding:13px 18px;text-align:start;display:grid;grid-template-columns:1fr auto;align-items:center;gap:3px 8px}.queue small{grid-column:1/-1}.queue strong{font-size:26px}
-.queue[aria-pressed=true],.action{background:var(--wine);color:white;border-color:var(--wine)}.queue[aria-pressed=true] small{color:white}
-.tools{flex-wrap:wrap;margin:18px 0}.views{display:flex;gap:8px;flex-wrap:wrap}.views button,.back{border:1px solid var(--line);background:white;border-radius:8px;padding:8px 12px;min-height:44px}.views button[aria-pressed=true]{background:var(--rose);border-color:var(--wine);color:var(--wine)}
-input{border:1px solid var(--line);border-radius:8px;padding:9px 12px;width:min(100%,260px);background:white;color:var(--ink)}
-.board{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(0,1fr);gap:16px;align-items:start}.panel{overflow:hidden;min-width:0}.panel-head,.detail{padding:20px}.panel-head{border-bottom:1px solid var(--line)}
-.order{display:grid;width:100%;grid-template-columns:1fr auto;align-items:center;gap:5px 12px;border:0;border-bottom:1px solid var(--line);background:white;text-align:start;padding:14px 20px}.order:last-child{border-bottom:0}.order[aria-pressed=true]{background:var(--rose);box-shadow:inset 3px 0 var(--wine)}.order span:last-child{text-align:end}.order strong,.order small{display:block}
-.pay{font-size:13px}.paid{color:#295d4a}.unpaid{color:#865512}.badge{padding:4px 10px;border:1px solid var(--line);border-radius:18px;font-size:14px}
-.meta,.item,.total{padding:12px 0;border-bottom:1px solid var(--line)}.meta,.item{display:flex;align-items:baseline;justify-content:space-between;gap:12px}.items{margin-top:18px}.total{border:0;color:var(--wine)}.total strong{font-size:24px}.action{width:100%;border:0;border-radius:8px;min-height:46px;font-weight:600;margin-top:12px}
-.empty{padding:24px}.back{display:none}.sr{position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden}
-@media(max-width:639px){main{padding-top:16px}.mast{min-height:54px}.queues{gap:5px}.queue{display:flex;flex-direction:column;align-items:start;gap:0;padding:9px;font-size:14px}.queue strong{font-size:23px}.queue small{display:none}.tools{gap:10px}.tools input{width:100%}.board{display:block}.detail{display:none}.order{padding:12px}.drill .detail{display:block}.drill .overview{display:none}.drill .back{display:inline-block;margin-bottom:12px}}
+h1,h2,h3,p{margin:0}h1{font-size:20px}h2{font-size:18px}h3{font-size:16px}
+small,.sub{color:var(--muted);font-size:14px}
+nav{position:fixed;inset:0 auto 0 0;width:var(--rail);background:var(--surface);border-right:1px solid var(--line);padding:8px;z-index:2}
+.brand{height:52px;display:flex;align-items:center;gap:6px;padding:0 8px;margin-bottom:12px}.mark{width:28px}.wordmark{width:96px}
+.dest{min-height:48px;display:flex;align-items:center;gap:12px;padding:8px 14px;border-radius:12px;text-decoration:none;color:var(--muted);font-size:14px}
+.dest[aria-current]{color:var(--wine);background:var(--rose);font-weight:600}
+.icon{width:22px;height:22px;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.7;flex:none}
+main{margin-left:var(--rail);padding:0 20px 32px}
+.appbar,.workspace{max-width:1040px;margin:auto}.appbar{height:64px;display:grid;align-items:center;grid-template-columns:48px 1fr 48px;text-align:center}.appbar h1{grid-column:2}
+.help,.back{border:0;background:transparent;min-width:48px;height:48px;color:var(--muted);display:grid;place-items:center}.back{display:none}
+.queues{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:8px 3px 12px;border-bottom:1px solid var(--line)}
+.queue{flex:none;min-height:48px;padding:8px 14px;border:0;border-radius:40px;background:var(--chip);display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600}
+.count{background:var(--rose);color:var(--wine);border-radius:20px;padding:1px 7px;font-size:13px}
+.queue[aria-pressed=true],.action{background:var(--wine);color:var(--primary-text)}
+.queue[aria-pressed=true] .count{background:color-mix(in srgb,currentColor 18%,transparent);color:inherit}
+.tools,.panel-head,.detail-head,.meta,.item,.total{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.tools{margin:16px 0}.searchbox{position:relative;display:flex;align-items:center;width:min(100%,330px)}.searchbox .icon{position:absolute;left:14px;width:19px;color:var(--muted)}
+input{width:100%;min-height:48px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px 9px 43px}
+.board{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;gap:16px}
+.panel-head{padding:0 4px 10px}.order,.detail,dialog{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);color:var(--ink)}
+.order{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;text-align:start;padding:14px 16px;margin-bottom:8px}
+.order[aria-pressed=true]{border-color:var(--wine);background:var(--rose)}.order strong,.order small{display:block}.order span:last-child{text-align:end}
+.pay,.badge{display:inline-block;font-size:13px;font-weight:600}.paid{color:var(--paid)}.unpaid{color:var(--pending)}.badge{padding:4px 10px;background:var(--chip);border-radius:20px}
+.detail,dialog{padding:20px}.detail-head{padding-bottom:12px}.meta,.item,.total{padding:10px 0;border-bottom:1px solid var(--line)}.items{margin-top:18px}.total{border:0}.total strong{font-size:22px}
+.action{border:0;border-radius:var(--radius);min-height:48px;font-weight:600;font-size:14px;padding:10px 20px;margin-top:12px}.actions{text-align:end}
+.empty{padding:16px}.sr{position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden}
+dialog{width:min(370px,90vw)}dialog p{margin-top:10px}dialog::backdrop{background:#0007}
+@media(min-width:600px) and (max-width:999px){:root{--rail:72px}.brand{justify-content:center}.wordmark,.dest span{display:none}.dest{justify-content:center}}
+@media(max-width:759px){.board{display:block}.detail{display:none}.drill .detail{display:block}.drill .overview{display:none}.drill .back{display:grid;grid-column:1;grid-row:1}.drill .appbar h1{grid-row:1}.tools{flex-wrap:wrap}.tools small{font-size:13px}}
+@media(max-width:599px){main{margin:0;padding:0 12px 88px}.appbar{height:56px}nav{inset:auto 0 0;width:100%;border:0;border-top:1px solid var(--line);display:flex;justify-content:space-evenly;padding:4px 8px calc(4px + env(safe-area-inset-bottom))}.brand{display:none}.dest{flex-direction:column;gap:2px;min-width:88px;font-size:12px}.searchbox{width:100%}.tools{gap:6px}.order{padding:12px}.drill nav{display:none}}
 </style>
-<header><div class="wrap mast"><img src="../../public/brand/pokpok-wordmark.svg" alt="Pokpok"><a href="pokpok-sales-report.html">ดูรายงานยอดขาย ↗</a></div></header>
-<main class="wrap">
-  <div class="line overview"><h1>ออเดอร์</h1><small>ร้านตัวอย่าง · ข้อมูลจำลอง</small></div>
-  <div class="queues overview" id="queues" aria-label="คิวออเดอร์"></div>
-  <div class="tools overview"><div id="views" class="views"></div><input id="search" type="search" aria-label="ค้นหาเลขออเดอร์หรือเมนู" placeholder="ค้นหาเลขออเดอร์หรือเมนู"></div>
-  <button id="back" class="back">← กลับไปที่คิว</button>
-  <div class="board">
-    <section class="panel overview" aria-labelledby="list-title"><div class="panel-head"><h2 id="list-title"></h2></div><div id="list"></div></section>
-    <section class="panel detail" id="detail" aria-label="รายละเอียดออเดอร์" tabindex="-1"></section>
+<nav aria-label="เมนูตัวอย่าง">
+  <div class="brand"><img class="mark" src="../../public/brand/pokpok-icon.svg" alt=""><img class="wordmark" src="../../public/brand/pokpok-wordmark.svg" alt="Pokpok"></div>
+  <a class="dest" aria-current="page" aria-label="ออเดอร์" href="pokpok-orders.html"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 8h16l1 13H3L4 8Zm4 2V7a4 4 0 0 1 8 0v3"/></svg><span>ออเดอร์</span></a>
+  <a class="dest" aria-label="รายงาน" href="pokpok-sales-report.html"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 20h18M6 17v-6m6 6V4m6 13V8"/></svg><span>รายงาน</span></a>
+</nav>
+<main>
+  <header class="appbar"><button id="back" class="back" aria-label="กลับไปที่คิว">←</button><h1 id="heading">ออเดอร์</h1><button class="help" aria-label="ข้อมูลหน้าจอออเดอร์" id="help"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 2-2.5 2-2.5 4m0 3h.01"/></svg></button></header>
+  <div class="workspace">
+    <div class="queues overview" id="queues" role="group" aria-label="คิวออเดอร์"></div>
+    <div class="tools overview"><label class="searchbox"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></svg><input id="search" type="search" aria-label="ค้นหาเลขออเดอร์หรือเมนู" placeholder="ค้นหาเลขออเดอร์หรือเมนู"></label><small>ร้านตัวอย่าง · ข้อมูลจำลอง</small></div>
+    <div class="board">
+      <section class="overview" aria-labelledby="list-title"><div class="panel-head"><h2 id="list-title"></h2></div><div id="list"></div></section>
+      <section class="detail" id="detail" aria-label="รายละเอียดออเดอร์" tabindex="-1"></section>
+    </div>
   </div>
   <p class="sr" id="announcement" role="status"></p>
 </main>
+<dialog id="info" aria-labelledby="info-title"><h2 id="info-title">ออเดอร์</h2><p>เลือกคิวเพื่อดูรายการที่ลูกค้าสั่งผ่านลิงก์หรือ QR ของร้าน ตรวจการชำระเงินก่อนรับออเดอร์ แล้วอัปเดตสถานะเมื่อพร้อมส่งมอบ</p><form method="dialog" class="actions"><button class="action">เข้าใจแล้ว</button></form></dialog>
 <script>
 const stages = [
-  {name:'รอยืนยัน', hint:'ตรวจการชำระและรับออเดอร์'},
-  {name:'กำลังเตรียม', hint:'ออเดอร์ที่ครัวกำลังทำ'},
-  {name:'พร้อมรับ', hint:'รอส่งมอบให้ลูกค้า'},
+  {name:'รอยืนยัน'}, {name:'กำลังเตรียม'}, {name:'พร้อมรับ'},
   {name:'นัดล่วงหน้า'}, {name:'ประวัติ'}
 ];
 const dishes = {pasta:['พาสต้ากุ้ง',180], tea:['ชาไทย',60], rice:['ข้าวกะเพรา',90], coffee:['กาแฟเย็น',75]};
@@ -62,16 +86,15 @@ const money=v=>'฿'+v.toLocaleString('th-TH');
 const total=o=>o.items.reduce((sum,[key,qty])=>sum+dishes[key][1]*qty,0);
 const el=id=>document.getElementById(id);
 let stage=0, selected='004';
-function stageButtons(start,end,primary){
-  return stages.slice(start,end).map(({name,hint},offset)=>{
-    const i=start+offset,count=orders.filter(o=>o.stage===i).length;
-    return `<button data-stage="${i}" aria-pressed="${stage===i}" class="${primary?'queue':''}">${name} <strong>${count}</strong>${hint?`<small>${hint}</small>`:''}</button>`;
+function stageButtons(){
+  return stages.map(({name},i)=>{
+    const count=orders.filter(o=>o.stage===i).length;
+    return `<button data-stage="${i}" aria-pressed="${stage===i}" class="queue">${name}${count?`<span class="count">${count}</span>`:''}</button>`;
   }).join('');
 }
 function pay(o){return `<span class="pay ${o.payment==='ชำระแล้ว'?'paid':'unpaid'}">${o.payment}</span>`}
 function draw(){
-  el('queues').innerHTML=stageButtons(0,3,true);
-  el('views').innerHTML=stageButtons(3,5,false);
+  el('queues').innerHTML=stageButtons();
   const q=el('search').value.trim().toLowerCase();
   const visible=orders.filter(o=>o.stage===stage&&[o.id,...o.items.map(([key])=>dishes[key][0])].some(s=>s.toLowerCase().includes(q)));
   const order=visible.find(o=>o.id===selected)??visible[0];
@@ -86,10 +109,17 @@ function draw(){
     <div class="meta"><small>การชำระเงิน</small>${pay(order)}</div>
     <h3 class="items">รายการอาหาร</h3>${order.items.map(([key,qty])=>`<div class="item"><span>${dishes[key][0]} × ${qty}</span><strong>${money(dishes[key][1]*qty)}</strong></div>`).join('')}
     <div class="total"><span>ยอดรวม</span><strong>${money(total(order))}</strong></div>
-    ${action?`<button class="action" id="advance">${action}</button>`:''}`;
+    ${action?`<div class="actions"><button class="action" id="advance">${action}</button></div>`:''}`;
 }
+const compact=matchMedia('(max-width:759px)');
+function drill(open){
+  document.body.classList.toggle('drill',open);
+  el('heading').textContent=open?'รายละเอียดออเดอร์':'ออเดอร์';
+}
+compact.addEventListener('change',()=>drill(false));
+el('help').addEventListener('click',()=>el('info').showModal());
 function changeStage(i){
-  stage=i;el('search').value='';document.body.classList.remove('drill');draw();
+  stage=i;el('search').value='';drill(false);draw();
   document.querySelector('[data-stage="'+i+'"]').focus();
 }
 document.addEventListener('click',event=>{
@@ -97,10 +127,10 @@ document.addEventListener('click',event=>{
   if(btn.hasAttribute('data-stage'))return changeStage(Number(btn.dataset.stage));
   if(btn.hasAttribute('data-order')){
     selected=btn.dataset.order;draw();
-    if(matchMedia('(max-width:639px)').matches){document.body.classList.add('drill');el('detail').focus()}
+    if(compact.matches){drill(true);el('detail').focus()}
     else document.querySelector('[data-order="'+selected+'"]').focus();
   }
-  if(btn.id==='back'){document.body.classList.remove('drill');document.querySelector('[data-order="'+selected+'"]')?.focus()}
+  if(btn.id==='back'){drill(false);document.querySelector('[data-order="'+selected+'"]')?.focus()}
   if(btn.id==='advance'){
     const order=orders.find(o=>o.id===selected);
     order.stage=[1,2,4][order.stage];

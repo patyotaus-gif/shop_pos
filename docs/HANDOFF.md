@@ -16,6 +16,7 @@ Rules:
 ## Current state (updated 2026-11-18)
 
 The sales report and orders click-throughs in `docs/previews/` link to each other and include PNG previews. Both use sample data for owner review.
+The orders prototype now follows the Flutter order screen's app bar, queue chips, navigation placement and Material theme.
 
 The owner approved the lower-left expanding tab in `docs/previews/pokpok-tab-motion.html`. It is implemented locally in the Flutter phone navigation. Production remains at 1.2.79 (96).
 
@@ -432,6 +433,10 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-18 — Align orders preview with Pokpok app UI
+
+Replaced the marketing header and large queue tiles in the local orders prototype with an app bar, compact queue filters and adaptive navigation. The paid-order workflow, payment states and sales report link remain available. Checked list, detail, help dialog and order acceptance in Chrome at 390, 768 and 1440 CSS pixels. Updated the desktop image. No production release or physical-device test.
 
 ### 2026-11-18 — Orders preview for owner review
 
