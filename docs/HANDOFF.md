@@ -15,6 +15,8 @@ Rules:
 
 ## Current state (updated 2026-11-19)
 
+Paperclip's CEO-to-CFO delegation and automatic follow-up have been verified with a self-contained task. Access to repository files from those agents' workspaces remains unverified.
+
 The Flutter settings headings and category navigation, including equal-width tablet category buttons, are verified locally and await a future app release.
 
 Android 1.2.80 (97) is live at https://pok-pok.app/app/pokpok.apk. Its detailed reports, order queues and phone navigation are from commit 372a8ab. Codemagic successfully built and published the iOS 1.2.80 TestFlight submission for the same commit. External beta approval and installation on physical devices are unconfirmed.
@@ -438,6 +440,8 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-19 — Board assigned POK-3 to CEO. Its assignment run created child POK-4 for CFO. CFO's assignment run returned the correct fictional total (35 + 50 + 75 = 160 THB) and closed POK-4. An automation run woke CEO to verify CFO's result and close POK-3. Checked both issue states, comment authors and run sources. No manual invocation. Both agents reported they could not find docs/HANDOFF.md in their task workspaces.
 
 - 2026-11-19 — Read-only Paperclip status check: all 12 agents were idle, with on-demand wake enabled and timer heartbeats disabled. No routines or open tasks. The CEO's two latest manually triggered runs succeeded and POK-2 was done. Assignment-triggered runs visible in history failed before those successes; automatic completion after assignment is still unverified.
 
