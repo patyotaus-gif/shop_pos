@@ -15,6 +15,8 @@ Rules:
 
 ## Current state (updated 2026-11-18)
 
+Mobile tab concept for owner review: `docs/previews/pokpok-tab-motion.html` uses sample data and a 200ms sliding selection. Production remains at 1.2.79 (96).
+
 Local motion study for review: `docs/previews/pokpok-loading-motion.html`
 compares a compact 880ms masthead animation with a 1500ms splash. Each
 impact reveals part of the wordmark; the app also shows expanding rings,
@@ -428,6 +430,8 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-18: Created a local interactive five-tab mobile navigation specimen. Edge checks passed at 390, 768 and 1440px for selection, replay, layout width and reduced motion. Visually inspected the 390px capture. Preview only.
 
 - 2026-11-18: Reviewed public Instagram Reel Dfw1xFBHAqY from ui_motion_prompts using its caption and 12 sampled video frames. It illustrates six paper-cut tab transitions. Suggested a sliding active indicator for mobile POS navigation as a concept for owner review.
 

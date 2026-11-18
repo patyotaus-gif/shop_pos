@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="th">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ลองสลับเมนู · Pokpok</title>
+<link rel="stylesheet" href="../../public/brand.css">
+<style>
+@font-face { font-family: Plex; src: url('../../assets/fonts/IBMPlexSansThai-Regular.ttf') }
+@font-face { font-family: Plex; src: url('../../assets/fonts/IBMPlexSansThai-SemiBold.ttf'); font-weight: 600 }
+* { box-sizing: border-box }
+body { margin: 0; min-height: 100svh; display: grid; align-content: center; justify-items: center; gap: 16px; padding: 16px; background: var(--paper); color: var(--ink); font: 16px/1.5 Plex,sans-serif }
+main { width: min(100%, 390px); background: var(--surface); border: 1px solid var(--line); border-radius: 24px; overflow: hidden; box-shadow: 0 12px 36px #30252612 }
+header { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 13px }
+header img { width: 88px; height: auto }
+article { padding: 20px 22px; min-height: 242px }
+h1 { margin: 0 0 16px; font-size: 24px; font-weight: 600 }
+dl, dd { margin: 0 }
+dl div { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line) }
+dd { font-weight: 600; text-align: end }
+nav { --index: 0; display: grid; position: relative; isolation: isolate; grid-template-columns: repeat(5, 1fr); background: var(--paper); border-top: 1px solid var(--line); }
+nav::before { content: ''; position: absolute; top: 7px; left: 0; width: 20%; height: 28px; background: var(--rose); border-radius: 20px; clip-path: inset(0 8% round 18px); transform: translateX(calc(100% * var(--index))); transition: transform 200ms cubic-bezier(.2,.8,.2,1); pointer-events: none; z-index: -1 }
+button { font: inherit; cursor: pointer }
+nav button { display: grid; justify-items: center; align-content: start; gap: 3px; padding: 10px 0 8px; min-height: 64px; border: 0; background: transparent; color: var(--muted); font-size: 13px }
+nav button[aria-current="page"] { color: var(--wine) }
+button:focus-visible { outline: 2px solid var(--wine); outline-offset: -3px }
+nav svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round }
+aside { text-align: center; color: var(--muted); font-size: 14px }
+aside button { border: 1px solid var(--muted); color: var(--wine); background: var(--surface); padding: 8px 16px; min-height: 44px; border-radius: 10px }
+@media (prefers-reduced-motion: reduce) { nav::before { transition: none } }
+</style>
+<main>
+  <header><img src="../../public/brand/pokpok-wordmark.svg" alt="Pokpok"><span>ร้านตัวอย่าง</span></header>
+  <article aria-live="polite"><h1></h1><dl></dl></article>
+  <nav aria-label="เมนูหลัก"></nav>
+</main>
+<aside><button id="demo" type="button">ดูตัวอย่าง ขาย → ออเดอร์</button></aside>
+<script>
+const screens = [
+  {name:'ขาย', title:'ขายกลับบ้าน', icon:'M3 11h18M5 11l2 9m12-9-2 9M3 7h18v4H3z', rows:[['พาสต้ากุ้ง','฿80'],['น้ำแครอต','฿45'],['ยอดรวม','฿125']]},
+  {name:'ออเดอร์', title:'ออเดอร์', icon:'M4 7h16l1 14H3z M8 8V6a4 4 0 0 1 8 0v2', rows:[['กลับบ้าน 001','รอยืนยัน'],['ออนไลน์ 001','กำลังเตรียม'],['โต๊ะ 2','พร้อมเสิร์ฟ']]},
+  {name:'สินค้า', title:'สินค้าคงเหลือ', icon:'M3 4h18v5H3z M5 9v11h14V9 M10 13h4', rows:[['พาสต้ากุ้ง','12 จาน'],['น้ำแครอต','8 ขวด'],['เครปเบอร์รี','6 ชิ้น']]},
+  {name:'รายงาน', title:'ยอดขายวันนี้', icon:'M4 20h16 M6 16v-5h2v5z M11 16V4h2v12z M16 16V8h2v8z', rows:[['ยอดขายสุทธิ','฿1,250'],['เงินสด','฿800'],['เงินโอน','฿450']]},
+  {name:'เพิ่มเติม', title:'เพิ่มเติม', icon:'M4 12h1m6 0h1m6 0h1', rows:[['เครื่องมือส่งเสริมการขาย',''],['ครัว',''],['ตั้งค่าร้าน','']]}
+];
+const nav = document.querySelector('nav');
+const title = document.querySelector('h1');
+const list = document.querySelector('dl');
+let replayTimer;
+function select(index) {
+  clearTimeout(replayTimer);
+  const screen = screens[index];
+  nav.style.setProperty('--index',index);
+  [...nav.children].forEach((button,i) => {
+    if (i === index) button.setAttribute('aria-current','page');
+    else button.removeAttribute('aria-current');
+  });
+  title.textContent = screen.title;
+  list.replaceChildren(...screen.rows.map(([label,value]) => {
+    const row = document.createElement('div');
+    const term = document.createElement('dt'), amount = document.createElement('dd');
+    term.textContent = label;
+    amount.textContent = value;
+    row.append(term,amount);
+    return row;
+  }));
+}
+screens.forEach(({name,icon},i) => {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="'+icon+'"/></svg><span>'+name+'</span>';
+  button.addEventListener('click',()=>select(i));
+  nav.append(button);
+});
+document.querySelector('#demo').addEventListener('click',()=>{
+  select(0);
+  replayTimer = setTimeout(()=>select(1),550);
+});
+select(0);
+</script>
+</html>
