@@ -119,7 +119,11 @@
           <span class="mark"></span><img class="pokpok-wordmark pokpok-wordmark--white reveal" src="../../public/brand/pokpok-wordmark.svg" alt="">
           <span class="tag reveal">POINT OF SALE</span>
         </div>
-      </div></section>
+      </div>
+        <p><button type="button" id="sound-replay">เล่นหน้าเปิดแอปพร้อมเสียง</button></p>
+        <audio id="knocks" preload="auto" src="pokpok-mortar-knocks.wav"></audio>
+        <span id="audio-status" role="status"></span>
+      </section>
     </article>
   </main>
   <script>
@@ -132,12 +136,23 @@
         mark.append(img);
       }
     }
+    const knocks = document.querySelector('#knocks');
+    const audioStatus = document.querySelector('#audio-status');
     function replay() {
+      knocks.pause();
+      knocks.currentTime = 0;
+      audioStatus.textContent = '';
       document.body.classList.remove('play');
       void document.body.offsetWidth;
       document.body.classList.add('play');
     }
     document.querySelector('#replay').addEventListener('click', replay);
+    document.querySelector('#sound-replay').addEventListener('click', () => {
+      replay();
+      knocks.play().catch(error => {
+        if (error.name !== 'AbortError') audioStatus.textContent = 'เล่นเสียงไม่ได้ กรุณาลองอีกครั้ง';
+      });
+    });
     window.addEventListener('load', replay);
   </script>
 </body>
