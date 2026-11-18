@@ -19,7 +19,8 @@ Local motion study for review: `docs/previews/pokpok-loading-motion.html`
 compares a compact 880ms masthead animation with a 1500ms splash. Each
 impact reveals part of the wordmark; the app also shows expanding rings,
 then a 680ms right-to-left wave reveals the sales screen.
-An optional sound replay uses two synthesized mortar knocks timed to the app.
+Optional sound replay pairs the two mortar knocks with a soft stereo surf
+sweep that moves right to left during the 1.50–2.18s transition.
 Production integration is pending owner review.
 
 **vidIQ plugin (2026-11-18):** the latest directory lookup now confirms
@@ -427,6 +428,10 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-18: Added a synthesized wave tail to the splash preview audio.
+  Checked PCM knock preservation, stereo direction and the fade to silence,
+  and verified playback to completion in desktop Edge. Local preview only.
 
 - 2026-11-18: Added original two-hit audio to the local splash preview.
   Verified waveform onsets at 375ms and 810ms and Edge playback, restart
