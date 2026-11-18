@@ -43,51 +43,61 @@ class SettingsSections extends StatefulWidget {
 }
 
 class _SettingsSectionsState extends State<SettingsSections> {
+  static const double _railWidth = 250;
+  static const double _menuInset = 12;
   int _selected = 0;
   @override
   Widget build(BuildContext context) =>
       LayoutBuilder(builder: (context, constraints) {
         final wide = constraints.maxWidth >= 900;
+        final uniformButtons =
+            wide || MediaQuery.sizeOf(context).shortestSide >= 600;
         final theme = Theme.of(context);
         final reducedMotion = MediaQuery.disableAnimationsOf(context);
         final navigation = List.generate(widget.sections.length, (i) {
           final section = widget.sections[i];
           final selected = _selected == i;
-          return Padding(
-              padding: const EdgeInsets.all(4),
-              child: ChoiceChip(
-                  showCheckmark: false,
-                  avatar: Icon(section.icon, size: 20),
-                  labelStyle: theme.textTheme.labelLarge,
-                  chipAnimationStyle: reducedMotion
-                      ? ChipAnimationStyle(
-                          selectAnimation: AnimationStyle.noAnimation)
-                      : null,
-                  label: Stack(children: [
-                    Padding(
-                        padding: const EdgeInsets.only(bottom: 3),
-                        child: Text(section.title)),
-                    PositionedDirectional(
-                      start: 0,
-                      end: 0,
-                      bottom: 0,
-                      child: AnimatedScale(
-                        scale: selected ? 1 : 0,
-                        alignment: Alignment.bottomLeft,
-                        duration: reducedMotion
-                            ? Duration.zero
-                            : const Duration(milliseconds: 240),
-                        curve: Curves.easeInOut,
-                        child: Container(
-                            height: 2, color: theme.colorScheme.primary),
-                      ),
-                    ),
-                  ]),
-                  selected: selected,
-                  onSelected: (_) {
-                    FocusScope.of(context).unfocus();
-                    setState(() => _selected = i);
-                  }));
+          return SizedBox(
+              width: uniformButtons ? _railWidth - 2 * _menuInset : null,
+              child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: ChoiceChip(
+                      showCheckmark: false,
+                      avatar: Icon(section.icon, size: 20),
+                      labelStyle: theme.textTheme.labelLarge,
+                      chipAnimationStyle: reducedMotion
+                          ? ChipAnimationStyle(
+                              selectAnimation: AnimationStyle.noAnimation)
+                          : null,
+                      label: Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          widthFactor: uniformButtons ? null : 1,
+                          child: Stack(children: [
+                            Padding(
+                                padding: const EdgeInsets.only(bottom: 3),
+                                child: Text(section.title)),
+                            PositionedDirectional(
+                              start: 0,
+                              end: 0,
+                              bottom: 0,
+                              child: AnimatedScale(
+                                scale: selected ? 1 : 0,
+                                alignment: Alignment.bottomLeft,
+                                duration: reducedMotion
+                                    ? Duration.zero
+                                    : const Duration(milliseconds: 240),
+                                curve: Curves.easeInOut,
+                                child: Container(
+                                    height: 2,
+                                    color: theme.colorScheme.primary),
+                              ),
+                            ),
+                          ])),
+                      selected: selected,
+                      onSelected: (_) {
+                        FocusScope.of(context).unfocus();
+                        setState(() => _selected = i);
+                      })));
         });
         final content = Expanded(
             child: Align(
@@ -111,22 +121,18 @@ class _SettingsSectionsState extends State<SettingsSections> {
             child: wide
                 ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     SizedBox(
-                        width: 250,
+                        width: _railWidth,
                         child: ListView(
-                            padding: const EdgeInsets.all(12),
-                            children: [
-                              for (final item in navigation)
-                                Align(
-                                    alignment: AlignmentDirectional.centerStart,
-                                    child: item),
-                            ])),
+                            padding: const EdgeInsets.all(_menuInset),
+                            children: navigation)),
                     const VerticalDivider(width: 1),
                     content,
                   ])
                 : Column(children: [
                     SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: _menuInset),
                         child: Row(children: navigation)),
                     const Divider(height: 1),
                     content,

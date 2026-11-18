@@ -11,6 +11,48 @@ void main() {
               rootBundle.load('assets/fonts/IBMPlexSansThai-Regular.ttf')))
         .load();
   });
+  for (final size in [const Size(800, 1180), const Size(1180, 800)]) {
+    testWidgets('tablet category buttons share a tappable width at $size',
+        (tester) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(MaterialApp(
+        theme: PokpokTheme.light(),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: const TextScaler.linear(2)),
+          child: child!,
+        ),
+        home: const Scaffold(
+            body: SettingsSections(sections: [
+          SettingsSection(
+              title: 'พนักงานและการจัดการ', icon: Icons.people, children: []),
+          SettingsSection(
+              title: 'ครัว',
+              icon: Icons.restaurant,
+              children: [Text('ตั้งค่าครัว')]),
+        ])),
+      ));
+      Rect buttonRect(String title) => tester.getRect(find
+          .descendant(
+              of: find.widgetWithText(ChoiceChip, title),
+              matching: find.byType(Material))
+          .first);
+      final long = buttonRect('พนักงานและการจัดการ');
+      final short = buttonRect('ครัว');
+      expect(short.width, long.width);
+      final longInset =
+          tester.getTopLeft(find.byIcon(Icons.people)).dx - long.left;
+      final shortInset =
+          tester.getTopLeft(find.byIcon(Icons.restaurant)).dx - short.left;
+      expect(shortInset, closeTo(longInset, 0.1));
+      await tester.tapAt(short.centerRight - const Offset(6, 0));
+      await tester.pumpAndSettle();
+      expect(find.text('ตั้งค่าครัว'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
   for (final width in [320.0, 1280.0]) {
     testWidgets(
         'selected settings tab respects large text and reduced motion at $width',
