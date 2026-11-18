@@ -15,6 +15,11 @@ Rules:
 
 ## Current state (updated 2026-11-18)
 
+**vidIQ plugin (2026-11-18):** the latest directory lookup now confirms
+`installed: true`. Instagram link access has not yet been tested; no vidIQ
+execution tools are exposed in this session at this check. No Paperclip
+connection was configured.
+
 **Latest Paperclip status (2026-11-18):** read-only local API check returned
 healthy and 12 agents, all `idle` / `ready`, with no pause reason. They are CEO,
 CTO, CFO / Finance, CMO / Growth, COO / Field Ops, Engineer - App,
@@ -415,6 +420,13 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-18 — vidIQ installation confirmed
+
+- Rechecked at the owner's request: the plugin directory now reports vidIQ
+  installed, superseding the earlier not-installed results. Actual Instagram
+  link access and provider account authorization are not independently tested.
+- No Paperclip changes, external messages, push or deployment.
 
 ### 2026-11-18 — Recheck vidIQ installation status
 
