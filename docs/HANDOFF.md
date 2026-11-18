@@ -15,6 +15,8 @@ Rules:
 
 ## Current state (updated 2026-11-18)
 
+Sales report click-through for owner review: `docs/previews/pokpok-sales-report.html` and accompanying PNG. Sample data only.
+
 The owner approved the lower-left expanding tab in `docs/previews/pokpok-tab-motion.html`. It is implemented locally in the Flutter phone navigation. Production remains at 1.2.79 (96).
 
 Local motion study for review: `docs/previews/pokpok-loading-motion.html`
@@ -430,6 +432,8 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-18 — Built a local sales report preview with two selectable weeks, three chart metrics, and day-to-bill drill-down. Checked Chrome at 1440, 768 and 390px, including mobile return navigation and week switching. Reviewed the captured wide layout. No production changes.
 
 - 2026-11-18 — Reviewed the owner's AutoParts order-dashboard reference (Instagram DfmSb0Fkf2l) from its public caption and preview image. Suggested tappable summary cards and filtered bill history for Pokpok, with fulfillment statuses in Orders and sales metrics in Reports. Design discussion only.
 
