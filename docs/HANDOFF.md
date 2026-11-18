@@ -421,6 +421,14 @@ or triggered; its Codemagic workflow does not run automatically on push.
 
 ## Log
 
+### 2026-11-18 — Explain how to activate installed vidIQ in a conversation
+
+- Official plugin documentation recommends starting a new chat after installation
+  and invoking the plugin explicitly. Account authorization may still be required;
+  available plugin controls depend on the ChatGPT/Codex surface.
+- vidIQ execution tools are still absent in this session. No Instagram access
+  was tested, and no account permissions or Paperclip configuration were changed.
+
 ### 2026-11-18 — vidIQ installation confirmed
 
 - Rechecked at the owner's request: the plugin directory now reports vidIQ
