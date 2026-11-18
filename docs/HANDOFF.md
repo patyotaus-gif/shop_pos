@@ -15,7 +15,7 @@ Rules:
 
 ## Current state (updated 2026-11-18)
 
-Sales report click-through for owner review: `docs/previews/pokpok-sales-report.html` and accompanying PNG. Sample data only.
+The sales report and orders click-throughs in `docs/previews/` link to each other and include PNG previews. Both use sample data for owner review.
 
 The owner approved the lower-left expanding tab in `docs/previews/pokpok-tab-motion.html`. It is implemented locally in the Flutter phone navigation. Production remains at 1.2.79 (96).
 
@@ -432,6 +432,10 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-18 — Orders preview for owner review
+
+Added a selectable order queue with payment status, scheduled pickup, history and fulfillment actions in `docs/previews/pokpok-orders.html`. Checked queue counts, status transitions, pending payment, search, mobile navigation and screen widths of 390, 768 and 1440 pixels locally in Chrome. Captured the orders screen and refreshed the sales report capture. Preview only, no deployment or physical-device test.
 
 - 2026-11-18 — Built a local sales report preview with two selectable weeks, three chart metrics, and day-to-bill drill-down. Checked Chrome at 1440, 768 and 390px, including mobile return navigation and week switching. Reviewed the captured wide layout. No production changes.
 
