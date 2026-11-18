@@ -15,6 +15,10 @@ Rules:
 
 ## Current state (updated 2026-11-18)
 
+Local motion study for review: `docs/previews/pokpok-loading-motion.html`
+compares two mortar strikes and a wordmark reveal in the website masthead and
+the app splash. Production integration is pending owner review.
+
 **vidIQ plugin (2026-11-18):** the latest directory lookup now confirms
 `installed: true`. Public Instagram Reel playback data was retrieved directly
 and sampled locally; vidIQ execution tools were unavailable. No Paperclip
@@ -420,6 +424,10 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-18: Built and visually checked the web/app opening motion specimen
+  in desktop Edge. Verified assets, replay, reduced motion and 360px layout.
+  Preview only; no Flutter build or deployment.
 
 - 2026-11-18: Verified direct access to the supplied public Bunny Knocks Reel
   through Instagram's embed. Inspected frames at four samples per second.

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ตัวอย่างจังหวะเปิด Pokpok</title>
+  <link rel="stylesheet" href="../../public/brand.css">
+  <link rel="stylesheet" href="../../public/brand/wordmark.css">
+  <style>
+    * { box-sizing: border-box }
+    body { margin: 0; background: var(--paper); color: var(--ink); font-family: Tahoma, sans-serif }
+    main { width: min(960px, 94%); margin: 4vh auto }
+    header, .mast { display: flex; align-items: center; gap: 12px }
+    header { justify-content: space-between }
+    h1 { font-size: clamp(20px, 3vw, 30px) }
+    h2 { font-size: 16px }
+    button { cursor: pointer; background: var(--wine); color: white; border: 0; border-radius: var(--radius); padding: 12px 18px; font: inherit }
+    article { display: grid; grid-template-columns: 2fr 1fr; gap: 24px }
+    .frame { height: 390px; border-radius: var(--radius); overflow: hidden }
+    .web { background: var(--surface); border: 1px solid var(--line) }
+    .mast { border-bottom: 1px solid var(--line); padding: 6px 16px; gap: 0 }
+    .web h3 { font-size: clamp(18px, 2.5vw, 32px); margin: 24px 24px 16px }
+    .screen { display: block; width: calc(100% - 48px); margin: auto; border: 1px solid var(--line); border-radius: 8px }
+    .app { display: grid; place-content: center; justify-items: center; background: var(--wine); color: white }
+    .mark { width: 146px; aspect-ratio: 1 / .84; position: relative }
+    .mast .mark { width: 48px; filter: brightness(0) saturate(100%) invert(15%) sepia(54%) saturate(1845%) hue-rotate(320deg) }
+    .mark img { position: absolute; top: 0; left: 0; width: 100%; height: auto }
+    .app .pokpok-wordmark { width: 125px }
+    .tag { margin-top: 6px; font: 600 10px/1.5 sans-serif; letter-spacing: 3.5px }
+    .web { --duration: 620ms }
+    .app { --duration: 1000ms }
+    @media (prefers-reduced-motion: no-preference) {
+      .play .pestle { animation: knock var(--duration) ease-in-out both }
+      .play .bowl { transform-origin: center 77%; animation: impact var(--duration) ease-out both }
+      .play .reveal { animation: reveal var(--duration) ease-out both }
+    }
+    @keyframes knock { 0% {transform: translateY(-7%)} 20%,50% {transform: translateY(8%)} 34% {transform: translateY(-5%)} 65%,100% {transform: none} }
+    @keyframes impact { 0%,16%,30%,45%,62%,100% {transform: none} 20%,50% {transform: scale(1.03,.96)} }
+    @keyframes reveal { 0%,42% {opacity: 0; transform: translateY(3px)} 92%,100% {opacity: 1; transform: none} }
+    @media(max-width: 640px) { article { grid-template-columns: 1fr } .web { height: auto; padding-bottom: 16px } .app { height: 280px } }
+  </style>
+</head>
+<body>
+  <main>
+    <header><h1>จังหวะเปิด Pokpok</h1><button type="button" id="replay">เล่นอีกครั้ง</button></header>
+    <article>
+      <section><h2>หน้าเว็บ</h2><div class="web frame">
+        <div class="mast"><span class="mark"></span><img class="pokpok-wordmark reveal" src="../../public/brand/pokpok-wordmark.svg" alt="Pokpok"></div>
+        <h3>แอป POS สำหรับร้านค้าปลีกและร้านอาหาร</h3>
+        <img class="screen" src="../../public/screens/pos-1.2.78.png" alt="หน้าขายของ Pokpok บนแท็บเล็ต">
+      </div></section>
+      <section><h2>หน้าเปิดแอป</h2><div class="app frame">
+        <span class="mark"></span><img class="pokpok-wordmark pokpok-wordmark--white reveal" src="../../public/brand/pokpok-wordmark.svg" alt="Pokpok">
+        <span class="tag reveal">POINT OF SALE</span>
+      </div></section>
+    </article>
+  </main>
+  <script>
+    for (const mark of document.querySelectorAll('.mark')) {
+      for (const layer of ['pestle', 'bowl']) {
+        const img = new Image();
+        img.alt = '';
+        img.className = layer;
+        img.src = '../../assets/icon/splash/white-' + layer + '.png';
+        mark.append(img);
+      }
+    }
+    function replay() {
+      document.body.classList.remove('play');
+      void document.body.offsetWidth;
+      document.body.classList.add('play');
+    }
+    document.querySelector('#replay').addEventListener('click', replay);
+    window.addEventListener('load', replay);
+  </script>
+</body>
+</html>
