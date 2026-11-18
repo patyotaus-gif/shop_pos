@@ -440,7 +440,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: Icons.storefront_outlined,
                     children: [
                       // Shop info section
-                      _SectionTitle('ข้อมูลร้าน'),
+                      const SettingsHeading('ข้อมูลร้าน'),
                       const SizedBox(height: 12),
                       TextField(
                         controller: _shopNameCtrl,
@@ -572,11 +572,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 16),
                       // Short shareable link — pok-pok.app/r/<slug>
-                      Text('ลิงก์ร้าน (สำหรับแชร์/ใส่ Google Maps)',
-                          style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.primary)),
+                      const SettingsHeading(
+                          'ลิงก์ร้าน (สำหรับแชร์/ใส่ Google Maps)'),
                       const SizedBox(height: 6),
                       Row(
                         children: [
@@ -671,13 +668,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             MaterialPageRoute<void>(
                                 builder: (_) => const UserSwitchScreen())),
                       ),
-                      Text('บัญชีผู้ใช้',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleSmall
-                              ?.copyWith(
-                                  color: cs.primary,
-                                  fontWeight: FontWeight.bold)),
+                      const SettingsHeading('บัญชีผู้ใช้'),
                       const SizedBox(height: 12),
                       const Text(
                           'เชื่อมวิธีเข้าสู่ระบบกับร้านเดิม โดยไม่สร้างร้านใหม่'),
@@ -722,7 +713,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       // target that opens the full SubscriptionScreen for
                       // upgrade/downgrade. Owner-facing source of truth for
                       // "ฉันใช้แผนไหนอยู่?" and "ทดลองเหลือกี่วัน?"
-                      _SectionTitle('แผนปัจจุบัน'),
+                      const SettingsHeading('แผนปัจจุบัน'),
                       const SizedBox(height: 8),
                       StreamBuilder<Shop?>(
                         stream: ShopService.watchCurrentShop(),
@@ -753,7 +744,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           return Column(
                             children: [
                               const SizedBox(height: 24),
-                              _SectionTitle('อุปกรณ์ของคุณ'),
+                              const SettingsHeading('อุปกรณ์ของคุณ'),
                               const SizedBox(height: 8),
                               _HardwareTracker(request: req),
                             ],
@@ -762,13 +753,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
 
                       // Subscription section
-                      Text('แพ็กเกจการใช้งาน',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleSmall
-                              ?.copyWith(
-                                  color: cs.primary,
-                                  fontWeight: FontWeight.bold)),
+                      const SettingsHeading('แพ็กเกจการใช้งาน'),
                       const SizedBox(height: 12),
                       CompactAction(
                         child: FilledButton.icon(
@@ -837,7 +822,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           return Column(
                             children: [
                               const SizedBox(height: 24),
-                              _SectionTitle('พนักงาน'),
+                              const SettingsHeading('พนักงาน'),
                               const SizedBox(height: 8),
                               InkWell(
                                 onTap: () {
@@ -915,7 +900,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           return Column(
                             children: [
                               const SizedBox(height: 24),
-                              _SectionTitle('ลูกค้าสะสมแต้ม'),
+                              const SettingsHeading('ลูกค้าสะสมแต้ม'),
                               const SizedBox(height: 8),
                               InkWell(
                                 onTap: () {
@@ -988,7 +973,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       // the same allowlist server-side; this just hides the entry.
                       if (AuthService.isFounder) ...[
                         const SizedBox(height: 24),
-                        _SectionTitle('ผู้ดูแลระบบ'),
+                        const SettingsHeading('ผู้ดูแลระบบ'),
                         const SizedBox(height: 8),
                         InkWell(
                           onTap: () =>
@@ -1072,7 +1057,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       // table tab on close. Set to 0 to disable.
                       if (_shopType == ShopType.restaurant) ...[
                         const SizedBox(height: 24),
-                        _SectionTitle(
+                        const SettingsHeading(
                           'Service charge',
                           helper:
                               'บวกเปอร์เซ็นต์บนยอดสินค้าตอนปิดบิล — 0 = ปิด',
@@ -1124,13 +1109,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: 24),
 
                       // PromptPay payment section
-                      Text('รับเงินออนไลน์ (PromptPay)',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleSmall
-                              ?.copyWith(
-                                  color: cs.primary,
-                                  fontWeight: FontWeight.bold)),
+                      const SettingsHeading('รับเงินออนไลน์ (PromptPay)'),
                       const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -1216,15 +1195,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                         : Colors.amber.shade800,
                                   ),
                                   const SizedBox(width: 8),
-                                  Text(
-                                    'ช่วยตรวจยอดจากแจ้งเตือนธนาคาร',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      color: _bankListenerGranted
-                                          ? Colors.green.shade800
-                                          : Colors.amber.shade900,
-                                    ),
-                                  ),
+                                  const Expanded(
+                                      child: SettingsHeading(
+                                          'ช่วยตรวจยอดจากแจ้งเตือนธนาคาร')),
                                 ],
                               ),
                               const SizedBox(height: 6),
@@ -1304,13 +1277,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: Icons.palette_outlined,
                     children: [
                       // Theme section
-                      Text('การแสดงผล',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleSmall
-                              ?.copyWith(
-                                  color: cs.primary,
-                                  fontWeight: FontWeight.bold)),
+                      const SettingsHeading('การแสดงผล'),
                       const SizedBox(height: 8),
                       ValueListenableBuilder<ThemeMode>(
                         valueListenable: themeNotifier,
@@ -1555,9 +1522,7 @@ class _ReferralCard extends StatelessWidget {
               Icon(Icons.card_giftcard_outlined, size: 18, color: cs.primary),
               const SizedBox(width: 8),
               const Expanded(
-                child: Text('แนะนำเพื่อน — ได้ฟรี 30 วันทั้งคู่',
-                    style:
-                        TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                child: SettingsHeading('แนะนำเพื่อน — ได้ฟรี 30 วันทั้งคู่'),
               ),
             ],
           ),
@@ -1665,12 +1630,7 @@ class _PlanCapabilities extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('สิ่งที่มีในแผน',
-              style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.8,
-                  color: cs.onSurface.withValues(alpha: 0.55))),
+          const SettingsHeading('สิ่งที่มีในแผน'),
           const SizedBox(height: 6),
           for (final f in _features)
             if (shopType == ShopType.restaurant ||
@@ -1732,45 +1692,6 @@ class _CapabilityRow extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-/// Small section heading + optional helper line. Replaces the repeated
-/// `Text(... titleSmall + primary color)` blocks across this screen so all
-/// section labels look identical and the helper text styling stays in one
-/// place.
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.title, {this.helper});
-  final String title;
-  final String? helper;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.8,
-            color: cs.primary,
-          ),
-        ),
-        if (helper != null) ...[
-          const SizedBox(height: 4),
-          Text(
-            helper!,
-            style: TextStyle(
-              fontSize: 12,
-              color: cs.onSurface.withValues(alpha: 0.6),
-            ),
-          ),
-        ],
-      ],
     );
   }
 }

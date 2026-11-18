@@ -3,6 +3,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../services/line_service.dart';
 import '../theme/operational_colors.dart';
 import 'compact_action.dart';
+import 'settings_sections.dart';
 
 class LineNotificationSettings extends StatelessWidget {
   const LineNotificationSettings(
@@ -32,10 +33,7 @@ class LineNotificationSettings extends StatelessWidget {
         title: const Text('ตั้งค่าการแจ้งเตือน / เชื่อมด้วยรหัสเอง'),
         children: [
           // LINE Notification section
-          Text('การแจ้งเตือน LINE',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.bold)),
+          const SettingsHeading('การแจ้งเตือน LINE'),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.all(12),

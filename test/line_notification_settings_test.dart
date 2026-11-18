@@ -45,6 +45,12 @@ void main() {
         ));
         await tester.tap(find.byType(ExpansionTile));
         await tester.pumpAndSettle();
+        final heading = find.text('การแจ้งเตือน LINE');
+        final headingStyle = tester.widget<Text>(heading).style!;
+        final themeStyle =
+            Theme.of(tester.element(heading)).textTheme.titleMedium!;
+        expect(headingStyle.fontSize, themeStyle.fontSize);
+        expect(headingStyle.fontWeight, themeStyle.fontWeight);
         expect(tester.takeException(), isNull);
         await tester.ensureVisible(find.byType(TextField));
         await tester.enterText(

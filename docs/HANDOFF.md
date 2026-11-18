@@ -13,7 +13,9 @@ Rules:
 
 ---
 
-## Current state (updated 2026-11-18)
+## Current state (updated 2026-11-19)
+
+The Flutter settings heading and category navigation changes are verified locally and await a future app release.
 
 Android 1.2.80 (97) is live at https://pok-pok.app/app/pokpok.apk. Its detailed reports, order queues and phone navigation are from commit 372a8ab. Codemagic successfully built and published the iOS 1.2.80 TestFlight submission for the same commit. External beta approval and installation on physical devices are unconfirmed.
 
@@ -436,6 +438,8 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-19 — Unified settings group headings on the app’s titleMedium style, with separate helper text and screen reader heading semantics. The active category has a lower-left expanding underline based on the approved tab reference, with an instant reduced-motion state. The phone category strip accommodates larger text and the tablet menu shares a leading edge. Verified the original LINE title mismatch (14 vs 16), then passed 10 widget tests across phone/tablet layouts, including 200% text, plus two locally rendered fixture previews and targeted Dart analysis. No physical Android device attached; no deployment.
 
 ### 2026-11-18 — Detailed Flutter sales report and order queues, release 1.2.80 (97)
 
