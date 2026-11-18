@@ -15,6 +15,8 @@ Rules:
 
 ## Current state (updated 2026-11-19)
 
+Paperclip CEO delegated the Instagram ad concept to CMO (POK-5 → POK-6). Both issues are done. CEO accepted the concept after a Board follow-up; the rendered, unpublished 4:5 kitchen ad is attached to POK-5 and saved in `docs/previews/pokpok-ig-kitchen.png`.
+
 Paperclip's CEO-to-CFO delegation and automatic follow-up have been verified with a self-contained task. Access to repository files from those agents' workspaces remains unverified.
 
 The Flutter settings headings and category navigation, including equal-width tablet category buttons, are verified locally and await a future app release.
@@ -440,6 +442,8 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-19 — Tested a real CEO-to-CMO assignment using a draft Thai Instagram ad. CMO delivered the headline, caption and SVG layout. The Board returned the parent to the CEO's queue once after a stale recovery error; CEO then reviewed the concept and closed it. Composited one real demo kitchen ticket with the official wordmark and bundled Thai font, rendered at 1080×1350, visually checked the 360×450 browser preview, and verified that the attachment downloaded from POK-5 matched the exported PNG by SHA-256. No Instagram post or ad purchase.
 
 - 2026-11-19 — Board assigned POK-3 to CEO. Its assignment run created child POK-4 for CFO. CFO's assignment run returned the correct fictional total (35 + 50 + 75 = 160 THB) and closed POK-4. An automation run woke CEO to verify CFO's result and close POK-3. Checked both issue states, comment authors and run sources. No manual invocation. Both agents reported they could not find docs/HANDOFF.md in their task workspaces.
 
