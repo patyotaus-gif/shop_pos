@@ -3,13 +3,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import '../models/order.dart';
 import 'auth_service.dart';
+import 'shop_database.dart';
 
 class OrderService {
   static CollectionReference<Map<String, dynamic>> _col() =>
-      FirebaseFirestore.instance
-          .collection('shops')
-          .doc(AuthService.shopId)
-          .collection('orders');
+      ShopDatabase.shop.collection('orders');
 
   static Stream<List<ShopOrder>> watchActive() => AuthService.isStaff
       ? watchAll().map((rows) => rows

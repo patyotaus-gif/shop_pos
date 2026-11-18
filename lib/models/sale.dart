@@ -128,7 +128,23 @@ class Sale {
   final DateTime createdAt;
   final bool isDebt;
   final String? customerName;
-  final PaymentMethod paymentMethod;
+
+  /// Stored on a completed sale after checkout verifies the member.
+  final String? loyaltyCustomerId;
+  static final _methodsByName = PaymentMethod.values.asNameMap();
+  final PaymentMethod? _selectedMethod;
+  final Object? storedPaymentMethodCode;
+
+  /// Historical bills can omit the method or contain a newer provider code.
+  PaymentMethod? get recordedPaymentMethod =>
+      _selectedMethod ?? _methodsByName[storedPaymentMethodCode];
+
+  String get reportPaymentLabel =>
+      recordedPaymentMethod?.label ?? 'ไม่ระบุวิธีชำระ';
+
+  /// Legacy checkout and receipt callers expect a non-null tender.
+  PaymentMethod get paymentMethod =>
+      recordedPaymentMethod ?? PaymentMethod.cash;
   final SalesChannel salesChannel;
   final bool isRefunded;
   final DateTime? refundedAt;
@@ -171,7 +187,9 @@ class Sale {
     required this.createdAt,
     this.isDebt = false,
     this.customerName,
-    this.paymentMethod = PaymentMethod.cash,
+    this.loyaltyCustomerId,
+    PaymentMethod? paymentMethod = PaymentMethod.cash,
+    this.storedPaymentMethodCode,
     this.salesChannel = SalesChannel.unspecified,
     this.isRefunded = false,
     this.refundedAt,
@@ -189,7 +207,7 @@ class Sale {
     this.offlineReview = const [],
     this.tableName,
     this.receiptProfile,
-  });
+  }) : _selectedMethod = paymentMethod;
 
   /// Sum of line item subtotals — total minus service charge plus discount.
   /// Useful for receipts that want to show subtotal explicitly.
@@ -265,10 +283,9 @@ class Sale {
             (c) => c.name == data['salesChannel'],
             orElse: () => SalesChannel.unspecified),
         customerName: data['customerName'],
-        paymentMethod: PaymentMethod.values.firstWhere(
-          (e) => e.name == (data['paymentMethod'] ?? 'cash'),
-          orElse: () => PaymentMethod.cash,
-        ),
+        loyaltyCustomerId: data['loyaltyCustomerId'] as String?,
+        paymentMethod: null,
+        storedPaymentMethodCode: data['paymentMethod'],
         isRefunded: data['isRefunded'] ?? false,
         refundedAt: (data['refundedAt'] as Timestamp?)?.toDate(),
         refundReason: data['refundReason'],
@@ -305,7 +322,8 @@ class Sale {
         'isDebt': isDebt,
         'isRefunded': isRefunded,
         'customerName': customerName,
-        'paymentMethod': paymentMethod.name,
+        if (_selectedMethod != null || storedPaymentMethodCode != null)
+          'paymentMethod': _selectedMethod?.name ?? storedPaymentMethodCode,
         if (salesChannel != SalesChannel.unspecified)
           'salesChannel': salesChannel.name,
         if (serviceCharge > 0) 'serviceCharge': serviceCharge,

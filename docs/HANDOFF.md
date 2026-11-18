@@ -15,11 +15,13 @@ Rules:
 
 ## Current state (updated 2026-11-18)
 
+Android 1.2.80 (97) is in preparation for the approved report, orders and phone navigation changes. The owner approved separate data-series colors in reports. The published build at start of work is 1.2.79 (96).
+
 The sales report and orders click-throughs in `docs/previews/` link to each other and include PNG previews. Both use sample data for owner review.
 The orders prototype now follows the Flutter order screen's app bar, queue chips, navigation placement and Material theme.
 The sales report preview now includes a branch and week selector, financial reconciliation, daily bill drilldown, time and channel breakdowns, inventory, members and cashier reporting.
 
-The owner approved the lower-left expanding tab in `docs/previews/pokpok-tab-motion.html`. It is implemented locally in the Flutter phone navigation. Production remains at 1.2.79 (96).
+The owner approved the lower-left expanding tab in `docs/previews/pokpok-tab-motion.html`. The 1.2.80 Flutter phone navigation includes this design.
 
 Local motion study for review: `docs/previews/pokpok-loading-motion.html`
 compares a compact 880ms masthead animation with a 1500ms splash. Each
@@ -27,7 +29,7 @@ impact reveals part of the wordmark; the app also shows expanding rings,
 then a 680ms right-to-left wave reveals the sales screen.
 Optional sound replay pairs the two mortar knocks with a soft stereo surf
 sweep that moves right to left during the 1.50–2.18s transition.
-Owner approved publication on 2026-11-18. Website and signed Android APK 1.2.79 (96) are live at pok-pok.app from commit 8c12e19. The downloaded APK and all 79 Hosting files matched the release. iOS TestFlight publication and physical device playback are pending.
+The previous release on 2026-11-18 published the website and signed Android APK 1.2.79 (96) from commit 8c12e19. The downloaded APK and all 79 Hosting files matched that release. Physical device playback was not verified.
 
 **vidIQ plugin (2026-11-18):** the latest directory lookup now confirms
 `installed: true`. Public Instagram Reel playback data was retrieved directly
@@ -434,6 +436,15 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-18 — Detailed Flutter sales report and order queues, release 1.2.80 (97)
+
+- The full Flutter suite recorded 469 passes and five baseline failures. Independent review led to live updates for the comparison period, explicit labels for missing payment methods and device-local time in reports and exports, and restoring the selected Orders tab count.
+- Final targeted Flutter tests passed (23). Dart analysis of changed source/tests was clean. The final independent review found no blockers. Local captures at 390 and 1240 logical pixels are in the release evidence folder.
+
+- Implemented date-range sales KPIs, bill drill-down, prior-period comparison, payment and order channels, promotions, named tables, cashier and member totals, and current stock insights from real shop-scoped records. Series use a light/dark categorical palette. Inventory is a current snapshot. The prototype branch selector is omitted because receipts have no branch key.
+- Added search, separate operational queues, detail navigation on phones and a two-pane Orders layout on tablets; included the approved animated phone navigation. Reproduced five pre-existing Flutter test failures on the remote baseline (two online payment readiness labels, the promotion entry label, and missing Firebase Auth initialization in two table checkout widget fixtures).
+- Visual checks use seeded Flutter fixtures; no tablet was attached to ADB. Android distribution uses Firebase Hosting and TestFlight uses a separate manual Codemagic workflow.
 
 ### 2026-11-18 — Detailed sales analytics preview
 

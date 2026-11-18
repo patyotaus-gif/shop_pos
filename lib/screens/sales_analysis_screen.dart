@@ -1,4 +1,5 @@
 import '../widgets/content_width.dart';
+import '../theme/report_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
@@ -128,7 +129,7 @@ class _SalesAnalysisScreenState extends State<SalesAnalysisScreen> {
     final current = r['current'] as Map, previous = r['previous'] as Map;
     final rows = analysisRows(current['daily']),
         prior = analysisRows(previous['daily']);
-    final max = rows.fold<double>(
+    final max = [...rows, ...prior].fold<double>(
         1,
         (m, r) => (r['net'] as num).toDouble() > m
             ? (r['net'] as num).toDouble()
@@ -141,9 +142,19 @@ class _SalesAnalysisScreenState extends State<SalesAnalysisScreen> {
           subtitle:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             LinearProgressIndicator(
+                semanticsLabel: 'ยอดช่วงปัจจุบัน',
+                color: ReportPalette.series(context, 0),
                 value: ((rows[i]['net'] as num) / max).clamp(0, 1).toDouble()),
-            Text(
-                'เทียบ ${prior[i]['day']} · ${analysisMoney(prior[i]['net'])}'),
+            if (i < prior.length) ...[
+              const SizedBox(height: 4),
+              LinearProgressIndicator(
+                  semanticsLabel: 'ยอดช่วงก่อนหน้า',
+                  color: ReportPalette.series(context, 1),
+                  value:
+                      ((prior[i]['net'] as num) / max).clamp(0, 1).toDouble()),
+              Text(
+                  'เทียบ ${prior[i]['day']} · ${analysisMoney(prior[i]['net'])}'),
+            ],
           ]),
         ),
       ExpansionTile(

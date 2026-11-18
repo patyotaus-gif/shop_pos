@@ -5,6 +5,39 @@ import '../theme/operational_colors.dart';
 import '../utils/money_format.dart';
 import 'status_badge.dart';
 
+class OrderPaymentBadge extends StatelessWidget {
+  const OrderPaymentBadge({super.key, required this.order});
+  final ShopOrder order;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, tone, icon) = switch (order.status) {
+      OrderStatus.cancelled => (
+          'ยกเลิก',
+          OperationalTone.neutral,
+          Icons.cancel_outlined
+        ),
+      OrderStatus.pendingPayment when order.slipUrl != null => (
+          'รอตรวจสลิป',
+          OperationalTone.warning,
+          Icons.image_outlined
+        ),
+      OrderStatus.pendingPayment when order.bankMatchPending => (
+          'รอตรวจยอดโอน',
+          OperationalTone.warning,
+          Icons.schedule
+        ),
+      OrderStatus.pendingPayment => (
+          'รอชำระ',
+          OperationalTone.warning,
+          Icons.schedule
+        ),
+      _ => ('ชำระแล้ว', OperationalTone.success, Icons.check_circle_outline),
+    };
+    return StatusBadge(label: label, tone: tone, icon: icon);
+  }
+}
+
 /// Presentation only. Payment, refund and preparation actions belong to the caller.
 class OrderSummaryCard extends StatefulWidget {
   const OrderSummaryCard(
@@ -82,6 +115,12 @@ class _OrderSummaryCardState extends State<OrderSummaryCard> {
                       ])),
             Wrap(spacing: 8, runSpacing: 8, children: [
               StatusBadge(label: order.status.label, tone: tone, icon: icon),
+              if (order.status == OrderStatus.accepted ||
+                  order.status == OrderStatus.ready ||
+                  order.status == OrderStatus.completed ||
+                  (order.status == OrderStatus.pendingPayment &&
+                      (order.slipUrl != null || order.bankMatchPending)))
+                OrderPaymentBadge(order: order),
               if (widget.urgency != null)
                 StatusBadge(
                     label: widget.urgency!,

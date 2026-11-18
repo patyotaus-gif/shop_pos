@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/sale.dart';
+import 'report_breakdowns.dart';
+import 'report_stock_card.dart';
 
 class ProductSalesTotal {
   ProductSalesTotal(this.name);
@@ -28,7 +30,14 @@ Map<String, ProductSalesTotal> productSalesTotals(
 }
 
 class SalesInsights extends StatefulWidget {
-  const SalesInsights({super.key, required this.sales});
+  const SalesInsights(
+      {super.key,
+      required this.sales,
+      this.header,
+      this.advanced = false,
+      this.showInventory = false});
+  final Widget? header;
+  final bool advanced, showInventory;
   final List<Sale> sales;
   @override
   State<SalesInsights> createState() => _SalesInsightsState();
@@ -52,43 +61,9 @@ class _SalesInsightsState extends State<SalesInsights> {
           ? b.revenue.compareTo(a.revenue)
           : b.quantity.compareTo(a.quantity));
     return ListView(padding: const EdgeInsets.all(16), children: [
-      const Text('ยอดขายตามวิธีชำระเงิน',
-          style: TextStyle(fontWeight: FontWeight.bold)),
-      const Text('แยกตามวิธีจ่ายที่บันทึกในบิล ไม่รวมบิลยกเลิกและบิลค้างชำระ'),
-      for (final method in PaymentMethod.values)
-        if (active.any((s) => !s.isDebt && s.paymentMethod == method))
-          ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(method.label),
-              subtitle: Text(
-                  '${active.where((s) => !s.isDebt && s.paymentMethod == method).length} บิล'),
-              trailing: Text(
-                  '฿${active.where((s) => !s.isDebt && s.paymentMethod == method).fold(0.0, (sum, s) => sum + s.total).toStringAsFixed(2)}')),
-      if (active.any((s) => s.isDebt))
-        ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('ค้างชำระ'),
-            subtitle: const Text(
-                'ยอดตามบิลตอนขาย ดูยอดที่ยังค้างจริงที่หน้าลูกค้าเครดิต'),
-            trailing: Text(
-                '฿${active.where((s) => s.isDebt).fold(0.0, (sum, s) => sum + s.total).toStringAsFixed(2)}')),
-      const Divider(),
-      const Text('ช่องทางที่ลูกค้าสั่งซื้อ',
-          style: TextStyle(fontWeight: FontWeight.bold)),
-      const Text('เช่น หน้าร้าน ซื้อกลับ หรือเดลิเวอรี แยกจากวิธีจ่ายเงิน'),
-      const Text('ยอดหลังส่วนลดและคืนเงิน ก่อนหักค่าธรรมเนียมแพลตฟอร์ม'),
-      if (active.any((s) => s.salesChannel == SalesChannel.unspecified))
-        const Text(
-            'บางบิลไม่ได้บันทึกช่องทางสั่งซื้อ วิธีจ่ายเงินยังดูได้ด้านบน'),
-      for (final channel in SalesChannel.values)
-        if (active.any((s) => s.salesChannel == channel))
-          ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(channel.label),
-              subtitle: Text(
-                  '${active.where((s) => s.salesChannel == channel).length} บิล'),
-              trailing: Text(
-                  '฿${active.where((s) => s.salesChannel == channel).fold(0.0, (sum, s) => sum + s.total).toStringAsFixed(2)}')),
+      if (widget.header != null) widget.header!,
+      ReportBreakdowns(sales: widget.sales, advanced: widget.advanced),
+      if (widget.showInventory) const ReportStockCard(),
       const Divider(),
       const Text('สินค้าขายดี', style: TextStyle(fontWeight: FontWeight.bold)),
       const Text('ยอดสินค้าหลังแบ่งส่วนลดท้ายบิล ไม่รวมค่าบริการและบิลคืนเงิน'),

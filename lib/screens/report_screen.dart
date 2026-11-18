@@ -18,6 +18,8 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import '../models/sale.dart';
 import '../widgets/sales_insights.dart';
+import '../widgets/report_sales_trend.dart';
+import '../services/auth_service.dart';
 import '../models/shop.dart';
 import '../services/entitlements.dart';
 import '../services/sale_service.dart';
@@ -130,8 +132,8 @@ class _ReportScreenState extends State<ReportScreen>
     final refundTotal = sumReportMoney(refunded.map((s) => s.total));
     final netRevenue = grossRevenue - refundTotal;
     final cogs = sumReportMoney(active.map(reportSaleCost));
-    final costComplete = active.isNotEmpty &&
-        active.every((s) => s.items.every((i) => i.hasKnownCost));
+    final costComplete =
+        active.isNotEmpty && active.every(reportSaleHasKnownCost);
     final itemRevenue = sumReportMoney(active.map(reportItemRevenue));
     final grossProfit = itemRevenue - cogs;
     final margin = itemRevenue > 0 ? grossProfit / itemRevenue * 100 : 0.0;
@@ -139,7 +141,7 @@ class _ReportScreenState extends State<ReportScreen>
 
     final byMethod = <String, double>{};
     for (final s in active) {
-      final key = s.isDebt ? 'ค้างชำระ' : s.paymentMethod.label;
+      final key = s.isDebt ? 'ค้างชำระ' : s.reportPaymentLabel;
       byMethod[key] = (byMethod[key] ?? 0) + s.total;
     }
 
@@ -311,6 +313,8 @@ class _ReportScreenState extends State<ReportScreen>
                       pw.Text(
                           '${_dayFmt.format(range.start)} – ${_dayFmt.format(range.end)}',
                           style: ts(8, color: PdfColor.fromInt(0xFFFFCDD2))),
+                      pw.Text('วันและเวลาตามอุปกรณ์ (${range.end.timeZoneName})',
+                          style: ts(7, color: PdfColor.fromInt(0xFFFFCDD2))),
                       pw.Text(
                           'พิมพ์: ${DateFormat('dd/MM/yyyy HH:mm').format(now)}',
                           style: ts(7, color: PdfColor.fromInt(0xFFFFCDD2))),
@@ -543,8 +547,7 @@ class _ReportScreenState extends State<ReportScreen>
                 final idx = entry.key;
                 final s = entry.value;
                 final cost = reportSaleCost(s);
-                final lineCostComplete =
-                    s.items.every((item) => item.hasKnownCost);
+                final lineCostComplete = reportSaleHasKnownCost(s);
                 final profit = s.isRefunded
                     ? 0.0
                     : s.itemNetRevenue
@@ -571,7 +574,7 @@ class _ReportScreenState extends State<ReportScreen>
                     td(
                         isRef
                             ? '-'
-                            : (s.isDebt ? 'ค้างชำระ' : s.paymentMethod.label),
+                            : (s.isDebt ? 'ค้างชำระ' : s.reportPaymentLabel),
                         color: textColor),
                     td(
                         isRef
@@ -640,7 +643,7 @@ class _ReportScreenState extends State<ReportScreen>
     return StreamBuilder<Shop?>(
       stream: ShopService.watchCurrentShop(),
       builder: (context, snap) {
-        final tier = snap.data?.tier ?? ShopTier.full;
+        final tier = snap.data?.tier ?? ShopTier.solo;
         final advanced = Entitlements.canUseAdvancedReports(tier);
 
         Future<void> exportOr(Future<void> Function() doExport) async {
@@ -716,7 +719,16 @@ class _ReportScreenState extends State<ReportScreen>
                 children: List.generate(
                   4,
                   (i) => _SalesReport(
-                    rangeBuilder: () => _rangeFor(i),
+                    key: ValueKey((
+                      snap.data?.id,
+                      i,
+                      _rangeFor(i).start,
+                      _rangeFor(i).end
+                    )),
+                    showInventory: advanced &&
+                        Entitlements.canUseInventory(tier) &&
+                        !AuthService.isStaff,
+                    range: _rangeFor(i),
                     baht: _baht,
                     dateFormat: _dateFmt,
                     advanced: advanced,
@@ -741,7 +753,8 @@ class _ProductStat {
 
 // ── Sales Report Widget ──────────────────────────────────────────
 class _SalesReport extends StatefulWidget {
-  final DateTimeRange Function() rangeBuilder;
+  final DateTimeRange range;
+  final bool showInventory;
   final NumberFormat baht;
   final DateFormat dateFormat;
 
@@ -751,7 +764,9 @@ class _SalesReport extends StatefulWidget {
   final bool advanced;
 
   const _SalesReport({
-    required this.rangeBuilder,
+    super.key,
+    required this.range,
+    required this.showInventory,
     required this.baht,
     required this.dateFormat,
     required this.advanced,
@@ -763,17 +778,15 @@ class _SalesReport extends StatefulWidget {
 
 class _SalesReportState extends State<_SalesReport> {
   bool _history = false;
-  DateTimeRange Function() get rangeBuilder => widget.rangeBuilder;
+  late final _sales =
+      SaleService.watchByRange(widget.range.start, widget.range.end);
   NumberFormat get baht => widget.baht;
   DateFormat get dateFormat => widget.dateFormat;
   bool get advanced => widget.advanced;
   @override
   Widget build(BuildContext context) {
-    final range = rangeBuilder();
-    final cs = Theme.of(context).colorScheme;
-
     return StreamBuilder<List<Sale>>(
-      stream: SaleService.watchByRange(range.start, range.end),
+      stream: _sales,
       builder: (ctx, snap) {
         if (snap.hasError) {
           return const Center(child: Text('โหลดข้อมูลไม่สำเร็จ'));
@@ -790,8 +803,8 @@ class _SalesReportState extends State<_SalesReport> {
         final refundTotal = sumReportMoney(refunded.map((s) => s.total));
         final netRevenue = grossRevenue - refundTotal;
         final cogs = sumReportMoney(active.map(reportSaleCost));
-        final costComplete = active.isNotEmpty &&
-            active.every((s) => s.items.every((i) => i.hasKnownCost));
+        final costComplete =
+            active.isNotEmpty && active.every(reportSaleHasKnownCost);
         final itemRevenue = sumReportMoney(active.map(reportItemRevenue));
         final grossProfit = itemRevenue - cogs;
         final margin = itemRevenue > 0 ? grossProfit / itemRevenue * 100 : 0.0;
@@ -799,168 +812,144 @@ class _SalesReportState extends State<_SalesReport> {
             .where((s) => s.isDebt)
             .fold<double>(0, (a, s) => a + s.total);
 
+        final paid = active.where((s) => !s.isDebt);
+        final paidTotal = sumReportMoney(paid.map((s) => s.total));
+        final summary = LayoutBuilder(builder: (context, box) {
+          final cols = box.maxWidth >= 760
+              ? 4
+              : box.maxWidth >= 300
+                  ? 2
+                  : 1;
+          final width = (box.maxWidth - 8 * (cols - 1)) / cols;
+          return Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final metric in [
+              (
+                'ยอดขายสุทธิ',
+                '฿${baht.format(netRevenue)}',
+                Icons.show_chart,
+                Colors.teal
+              ),
+              (
+                'บิลที่ชำระแล้ว',
+                '${paid.length} บิล',
+                Icons.receipt_long,
+                Colors.indigo
+              ),
+              (
+                'เฉลี่ยต่อบิลที่ชำระแล้ว',
+                paid.isEmpty ? '—' : '฿${baht.format(paidTotal / paid.length)}',
+                Icons.calculate_outlined,
+                Colors.deepOrange
+              ),
+              (
+                'ยอดขายค้างชำระ',
+                '฿${baht.format(debtTotal)}',
+                Icons.schedule,
+                Colors.deepPurple
+              ),
+            ])
+              SizedBox(
+                  width: width,
+                  child: _Card(
+                      label: metric.$1,
+                      value: metric.$2,
+                      icon: metric.$3,
+                      color: metric.$4)),
+          ]);
+        });
+
         return Column(
           children: [
             Padding(
-                padding: const EdgeInsets.all(8),
-                child: SegmentedButton<bool>(
-                    segments: const [
-                      ButtonSegment(value: false, label: Text('ภาพรวม')),
-                      ButtonSegment(value: true, label: Text('ประวัติการขาย'))
-                    ],
-                    selected: {
-                      _history
-                    },
-                    onSelectionChanged: (values) =>
-                        setState(() => _history = values.first))),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: TextButton.icon(
-                  icon: const Icon(Icons.info_outline, size: 16),
-                  label: const Text('ยอดตามวันที่ขาย · วิธีนับคืนเงิน'),
-                  onPressed: () => showDialog<void>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                            title: const Text('ฐานรายงานยอดขาย'),
-                            content: const Text(salesReportBasis),
-                            actions: [
-                              TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('ปิด'))
-                            ],
-                          ))),
-            ),
-            // ── Summary cards ──
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-              child: Column(
-                children: [
-                  Row(children: [
-                    _Card(
-                        label: 'รายได้สุทธิ',
-                        value: '฿${baht.format(netRevenue)}',
-                        icon: Icons.attach_money,
-                        color: Colors.green),
-                    const SizedBox(width: 8),
-                    _Card(
-                        label: 'จำนวนบิล',
-                        value: '${active.length} บิล',
-                        icon: Icons.receipt_long,
-                        color: cs.primary),
-                    const SizedBox(width: 8),
-                    _Card(
-                        label: 'ค้างชำระ',
-                        value: '฿${baht.format(debtTotal)}',
-                        icon: Icons.person_outline,
-                        color: Colors.orange),
-                  ]),
-                  const SizedBox(height: 8),
-                  // P&L bar — advanced (Full/Restaurant). Basic tiers see
-                  // a locked teaser that opens the upgrade prompt.
-                  if (advanced)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.teal.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                            color: Colors.teal.withValues(alpha: 0.25)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _PLItem(
-                              label: 'ยอดสินค้าสุทธิ',
-                              value: '฿${baht.format(itemRevenue)}',
-                              color: Colors.green),
-                          const Text('−', style: TextStyle(color: Colors.grey)),
-                          _PLItem(
-                              label: 'ต้นทุน',
-                              value: '฿${baht.format(cogs)}',
-                              color: Colors.redAccent),
-                          const Text('=', style: TextStyle(color: Colors.grey)),
-                          _PLItem(
-                            label: costComplete
-                                ? 'กำไรขั้นต้น ${margin.toStringAsFixed(1)}%'
-                                : 'กำไรขั้นต้น',
-                            value: costComplete
-                                ? '฿${baht.format(grossProfit)}'
-                                : 'ต้นทุนไม่ครบ',
-                            color: grossProfit >= 0 ? Colors.teal : Colors.red,
-                            bold: true,
-                          ),
-                        ],
-                      ),
-                    )
-                  else
-                    InkWell(
-                      onTap: () => showUpgradePrompt(context,
-                          feature: EntitlementFeature.advancedReports),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: cs.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: cs.outlineVariant),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.lock_outline,
-                                size: 18,
-                                color: cs.onSurface.withValues(alpha: 0.5)),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                'กำไร–ต้นทุน + ส่งออก PDF/CSV — อยู่ในแผน Full ขึ้นไป',
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color: cs.onSurface.withValues(alpha: 0.7)),
-                              ),
-                            ),
-                            Text('อัพเกรด',
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: cs.primary)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  if (refunded.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.06),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                              color: Colors.red.withValues(alpha: 0.2)),
-                        ),
-                        child: Text(
-                          'คืนเงิน ${refunded.length} บิล รวม ฿${baht.format(refundTotal)}',
-                          style:
-                              const TextStyle(fontSize: 12, color: Colors.red),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
+              padding: const EdgeInsets.all(8),
+              child: SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(value: false, label: Text('ภาพรวม')),
+                  ButtonSegment(value: true, label: Text('ประวัติการขาย'))
                 ],
+                selected: {_history},
+                onSelectionChanged: (values) =>
+                    setState(() => _history = values.first),
               ),
             ),
-            const SizedBox(height: 8),
-            const Divider(height: 1),
-            // ── Transaction list ──
             Expanded(
               child: !_history
-                  ? SalesInsights(sales: sales)
+                  ? SalesInsights(
+                      sales: sales,
+                      advanced: advanced,
+                      showInventory: widget.showInventory,
+                      header: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                              '${DateFormat('dd/MM/yyyy').format(widget.range.start)} – ${DateFormat('dd/MM/yyyy').format(widget.range.end)}',
+                              style: Theme.of(context).textTheme.titleMedium),
+                          Text(
+                              'วันและเวลาตามอุปกรณ์ (${widget.range.end.timeZoneName})',
+                              style: Theme.of(context).textTheme.bodySmall),
+                          const SizedBox(height: 8),
+                          summary,
+                          if (advanced)
+                            ExpansionTile(
+                                title: const Text('กำไรขั้นต้นสินค้า'),
+                                subtitle: Text(costComplete
+                                    ? '฿${baht.format(grossProfit)}'
+                                    : 'ต้นทุนไม่ครบ'),
+                                children: [
+                                  ListTile(
+                                      title: const Text('ยอดสินค้าสุทธิ'),
+                                      trailing:
+                                          Text('฿${baht.format(itemRevenue)}')),
+                                  ListTile(
+                                      title: const Text('ต้นทุนสินค้า'),
+                                      trailing: Text(costComplete
+                                          ? '฿${baht.format(cogs)}'
+                                          : 'ข้อมูลไม่ครบ')),
+                                  if (costComplete && itemRevenue > 0)
+                                    ListTile(
+                                        title: const Text('อัตรากำไรขั้นต้น'),
+                                        trailing: Text(
+                                            '${margin.toStringAsFixed(1)}%')),
+                                ])
+                          else
+                            ListTile(
+                                leading: const Icon(Icons.lock_outline),
+                                title:
+                                    const Text('กำไร–ต้นทุนและการส่งออกรายงาน'),
+                                subtitle: const Text('ดูแพ็กเกจ Full'),
+                                onTap: () => showUpgradePrompt(context,
+                                    feature:
+                                        EntitlementFeature.advancedReports)),
+                          if (advanced)
+                            ReportSalesTrend(
+                                sales: sales,
+                                range: widget.range,
+                                previousSales: (range) =>
+                                    SaleService.watchByRange(
+                                        range.start, range.end),
+                                onOpenBill: (sale) =>
+                                    _showDetail(context, sale)),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: TextButton.icon(
+                                icon: const Icon(Icons.info_outline, size: 16),
+                                label: const Text(
+                                    'ยอดตามวันที่ขาย · วิธีนับคืนเงิน'),
+                                onPressed: () => showDialog<void>(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                          title: const Text('ฐานรายงานยอดขาย'),
+                                          content: const Text(salesReportBasis),
+                                          actions: [
+                                            TextButton(
+                                                onPressed: () =>
+                                                    Navigator.pop(context),
+                                                child: const Text('ปิด'))
+                                          ],
+                                        ))),
+                          ),
+                        ],
+                      ))
                   : sales.isEmpty
                       ? const Center(child: Text('ยังไม่มีรายการขาย'))
                       : ListView.builder(
@@ -997,7 +986,7 @@ class _SalesReportState extends State<_SalesReport> {
                                   child: Text(
                                     s.isDebt
                                         ? 'ค้างชำระ: ${s.customerName}'
-                                        : s.paymentMethod.label,
+                                        : s.reportPaymentLabel,
                                     style: TextStyle(
                                       fontWeight: FontWeight.w600,
                                       decoration: s.isRefunded
@@ -1123,8 +1112,8 @@ class _SalesReportState extends State<_SalesReport> {
               ),
               const SizedBox(width: 8),
               Expanded(
-                  child: _RefundButton(
-                      sale: sale, baht: bahtFmt, host: context)),
+                  child:
+                      _RefundButton(sale: sale, baht: bahtFmt, host: context)),
             ]),
           ],
         ),
@@ -1194,53 +1183,26 @@ class _Card extends StatelessWidget {
       required this.color});
 
   @override
-  Widget build(BuildContext context) => Expanded(
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withValues(alpha: 0.3)),
-          ),
-          child: Column(children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(height: 4),
-            Text(value,
-                style: TextStyle(
-                    fontWeight: FontWeight.bold, color: color, fontSize: 13),
-                textAlign: TextAlign.center),
-            Text(label,
-                style: const TextStyle(fontSize: 10, color: Colors.grey),
-                textAlign: TextAlign.center),
-          ]),
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
-      );
-}
-
-class _PLItem extends StatelessWidget {
-  final String label, value;
-  final Color color;
-  final bool bold;
-  const _PLItem(
-      {required this.label,
-      required this.value,
-      required this.color,
-      this.bold = false});
-
-  @override
-  Widget build(BuildContext context) => Expanded(
-          child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Icon(icon,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Color.lerp(color, Colors.white, 0.45)
+                  : color,
+              size: 20),
+          const SizedBox(height: 8),
+          Text(label, style: Theme.of(context).textTheme.bodyMedium),
           Text(value,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontWeight: bold ? FontWeight.bold : FontWeight.w600,
-                  color: color,
-                  fontSize: bold ? 14 : 12)),
-          Text(label,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 10, color: Colors.grey)),
-        ],
-      ));
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold)),
+        ]),
+      );
 }

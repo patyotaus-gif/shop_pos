@@ -94,7 +94,7 @@ void main() {
   });
 
   test(
-      'four order groups retain every status exactly once, including overdue work',
+      'five order groups retain every status exactly once, including overdue work',
       () {
     final now = DateTime.utc(2026, 10, 9, 16, 50);
     final tomorrow = DateTime.utc(2026, 10, 9, 17, 10);
@@ -127,6 +127,8 @@ void main() {
                 status == OrderStatus.pendingPayment ||
                 status == OrderStatus.paid) {
               expect(groups.single, OrderQueue.confirmation);
+            } else if (status == OrderStatus.ready) {
+              expect(groups.single, OrderQueue.ready);
             } else {
               expect(groups.single, OrderQueue.preparing);
             }
@@ -142,7 +144,11 @@ void main() {
     for (final status in [OrderStatus.accepted, OrderStatus.ready]) {
       final item = order(status, pickup: pickup);
       expect(isFuturePickup(item, now), isTrue);
-      expect(matchesQueue(item, OrderQueue.preparing, now), isTrue);
+      expect(
+          orderQueueFor(item, now),
+          status == OrderStatus.ready
+              ? OrderQueue.ready
+              : OrderQueue.preparing);
       expect(matchesQueue(item, OrderQueue.future, now), isFalse);
       expect(orderDueAt(item), pickup);
     }

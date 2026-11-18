@@ -1,11 +1,12 @@
 import 'order.dart';
 
-enum OrderQueue { confirmation, preparing, future, history }
+enum OrderQueue { confirmation, preparing, ready, future, history }
 
 extension OrderQueueLabel on OrderQueue {
   String get label => switch (this) {
         OrderQueue.confirmation => 'รอยืนยัน',
         OrderQueue.preparing => 'กำลังเตรียม',
+        OrderQueue.ready => 'พร้อมรับ',
         OrderQueue.future => 'นัดล่วงหน้า',
         OrderQueue.history => 'ประวัติ',
       };
@@ -23,24 +24,29 @@ bool isActiveOrder(ShopOrder order) =>
     order.status != OrderStatus.completed &&
     order.status != OrderStatus.cancelled;
 bool matchesQueue(ShopOrder order, OrderQueue queue, DateTime now) {
-  final active = isActiveOrder(order);
-  final future = isFuturePickup(order, now);
-  // Evidence requiring review stays actionable even for a future pickup.
-  final needsReview = order.bankMatchPending ||
-      order.slipUrl != null && order.status == OrderStatus.pendingPayment;
-  final needsConfirmation = needsReview ||
-      order.status == OrderStatus.pendingPayment ||
-      order.status == OrderStatus.paid;
-  // Once work starts, the operational queue takes precedence over pickup day.
-  final started =
-      order.status == OrderStatus.accepted || order.status == OrderStatus.ready;
-  final current = active && (!future || needsReview || started);
-  return switch (queue) {
-    OrderQueue.confirmation => current && needsConfirmation,
-    OrderQueue.preparing => current && !needsConfirmation,
-    OrderQueue.future => active && future && !needsReview && !started,
-    OrderQueue.history => !active,
-  };
+  return orderQueueFor(order, now) == queue;
+}
+
+OrderQueue orderQueueFor(ShopOrder order, DateTime now) {
+  if (!isActiveOrder(order)) return OrderQueue.history;
+  if (order.bankMatchPending) return OrderQueue.confirmation;
+  if (order.status == OrderStatus.ready) return OrderQueue.ready;
+  if (order.status == OrderStatus.accepted) return OrderQueue.preparing;
+  final needsReview =
+      order.status == OrderStatus.pendingPayment && order.slipUrl != null;
+  if (isFuturePickup(order, now) && !needsReview) return OrderQueue.future;
+  return OrderQueue.confirmation;
+}
+
+bool matchesOrderSearch(ShopOrder order, String query) {
+  final term = query.trim().toLowerCase();
+  return term.isEmpty ||
+      [
+        order.displayLabel,
+        order.displayNumber,
+        order.customerName,
+        ...order.items.map((item) => item.productName),
+      ].any((value) => value.toLowerCase().contains(term));
 }
 
 DateTime orderDueAt(ShopOrder order) => order.pickupStartAt ?? order.createdAt;

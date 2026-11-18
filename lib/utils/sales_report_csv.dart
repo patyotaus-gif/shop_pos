@@ -10,6 +10,8 @@ int _itemRevenue(Sale s) =>
 
 // Share the per-bill cent rounding with the on-screen and PDF report totals.
 double reportSaleCost(Sale sale) => _cost(sale) / 100;
+bool reportSaleHasKnownCost(Sale sale) =>
+    sale.items.isNotEmpty && sale.items.every((item) => item.hasKnownCost);
 double reportItemRevenue(Sale sale) => _itemRevenue(sale) / 100;
 double sumReportMoney(Iterable<num> values) =>
     values.fold<int>(0, (sum, value) => sum + _minor(value)) / 100;
@@ -30,7 +32,7 @@ String buildSalesReportCsv({
   final returns = refunded.fold<int>(0, (v, s) => v + _minor(s.total));
   final cost = active.fold<int>(0, (v, s) => v + _cost(s));
   final revenue = active.fold<int>(0, (v, s) => v + _itemRevenue(s));
-  final costKnown = active.every((s) => s.items.every((i) => i.hasKnownCost));
+  final costKnown = active.every(reportSaleHasKnownCost);
   final out = StringBuffer();
   void row(List<Object?> cells) => out.writeln(csvRow(cells));
   CsvMoney money(int cents) => CsvMoney(cents / 100);
@@ -93,13 +95,13 @@ String buildSalesReportCsv({
     final s = sales[i];
     final total = _minor(s.total);
     final c = _cost(s);
-    final known = s.items.every((item) => item.hasKnownCost);
+    final known = reportSaleHasKnownCost(s);
     row([
       i + 1,
       s.id,
       date.format(s.createdAt),
       s.customerName,
-      s.isDebt ? 'เชื่อ' : s.paymentMethod.label,
+      s.isDebt ? 'เชื่อ' : s.reportPaymentLabel,
       s.salesChannel.label,
       money(total),
       money(s.isRefunded ? total : 0),

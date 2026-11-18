@@ -27,6 +27,8 @@ class OrdersScreen extends StatefulWidget {
 class _OrdersScreenState extends State<OrdersScreen> {
   OrderQueue _filter = OrderQueue.confirmation;
   late Stream<List<ShopOrder>> _orders = OrderService.watchAll();
+  final _search = TextEditingController();
+  String? _selectedId;
   Timer? _clock;
   @override
   void initState() {
@@ -39,6 +41,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   @override
   void dispose() {
     _clock?.cancel();
+    _search.dispose();
     super.dispose();
   }
 
@@ -62,7 +65,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 content: const Text(
                     'รายการที่ลูกค้าสั่งผ่านลิงก์หรือ QR ของร้าน\n\n'
                     'รอยืนยัน: รอชำระ รอตรวจเงิน หรือชำระแล้วรอร้านรับออเดอร์\n'
-                    'กำลังเตรียม: ร้านรับออเดอร์แล้ว รวมรายการพร้อมรับที่ยังไม่ส่งมอบ\n'
+                    'กำลังเตรียม: ร้านรับออเดอร์และเริ่มจัดเตรียมแล้ว\n'
+                    'พร้อมรับ: เตรียมเสร็จแล้ว รอส่งมอบให้ลูกค้า\n'
                     'นัดล่วงหน้า: นัดรับตั้งแต่วันถัดไปที่ยังไม่เริ่มเตรียม หากมีหลักฐานรอตรวจจะอยู่ในรอยืนยัน เมื่อเริ่มเตรียมจะย้ายไปกำลังเตรียม\n'
                     'ประวัติ: ออเดอร์ที่เสร็จแล้วหรือยกเลิก\n\n'
                     'บิลขายที่เคาน์เตอร์และบิลโต๊ะ ดูได้ที่ รายงาน → รายงานยอดขาย → ประวัติการขาย'),
@@ -97,7 +101,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
               final now = DateTime.now();
               final all = snap.data!;
               final orders = all
-                  .where((o) => matchesQueue(o, _filter, now))
+                  .where((o) =>
+                      matchesQueue(o, _filter, now) &&
+                      matchesOrderSearch(o, _search.text))
                   .toList()
                 ..sort((a, b) => _filter == OrderQueue.history
                     ? b.createdAt.compareTo(a.createdAt)
@@ -120,20 +126,132 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                     .where((o) => matchesQueue(o, f, now))
                                     .length,
                                 selected: _filter == f,
-                                onTap: () => setState(() => _filter = f))),
+                                onTap: () => setState(() {
+                                      _filter = f;
+                                      _search.clear();
+                                      _selectedId = null;
+                                    }))),
                     ])),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                  child: TextField(
+                    controller: _search,
+                    textInputAction: TextInputAction.search,
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      labelText: 'ค้นหาเลขออเดอร์ ชื่อลูกค้า หรือเมนู',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _search.text.isEmpty
+                          ? null
+                          : IconButton(
+                              tooltip: 'ล้างคำค้น',
+                              icon: const Icon(Icons.clear),
+                              onPressed: () => setState(_search.clear),
+                            ),
+                    ),
+                  ),
+                ),
                 Divider(height: 1, color: cs.outlineVariant),
                 Expanded(
                     child: orders.isEmpty
                         ? Center(
-                            child: Text('ไม่มีออเดอร์ในหมวด ${_filter.label}'))
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(12),
-                            itemCount: orders.length,
-                            itemBuilder: (_, i) => _OrderCard(
-                                key: ValueKey(orders[i].id),
-                                order: orders[i],
-                                urgency: pickupUrgency(orders[i], now)))),
+                            child: Text(_search.text.trim().isEmpty
+                                ? 'ไม่มีออเดอร์ในหมวด ${_filter.label}'
+                                : 'ไม่พบออเดอร์ที่ตรงกับคำค้นในหมวด ${_filter.label}'))
+                        : LayoutBuilder(builder: (context, constraints) {
+                            final wide = constraints.maxWidth >= 760;
+                            final selected = orders.firstWhere(
+                                (o) => o.id == _selectedId,
+                                orElse: () => orders.first);
+                            final list = ListView.separated(
+                              keyboardDismissBehavior:
+                                  ScrollViewKeyboardDismissBehavior.onDrag,
+                              itemCount: orders.length,
+                              separatorBuilder: (_, __) =>
+                                  const Divider(height: 1),
+                              itemBuilder: (_, i) {
+                                final order = orders[i];
+                                final locale =
+                                    MaterialLocalizations.of(context);
+                                final created = order.createdAt.toLocal();
+                                final time = locale.formatTimeOfDay(
+                                    TimeOfDay.fromDateTime(created),
+                                    alwaysUse24HourFormat: true);
+                                return ListTile(
+                                  key: ValueKey('queue-${order.id}'),
+                                  selected: wide && selected.id == order.id,
+                                  selectedTileColor: cs.secondaryContainer,
+                                  title: Text(order.displayLabel),
+                                  subtitle: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                          [
+                                            if (!DateUtils.isSameDay(
+                                                created, now))
+                                              locale.formatShortDate(created),
+                                            time,
+                                            if (order.customerName.isNotEmpty)
+                                              order.customerName,
+                                            ...order.items.map((item) =>
+                                                '${item.productName} × ${item.quantity}')
+                                          ].join(' · '),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis),
+                                      if (order.pickupLabel != null)
+                                        Text(
+                                            'นัดรับ ${order.pickupLabel} (เวลาไทย)'),
+                                      if (pickupUrgency(order, now)
+                                          case final urgency?)
+                                        Text(urgency,
+                                            style: TextStyle(color: cs.error)),
+                                      Wrap(
+                                          spacing: 8,
+                                          crossAxisAlignment:
+                                              WrapCrossAlignment.center,
+                                          children: [
+                                            Text(formatBaht(
+                                                order.paymentMethod == 'stripe'
+                                                    ? order.total
+                                                    : order.finalAmount)),
+                                            OrderPaymentBadge(order: order),
+                                          ]),
+                                    ],
+                                  ),
+                                  trailing: const Icon(Icons.chevron_right),
+                                  onTap: () {
+                                    FocusScope.of(context).unfocus();
+                                    if (wide) {
+                                      setState(() => _selectedId = order.id);
+                                    } else {
+                                      Navigator.of(context).push(
+                                          MaterialPageRoute<void>(
+                                              builder: (_) => OrderDetailScreen(
+                                                  orderId: order.id)));
+                                    }
+                                  },
+                                );
+                              },
+                            );
+                            if (!wide) return list;
+                            return Row(children: [
+                              Expanded(flex: 4, child: list),
+                              const VerticalDivider(width: 1),
+                              Expanded(
+                                  flex: 6,
+                                  child: ListView(
+                                    key: ValueKey('detail-${selected.id}'),
+                                    padding: const EdgeInsets.all(12),
+                                    children: [
+                                      _OrderCard(
+                                          order: selected,
+                                          urgency: pickupUrgency(selected, now),
+                                          expanded: true)
+                                    ],
+                                  )),
+                            ]);
+                          })),
               ]);
             },
           )),
@@ -210,7 +328,7 @@ class _FilterChip extends StatelessWidget {
 class _OrderCard extends StatelessWidget {
   final ShopOrder order;
   const _OrderCard(
-      {super.key, required this.order, this.urgency, this.expanded = false});
+      {required this.order, this.urgency, this.expanded = false});
   final String? urgency;
   final bool expanded;
 
@@ -457,14 +575,20 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           onPressed: () => setState(() => _stream = _watch()),
                           child: const Text('โหลดไม่ได้ · ลองใหม่')));
                 }
-                if (!snap.hasData) {
+                if (snap.connectionState == ConnectionState.waiting &&
+                    !snap.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
+                if (!snap.hasData) {
+                  return const Center(child: Text('ไม่พบออเดอร์นี้'));
+                }
+                final order =
+                    ShopOrder.fromFirestore(snap.data!, widget.orderId);
                 return ListView(padding: const EdgeInsets.all(12), children: [
                   _OrderCard(
                       expanded: true,
-                      order:
-                          ShopOrder.fromFirestore(snap.data!, widget.orderId)),
+                      urgency: pickupUrgency(order, DateTime.now()),
+                      order: order),
                 ]);
               })));
 }

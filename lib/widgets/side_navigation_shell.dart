@@ -382,7 +382,7 @@ class _PhoneNavigationBar extends StatelessWidget {
     final color = selected ? colors.onPrimaryContainer : colors.onSurfaceVariant;
     final caption = selected
         ? Padding(
-            padding: const EdgeInsetsDirectional.only(start: 4),
+            padding: EdgeInsetsDirectional.only(start: badge > 0 ? 14 : 4),
             child: Text(label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -405,7 +405,7 @@ class _PhoneNavigationBar extends StatelessWidget {
               customBorder: const StadiumBorder(),
               child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 Badge(
-                  isLabelVisible: !selected && badge > 0,
+                  isLabelVisible: badge > 0,
                   label: Text(badge > 99 ? '99+' : '$badge'),
                   child: Icon(
                     (selected ? item?.selectedIcon : item?.icon) ?? Icons.more_horiz,

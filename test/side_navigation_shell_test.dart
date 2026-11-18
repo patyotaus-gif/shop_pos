@@ -110,6 +110,7 @@ void main() {
     expect(middle.left, greaterThan(initial.left));
     expect(middle.left, lessThan(tester.getRect(pill).left));
     expect(find.text('ออเดอร์'), findsOneWidget);
+    expect(find.text('99+'), findsOneWidget);
     expect(find.text('ขาย'), findsNothing);
     expect(find.text('หน้าออเดอร์'), findsOneWidget);
     await tester.tap(find.byTooltip('เพิ่มเติม'));
