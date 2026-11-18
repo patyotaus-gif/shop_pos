@@ -15,7 +15,7 @@ Rules:
 
 ## Current state (updated 2026-11-18)
 
-Mobile tab concept for owner review: `docs/previews/pokpok-tab-motion.html` uses sample data and a 200ms sliding selection. Production remains at 1.2.79 (96).
+Mobile tab concept for owner review: `docs/previews/pokpok-tab-motion.html` opens with the lower-left expanding icon-and-label pill and offers the previous sliding selection for comparison. Production remains at 1.2.79 (96).
 
 Local motion study for review: `docs/previews/pokpok-loading-motion.html`
 compares a compact 880ms masthead animation with a 1500ms splash. Each
@@ -430,6 +430,8 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-18: Added the lower-left Reel navigation variant to the local specimen. Reviewed the selected Orders frame and tested both styles, all five destinations, replay, touch target size and reduced motion in Edge at 320, 390, 768 and 1440px.
 
 - 2026-11-18: Created a local interactive five-tab mobile navigation specimen. Edge checks passed at 390, 768 and 1440px for selection, replay, layout width and reduced motion. Visually inspected the 390px capture. Preview only.
 
