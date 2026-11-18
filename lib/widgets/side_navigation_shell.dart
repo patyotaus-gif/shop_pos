@@ -83,7 +83,7 @@ class _SideNavigationShellState extends State<SideNavigationShell> {
                     child: MediaQuery.removePadding(
                         context: context,
                         removeBottom: true,
-                        // NavigationBar owns the home-indicator inset. Pages
+                        // The bottom bar owns the home-indicator inset. Pages
                         // above it must not reserve that same space again.
                         child: IndexedStack(
                             index: widget.selectedIndex,
@@ -102,8 +102,10 @@ class _SideNavigationShellState extends State<SideNavigationShell> {
                 MediaQuery.removePadding(
                   context: context,
                   removeTop: true,
-                  child: NavigationBar(
-                    height: 64,
+                  child: _PhoneNavigationBar(
+                    key: const ValueKey('phone-navigation'),
+                    items: widget.items,
+                    primaryCount: count,
                     selectedIndex: widget.selectedIndex < count
                         ? widget.selectedIndex
                         : count,
@@ -127,21 +129,6 @@ class _SideNavigationShellState extends State<SideNavigationShell> {
                               ])));
                       if (chosen != null && mounted) widget.onSelected(chosen);
                     },
-                    destinations: [
-                      for (var i = 0; i < count; i++)
-                        NavigationDestination(
-                            icon: Badge(
-                                isLabelVisible: widget.items[i].badgeCount > 0,
-                                label: Text(widget.items[i].badgeCount > 99
-                                    ? '99+'
-                                    : '${widget.items[i].badgeCount}'),
-                                child: Icon(widget.items[i].icon)),
-                            selectedIcon: Icon(widget.items[i].selectedIcon),
-                            label: widget.items[i].label),
-                      if (widget.items.length > count)
-                        const NavigationDestination(
-                            icon: Icon(Icons.more_horiz), label: 'เพิ่มเติม'),
-                    ],
                   ),
                 ),
               ]);
@@ -315,6 +302,130 @@ class _SideNavigationShellState extends State<SideNavigationShell> {
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _PhoneNavigationBar extends StatelessWidget {
+  const _PhoneNavigationBar({
+    super.key,
+    required this.items,
+    required this.primaryCount,
+    required this.selectedIndex,
+    required this.onDestinationSelected,
+  });
+
+  final List<AppNavigationItem> items;
+  final int primaryCount;
+  final int selectedIndex;
+  final ValueChanged<int> onDestinationSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final count = primaryCount + (items.length > primaryCount ? 1 : 0);
+    final duration = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 240);
+    return Material(
+      color: colors.surfaceContainerLow,
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 64,
+          child: LayoutBuilder(builder: (context, constraints) {
+            // Each tab uses one track, and the selected tab uses two.
+            final track = constraints.maxWidth / (count + 1);
+            return Stack(children: [
+              if (count > 0)
+                AnimatedPositionedDirectional(
+                  duration: duration,
+                  curve: Curves.easeInOut,
+                  start: selectedIndex * track + 2,
+                  width: 2 * track - 4,
+                  top: 12,
+                  height: 40,
+                  child: DecoratedBox(
+                    key: const ValueKey('phone-navigation-indicator'),
+                    decoration: ShapeDecoration(
+                      color: colors.primaryContainer,
+                      shape: const StadiumBorder(),
+                    ),
+                  ),
+                ),
+              for (var i = 0; i < count; i++)
+                AnimatedPositionedDirectional(
+                  key: ValueKey(i < primaryCount ? items[i].label : 'เพิ่มเติม'),
+                  duration: duration,
+                  curve: Curves.easeInOut,
+                  start: (i + (i > selectedIndex ? 1 : 0)) * track,
+                  width: i == selectedIndex ? 2 * track : track,
+                  top: 0,
+                  bottom: 0,
+                  child: _tab(context, i, duration),
+                ),
+            ]);
+          }),
+        ),
+      ),
+    );
+  }
+
+  Widget _tab(BuildContext context, int index, Duration duration) {
+    final item = index < primaryCount ? items[index] : null;
+    final label = item?.label ?? 'เพิ่มเติม';
+    final selected = index == selectedIndex;
+    final badge = item?.badgeCount ?? 0;
+    final colors = Theme.of(context).colorScheme;
+    final color = selected ? colors.onPrimaryContainer : colors.onSurfaceVariant;
+    final caption = selected
+        ? Padding(
+            padding: const EdgeInsetsDirectional.only(start: 4),
+            child: Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(color: color)),
+          )
+        : const SizedBox.shrink();
+    void select() => onDestinationSelected(index);
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: badge > 0 ? '$label, $badge ออเดอร์ใหม่' : label,
+      onTap: select,
+      child: ExcludeSemantics(
+        child: Tooltip(
+          message: label,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: select,
+              customBorder: const StadiumBorder(),
+              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Badge(
+                  isLabelVisible: !selected && badge > 0,
+                  label: Text(badge > 99 ? '99+' : '$badge'),
+                  child: Icon(
+                    (selected ? item?.selectedIcon : item?.icon) ?? Icons.more_horiz,
+                    size: 22,
+                    color: color,
+                  ),
+                ),
+                Flexible(
+                  child: duration == Duration.zero
+                      ? caption
+                      : AnimatedSize(
+                          duration: duration,
+                          curve: Curves.easeInOut,
+                          alignment: AlignmentDirectional.centerStart,
+                          child: caption,
+                        ),
+                ),
+              ]),
+            ),
+          ),
         ),
       ),
     );

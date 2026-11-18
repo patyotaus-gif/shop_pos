@@ -8,7 +8,7 @@ import 'package:shop_pos/widgets/app_viewport.dart';
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
   Future<void> openShell(WidgetTester tester, Size size,
-      {double textScale = 1}) async {
+      {double textScale = 1, bool reduceMotion = false}) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     tester.view.padding = const FakeViewPadding(bottom: 34);
@@ -22,6 +22,7 @@ void main() {
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(
           textScaler: TextScaler.linear(textScale),
+          disableAnimations: reduceMotion,
         ),
         child: AppViewport(child: child!),
       ),
@@ -71,7 +72,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('nav-ขาย')));
     await tester.pump();
     expect(find.text('สินค้าในตะกร้า 1'), findsOneWidget);
-    expect(find.byType(NavigationBar), findsNothing);
+    expect(find.byKey(const ValueKey('phone-navigation')), findsNothing);
     expect(tester.getTopLeft(find.byKey(const ValueKey('add-item'))).dx,
         greaterThan(192));
     expect(tester.takeException(), isNull);
@@ -80,31 +81,60 @@ void main() {
   testWidgets('all destinations remain reachable on a small landscape screen',
       (tester) async {
     await openShell(tester, const Size(568, 320), textScale: 2);
-    await tester.tap(find.text('เพิ่มเติม'));
+    await tester.tap(find.byTooltip('เพิ่มเติม'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('ตั้งค่า'), 150);
     await tester.tap(find.text('ตั้งค่า'));
     await tester.pumpAndSettle();
     expect(find.text('หน้าตั้งค่า'), findsOneWidget);
+    expect(find.text('เพิ่มเติม'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('phone sidebar shows order count and accessible selected state',
+  testWidgets('phone tabs move the pill and show only the selected label',
       (tester) async {
     final semantics = tester.ensureSemantics();
     await openShell(tester, const Size(375, 812));
     expect(find.text('99+'), findsOneWidget);
-    expect(find.byType(NavigationBar), findsOneWidget);
-    expect(tester.getSize(find.byType(NavigationBar)).height, 64);
-    expect(tester.getBottomRight(find.byType(NavigationBar)).dy, 812 - 34);
-    await tester.tap(find.text('ออเดอร์'));
+    final nav = find.byKey(const ValueKey('phone-navigation'));
+    final pill = find.byKey(const ValueKey('phone-navigation-indicator'));
+    expect(tester.getSize(nav).height, 64);
+    expect(tester.getBottomRight(nav).dy, 812 - 34);
+    expect(find.text('ออเดอร์'), findsNothing);
+    final initial = tester.getRect(pill);
+    await tester.tap(find.byTooltip('ออเดอร์'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 120));
+    final middle = tester.getRect(pill);
+    await tester.pumpAndSettle();
+    expect(middle.left, greaterThan(initial.left));
+    expect(middle.left, lessThan(tester.getRect(pill).left));
+    expect(find.text('ออเดอร์'), findsOneWidget);
+    expect(find.text('ขาย'), findsNothing);
+    expect(find.text('หน้าออเดอร์'), findsOneWidget);
+    await tester.tap(find.byTooltip('เพิ่มเติม'));
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(10, 60));
     await tester.pumpAndSettle();
     expect(find.text('หน้าออเดอร์'), findsOneWidget);
-    await tester.tap(find.text('ขาย'));
+    await tester.tap(find.byTooltip('ขาย'));
     await tester.pumpAndSettle();
     expect(find.text('สินค้าในตะกร้า 0'), findsOneWidget);
     expect(tester.takeException(), isNull);
     semantics.dispose();
+  });
+
+  testWidgets('reduced motion immediately selects the destination on a narrow phone',
+      (tester) async {
+    await openShell(tester, const Size(320, 720), reduceMotion: true);
+    final pill = find.byKey(const ValueKey('phone-navigation-indicator'));
+    await tester.tap(find.byTooltip('ครัว'));
+    await tester.pump();
+    await tester.pump();
+    expect(tester.getCenter(pill).dx,
+        closeTo(tester.getCenter(find.byTooltip('ครัว')).dx, 0.1));
+    expect(find.text('หน้าครัว'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
 

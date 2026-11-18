@@ -15,7 +15,7 @@ Rules:
 
 ## Current state (updated 2026-11-18)
 
-Mobile tab concept for owner review: `docs/previews/pokpok-tab-motion.html` opens with the lower-left expanding icon-and-label pill and offers the previous sliding selection for comparison. Production remains at 1.2.79 (96).
+The owner approved the lower-left expanding tab in `docs/previews/pokpok-tab-motion.html`. It is implemented locally in the Flutter phone navigation. Production remains at 1.2.79 (96).
 
 Local motion study for review: `docs/previews/pokpok-loading-motion.html`
 compares a compact 880ms masthead animation with a 1500ms splash. Each
@@ -430,6 +430,8 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-18 — Implemented the approved expanding phone tabs below 600 logical pixels. A 40px selection indicator slides between destinations; “เพิ่มเติม” opens the existing destination sheet. Reduced-motion mode selects immediately. All 18 Flutter widget tests across side navigation, checkout, and viewport passed locally, including animation, returning from the sheet, rotation, and safe insets. No device test or release for this change.
 
 - 2026-11-18: Added the lower-left Reel navigation variant to the local specimen. Reviewed the selected Orders frame and tested both styles, all five destinations, replay, touch target size and reduced motion in Edge at 320, 390, 768 and 1440px.
 

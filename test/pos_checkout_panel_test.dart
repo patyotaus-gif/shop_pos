@@ -61,7 +61,7 @@ void main() {
       ]),
     ));
     await tester.pumpAndSettle();
-    final nav = tester.getRect(find.byType(NavigationBar));
+    final nav = tester.getRect(find.byKey(const ValueKey('phone-navigation')));
     final panel = tester.getRect(find.byType(PosCheckoutPanel));
     expect(nav.height, 64 + 34);
     expect(panel.height, lessThanOrEqualTo(80));
