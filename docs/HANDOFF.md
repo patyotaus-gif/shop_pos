@@ -431,6 +431,8 @@ or triggered; its Codemagic workflow does not run automatically on push.
 
 ## Log
 
+- 2026-11-18 — Reviewed the owner's AutoParts order-dashboard reference (Instagram DfmSb0Fkf2l) from its public caption and preview image. Suggested tappable summary cards and filtered bill history for Pokpok, with fulfillment statuses in Orders and sales metrics in Reports. Design discussion only.
+
 - 2026-11-18 — Reviewed the Flutter sales report and sales insights for the owner's analytics discussion. The report already separates payment methods and order channels and ranks products by units or revenue. Proposed a first iteration comparing net sales, bill count and average bill against an equivalent period. This is a proposal, not an implemented feature.
 
 - 2026-11-18 — Implemented the approved expanding phone tabs below 600 logical pixels. A 40px selection indicator slides between destinations; “เพิ่มเติม” opens the existing destination sheet. Reduced-motion mode selects immediately. All 18 Flutter widget tests across side navigation, checkout, and viewport passed locally, including animation, returning from the sheet, rotation, and safe insets. No device test or release for this change.
