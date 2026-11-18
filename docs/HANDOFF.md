@@ -17,6 +17,7 @@ Rules:
 
 The sales report and orders click-throughs in `docs/previews/` link to each other and include PNG previews. Both use sample data for owner review.
 The orders prototype now follows the Flutter order screen's app bar, queue chips, navigation placement and Material theme.
+The sales report preview now includes a branch and week selector, financial reconciliation, daily bill drilldown, time and channel breakdowns, inventory, members and cashier reporting.
 
 The owner approved the lower-left expanding tab in `docs/previews/pokpok-tab-motion.html`. It is implemented locally in the Flutter phone navigation. Production remains at 1.2.79 (96).
 
@@ -433,6 +434,10 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-18 — Detailed sales analytics preview
+
+Reworked the sample report to use one deterministic set of branch-specific bills for KPIs, week comparisons, refunds, costs, product rankings, members and cashier totals. Inventory uses sample opening stock and units sold. Chrome checks covered all six branch/week combinations, reconciliation, metric switching, tabs and the daily bill dialog. Checked widths of 390, 768 and 1440 CSS pixels; refreshed the desktop screenshot. Local preview only; no production data, release or physical-device test.
 
 ### 2026-11-18 — Align orders preview with Pokpok app UI
 
