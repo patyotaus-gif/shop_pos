@@ -16,8 +16,9 @@ Rules:
 ## Current state (updated 2026-11-18)
 
 Local motion study for review: `docs/previews/pokpok-loading-motion.html`
-compares two mortar strikes and a wordmark reveal in the website masthead and
-the app splash. Production integration is pending owner review.
+compares a compact 880ms masthead animation with a 1480ms splash. Each
+impact reveals part of the wordmark; the app also shows expanding rings.
+Production integration is pending owner review.
 
 **vidIQ plugin (2026-11-18):** the latest directory lookup now confirms
 `installed: true`. Public Instagram Reel playback data was retrieved directly
@@ -424,6 +425,11 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-18: Revised the local motion preview with angled pestle lifts,
+  asymmetric strikes, impact accents and a two-stage wordmark reveal. In
+  Edge, sampled the motion timeline, inspected the second impact, checked
+  replay and confirmed static reduced motion at 360px. Preview only.
 
 - 2026-11-18: Built and visually checked the web/app opening motion specimen
   in desktop Edge. Verified assets, replay, reduced motion and 360px layout.

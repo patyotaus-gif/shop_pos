@@ -27,16 +27,63 @@
     .mark img { position: absolute; top: 0; left: 0; width: 100%; height: auto }
     .app .pokpok-wordmark { width: 125px }
     .tag { margin-top: 6px; font: 600 10px/1.5 sans-serif; letter-spacing: 3.5px }
-    .web { --duration: 620ms }
-    .app { --duration: 1000ms }
+    .web { --duration: 880ms }
+    .app { --duration: 1480ms; position: relative; isolation: isolate }
+    .pestle { transform-origin: 50% 45% }
+    .mark::before, .mark::after {
+      content: ""; position: absolute; top: 58%; width: 8%; height: 3%;
+      background: white; border-radius: 50%; opacity: 0;
+    }
+    .mark::before { left: 20%; --drift: -130%; --tilt: 29deg }
+    .mark::after { right: 20%; --drift: 130%; --tilt: -29deg }
+    .app::before, .app::after {
+      content: ""; position: absolute; z-index: -1; pointer-events: none;
+      left: 50%; top: calc(50% - 24px); width: 154px; aspect-ratio: 1;
+      border: 2px solid var(--rose); border-radius: 50%; opacity: 0;
+    }
     @media (prefers-reduced-motion: no-preference) {
       .play .pestle { animation: knock var(--duration) ease-in-out both }
       .play .bowl { transform-origin: center 77%; animation: impact var(--duration) ease-out both }
-      .play .reveal { animation: reveal var(--duration) ease-out both }
+      .play .mark::before, .play .mark::after { animation: fleck var(--duration) ease-out both }
+      .play .app::before { animation: ripple 430ms 370ms ease-out both }
+      .play .app::after { animation: ripple 650ms 800ms ease-out both }
+      .play .pokpok-wordmark.reveal { animation: reveal var(--duration) ease-out both }
+      .play .tag { animation: signature var(--duration) ease-out both }
     }
-    @keyframes knock { 0% {transform: translateY(-7%)} 20%,50% {transform: translateY(8%)} 34% {transform: translateY(-5%)} 65%,100% {transform: none} }
-    @keyframes impact { 0%,16%,30%,45%,62%,100% {transform: none} 20%,50% {transform: scale(1.03,.96)} }
-    @keyframes reveal { 0%,42% {opacity: 0; transform: translateY(3px)} 92%,100% {opacity: 1; transform: none} }
+    @keyframes knock {
+      0%, 100% { transform: none }
+      13% { transform: translate(-3%,-13%) rotate(-18deg) }
+      25% { transform: translate(0,9%) rotate(5deg) }
+      41% { transform: translate(4%,-18%) rotate(22deg) }
+      54% { transform: translate(0,11%) rotate(-6deg) }
+      65% { transform: translateY(-5%) rotate(4deg) }
+      77% { transform: none }
+    }
+    @keyframes impact {
+      0%, 21%, 38%, 49%, 79%, 100% { transform: none }
+      25% { transform: scale(1.07,.90) rotate(3deg) }
+      54% { transform: scale(1.12,.84) rotate(-5deg) }
+      64% { transform: scale(.97,1.05) rotate(2deg) }
+    }
+    @keyframes fleck {
+      0%,24%,53% { opacity: 0; transform: scale(.3) rotate(var(--tilt)) }
+      26%,55% { opacity: .95 }
+      38%,75%,100% { opacity: 0; transform: translate(var(--drift),-220%) rotate(var(--tilt)) }
+    }
+    @keyframes ripple {
+      0% { opacity: 0; transform: translate(-50%,-50%) scale(.36) }
+      16% { opacity: .32 }
+      100% { opacity: 0; transform: translate(-50%,-50%) scale(1.72) }
+    }
+    @keyframes reveal {
+      0%,25% { clip-path: inset(-5% 100% -5% 0); transform: translateY(3px) }
+      42%,52% { clip-path: inset(-5% 50% -5% 0); transform: none }
+      78%,100% { clip-path: inset(-5% 0 -5% 0); transform: none }
+    }
+    @keyframes signature {
+      0%,62% { opacity: 0; transform: translateY(5px) }
+      100% { opacity: 1; transform: none }
+    }
     @media(max-width: 640px) { article { grid-template-columns: 1fr } .web { height: auto; padding-bottom: 16px } .app { height: 280px } }
   </style>
 </head>
