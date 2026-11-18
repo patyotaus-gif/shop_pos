@@ -416,6 +416,12 @@ or triggered; its Codemagic workflow does not run automatically on push.
 
 ## Log
 
+### 2026-11-18 — Recheck vidIQ installation status
+
+- At the owner's follow-up, the current directory still reports
+  `installed: false`. Clarified that the earlier installation suggestion did
+  not install vidIQ; the owner must finish installation/account authorization.
+
 ### 2026-11-18 — Owner requested vidIQ installation
 
 - Current plugin lookup reports vidIQ available but not installed. Reopened
