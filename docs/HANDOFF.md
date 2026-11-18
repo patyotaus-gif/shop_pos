@@ -15,6 +15,8 @@ Rules:
 
 ## Current state (updated 2026-11-19)
 
+The first Content Marketer trial (POK-7) produced a Thai script, caption, and storyboard for a sales-report Reel. The Board rendered the unpublished 18-second MP4 from that handoff. The preview is attached to POK-7 and saved at `docs/previews/pokpok-sales-check-reel.mp4`.
+
 Paperclip CEO delegated the Instagram ad concept to CMO (POK-5 → POK-6). Both issues are done. CEO accepted the concept after a Board follow-up; the rendered, unpublished 4:5 kitchen ad is attached to POK-5 and saved in `docs/previews/pokpok-ig-kitchen.png`.
 
 Paperclip's CEO-to-CFO delegation and automatic follow-up have been verified with a self-contained task. Access to repository files from those agents' workspaces remains unverified.
@@ -445,6 +447,8 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-19 — Assigned POK-7 directly to Content Marketer. The agent supplied creative and storyboard attachments and reported no ffmpeg on its PATH. Rendered five scenes using the official wordmark and Thai font. Demo arithmetic: ฿4,800 / 32 bills = ฿150 per bill. Reviewed frames from each scene, decoded all 540 frames at 1080×1920/30 fps, and verified the Paperclip MP4 download matched the local file byte for byte.
 
 - 2026-11-19 — Added Content Marketer under CMO / Growth in the local Pokpok Paperclip organization. Verified the approved hire is idle/ready with public search enabled, sandbox bypass off, timer off, and live instructions matching `docs/paperclip-agents/content-marketer.md`. CMO reviews campaign drafts and the owner controls publication and spend. No campaign assigned during setup.
 
