@@ -15,7 +15,7 @@ Rules:
 
 ## Current state (updated 2026-11-18)
 
-Android 1.2.80 (97) is in preparation for the approved report, orders and phone navigation changes. The owner approved separate data-series colors in reports. The published build at start of work is 1.2.79 (96).
+Android 1.2.80 (97) is live at https://pok-pok.app/app/pokpok.apk. Its detailed reports, order queues and phone navigation are from commit 372a8ab. Codemagic successfully built and published the iOS 1.2.80 TestFlight submission for the same commit. External beta approval and installation on physical devices are unconfirmed.
 
 The sales report and orders click-throughs in `docs/previews/` link to each other and include PNG previews. Both use sample data for owner review.
 The orders prototype now follows the Flutter order screen's app bar, queue chips, navigation placement and Material theme.
@@ -438,6 +438,9 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ## Log
 
 ### 2026-11-18 — Detailed Flutter sales report and order queues, release 1.2.80 (97)
+
+- Published commit 372a8ab to GitHub master and Firebase Hosting version 18b6c596b2d82616. All 79 Hosting files matched. Downloaded the live APK (93,116,248 bytes, SHA-256 156d88228a4eada16773880cbcf4267e9e186ff304f72296639653dd96df521a); it matched the signed build and the signing certificate matched 1.2.79. Only the APK and its update manifest changed on Hosting. The owner triggered the iOS build and its GitHub check was confirmed in progress on this commit.
+- Verified the final Codemagic check 134607758656 for build 6afd3974d133a39c4a12859b on 372a8ab: successful including Publishing, completed at 05:48:56 UTC. Apple external tester availability was not independently confirmed.
 
 - The full Flutter suite recorded 469 passes and five baseline failures. Independent review led to live updates for the comparison period, explicit labels for missing payment methods and device-local time in reports and exports, and restoring the selected Orders tab count.
 - Final targeted Flutter tests passed (23). Dart analysis of changed source/tests was clean. The final independent review found no blockers. Local captures at 390 and 1240 logical pixels are in the release evidence folder.
