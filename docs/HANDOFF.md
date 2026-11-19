@@ -15,7 +15,7 @@ Rules:
 
 ## Current state (updated 2026-11-20)
 
-Instagram setup for Paperclip: the owner reports completing Meta's token step. The local company Secrets page is available. Saving the token in Paperclip, verifying account access, and connecting a Reel publisher are pending.
+Instagram setup for Paperclip: the saved organization secret is bound to Content Marketer. The local agent runtime passed its connection test after binding. Instagram account verification and Reel publisher integration are pending.
 
 The first Content Marketer trial (POK-7) produced a Thai script, caption, and storyboard for a sales-report Reel. The Board rendered the unpublished 18-second MP4 from that handoff. The preview is attached to POK-7 and saved at `docs/previews/pokpok-sales-check-reel.mp4`.
 
@@ -449,6 +449,8 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-20: Retried Content Marketer's failed secret assignment through the local Paperclip agent settings API. Verified the saved reference by reading the agent settings back and confirmed all five runtime checks passed. The original validation error did not recur. No Instagram post was sent.
 
 - 2026-11-20 — Confirmed Paperclip health, the local Secrets UI route, and an empty installed plugin list. No `POKPOK_IG_ACCESS_TOKEN` entry was found by name/key. No token value was requested or inspected, and no Reel was posted.
 
