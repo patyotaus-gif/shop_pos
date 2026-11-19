@@ -15,9 +15,9 @@ Rules:
 
 ## Current state (updated 2026-11-20)
 
-Instagram setup for Paperclip: the saved organization secret is bound to Content Marketer. The local agent runtime passed its connection test after binding. Instagram account verification and Reel publisher integration are pending.
+Instagram setup for Paperclip: Content Marketer published the approved sales-report Reel to @pokpokapp.th in POK-8. Meta returned media ID `17977647021169210`; the agent read back the account, REELS type, caption and [permalink](https://www.instagram.com/reel/Df7RLUrkTTK/).
 
-The first Content Marketer trial (POK-7) produced a Thai script, caption, and storyboard for a sales-report Reel. The Board rendered the unpublished 18-second MP4 from that handoff. The preview is attached to POK-7 and saved at `docs/previews/pokpok-sales-check-reel.mp4`.
+The first Content Marketer trial (POK-7) produced a Thai script, caption, and storyboard for a sales-report Reel. The Board rendered the 18-second MP4 from that handoff. The published clip is attached to POK-7 and saved at `docs/previews/pokpok-sales-check-reel.mp4`.
 
 Paperclip CEO delegated the Instagram ad concept to CMO (POK-5 → POK-6). Both issues are done. CEO accepted the concept after a Board follow-up; the rendered, unpublished 4:5 kitchen ad is attached to POK-5 and saved in `docs/previews/pokpok-ig-kitchen.png`.
 
@@ -449,6 +449,8 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-20 — The owner authorized Content Marketer to publish the 18-second POK-7 sales-report clip once as an organic Reel. Matched the attachment to the repository MP4 by SHA-256. In POK-8 the agent checked recent posts for duplicates, uploaded through Meta, published once, and verified the media via authenticated readback. Playback on a physical phone was not tested.
 
 - 2026-11-20: Retried Content Marketer's failed secret assignment through the local Paperclip agent settings API. Verified the saved reference by reading the agent settings back and confirmed all five runtime checks passed. The original validation error did not recur. No Instagram post was sent.
 
