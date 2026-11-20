@@ -403,6 +403,12 @@ approval. The [official Windows sandbox guide](https://learn.chatgpt.com/docs/wi
 documents the MXC compatibility probe; use a real command probe rather than
 inferring permanent incompatibility from this intermittent error.
 
+After the restart, Content Marketer run `2b599382-e3ef-41bc-b950-ba2c4f7f11f8`
+passed shell read/write and API checks and rendered the existing 15-second
+composition with exit 0. Independent FFprobe and full FFmpeg decode passed
+(H.264, 720x1280, 30fps). This is a recovery check, not proof that the underlying
+MXC fault cannot recur or that the final Reel is complete.
+
 ## Content Marketer video tools
 
 The rendering host keeps its npm project at `D:\PokpokTools\marketing-video`.

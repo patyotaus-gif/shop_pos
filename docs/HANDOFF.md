@@ -36,8 +36,12 @@ launcher error in structured command results and forwards it to Paperclip's
 existing bounded transient retry mechanism. Five regression checks passed;
 the unpatched result builder first reproduced the false success. Fresh shell
 probes with the same managed home/workspace pass using the original MXC sandbox.
-The reason MXC became unavailable mid-run remains unproven; agent recovery/render
-verification is in progress. Paperclip's API is healthy after restart. The paw
+The reason MXC became unavailable mid-run remains unproven. Recovery run
+`2b599382-e3ef-41bc-b950-ba2c4f7f11f8` passed shell read/write and API checks,
+then rendered the existing 15-second composition successfully. The operator
+independently checked H.264, 720x1280, 30fps, 15 seconds and a full FFmpeg decode
+(exit 0). This verifies runtime recovery, not the finished commercial. Content
+Marketer continues the fluffy-paw preview. Paperclip's API is healthy. The paw
 PNG was copied with Node (PowerShell's long-path copy failed) into the retained
 task's `docs/previews/pok-14/paws-v08/paws.png` and SHA-256 verified. Verified
 demo UI footage and Thai voice are separate outstanding requirements. The owner's
@@ -501,6 +505,19 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-21 — Verified recovery in the real Content Marketer runtime, run
+  `2b599382-e3ef-41bc-b950-ba2c4f7f11f8`. Shell read/write, local API and the
+  `render.cjs` command returned exit 0. Independently probed and decoded
+  `docs/previews/pok-14/runtime-check/agent-render-smoke.mp4` in the retained
+  task workspace: H.264 720x1280, 30fps, 15 seconds, 820074 bytes, SHA-256
+  `a6a195766f51349a897ba5ebfb579af9d00f4c4af19807c1d4641ebe3a16f6cd`.
+  It re-renders the existing v0.7 composition as a runtime test; Content Marketer
+  is continuing the fluffy-paw revision. Sandbox bypass remains false and the
+  agent has no publishing token. The patch is committed in `0b6d41a`; the
+  original MXC fault's internal cause and future recurrence remain unproven.
+  Final UI footage, Thai voice, finger/button alignment and device checks are
+  still production work. No public post, app change or deployment occurred.
 
 - 2026-11-21 — Restored Paperclip after a restart exposed an orphaned embedded
   PostgreSQL `io_worker`. The main database process had exited; pg_ctl status
