@@ -370,6 +370,39 @@ Apply agent runtime config changes while the company has no active model runs.
 Paperclip validates the shared AI account during these writes and can defer
 other agents with `ai_connection_busy`. The scheduler resumes deferred work.
 
+### Recovering a mid-run MXC launcher failure (2026-11-21)
+
+POK-14 run `bc50607a-a98f-47ed-b874-97a08d4649df` ran shell commands, generated
+an image, then failed two shell calls with
+`MXC launcher: native MXC is unavailable on this Windows build`. Codex exited
+0 after reporting the failure, so the adapter recorded success and no retry.
+New-process probes using that same managed Codex home and workspace succeeded
+with MXC unchanged. The underlying cause of the mid-run MXC failure is unknown.
+
+The pinned `@paperclipai/adapter-codex-local` 2026.1106.0 has a scoped recovery
+patch, maintained in `scripts/paperclip/codex-mxc-recovery.mjs`. It examines only
+structured failed command results with the exact launcher output. An unrecovered
+fault in an otherwise successful turn becomes `codex_transient_upstream`, retaining
+the session/transcript for continuation. The existing scheduler allows two retry
+attempts. A later successful command clears the fault; quotations, unrelated
+failures, cancelled runs and timeouts preserve their original handling.
+
+```powershell
+node --test scripts/paperclip/codex-mxc-recovery.test.mjs
+node scripts/paperclip/repair-codex-mxc-recovery.mjs
+node scripts/paperclip/repair-codex-mxc-recovery.mjs --apply
+```
+
+Apply only while all agents are idle, then gracefully restart Paperclip. The
+installer verifies the pinned version and patch sites and saves the original
+`execute.js` under `D:/PokpokTools/paperclip/local-fixes/mxc-recovery-20261121`.
+To roll back, restore that file to the adapter's `dist/server/execute.js` while
+idle and restart. The helper can remain unused. Reassess the patch before a
+Paperclip upgrade. It does not change sandbox mode, permissions or publication
+approval. The [official Windows sandbox guide](https://learn.chatgpt.com/docs/windows/windows-sandbox)
+documents the MXC compatibility probe; use a real command probe rather than
+inferring permanent incompatibility from this intermittent error.
+
 ## Content Marketer video tools
 
 The rendering host keeps its npm project at `D:\PokpokTools\marketing-video`.

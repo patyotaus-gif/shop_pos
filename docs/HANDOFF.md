@@ -22,16 +22,24 @@ The approved visual reference is
 `docs/previews/pokpok-2d-dog-cat-concept-v3.png`, attached to POK-14 and documented
 in `docs/previews/pokpok-2d-animation-direction.md`. POK-11 and POK-14 now carry
 that decision and instructions to continue production without repeating style
-approval. POK-14 is in_progress but its agent is idle with no active run; the
-parent remains blocked on delivery. The latest completed preview is the reported
+approval. POK-14 is in_progress and has received an operator recovery continuation;
+the parent remains blocked on delivery. The latest completed preview is the reported
 v0.7 hand-motion study, with placeholder UI and no audio. The owner then requested
 the finished version with the finger aligned to real tablet buttons. In run
 `bc50607a-a98f-47ed-b874-97a08d4649df`, shell commands worked initially, but after
 generating the fluffy paw image both the asset-copy command and Get-Location
 failed with `MXC launcher: native MXC is unavailable on this Windows build`.
-The generated paw PNG still exists (779804 bytes); the new MP4 was not produced.
-Paperclip reports that run succeeded because the agent turn completed, despite
-the command failures. The mid-run sandbox failure remains unresolved. Verified
+The generated paw PNG still exists (779804 bytes); that run produced no new MP4.
+The root adapter reported success because Codex exited 0 despite its failed tool
+calls. A local compatibility patch now recognizes the exact unrecovered MXC
+launcher error in structured command results and forwards it to Paperclip's
+existing bounded transient retry mechanism. Five regression checks passed;
+the unpatched result builder first reproduced the false success. Fresh shell
+probes with the same managed home/workspace pass using the original MXC sandbox.
+The reason MXC became unavailable mid-run remains unproven; agent recovery/render
+verification is in progress. Paperclip's API is healthy after restart. The paw
+PNG was copied with Node (PowerShell's long-path copy failed) into the retained
+task's `docs/previews/pok-14/paws-v08/paws.png` and SHA-256 verified. Verified
 demo UI footage and Thai voice are separate outstanding requirements. The owner's
 approval covers this visual direction and production; public publication still
 requires final content/destination approval.
@@ -493,6 +501,30 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-21 — Restored Paperclip after a restart exposed an orphaned embedded
+  PostgreSQL `io_worker`. The main database process had exited; pg_ctl status
+  confirmed no server, while its verified child retained port/shared-memory
+  handles. A pg_ctl TERM attempt could not reach it; stopped only that verified
+  orphan and restarted successfully. API health is ok. A separate sandbox render
+  probe used the offline `:workspace` profile, hit loopback EACCES and timed out;
+  its verified process tree was stopped. This is not a passing agent render check.
+  Recovered the already generated paw PNG into POK-14's retained workspace with
+  SHA-256 `4d65c51defae478ea58ea5c725aec20e5577d1099214325123660ccd9e7874d8`.
+  Sent the existing Content Marketer task a recovery continuation requiring
+  actual-runtime shell/API/render verification before reporting recovery.
+
+- 2026-11-21 — Installed the scoped Codex adapter recovery patch after all 13
+  agents were idle. `scripts/paperclip/repair-codex-mxc-recovery.mjs` targets
+  adapter 2026.1106.0; its original execute.js is backed up under
+  `D:/PokpokTools/paperclip/local-fixes/mxc-recovery-20261121`.
+  The adapter now treats the observed structured MXC launcher failure as
+  `codex_transient_upstream`, retaining the session and original transcript.
+  Quotes, ordinary errors, cancellations, timeouts and faults followed by a
+  successful command do not trigger this recovery. Five focused tests passed
+  after a red check against the installed unpatched result builder. Syntax checks
+  passed. Graceful Paperclip restart initiated; real task recovery remains to
+  verify. Sandbox selection, agent permissions and publishing credentials unchanged.
 
 - 2026-11-21 — Investigated the owner's POK-14 failure screenshot against the
   local API and run log. Confirmed the exact MXC launcher error on two shell
