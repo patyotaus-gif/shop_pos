@@ -299,6 +299,25 @@ encryption key under `secrets`, as well as database backups and local storage.
 Do not commit these files or publish them in a shared repository. The data ACL
 allows only the current Windows user, SYSTEM and Administrators.
 
+## Content Marketer video tools
+
+The rendering host keeps its npm project at `D:\PokpokTools\marketing-video`.
+It uses Remotion and @remotion/cli 4.0.545, React and React DOM 19.2.0, and
+Chrome from Program Files. Copy `scripts/paperclip/render.cjs` beside its
+package.json after updating the renderer. Set `POKPOK_RENDER_BROWSER` to use
+another installed Chrome executable.
+
+The two skills in the toolkit's `skills` directory come from
+`remotion-dev/skills` at `6f55706d1069e512430582ad86e4e57dc07afe1b`.
+The `ffmpeg/bin` directory contains the Gyan FFmpeg 9.0.2 essentials build.
+To recreate `render-binaries`, copy the DLLs and `remotion.exe` from
+`node_modules/@remotion/compositor-win32-x64-msvc`, then copy the standalone
+`ffmpeg.exe` and `ffprobe.exe` from the Gyan 7.1.1 essentials build
+(`ffmpeg7/bin`) into the same directory. Remotion 4.0.545 uses an audio
+filter option removed in FFmpeg 9.
+The live Content Marketer role points to these tools. Its local render command
+and probe paths are in `docs/paperclip-agents/content-marketer.md`.
+
 ## References
 
 - [Installation](https://docs.paperclip.ing/reference/cli/installation/)
