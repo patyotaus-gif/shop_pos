@@ -19,6 +19,8 @@ Paperclip's Windows runner now supports long Git paths for fresh clones and
 the Pokpok origin matches the URL recorded for shared worktrees. POK-12
 successfully retried and submitted three Reel storyboards for review. Its
 parent POK-11 is still waiting on the child, including feature evidence.
+The POK-13 CTO retry completed successfully. The remaining blocker is the
+CTO runtime's access to the retained workspace referenced by POK-12 revision 1.
 
 Paperclip Content Marketer can render vertical MP4s in its own task worktree. The Windows host has Remotion 4.0.545, two official Remotion skills and FFmpeg. The POK-10 agent output was independently probed as H.264, 360×640, 30 fps, one second. A separate local render verified H.264 with AAC audio.
 
@@ -456,6 +458,12 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-20: Retried POK-13. Paperclip run `7515aab7-5990-43f7-a647-8f74861ed404`
+  exited with code 0 and no recorded remote compact error. The CTO verified
+  the existing Reel draft and the current checkout and saved `workspace-evidence`
+  revision `69aebd0d-e6b4-4759-91a0-563a4a3e58d2`. Reading HEAD in the retained
+  POK-12 workspace still returned `Permission denied` from the CTO runtime.
 
 - 2026-11-20 — Fixed both workspace failures behind POK-12 locally. Verified
   the retained POK-11 checkout with the installed Paperclip source validator
