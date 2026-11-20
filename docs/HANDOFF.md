@@ -22,10 +22,33 @@ The approved visual reference is
 `docs/previews/pokpok-2d-dog-cat-concept-v3.png`, attached to POK-14 and documented
 in `docs/previews/pokpok-2d-animation-direction.md`. POK-11 and POK-14 now carry
 that decision and instructions to continue production without repeating style
-approval. POK-14 is in_progress and has received an operator recovery continuation;
-the parent remains blocked on delivery. The latest completed preview is the reported
-v0.7 hand-motion study, with placeholder UI and no audio. The owner then requested
-the finished version with the finger aligned to real tablet buttons. In run
+approval. The owner subsequently accepted the v0.9 left-grip preview (comment
+`4ca3c81f-36dc-4750-95d5-8df85130d3c4`); POK-14 resumed in_progress, still missing real
+demo UI and Thai narration. Its current MP4 attachment is
+`378cbc06-f2c9-48cd-9420-ad3dc80d33ee`. The owner asked why agents could not produce
+those assets and then chose to defer voice credits and do the screen recording first.
+POK-15 had only authorized a readiness inventory; there was no UI production task.
+The operator created POK-16 for CTO to delegate isolated synthetic-data Flutter
+recording to Engineer - App and QA, with actual UI, tap coordinates and downloadable
+evidence for POK-14. POK-16 is in_progress (run
+`51a6c501-79c1-4b37-8149-a1117517412e`); no new UI footage exists yet. The old
+owner/CEO asset questions in POK-11 and POK-14 were cancelled as superseded,
+without claiming receipt of assets. Both briefs and assignees received the new
+production dependency. See `docs/paperclip-reel-ui-production.md`.
+
+vidIQ discovery verified 150 renewable credits and four native Thai voice options;
+the existing four-line script would cost 28 credits. The owner explicitly chose
+not to spend credits now. No voice generation or credit purchase was requested.
+Windows' installed System.Speech voices are English. The app's default entry point
+connects to production Firebase; no complete isolated demo switch was found.
+The production task must use actual Flutter screens with synthetic local fixtures
+or emulators and prove isolation before capture. Android SDK/AVDs exist, but no
+ADB device was connected. C: has about 90 MB free; large build/cache/AVD data must
+use D:, not consume C: or remove owner files. No new physical-device test or
+production deployment has taken place.
+
+Earlier runtime recovery: the owner requested the finished version with the
+finger aligned to real tablet buttons. In run
 `bc50607a-a98f-47ed-b874-97a08d4649df`, shell commands worked initially, but after
 generating the fluffy paw image both the asset-copy command and Get-Location
 failed with `MXC launcher: native MXC is unavailable on this Windows build`.
@@ -40,8 +63,8 @@ The reason MXC became unavailable mid-run remains unproven. Recovery run
 `2b599382-e3ef-41bc-b950-ba2c4f7f11f8` passed shell read/write and API checks,
 then rendered the existing 15-second composition successfully. The operator
 independently checked H.264, 720x1280, 30fps, 15 seconds and a full FFmpeg decode
-(exit 0). This verifies runtime recovery, not the finished commercial. Content
-Marketer continues the fluffy-paw preview. Paperclip's API is healthy. The paw
+(exit 0). This verifies runtime recovery, not the finished commercial.
+Paperclip's API is healthy. The paw
 PNG was copied with Node (PowerShell's long-path copy failed) into the retained
 task's `docs/previews/pok-14/paws-v08/paws.png` and SHA-256 verified. Verified
 demo UI footage and Thai voice are separate outstanding requirements. The owner's
@@ -505,6 +528,21 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-21 — Diagnosed the missing UI/voice handoff: CTO's completed POK-15
+  was readiness-only, while CEO and Content Marketer were waiting for owner
+  assets. Created POK-16 (`bee6736b-7f22-4cc2-b952-7f895768486f`) with the
+  production brief in `docs/paperclip-reel-ui-production.md`, assigned CTO to
+  delegate to existing Engineer - App / QA, and read back the complete UTF-8
+  brief. Its real run `51a6c501-79c1-4b37-8149-a1117517412e` started and CEO
+  acknowledged delivery ownership. Updated POK-11/14, cancelled the obsolete
+  input questions without inventing asset receipt, and linked POK-14 to POK-16
+  as its UI dependency. Actual recording and QA remain outstanding.
+  Free vidIQ balance/voice discovery used 0 credits per call and found 150
+  renewable credits with four native Thai voices. Owner declined the proposed
+  28-credit Hammy voiceover and requested UI first; no generation submitted.
+  Existing v0.9 visual approval remains valid; no new approval for public posting.
+  No app code, production data, permission settings or deployment changed.
 
 - 2026-11-21 — Verified recovery in the real Content Marketer runtime, run
   `2b599382-e3ef-41bc-b950-ba2c4f7f11f8`. Shell read/write, local API and the
