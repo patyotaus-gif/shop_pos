@@ -22,11 +22,19 @@ The approved visual reference is
 `docs/previews/pokpok-2d-dog-cat-concept-v3.png`, attached to POK-14 and documented
 in `docs/previews/pokpok-2d-animation-direction.md`. POK-11 and POK-14 now carry
 that decision and instructions to continue production without repeating style
-approval. POK-14 resumed in_progress; the parent remains blocked on delivery.
-Content Marketer previously reported a limited 2D cutout study; its layers and
-motion now need to follow v3. A finished Reel, verified demo UI footage and
-voice remain production work. The owner's approval covers this visual direction
-and production; public publication still requires final content/destination approval.
+approval. POK-14 is in_progress but its agent is idle with no active run; the
+parent remains blocked on delivery. The latest completed preview is the reported
+v0.7 hand-motion study, with placeholder UI and no audio. The owner then requested
+the finished version with the finger aligned to real tablet buttons. In run
+`bc50607a-a98f-47ed-b874-97a08d4649df`, shell commands worked initially, but after
+generating the fluffy paw image both the asset-copy command and Get-Location
+failed with `MXC launcher: native MXC is unavailable on this Windows build`.
+The generated paw PNG still exists (779804 bytes); the new MP4 was not produced.
+Paperclip reports that run succeeded because the agent turn completed, despite
+the command failures. The mid-run sandbox failure remains unresolved. Verified
+demo UI footage and Thai voice are separate outstanding requirements. The owner's
+approval covers this visual direction and production; public publication still
+requires final content/destination approval.
 
 Paperclip's continuation policy is installed in all 13 managed role instructions.
 CTO's sandboxed workspace access passed in a real run. POK-13 and POK-12 are
@@ -485,6 +493,20 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-21 — Investigated the owner's POK-14 failure screenshot against the
+  local API and run log. Confirmed the exact MXC launcher error on two shell
+  calls and a later HANDOFF write failure; earlier shell calls in the same run
+  had succeeded. Paperclip health is ok, Content Marketer is idle, and the run
+  has no scheduled retry. Confirmed the generated paw PNG still exists in the
+  managed skill runtime. No new render, runtime configuration change, sandbox
+  bypass or publication was performed. The reason MXC began failing mid-run
+  needs further investigation; UI footage and voice remain separately missing.
+  Also found the prior approval prefix in both issue descriptions had been
+  converted to question marks by the PowerShell-to-Node pipe. Replaced only
+  those prefixes with an ASCII summary linked to the intact Thai art-direction
+  document, saved local before-copies, and verified the readback. Historical
+  comments retain their original contents; later CEO comments correctly confirm v3.
 
 - 2026-11-21 — Owner selected the plump, fluffy v3 with “เอาตามนี้”. Recorded
   approval in the local art direction and uploaded the PNG to POK-14 as
