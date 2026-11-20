@@ -17,17 +17,16 @@ Rules:
 
 The owner changed the Reel's visual direction from 3D to original 2D dog/cat
 characters with Japanese anime and Disney-style hand-drawn animation appeal.
-POK-11 and POK-14 now carry the updated brief. A generated restaurant keyframe
-was supplied, followed by v2 after the owner requested more natural facial
-expressions. The production task's current reference is
-`docs/previews/pokpok-2d-dog-cat-concept-v2.png`, attached to POK-14 and documented
-in `docs/previews/pokpok-2d-animation-direction.md`. This is an unapproved visual
-prototype. Character layers, finished animation, verified demo UI footage and
-voice remain production work. Public publication requires final owner approval.
-
-The owner subsequently asked to see a plumper, softer-furred variation. That
-preview is saved as `docs/previews/pokpok-2d-dog-cat-concept-v3.png` for visual
-comparison, with both characters rounder and fluffier.
+The owner selected the plump, soft-furred v3 with “เอาตามนี้” on 2026-11-21.
+The approved visual reference is
+`docs/previews/pokpok-2d-dog-cat-concept-v3.png`, attached to POK-14 and documented
+in `docs/previews/pokpok-2d-animation-direction.md`. POK-11 and POK-14 now carry
+that decision and instructions to continue production without repeating style
+approval. POK-14 resumed in_progress; the parent remains blocked on delivery.
+Content Marketer previously reported a limited 2D cutout study; its layers and
+motion now need to follow v3. A finished Reel, verified demo UI footage and
+voice remain production work. The owner's approval covers this visual direction
+and production; public publication still requires final content/destination approval.
 
 Paperclip's continuation policy is installed in all 13 managed role instructions.
 CTO's sandboxed workspace access passed in a real run. POK-13 and POK-12 are
@@ -486,6 +485,16 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-21 — Owner selected the plump, fluffy v3 with “เอาตามนี้”. Recorded
+  approval in the local art direction and uploaded the PNG to POK-14 as
+  attachment `561e7173-130e-466a-a378-5222cf70dfe8`; downloaded bytes matched the
+  local SHA-256. Updated the task art-direction document (revision
+  `96a33c47-a408-4e47-8430-1f8a1de0365c`) and read back both issue briefs.
+  POK-14 resumed in_progress, run `2922cbda-c60f-47f4-9bd7-84ab8e92e2a8`;
+  POK-11 retains its delivery dependency. The brief directs production to use
+  v3 and preserves the final publication approval requirement. No public post,
+  deployment or new animation verification was performed in this approval step.
 
 - 2026-11-21 — Generated the owner's requested plump, soft-fur variation by
   editing v2 with built-in ImageGen. Visually inspected v3 and saved its PNG
