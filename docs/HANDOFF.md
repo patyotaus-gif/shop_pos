@@ -13,12 +13,23 @@ Rules:
 
 ---
 
-## Current state (updated 2026-11-20)
+## Current state (updated 2026-11-21)
+
+The owner changed the Reel's visual direction from 3D to original 2D dog/cat
+characters with Japanese anime and Disney-style hand-drawn animation appeal.
+POK-11 and POK-14 now carry the updated brief. A generated restaurant keyframe
+was supplied, followed by v2 after the owner requested more natural facial
+expressions. The current prototype is
+`docs/previews/pokpok-2d-dog-cat-concept-v2.png`, attached to POK-14 and documented
+in `docs/previews/pokpok-2d-animation-direction.md`. This is an unapproved visual
+prototype. Character layers, finished animation, verified demo UI footage and
+voice remain production work. Public publication requires final owner approval.
 
 Paperclip's continuation policy is installed in all 13 managed role instructions.
 CTO's sandboxed workspace access passed in a real run. POK-13 and POK-12 are
-done. CEO resumed through queue recovery, verified the final storyboard and
-submitted POK-11 as in_review, matching the original owner-review brief.
+done. During the autonomy verification, CEO resumed through queue recovery,
+verified the original storyboard and submitted POK-11 for owner review. The
+owner subsequently authorized production and then requested the 2D revision.
 The service-wide recovery scheduler is enabled. Individual timer heartbeats
 are off. Provider startup stalls required a fresh retry during verification.
 
@@ -471,6 +482,23 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-21 — Owner requested 2D dog/cat animation after the 3D preview, then
+  asked for more natural facial expressions. Generated an original restaurant
+  keyframe with built-in ImageGen and edited its faces in a second image call.
+  Both PNGs are 1024x1536 and saved under `docs/previews/`; v2 uses smaller,
+  relaxed eyes and restrained closed-mouth expressions. The assistant chose
+  dog/server and cat/kitchen roles as a working interpretation, keeping the
+  existing 15-second story as the production basis. Preserved the original image.
+  Updated POK-11/14 titles, descriptions and comments, and read back the revised
+  `2d-art-direction` document at revision
+  `db249a05-12f8-4600-b798-62ccadbb58ab`. The current attachment is
+  `3447ef56-5e26-44e0-bef1-a7ea2eefd38e`; downloaded bytes match local SHA-256
+  `3a2872ddc756d17c31def05b207b456a299eb15b191e81c5e6e1ef91e58b0219`.
+  The saved direction document includes both exact prompts and image provenance.
+  Inspected the generated images visually. These are style prototypes; final
+  animation and demo UI/voice production remain with the existing task. No post
+  or production app change was made.
 
 - 2026-11-20 — Final read-only checks confirm healthy Paperclip, all 13 agents
   idle, individual timers disabled, ten runtime Git overrides and zero Instagram
