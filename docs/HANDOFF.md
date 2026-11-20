@@ -23,19 +23,27 @@ The approved visual reference is
 in `docs/previews/pokpok-2d-animation-direction.md`. POK-11 and POK-14 now carry
 that decision and instructions to continue production without repeating style
 approval. The owner subsequently accepted the v0.9 left-grip preview (comment
-`4ca3c81f-36dc-4750-95d5-8df85130d3c4`); POK-14 is blocked on POK-16, still missing real
-demo UI and Thai narration. Its current MP4 attachment is
+`4ca3c81f-36dc-4750-95d5-8df85130d3c4`); POK-14 is blocked on POK-16, still awaiting
+UI composition/QA and Thai narration. Its current animated MP4 attachment is
 `378cbc06-f2c9-48cd-9420-ad3dc80d33ee`. The owner asked why agents could not produce
 those assets and then chose to defer voice credits and do the screen recording first.
 POK-15 had only authorized a readiness inventory; there was no UI production task.
 The operator created POK-16 for CTO to delegate isolated synthetic-data Flutter
 recording to Engineer - App and QA, with actual UI, tap coordinates and downloadable
-evidence for POK-14. POK-16 is in_progress (run
-`51a6c501-79c1-4b37-8149-a1117517412e`). CTO created POK-17 for Engineer - App,
-now running (`ed1e5b64-b897-4318-92e2-ab8f7ef48b13`), and POK-18 for QA blocked
-on POK-17. The Engineer has started reading the actual screen/data dependencies
-and preparing its plan for CTO; shell commands work. No new UI footage exists yet.
-The old
+evidence for POK-14. CTO created POK-17 for Engineer - App and POK-18 for QA.
+At the latest capture request POK-17 was in_review, waiting for CTO on plan
+revision 2; POK-16/18 were blocked. The owner then explicitly requested screens
+and actual menus from the connected tablet. The operator captured the installed
+app directly on physical SM-X900, version 1.2.80 (97): main navigation, tables,
+table detail, food picker, plus continuous 27.1-second video. Nine attachments
+are in POK-17, with readback SHA-256 verification and a 2960x1848 H.264 30fps
+editing copy that passed full FFmpeg decode. Document `tablet-ui-capture`, revision
+`99a1c3a8-b8f3-4afd-9553-afa8815c7a7a`, records provenance and tap coordinates.
+The request authorizes this capture and internal handoff; the data is not
+certified synthetic. Screenshots/media remain outside Git. POK-11/14/16/17/18
+received the files and updated scope, so lack of UI files is no longer a reason
+to wait for the owner. Technical-plan approval and QA are not claimed complete.
+See `docs/paperclip-tablet-capture-20261121.md`. The old
 owner/CEO asset questions in POK-11 and POK-14 were cancelled as superseded,
 without claiming receipt of assets. Both briefs and assignees received the new
 production dependency. See `docs/paperclip-reel-ui-production.md`.
@@ -45,11 +53,13 @@ the existing four-line script would cost 28 credits. The owner explicitly chose
 not to spend credits now. No voice generation or credit purchase was requested.
 Windows' installed System.Speech voices are English. The app's default entry point
 connects to production Firebase; no complete isolated demo switch was found.
-The production task must use actual Flutter screens with synthetic local fixtures
-or emulators and prove isolation before capture. Android SDK/AVDs exist, but no
-ADB device was connected. C: has about 90 MB free; large build/cache/AVD data must
-use D:, not consume C: or remove owner files. No new physical-device test or
-production deployment has taken place.
+The original harness proposal required actual Flutter screens with isolated
+fixtures. The later owner request authorized capture from the currently connected
+physical tablet; it did not grant broader database access or transaction changes.
+Earlier no ADB device was connected; SM-X900 is now connected and the requested
+screen navigation/capture passed on that device. No install or release occurred.
+C: had about 37 MB free at capture preflight; large build/cache/media must use D:.
+No production deployment, payment test or backend-state audit occurred.
 
 Earlier runtime recovery: the owner requested the finished version with the
 finger aligned to real tablet buttons. In run
@@ -70,8 +80,9 @@ independently checked H.264, 720x1280, 30fps, 15 seconds and a full FFmpeg decod
 (exit 0). This verifies runtime recovery, not the finished commercial.
 Paperclip's API is healthy. The paw
 PNG was copied with Node (PowerShell's long-path copy failed) into the retained
-task's `docs/previews/pok-14/paws-v08/paws.png` and SHA-256 verified. Verified
-demo UI footage and Thai voice are separate outstanding requirements. The owner's
+task's `docs/previews/pok-14/paws-v08/paws.png` and SHA-256 verified. At that stage
+UI footage and Thai voice were both outstanding; the physical capture above now
+supplies UI for internal review, while narration remains deferred. The owner's
 approval covers this visual direction and production; public publication still
 requires final content/destination approval.
 
@@ -532,6 +543,23 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-21 — Fulfilled the owner's request to capture real screens/menus from
+  the currently connected tablet. Verified SM-X900 via ADB and installed Pokpok
+  1.2.80 (97); captured five direct PNGs, a loaded-menu video frame, original
+  continuous MP4, 30fps editing MP4 and tap-map. Uploaded all nine to POK-17,
+  downloaded each and verified SHA-256. Editing MP4 is H.264 2960x1848, 30fps,
+  27.1 seconds with no audio; full FFmpeg decode with -xerror passed. Viewed
+  screenshots and video samples at 6/14 seconds; restored the original sales
+  chooser. No product selection, cart edit, kitchen submission or payment action
+  was performed; automatic backend behavior was not audited. Current app data
+  was not certified synthetic. This is physical UI evidence, not an isolation or
+  account-permission test. Source media is retained on D: and outside Git.
+  Published the internal `tablet-ui-capture` document (readback matched) and
+  sent verified comments to POK-11/14/16/17/18 with the owner's capture request,
+  files and provenance. CTO must reconcile the previous plan/review dependency;
+  no code-plan approval or QA completion was fabricated. Voice credits remain
+  deferred and no public publication, app install or deployment occurred.
 
 - 2026-11-21 — Verified the production delegation actually happened: CTO created
   POK-17 (Engineer - App, in_progress) and POK-18 (QA, blocked by POK-17), both
