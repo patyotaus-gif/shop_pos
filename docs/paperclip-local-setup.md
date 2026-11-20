@@ -318,6 +318,27 @@ filter option removed in FFmpeg 9.
 The live Content Marketer role points to these tools. Its local render command
 and probe paths are in `docs/paperclip-agents/content-marketer.md`.
 
+## Windows workspace setup
+
+When provisioning the Windows user that runs Paperclip, enable long paths in Git
+for Windows. Paperclip clones an isolated checkout before it starts the agent,
+so the setting must also apply to newly created repositories.
+
+```powershell
+git config --global core.longpaths true
+git config --get core.longpaths
+git -C C:\Users\Dav\shop_pos config --get remote.origin.url
+```
+
+For this project, both the source checkout's origin and Paperclip's project
+workspace repository URL are `https://github.com/patyotaus-gif/shop_pos`.
+Paperclip 2026.1106.0 checks the URL saved with an execution workspace when a
+second agent reuses it. A trailing `.git` on just one side can trigger
+`source_repository_mismatch`. If this happens, verify the host, owner,
+repository and linked checkout before aligning the URL with the saved one.
+Keep worktrees containing agent commits. For a failed task, retry it once the
+corresponding check passes and verify its run and output in the task activity.
+
 ## References
 
 - [Installation](https://docs.paperclip.ing/reference/cli/installation/)

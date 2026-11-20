@@ -15,6 +15,11 @@ Rules:
 
 ## Current state (updated 2026-11-20)
 
+Paperclip's Windows runner now supports long Git paths for fresh clones and
+the Pokpok origin matches the URL recorded for shared worktrees. POK-12
+successfully retried and submitted three Reel storyboards for review. Its
+parent POK-11 is still waiting on the child, including feature evidence.
+
 Paperclip Content Marketer can render vertical MP4s in its own task worktree. The Windows host has Remotion 4.0.545, two official Remotion skills and FFmpeg. The POK-10 agent output was independently probed as H.264, 360×640, 30 fps, one second. A separate local render verified H.264 with AAC audio.
 
 Instagram setup for Paperclip: Content Marketer published the approved sales-report Reel to @pokpokapp.th in POK-8. Meta returned media ID `17977647021169210`; the agent read back the account, REELS type, caption and [permalink](https://www.instagram.com/reel/Df7RLUrkTTK/).
@@ -451,6 +456,12 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-20 — Fixed both workspace failures behind POK-12 locally. Verified
+  the retained POK-11 checkout with the installed Paperclip source validator
+  and a negative control, checked out a fresh Git fixture with a 278-character
+  pack path, and confirmed the real POK-12 retry succeeded and saved its draft.
+  Recorded Windows provisioning and origin checks in the local setup guide.
 
 - 2026-11-20 — Checked the local Paperclip run history for POK-12. Workspace validation originally blocked the task. The latest attempt failed during `git clone` when the Windows path to the temporary pack `.keep` file was too long. The POK-11 worktree is still registered. POK-11 awaits the storyboard task. Diagnosis only.
 
