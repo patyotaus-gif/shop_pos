@@ -23,7 +23,7 @@ The approved visual reference is
 in `docs/previews/pokpok-2d-animation-direction.md`. POK-11 and POK-14 now carry
 that decision and instructions to continue production without repeating style
 approval. The owner subsequently accepted the v0.9 left-grip preview (comment
-`4ca3c81f-36dc-4750-95d5-8df85130d3c4`); POK-14 resumed in_progress, still missing real
+`4ca3c81f-36dc-4750-95d5-8df85130d3c4`); POK-14 is blocked on POK-16, still missing real
 demo UI and Thai narration. Its current MP4 attachment is
 `378cbc06-f2c9-48cd-9420-ad3dc80d33ee`. The owner asked why agents could not produce
 those assets and then chose to defer voice credits and do the screen recording first.
@@ -31,7 +31,11 @@ POK-15 had only authorized a readiness inventory; there was no UI production tas
 The operator created POK-16 for CTO to delegate isolated synthetic-data Flutter
 recording to Engineer - App and QA, with actual UI, tap coordinates and downloadable
 evidence for POK-14. POK-16 is in_progress (run
-`51a6c501-79c1-4b37-8149-a1117517412e`); no new UI footage exists yet. The old
+`51a6c501-79c1-4b37-8149-a1117517412e`). CTO created POK-17 for Engineer - App,
+now running (`ed1e5b64-b897-4318-92e2-ab8f7ef48b13`), and POK-18 for QA blocked
+on POK-17. The Engineer has started reading the actual screen/data dependencies
+and preparing its plan for CTO; shell commands work. No new UI footage exists yet.
+The old
 owner/CEO asset questions in POK-11 and POK-14 were cancelled as superseded,
 without claiming receipt of assets. Both briefs and assignees received the new
 production dependency. See `docs/paperclip-reel-ui-production.md`.
@@ -528,6 +532,17 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-21 — Verified the production delegation actually happened: CTO created
+  POK-17 (Engineer - App, in_progress) and POK-18 (QA, blocked by POK-17), both
+  children of POK-16. Read their briefs back: real Flutter UI, isolated fixtures,
+  recording plus touch coordinates, independent QA and no voice-credit use.
+  Engineer's real run has successful shell reads and is preparing the technical
+  plan for CTO, not asking Board for existing asset files. POK-14 is now blocked
+  on POK-16; POK-11 is blocked on POK-14. These are active internal dependencies,
+  not a request for owner-supplied footage. The root production brief and earlier
+  handoff are committed in `69c4f76`. Recording, code changes and QA are still
+  pending in the background tasks; no finished-video claim is made.
 
 - 2026-11-21 — Diagnosed the missing UI/voice handoff: CTO's completed POK-15
   was readiness-only, while CEO and Content Marketer were waiting for owner
