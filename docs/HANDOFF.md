@@ -15,22 +15,25 @@ Rules:
 
 ## Current state (updated 2026-11-20)
 
-Paperclip autonomy verification is in progress. All 13 managed role instructions now
-continue authorized tasks, reuse earlier Board decisions and require explicit
-approval of the final content and destination before public publication.
-Instruction readbacks match the repository. CTO's sandboxed POK-13 run now
-reads the retained POK-12 checkout and has closed POK-13. Automatic follow-up
-woke CEO and Content Marketer. Both follow-up runs stalled at provider startup
-and were cancelled after five minutes without tool actions. A fresh POK-12
-retry is running. POK-12/POK-11 completion is being monitored.
-The Instagram token has zero agent bindings and is withheld from draft runs.
+Paperclip's continuation policy is installed in all 13 managed role instructions.
+CTO's sandboxed workspace access passed in a real run. POK-13 and POK-12 are
+done. CEO resumed through queue recovery, verified the final storyboard and
+submitted POK-11 as in_review, matching the original owner-review brief.
+The service-wide recovery scheduler is enabled. Individual timer heartbeats
+are off. Provider startup stalls required a fresh retry during verification.
 
-Paperclip's Windows runner now supports long Git paths for fresh clones and
-the Pokpok origin matches the URL recorded for shared worktrees. POK-12
-successfully retried and submitted three Reel storyboards for review. Its
-parent POK-11 is still waiting on the child, including feature evidence.
-The earlier POK-13 access failure is resolved by the task-scoped runtime grant.
-Git in the retained checkout also needs core.longpaths in the managed runtime.
+Public publication requires Board approval of the final content and destination.
+The Instagram secret has zero agent bindings. Content Marketer confirmed the
+token was absent from its runtime and its accessible-secret list was empty.
+Publishing after a new approval was not exercised in this change.
+
+The retained POK-12 checkout has local core.longpaths enabled. Ten agents have
+the runtime Git override. Reviewer / QA, Security & Data and COO / Field Ops
+still await this additional setting due to provider hello validation timeouts.
+All 13 instruction bundles are installed. Managed homes need the Git setting
+independently of the host's Git configuration. The Pokpok origin matches the
+saved workspace URL. Startup logs also contain MCP discovery HTTP 500 warnings;
+the verified task handoffs used the working Paperclip REST API.
 
 Paperclip Content Marketer can render vertical MP4s in its own task worktree. The Windows host has Remotion 4.0.545, two official Remotion skills and FFmpeg. The POK-10 agent output was independently probed as H.264, 360×640, 30 fps, one second. A separate local render verified H.264 with AAC audio.
 
@@ -468,6 +471,50 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-20 — Final read-only checks confirm healthy Paperclip, all 13 agents
+  idle, individual timers disabled, ten runtime Git overrides and zero Instagram
+  secret bindings. POK-12/13 are done and POK-11 is in_review. A final sequential
+  retry for Reviewer / QA, Security & Data and COO / Field Ops again failed
+  `ai_connection_validation_failed`; their additional Git environment setting
+  is still pending. All 13 managed instruction bundles match repository sources.
+  The autonomy source changes were committed as `88dfb46`; recovery setup and
+  this final verification are committed with this log. No active test/run remains.
+
+- 2026-11-20 — Recovery scheduler is live after a graceful restart. API health
+  is ok. Startup recovery retried a lost CEO process automatically as
+  `f58b563d-a108-4306-8f31-e5986820d3a2`, which succeeded. POK-13 and POK-12
+  are done; POK-11 is in_review with `final-storyboard` revision
+  `74fd9825-999c-48d0-9e5d-a76dc511ba36`. CEO recorded worktree commit
+  `35768ee`. Owner review is the requested handoff, and final-content approval
+  is still required for publication. No production deployment or public post.
+  Local verification covered actual task execution, instruction readbacks,
+  absent publishing credentials, persisted Git config, restart and recovery.
+  Script syntax, launcher parse, idempotence and diff checks passed. Reviewed
+  the source/config diff for scope, preservation and approval boundaries.
+  Git environment overrides saved for ten agents. Three saves continue to
+  fail provider hello validation; the direct test confirms
+  `codex_hello_probe_timed_out`, followed by `ai_connection_validation_incomplete`.
+  Existing roles and working task paths remain available. Startup logs also
+  show MCP discovery HTTP 500 warnings; REST task/document delivery passed.
+
+- 2026-11-20 — Found the service-wide launcher setting
+  `HEARTBEAT_SCHEDULER_ENABLED=false`, which disabled due-retry promotion,
+  queued-run recovery and dependency reconciliation. The CEO retry stayed
+  queued after manual promotion. Added a version-guarded, idempotent launcher
+  repair, verified its PowerShell syntax, cancelled obsolete retry runs for
+  POK-1/POK-2 and closed superseded POK-1 with references to POK-2/POK-11.
+  Stopped Paperclip through its shutdown handler and restarted with recovery
+  enabled. All individual agent timer heartbeats remain off. Startup is pending.
+
+- 2026-11-20 — POK-12 retry succeeded and closed the child after verifying its
+  own workspace, HEAD, clean Git state and `core.longpaths=true`. It confirmed
+  `IG_TOKEN_PRESENT=False` and an empty `/api/agents/me/secrets` response.
+  The revised `reel-concepts` document was read back at revision
+  `f054a8db-eabd-4a5d-8640-f077da351cc5` (12,705 characters). CEO follow-up was
+  triggered automatically, then deferred with `ai_connection_busy` while config
+  validation used the shared account. Stopped further config changes during
+  active work. CEO retry `1882c0f6-e542-4710-9191-ac060ba82e3b` is scheduled.
 
 - 2026-11-20 — Retained POK-12 Git now has local `core.longpaths=true`, read
   back with a successful commit-object check. Runtime Git overrides were saved

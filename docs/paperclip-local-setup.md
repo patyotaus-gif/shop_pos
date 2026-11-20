@@ -328,11 +328,13 @@ agents' changes. CTO continues with sandbox bypass disabled.
 
 The managed Codex home does not inherit the operator's Git configuration.
 The retained POK-12 repository now has local `core.longpaths=true`, which applies
-inside the agent's managed runtime. CEO and Release Coordinator also have
+inside the agent's managed runtime. Ten agents also have
 `GIT_CONFIG_COUNT=1`, `GIT_CONFIG_KEY_0=core.longpaths` and
-`GIT_CONFIG_VALUE_0=true` in their runtime environments. The remaining agents'
-environment rollout is pending because the provider hello validation did not
-complete. The launcher uses the host Git setting when provisioning checkouts.
+`GIT_CONFIG_VALUE_0=true` in their runtime environments. Reviewer / QA,
+Security & Data and COO / Field Ops still await this additional environment
+setting because the provider hello validation timed out. Their updated
+continuation/publication instructions are installed and verified. The launcher
+uses the host Git setting when provisioning checkouts.
 Review existing `GIT_CONFIG_*` overrides before adding more entries. Remove the
 three environment keys, or unset the retained repository's local core.longpaths,
 to restore the respective prior state.
@@ -353,6 +355,20 @@ only. To reverse these changes, restore the saved instruction revisions through
 Paperclip and restore CTO's prior `extraArgs`. Reassign the publishing reference
 only for a Board-approved publication. Timer heartbeats remain disabled and
 on-demand assignment/follow-up wakes remain enabled, with one run per agent.
+
+The launcher must enable `HEARTBEAT_SCHEDULER_ENABLED` for scheduled retries,
+queued-run recovery and dependency reconciliation. Individual agent timer
+heartbeats can stay disabled. The original launcher disabled this service-wide
+scheduler, which left a due CEO retry queued until operator intervention.
+`node scripts/paperclip/enable-task-recovery.mjs` changes the pinned launcher
+and saves its original copy beside the autonomy backups. Restart gracefully to
+load it. Review pending retries before enabling recovery. Obsolete retries for
+the completed POK-2 and superseded POK-1 trial were cancelled, and POK-1 was
+closed with links to its completed/replacement tasks.
+
+Apply agent runtime config changes while the company has no active model runs.
+Paperclip validates the shared AI account during these writes and can defer
+other agents with `ai_connection_busy`. The scheduler resumes deferred work.
 
 ## Content Marketer video tools
 
