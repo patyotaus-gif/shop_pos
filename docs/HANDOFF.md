@@ -19,11 +19,15 @@ The owner changed the Reel's visual direction from 3D to original 2D dog/cat
 characters with Japanese anime and Disney-style hand-drawn animation appeal.
 POK-11 and POK-14 now carry the updated brief. A generated restaurant keyframe
 was supplied, followed by v2 after the owner requested more natural facial
-expressions. The current prototype is
+expressions. The production task's current reference is
 `docs/previews/pokpok-2d-dog-cat-concept-v2.png`, attached to POK-14 and documented
 in `docs/previews/pokpok-2d-animation-direction.md`. This is an unapproved visual
 prototype. Character layers, finished animation, verified demo UI footage and
 voice remain production work. Public publication requires final owner approval.
+
+The owner subsequently asked to see a plumper, softer-furred variation. That
+preview is saved as `docs/previews/pokpok-2d-dog-cat-concept-v3.png` for visual
+comparison, with both characters rounder and fluffier.
 
 Paperclip's continuation policy is installed in all 13 managed role instructions.
 CTO's sandboxed workspace access passed in a real run. POK-13 and POK-12 are
@@ -482,6 +486,14 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-21 — Generated the owner's requested plump, soft-fur variation by
+  editing v2 with built-in ImageGen. Visually inspected v3 and saved its PNG
+  at `docs/previews/pokpok-2d-dog-cat-concept-v3.png`; kept earlier variants.
+  Both characters have rounder bodies and cheeks plus drawn fur tufts on ears,
+  arms and tails. Recorded the exact edit prompt in the direction document.
+  This pass supplied a visual comparison candidate in chat; the production
+  task's existing reference remains v2 pending the owner's choice.
 
 - 2026-11-21 — Owner requested 2D dog/cat animation after the 3D preview, then
   asked for more natural facial expressions. Generated an original restaurant

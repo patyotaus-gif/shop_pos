@@ -6,6 +6,12 @@
 
 เจ้าของให้ปรับสีหน้าที่ดูเหมือน AI ให้เป็นธรรมชาติมากขึ้นในวันเดียวกัน เวอร์ชัน 2 ลดขนาดตาและการเบิกตา ปรับเป็นรอยยิ้มปิดปากเล็กน้อย และใช้คิ้ว/เปลือกตาที่ผ่อนคลาย โดยตีความเป็นอารมณ์มนุษย์ผ่านตัวละครหมา–แมว ภาพนี้ยังเป็นต้นแบบสไตล์สำหรับตรวจ
 
+## ตัวเลือกอวบและขนนุ่ม เวอร์ชัน 3
+
+เจ้าของขอดูตัวละครอวบขึ้นและขนนุ่ม จึงทำภาพตัวเลือกเพิ่มให้ทั้งหมาและแมวมีลำตัว แก้ม แขนขากลมขึ้น และขนฟูบริเวณแก้ม หู แขนและหาง ภาพนี้เป็นตัวเลือกสำหรับเจ้าของดูต่อจากเวอร์ชัน 2
+
+![ตัวเลือกอวบและขนนุ่ม](pokpok-2d-dog-cat-concept-v3.png)
+
 ## ภาพและบทบาทตัวละคร
 
 ภาพต้นแบบสร้างขึ้นใหม่ด้วยเครื่องมือ ImageGen ในแชตนี้ ใช้เส้นวาด เงาแบบ cel shading ฉากลงสีโทนอุ่น และสีหน้าที่สื่ออารมณ์ชัดเจน ผู้ช่วยเลือกให้หมาสีน้ำตาลครีมเป็นพนักงานถือแท็บเล็ต และแมวสีส้มขาวเป็นพนักงานครัวถืออาหาร เพื่อให้เข้ากับเรื่องรายการอาหารและโต๊ะ
@@ -36,4 +42,12 @@ Create a polished ORIGINAL 2D animation visual-development keyframe for a Thai r
 
 ```text
 Edit this exact illustration with a focused facial acting revision. The user says the expressions feel AI-generated and wants more natural, human-observed emotion. Preserve the same original anthropomorphic DOG and CAT, their species, character identities, fur markings, outfits, body poses, tablet, food, restaurant background, warm light and overall composition. Revise both faces so they feel like carefully observed, hand-drawn acting by a skilled 2D character animator. Reduce the oversized eyes slightly, give the upper eyelids relaxed weight, reduce glossy catchlights, and make pupils/gaze clearly connect between the characters. The dog server is quietly checking with his coworker, with a small relaxed CLOSED mouth and an understated slight lift in one brow, a gentle attentive expression. The cat chef is focused on carrying the dish and listening to the dog, with a subtle CLOSED-mouth half-smile and relaxed cheeks, slightly asymmetric brows. Convey warm ordinary workplace rapport, not posing for a portrait. Use small natural asymmetries, believable cheek and eyelid tension, restrained expression and elegant varied ink lines. Remove the generic broad open-mouth smiles, toothy grins, permanently raised eyebrows, huge sparkling eyes, and exaggerated cute reaction. Keep the attractive Japanese-anime and classical hand-drawn feature-animation 2D aesthetic. Neither character becomes a human; retain their animal muzzles and ears, adapting human emotional nuance through their animal faces. Make this the same scene at the same moment, with more grounded, candid facial acting. No added text or logos.
+```
+
+## Prompt ที่ใช้สร้างตัวเลือกเวอร์ชัน 3
+
+ใช้ built-in ImageGen โดยอ้างอิง `pokpok-2d-dog-cat-concept-v2.png` และตั้ง `transparent_background=false`
+
+```text
+Edit this exact 2D illustrated restaurant scene. The user requests visibly CHUBBIER characters with SOFT FLUFFY FUR. Apply the change to BOTH the tan-and-cream dog server and the orange-and-white cat chef. Give them pleasantly plump rounded bodies, broader soft torsos and hips, gently rounded bellies under naturally fitted clothing, thicker soft arms and legs, fuller cheeks, and rounded plush paws. Keep adult coworker proportions and charming natural anatomy, but make the plumper silhouette clearly noticeable at phone size. Make their fur look soft and fluffy through fine hand-drawn overlapping tufts and gently feathered silhouettes around cheeks, ears, forearms and tails. The dog's cheek ruff, ear edges and tail should look especially soft; give the cat a fluffy cheek ruff and a thicker plush striped tail. Keep the fur treatment in beautiful traditional 2D cel-animation illustration with subtle drawn texture and painted shading. Preserve the restrained natural closed-mouth facial expressions and relaxed eyes from the input. Preserve their species, recognizable original faces, fur colors/markings, same cream shirts and plum/sage aprons adapted naturally to the fuller bodies, the tablet, plate of Thai basil rice, poses and friendly eye contact. Preserve the warm restaurant background, lighting, composition and image framing. No added text or logos. Avoid 3D/CGI, photorealistic fur, plastic plush-toy surfaces, excessive shiny eyes, broad open-mouth smiles, and tiny chibi proportions.
 ```
