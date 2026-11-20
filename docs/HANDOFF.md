@@ -15,12 +15,22 @@ Rules:
 
 ## Current state (updated 2026-11-20)
 
+Paperclip autonomy verification is in progress. All 13 managed role instructions now
+continue authorized tasks, reuse earlier Board decisions and require explicit
+approval of the final content and destination before public publication.
+Instruction readbacks match the repository. CTO's sandboxed POK-13 run now
+reads the retained POK-12 checkout and has closed POK-13. Automatic follow-up
+woke CEO and Content Marketer. Both follow-up runs stalled at provider startup
+and were cancelled after five minutes without tool actions. A fresh POK-12
+retry is running. POK-12/POK-11 completion is being monitored.
+The Instagram token has zero agent bindings and is withheld from draft runs.
+
 Paperclip's Windows runner now supports long Git paths for fresh clones and
 the Pokpok origin matches the URL recorded for shared worktrees. POK-12
 successfully retried and submitted three Reel storyboards for review. Its
 parent POK-11 is still waiting on the child, including feature evidence.
-The POK-13 CTO retry completed successfully. The remaining blocker is the
-CTO runtime's access to the retained workspace referenced by POK-12 revision 1.
+The earlier POK-13 access failure is resolved by the task-scoped runtime grant.
+Git in the retained checkout also needs core.longpaths in the managed runtime.
 
 Paperclip Content Marketer can render vertical MP4s in its own task worktree. The Windows host has Remotion 4.0.545, two official Remotion skills and FFmpeg. The POK-10 agent output was independently probed as H.264, 360×640, 30 fps, one second. A separate local render verified H.264 with AAC audio.
 
@@ -458,6 +468,38 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+- 2026-11-20 — Retained POK-12 Git now has local `core.longpaths=true`, read
+  back with a successful commit-object check. Runtime Git overrides were saved
+  for CEO and Release Coordinator. CMO and Content Marketer saves failed provider
+  hello validation, so the remaining environment rollout was stopped for
+  diagnosis. Follow-up runs `54aa7d15-f74e-4c39-aabb-0dd0bc29b68c` and
+  `f12d5be8-ede8-4ae0-9db8-a0c193558e7e` produced no tool actions for five minutes
+  and were cancelled through the API. Fresh Content Marketer retry
+  `74cbb4f6-4bf2-458e-8223-357f44bb7e22` is running. Syntax and diff checks pass,
+  all 13 instruction readbacks match, and the publishing secret has zero bindings.
+
+- 2026-11-20 — POK-13 run `f90b809e-a548-4c35-b282-d7ade813cb70` succeeded
+  with sandbox bypass off. CTO read retained HEAD
+  `7f40fa8ce37b2683e5613bd705cc0b3e90f5dd67`, commit object, clean status
+  including untracked files, both diffs and source evidence using
+  `git -c core.longpaths=true`. Evidence revision
+  `827c66af-0b8b-4be2-b8bc-bb6d6dbef449` was read back. Existing binding was
+  retained after preservation checks. CTO closed the task and automatic runs
+  started for POK-12 and POK-11. Content Marketer token assignment is removed
+  and the publishing secret's usage endpoint returns zero bindings. Git
+  runtime environment rollout is in progress after one transient CMO validation
+  rejection. No publication was attempted.
+
+- 2026-11-20 — Owner authorized resuming Paperclip autonomy work. Updated and
+  read back all 13 role instructions, replacing blanket stop-and-ask and single-run
+  rules with scoped continuation and child follow-up. Original instruction
+  revisions and changed-setting references are saved under
+  `D:/PokpokTools/paperclip/local-fixes/autonomy-20261120` without secret values.
+  C: had zero free space. Moved the ignored `release91-public.apk` verification
+  copy from `.remember/tmp` into that folder's `verification-archive`, preserving
+  SHA-256 `f6473647c88f2f9a79ebdd6b566c8b1a526a87f03ed48e582980d1a7141c7744`.
+  Runtime verification is pending.
 
 - 2026-11-20: Retried POK-13. Paperclip run `7515aab7-5990-43f7-a647-8f74861ed404`
   exited with code 0 and no recorded remote compact error. The CTO verified

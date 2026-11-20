@@ -29,6 +29,11 @@ data in it.
 
 ## Working conventions
 
+When configuring Paperclip agents or troubleshooting their task continuation,
+read `docs/paperclip-local-setup.md` and `docs/paperclip-agents/README.md`.
+The owner authorized in-scope task continuation on 2026-11-20. Public posting
+requires approval of the final content and destination (review 2027-02).
+
 ### Website direction (owner-approved 2026-11-11; content standard 2026-11-12)
 
 Before planning, editing, reviewing, or releasing the marketing website, read

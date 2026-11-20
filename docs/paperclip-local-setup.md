@@ -299,6 +299,61 @@ encryption key under `secrets`, as well as database backups and local storage.
 Do not commit these files or publish them in a shared repository. The data ACL
 allows only the current Windows user, SYSTEM and Administrators.
 
+## Continuing assigned work (2026-11-20)
+
+The owner authorized agents to carry assigned work through completion, reuse
+earlier approvals, make reversible implementation decisions within their brief,
+and follow child tasks through to the parent deliverable. All 13 managed
+instruction files carry this policy. Public posting requires Board approval of
+the final content, account, destination and publication occurrence. A concept
+selection or production brief alone does not authorize publication.
+
+The source roles are in `docs/paperclip-agents/` and the CEO Instructions block
+in `docs/paperclip-ceo-role.md`. From the repository root, preview or sync them
+with the following commands. Sync checks the existing revision before writing
+and reads each saved file back. Paperclip also retains instruction history.
+
+```powershell
+node scripts/paperclip/sync-agent-instructions.mjs
+node scripts/paperclip/sync-agent-instructions.mjs --apply
+```
+
+CTO has two additional Codex workspace grants through `extraArgs` using
+`--add-dir`. One covers `D:/PokpokWork/worktrees` so it can prepare and inspect
+task workspaces. The other covers the exact retained POK-12 workspace returned
+by `GET /api/issues/a4b766c3-b8d1-4acb-ba94-d29a3acb6811/workspace` at binding
+revision 1. These grants permit filesystem writes as well as reads. Task
+instructions restrict edits to the assigned work and require preserving other
+agents' changes. CTO continues with sandbox bypass disabled.
+
+The managed Codex home does not inherit the operator's Git configuration.
+The retained POK-12 repository now has local `core.longpaths=true`, which applies
+inside the agent's managed runtime. CEO and Release Coordinator also have
+`GIT_CONFIG_COUNT=1`, `GIT_CONFIG_KEY_0=core.longpaths` and
+`GIT_CONFIG_VALUE_0=true` in their runtime environments. The remaining agents'
+environment rollout is pending because the provider hello validation did not
+complete. The launcher uses the host Git setting when provisioning checkouts.
+Review existing `GIT_CONFIG_*` overrides before adding more entries. Remove the
+three environment keys, or unset the retained repository's local core.longpaths,
+to restore the respective prior state.
+
+Content Marketer's `POKPOK_IG_ACCESS_TOKEN` secret reference was removed from
+its persistent environment. The stored secret remains available to the operator.
+Before an approved publication, the operator verifies the exact Board approval
+and final artifact, checks that other runs for this agent are idle, and assigns
+the reference for that publication run. The operator removes it after the run
+finishes, including failures. The agent checks the destination before retrying
+an uncertain publication. This is an operator-controlled credential step. The
+local trusted Paperclip installation is not a security boundary against the
+Windows account owner.
+
+Original instructions and changed-setting references are saved locally under
+`D:/PokpokTools/paperclip/local-fixes/autonomy-20261120`. They contain secret IDs
+only. To reverse these changes, restore the saved instruction revisions through
+Paperclip and restore CTO's prior `extraArgs`. Reassign the publishing reference
+only for a Board-approved publication. Timer heartbeats remain disabled and
+on-demand assignment/follow-up wakes remain enabled, with one run per agent.
+
 ## Content Marketer video tools
 
 The rendering host keeps its npm project at `D:\PokpokTools\marketing-video`.
