@@ -452,6 +452,8 @@ or triggered; its Codemagic workflow does not run automatically on push.
 
 ## Log
 
+- 2026-11-20 — Checked the local Paperclip run history for POK-12. Workspace validation originally blocked the task. The latest attempt failed during `git clone` when the Windows path to the temporary pack `.keep` file was too long. The POK-11 worktree is still registered. POK-11 awaits the storyboard task. Diagnosis only.
+
 - 2026-11-20 — Read-only check of POK-1 after a Reel request appeared on the old CEO summary task. The SQLite error comment and scheduled retry date from November 17. The November 20 Reel brief was saved as a comment. At inspection the issue showed Todo, with the linked retry still unstarted.
 
 - 2026-11-20 — Installed the Content Marketer video toolkit under `D:\PokpokTools\marketing-video` and updated the agent's managed instructions. POK-9 exposed a bundled FFmpeg crash inside the agent. POK-10 produced a valid silent MP4 using standalone FFmpeg. The host also passed an audio fixture with the FFmpeg 7.1.1 renderer and native AAC. Setup and pinned versions are in `docs/paperclip-local-setup.md`. Installation and tests were local, with no Instagram publication or app release.
