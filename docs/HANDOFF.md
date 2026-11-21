@@ -23,6 +23,13 @@ undecided. Existing restaurant entry uses the staff POS/takeaway workspace;
 the payment sheet currently relies on cashier-confirmed cash/transfer, with
 Omise limited to its separate test mode. No kiosk flow has been built.
 
+The owner then supplied a Facebook Reel as inspiration for the Pokpok website:
+`https://www.facebook.com/share/r/1FNUaDmeF8/`, resolving to Reel
+`1999430697684532`. Only its public caption and cover image were retrieved;
+the video itself has not been watched. The caption discusses animated website
+design. Do not infer a kiosk implementation or specific animation from this
+reference until the clip is available. No website change has been made.
+
 The owner authorized publication of this table-sales change on 2026-11-21
 ("ปล่อยอัพเดท"). Android **1.2.81 (98)** is now published at
 `https://pok-pok.app/app/pokpok.apk`. It was built from `a602c8d` and installed
@@ -608,6 +615,17 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-21 — Website inspiration Reel received; video inspection pending
+
+- Resolved the owner's Facebook share URL to Reel `1999430697684532` by wearebrand.
+  Public metadata describes AI-assisted website visuals/animation and identifies
+  a paid partnership; this is the author's description, not verified tool evidence.
+- The web fetcher was throttled. Direct public fetch returned caption and cover,
+  but no playable video; no connected browser document session was available.
+  Inspected the cover only. No claim about the clip's interaction/motion is made.
+- Need the actual clip or a screen recording to assess the website reference.
+  No paid credits used, app/site edits or publication performed.
 
 ### 2026-11-21 — Owner clarified shared front-of-store self-ordering kiosk
 
