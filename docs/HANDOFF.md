@@ -25,10 +25,16 @@ Omise limited to its separate test mode. No kiosk flow has been built.
 
 The owner then supplied a Facebook Reel as inspiration for the Pokpok website:
 `https://www.facebook.com/share/r/1FNUaDmeF8/`, resolving to Reel
-`1999430697684532`. Only its public caption and cover image were retrieved;
-the video itself has not been watched. The caption discusses animated website
-design. Do not infer a kiosk implementation or specific animation from this
-reference until the clip is available. No website change has been made.
+`1999430697684532`. The owner supplied `Recording 2026-11-21 171226.mp4` locally;
+the 12.83-second recording was inspected through ordered frames at 0.5-second
+intervals. It shows a beverage website with a rotating/tilting product, staged
+copy/background transitions and a row of products whose selected item comes
+forward. Suggested Pokpok adaptation: an actual app screen in a tablet as the
+main visual, successive sales/order/report scenes, and retail/restaurant demo
+selection within the existing white/gray/Burgundy direction. These are design
+suggestions, not an accepted redesign. The recording does not establish the
+site's implementation or whether motion is driven by scroll, video or 3D.
+No website change has been made.
 
 The owner authorized publication of this table-sales change on 2026-11-21
 ("ปล่อยอัพเดท"). Android **1.2.81 (98)** is now published at
@@ -615,6 +621,25 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-21 — Inspected supplied website motion reference recording
+
+- Input: owner's local `Recording 2026-11-21 171226.mp4`, 1920x1140, H.264,
+  30 fps, 12.8333 seconds. Used existing FFprobe/FFmpeg to inspect metadata and
+  extract ordered 2 fps frames across the supplied recording. Visual inspection
+  covers the supplied excerpt; audio was not analyzed.
+- Observed: first approximately 0–5 s shows a single rotating/tilting can with
+  changing copy and green lighting; approximately 5–7 s moves to a darker scene
+  with a smaller can and large text; approximately 7–12 s shows a row of cans,
+  selected product brought forward and matching color/text changes, then a loop.
+  The exact scroll/click trigger and implementation cannot be verified from it.
+- Read the website core/content standards and applied the design skill for the
+  reference assessment. Proposed app/tablet-led storytelling and business-type
+  demo selection as directions to consider, retaining approved brand colors and
+  factual app screens. No pricing, feature or kiosk-readiness claims inferred.
+- Extracted frames stay outside Git at
+  `D:/PokpokWork/website-reference-20261121/`; no reference artwork was copied into
+  the site. No prototype, application edit, external post or deployment performed.
 
 ### 2026-11-21 — Website inspiration Reel received; video inspection pending
 
