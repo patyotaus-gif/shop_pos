@@ -15,6 +15,14 @@ Rules:
 
 ## Current state (updated 2026-11-21)
 
+New product discussion: the owner clarified that the self-ordering concept is
+a shared customer kiosk at the front of the restaurant, not a tablet at every
+table. This is a direction clarification, not an implementation or release.
+Payment at the kiosk versus ordering there and paying at the counter is still
+undecided. Existing restaurant entry uses the staff POS/takeaway workspace;
+the payment sheet currently relies on cashier-confirmed cash/transfer, with
+Omise limited to its separate test mode. No kiosk flow has been built.
+
 The owner authorized publication of this table-sales change on 2026-11-21
 ("ปล่อยอัพเดท"). Android **1.2.81 (98)** is now published at
 `https://pok-pok.app/app/pokpok.apk`. It was built from `a602c8d` and installed
@@ -600,6 +608,16 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-21 — Owner clarified shared front-of-store self-ordering kiosk
+
+- Owner answered "จอกลางหน้าร้าน" after discussing a McDonald's-style ordering
+  screen. Recorded a shared customer-facing kiosk as the intended setting.
+- Read current restaurant/POS entry and payment-sheet code: catalog/cart pieces
+  exist, while cash/transfer confirmation is a cashier action and Omise remains
+  sandbox-only. A customer payment flow cannot be inferred from the staff UI.
+- No app/backend changes, prototype, device action or deployment in this
+  discussion. Next product decision is kiosk payment versus counter payment.
 
 ### 2026-11-21 — Android 1.2.81 (98) published and verified
 
