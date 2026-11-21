@@ -17,8 +17,9 @@ Rules:
 
 The owner rejected the first full-page catalog on 2026-11-21 and clarified:
 pressing Add product at a table must open the same sales workspace as takeaway.
-The follow-up implementation is in the D: worktree
-`table-catalog-page-20261121`, based on `5b8557d`. It reuses `PosCatalog`,
+The follow-up implementation was committed as `b2d3499` in the D: worktree
+`table-catalog-page-20261121` and fast-forwarded into the root `master` checkout.
+It reuses `PosCatalog`,
 `PosSalesWorkspace`, `PosBasket`, cart tiles and checkout controls, with existing
 table lines plus a local draft and direct popup payment from that page.
 The pending batch is saved with its request ID and the order reread before
@@ -582,6 +583,16 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-21 — Integrated the table takeaway-style sales workspace
+
+- Committed the implementation, 105-test validation record, source-review triage
+  and synthetic Flutter previews as `b2d3499`. Fast-forwarded root `master` from
+  `5b8557d` after confirming the root working tree was clean.
+- No source changes followed the final test/analyze gate. Review reports and
+  regression captures remain on D:; temporary reviewer briefs/runners were
+  removed. Device installation, real multi-device acceptance and release remain
+  outside this change. The tablet still has the older installed app.
 
 ### 2026-11-21 — Follow-up: use takeaway sales workspace for table ordering (local)
 
