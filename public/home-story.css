@@ -41,23 +41,21 @@
 .device-stage.is-dragging .device-model { cursor: grabbing; transition: none; }
 .device-model[data-position="left"] { left: 14%; transform: translate(-50%,-50%) scale(.76) rotateY(var(--device-side-angle)) rotateZ(-5deg); z-index: 1; }
 .device-model[data-position="right"] { left: 85%; transform: translate(-50%,-50%) scale(.76) rotateY(calc(var(--device-side-angle) * -1)) rotateZ(4deg); z-index: 1; }
-.device-shell { display: block; position: relative; padding: var(--device-bezel); background: var(--home-device); border: var(--home-border) solid var(--home-device-edge); border-radius: var(--device-radius); box-shadow: var(--device-shadow); }
-.device-glass { display: block; position: relative; overflow: hidden; background: var(--home-ground); border-radius: calc(var(--device-radius) - var(--device-bezel)); }
-.device-glass > img { display: block; width: 100%; height: auto; }
+.device-shell { display: block; position: relative; filter: drop-shadow(var(--device-photo-shadow)); }
+.device-glass { display: block; position: absolute; overflow: hidden; }
+.device-hardware { display: block; position: relative; width: 100%; height: auto; }
 .device-phone { width: 28%; max-width: var(--device-phone-width); }
-.device-phone .device-glass { aspect-ratio: 9 / 19; }
-.device-phone .device-shell::before { content: ''; position: absolute; z-index: 1; width: 28%; height: var(--device-bezel); top: calc(var(--device-bezel) * 1.7); left: 36%; border-radius: var(--home-radius-sm); background: var(--home-camera); }
-.device-phone .device-glass::after { content: ''; position: absolute; width: 35%; height: var(--home-focus); bottom: var(--device-bezel); border-radius: var(--home-radius-sm); background: var(--home-device); }
+.device-phone .device-shell { aspect-ratio: 391 / 800; }
+.device-phone .device-glass { inset: var(--phone-screen-inset); border-radius: var(--phone-screen-radius); }
 .device-tablet { width: 67%; max-width: var(--device-tablet-width); }
 .device-tablet[data-position="left"] { left: 24%; transform: translate(-50%,-50%) scale(.62) rotateY(var(--device-side-angle)) rotateZ(-5deg); }
 .device-tablet[data-position="right"] { left: 76%; transform: translate(-50%,-50%) scale(.62) rotateY(calc(var(--device-side-angle) * -1)) rotateZ(4deg); }
-.device-tablet .device-glass { aspect-ratio: 1480 / 924; }
-.device-kiosk { width: 31%; max-width: var(--device-kiosk-width); aspect-ratio: 1 / 2.12; }
-.device-kiosk .device-shell { position: absolute; inset: 0 0 auto; border-radius: var(--home-radius-screen); padding-bottom: 12%; background: var(--device-metal); border-color: var(--device-metal-edge); box-shadow: var(--device-edge-depth) var(--device-edge-depth) 0 var(--device-metal-edge), var(--home-shadow); }
-.device-kiosk .device-glass { aspect-ratio: 3 / 4; border-radius: var(--home-camera-inset); border: var(--device-bezel) solid var(--home-device); }
-.kiosk-pedestal { position: absolute; top: 60%; bottom: 3%; width: 24%; left: 38%; background: var(--device-metal); border-inline: var(--home-border) solid var(--device-metal-edge); box-shadow: var(--device-edge-depth) 0 var(--device-metal-edge); }
-.kiosk-foot { position: absolute; bottom: 0; left: 10%; width: 80%; height: 6%; border-radius: 50%; background: var(--device-metal); box-shadow: 0 var(--device-edge-depth) 0 var(--device-metal-edge), var(--home-shadow); }
-.kiosk-slot { position: absolute; bottom: 5%; left: 36%; width: 28%; height: var(--home-focus); background: var(--home-device); border-radius: var(--home-radius-sm); }
+.device-tablet .device-shell { aspect-ratio: 800 / 522; }
+.device-tablet .device-hardware { position: absolute; width: 65.25%; height: auto; left: 50%; top: 50%; transform: translate(-50%,-50%) rotate(90deg); }
+.device-tablet .device-glass { inset: var(--tablet-screen-inset); border-radius: var(--tablet-screen-radius); }
+.device-kiosk { width: 31%; max-width: var(--device-kiosk-width); }
+.device-kiosk .device-shell { aspect-ratio: 365 / 800; }
+.device-kiosk .device-glass { inset: var(--kiosk-screen-inset); }
 .launch-screen { display: grid; place-items: center; background: var(--wine); }
 .launch-logo { display: flex; flex-direction: column; align-items: center; width: 68%; max-width: var(--launch-logo-width); }
 .device-tablet .launch-logo { width: 30%; }

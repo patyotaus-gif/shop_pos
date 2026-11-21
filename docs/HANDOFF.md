@@ -15,17 +15,23 @@ Rules:
 
 ## Current state (updated 2026-11-22)
 
-Latest owner revision is complete locally: all three device screens now
-use the app's Burgundy launch background and official white mortar/wordmark.
+Latest revision is complete locally: replaced the CSS-drawn device shells with
+licensed realistic Mobile FIRST frames (Galaxy S24 Ultra, Galaxy Tab S7, and a
+self-service kiosk). All retain Pokpok launch logos and direct swipe/tap behavior.
+The free standard exports total 29,186 bytes; sources and usage restrictions are
+in `docs/website-device-image-sources.md`. No purchase or website publication.
+
+All three device screens use the app's Burgundy launch background and official
+white mortar/wordmark.
 The separate device selector and on-device/under-device copy were removed.
 Devices themselves are interactive: tap/click, horizontal touch/mouse drag, or
 keyboard arrows. Vertical page scrolling is verified through native browser touch
 events; pinch zoom is allowed by touch-action (not tested on physical hardware).
 The focused suite passed 13 groups at eight widths including touch cancellation,
 short swipes, wrap-around, reduced-motion and no-JS. Shared marketing regression
-passed 18 pages at five widths. A fresh visual walkthrough found a kiosk shell
-alignment gap, which was reproduced, fixed and rechecked successfully. The review
-was not fully blind because mandatory project docs were read before screenshots.
+passed 18 pages at five widths, rerun after the hardware image replacement. A fresh
+visual walkthrough of five views found no stretched/cropped devices or misplaced
+logos. It was not fully blind because mandatory project docs were read first.
 Native app logo copies are byte-identical to their sources. Kiosk self-ordering
 remains an unimplemented concept, disclosed in the hero copy and accessible name.
 The lower three-chapter app story and real screenshots remain. Updated desktop,
@@ -640,6 +646,36 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-22 — Realistic hardware images verified for local preview
+
+- Integrated three licensed WebP device frames without changing their pixels.
+  Pokpok launch branding remains on all three screens; direct gestures and the
+  absence of separate labelled controls remain as requested.
+- Focused suite passed 13 groups / eight widths, exit 0, now also checking all
+  three hardware images load and retain original aspect ratios. Native browser
+  touch, mouse/keyboard, reduced motion and no-JS paths passed. Shared marketing
+  regression passed 18 pages at five widths, exit 0. Syntax/diff checks passed.
+- Fresh visual walkthrough of five desktop/mobile/tablet views found no material
+  layout, stretching or logo-alignment issue. The layered devices partly obscure
+  side devices at narrow widths, a minor known tradeoff. Focus ring is intentional.
+  Review read mandatory docs before images and therefore was not fully blind.
+- Updated saved previews. Local HTTP readback returns 200 with all three hardware
+  image elements and the 20261122-devices revision. No purchase, public deploy,
+  device compatibility claim or real hardware test. License/source notes saved in
+  `docs/website-device-image-sources.md`.
+
+### 2026-11-22 — Sourced realistic device frames and integrated local preview
+
+- Owner requested actual-device images instead of the drawn shapes. Found a
+  matching front-view transparent set: Galaxy S24 Ultra, Galaxy Tab S7 and a
+  self-service kiosk. These are supplier mockup frames, not Pokpok photographs.
+- Checked Mobile FIRST source pages and mockup license section 9. Used only free
+  standard downloads; documented URLs, terms, byte sizes and hashes. Kept image
+  pixels unchanged, composed existing launch logos behind each screen with CSS,
+  and turned the tablet frame to landscape. Removed the drawn kiosk stand.
+- Preserved tap/swipe/keyboard behavior and kiosk concept disclosure. Focused
+  browser and visual verification is in progress. No purchase or public release.
 
 ### 2026-11-22 — Launch-logo swipe preview verified
 

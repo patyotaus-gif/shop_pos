@@ -16,6 +16,13 @@ The existing hero text still identifies the front-of-store display as a future
 concept; its accessible name also says it is unavailable. Self-ordering has not
 been built. Actual app feature screenshots remain in the story below the hero.
 
+The owner then requested real-device imagery. The hero now uses licensed,
+realistic image frames for Galaxy S24 Ultra, Galaxy Tab S7 (landscape) and a
+self-service kiosk in place of the CSS-drawn hardware. Source files, usage terms,
+dimensions and hashes are recorded in [device image sources](website-device-image-sources.md).
+The app launch screens are still ordinary HTML/CSS behind the frame apertures;
+source image pixels are unchanged. No added device descriptions or selector row.
+
 ## Jobs and direction
 
 | Visitor's job | Surface | Question answered | Primary action |
@@ -25,8 +32,8 @@ been built. Actual app feature screenshots remain in the story below the hero.
 | See how the app handles a day's work | Three-scene product story | What happens during sales, order/stock management and daily overview? | Move through examples or open a full image |
 | Find the relevant business functions | Business picker and existing segment links | What fits a restaurant versus a retail shop? | Open the relevant segment page |
 
-Device silhouettes are the hero's main visual, following the owner's correction.
-The device illustrations themselves are native buttons; no separate selector is
+Device imagery is the hero's main visual, following the owner's correction.
+The device images themselves are native buttons; no separate selector is
 shown. Tap/click chooses a device, horizontal touch or mouse drag advances one
 position and wraps, and Left/Right arrows also move selection and focus. A short
 drag snaps back; pointer cancellation does not select. Vertical gestures retain
@@ -88,7 +95,7 @@ screen is used. Screenshot refresh to a later released build is a separate task.
 
 ## Verification and preview
 
-Latest automated evidence: 2026-11-22 launch-logo and swipe revision. The following browser
+Latest automated evidence: 2026-11-22 realistic hardware-image revision. The following browser
 suites are manual local checks, not a deployed-site or native-device test.
 
 Browser checks use the local static files, bundled Thai fonts and an isolated
@@ -103,7 +110,8 @@ node scripts/preview_marketing.cjs --port 4178
 ```
 
 The homepage suite covers eight widths (320, 360, 390, 768, 1024, 1280, 1440,
-1920), the official logos without on-screen prose, direct device click/Enter/arrow
+1920), the three loaded image frames at their original proportions, the official
+logos without on-screen prose, direct device click/Enter/arrow
 keys and mouse dragging, the selected model's actual transform, overflow for each
 selected device, business selection, scroll/direct anchors, reduced motion,
 short windows, failed story images, and a no-JavaScript fallback. A dedicated
@@ -112,11 +120,11 @@ wrap-around, direct tap, short-drag snapback, cancellation, vertical page scroll
 without a selection change, and reduced-motion swiping. These are browser touch
 events, not an Android/iOS hardware test.
 
-Final focused touch/launch run, including kiosk alignment: **13 groups passed,
-exit 0**. Shared marketing regression: **18 pages at five widths passed, exit 0**.
-Script syntax and `git diff --check` passed.
-Captures are in `D:/PokpokWork/home-swipe-20261122/`. Initial findings were
-reproduced and fixed before the passing run:
+Final focused hardware/touch run: **13 groups passed, exit 0**. Shared marketing
+regression for this revision: **18 pages at five widths passed, exit 0**. Script syntax and
+`git diff --check` passed. Current captures are in
+`D:/PokpokWork/home-hardware-20261122/`. Earlier launch/swipe findings were
+reproduced and fixed before that revision's passing run:
 
 - At 1280 px the initial transform transition could briefly put devices outside
   the viewport. Transitions now start with interaction, avoiding an entrance
@@ -130,13 +138,16 @@ reproduced and fixed before the passing run:
   at the top; the regression checks its rendered top against the button bounds.
   A second visual pass confirmed that the gap is gone at 390 and 1280 px.
 
-A fresh screenshot walkthrough reviewed five desktop/phone/tablet captures and
+A fresh screenshot walkthrough of the preceding launch/swipe build reviewed five desktop/phone/tablet captures and
 found no high/medium comprehension issue. It noticed the kiosk focus gap (fixed)
 and two minor tradeoffs: without visible controls swiping is less discoverable,
 and the foreground tablet partly covers the phone on narrow screens. The owner
 explicitly requested direct manipulation without labelled controls; no helper
 copy was added. Review was not fully blind because mandatory project docs were
-read first. Actual feature UI remains available in the lower story, with full-image
+read first. The subsequent hardware-image review checked five captures and found
+no material issue: devices retain their proportions, image bounds and logo
+alignment. Minor side-device occlusion remains on narrow screens. Actual feature
+UI remains available in the lower story, with full-image
 links. Captures wait for device transitions and the existing masthead animation.
 
 Manual design audit, rechecked for the device revision: accessibility **4/4**, payload and

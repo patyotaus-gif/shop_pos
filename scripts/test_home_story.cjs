@@ -85,7 +85,13 @@ async function scene(page, index) {
       await page.setViewportSize({width,height:960});
       await load(page);
       assert.equal(await page.locator('h1').count(), 1);
-      assert.equal(await page.locator('.device-stage img').evaluateAll(images => images.length === 9 && images.every(i => i.complete && i.naturalWidth > 0)), true);
+      assert.equal(await page.locator('.device-stage img').evaluateAll(images => images.length === 12 && images.every(i => i.complete && i.naturalWidth > 0)), true);
+      assert.equal(await page.locator('.device-model').evaluateAll(models => models.every(model => {
+        const frame = model.querySelector('.device-hardware');
+        const shell = model.querySelector('.device-shell');
+        const ratio = model.dataset.model === 'tablet' ? frame.naturalHeight / frame.naturalWidth : frame.naturalWidth / frame.naturalHeight;
+        return Math.abs(shell.offsetWidth / shell.offsetHeight - ratio) < .01;
+      })), true, `Device photo proportions ${width}`);
       assert.equal(await page.locator('.device-picker, .device-description').count(), 0);
       assert.equal(await page.locator('.device-glass').evaluateAll(screens => screens.every(s => s.textContent.trim() === '' && getComputedStyle(s).backgroundColor === 'rgb(122, 31, 43)')), true);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
