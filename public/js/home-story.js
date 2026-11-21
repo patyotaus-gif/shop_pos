@@ -11,6 +11,15 @@
   const picker = story.querySelector('.business-picker');
   const hero = document.querySelector('.cinematic-hero');
   const device = hero.querySelector('.hero-device');
+  const showcase = hero.querySelector('[data-device-showcase]');
+  const devicePicker = showcase.querySelector('.device-picker');
+  const deviceButtons = [...devicePicker.querySelectorAll('button')];
+  const models = [...showcase.querySelectorAll('[data-model]')];
+  const deviceDetails = {
+    phone: {title: 'มือถือ', copy: 'งานร้านในอุปกรณ์ที่พกไปด้วยได้', detail: 'ภาพจำลองอุปกรณ์ · ใช้งานผ่านแอป Android และ iOS ผ่าน TestFlight'},
+    tablet: {title: 'แท็บเล็ต', copy: 'พื้นที่สำหรับงานขายหน้าร้าน', detail: 'ภาพแอปจริงจากร้านทดสอบ · 1.2.78 (95)'},
+    kiosk: {title: 'จอกลางหน้าร้าน · แนวคิด', copy: 'อีกมุมมองของการสั่งอาหารด้วยตัวเอง', detail: 'ภาพจำลองแนวคิด · โหมดลูกค้าสั่งเองยังอยู่ระหว่างออกแบบ ยังไม่เปิดให้ใช้งาน'}
+  };
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const wide = matchMedia('(min-width: 1000px) and (min-height: 700px)');
   const middle = chapters[1];
@@ -35,6 +44,34 @@
   let active = true;
   let business = 'restaurant';
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+  function selectDevice(index) {
+    const key = deviceButtons[index].dataset.device;
+    const detail = deviceDetails[key];
+    deviceButtons.forEach((button, i) => button.setAttribute('aria-pressed', String(i === index)));
+    models.forEach((model, i) => { model.dataset.position = i === index ? 'center' : (i === (index + 1) % models.length ? 'right' : 'left'); });
+    showcase.querySelector('[data-device-title]').textContent = detail.title;
+    showcase.querySelector('[data-device-copy]').textContent = detail.copy;
+    const description = showcase.querySelector('[data-device-detail]');
+    description.textContent = detail.detail;
+    if (key === 'tablet') {
+      const fullImage = document.createElement('a');
+      fullImage.href = '/screens/pos-1.2.78.png'; fullImage.target = '_blank'; fullImage.rel = 'noopener';
+      fullImage.textContent = 'ดูภาพเต็ม ↗'; fullImage.setAttribute('aria-label', 'ดูภาพหน้าขายขนาดเต็ม (เปิดแท็บใหม่)');
+      description.append(' ', fullImage);
+    }
+  }
+  deviceButtons.forEach((button, index) => {
+    button.addEventListener('click', () => selectDevice(index));
+    button.addEventListener('keydown', event => {
+      const direction = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+      if (!direction) return;
+      event.preventDefault();
+      const next = (index + direction + deviceButtons.length) % deviceButtons.length;
+      deviceButtons[next].focus(); selectDevice(next);
+    });
+  });
+  devicePicker.hidden = false;
 
   function updateLink() {
     const image = screens[current];

@@ -13,18 +13,23 @@ Rules:
 
 ---
 
-## Current state (updated 2026-11-21)
+## Current state (updated 2026-11-22)
 
-Homepage motion implementation is complete locally following the owner's "เริ่มทำเลย".
-The local homepage now has a tablet hero, a three-chapter sales/order/overview
-story, a retail/restaurant picker, and static mobile/reduced-motion/no-JS layouts.
-It uses optimized derivatives of existing public 1.2.78 demo-shop screenshots,
-with their version labels intact. The focused browser suite passed 11 groups;
-shared marketing regression passed 18 pages at five widths. Two fresh visual
-walkthroughs completed; the install/signup hint was clarified. Desktop/phone
-captures are saved in `docs/previews/pokpok-home-motion-*.png`. A read-only local
-preview is running at `http://127.0.0.1:4178/` for owner review. No website
-publication has occurred. See `docs/website-home-motion.md`.
+The owner clarified the website reference: replace the cans with a phone,
+tablet and front-of-store display to communicate different device formats.
+The local hero now shows three device illustrations; selecting one rotates and
+moves it forward. The tablet retains a real public demo screenshot; phone and
+kiosk use labelled branded illustrations. Kiosk self-ordering is still an
+unimplemented concept, disclosed beside the selector and in a persistent note.
+The three-chapter app story and retail/restaurant selection remain below.
+The revised homepage passed 12 browser groups across eight widths, keyboard,
+reduced-motion and no-JS paths; shared regression passed 18 pages at five widths.
+A fresh screenshot walkthrough found no material comprehension issue; it was
+not fully blind because the reviewer first read mandatory HANDOFF instructions.
+Phone artwork is illustrative because no public portrait app capture exists in
+the current library. Desktop/phone/kiosk captures are saved in `docs/previews/`.
+Local preview: `http://127.0.0.1:4178/`. No website publication or native-app
+change in this task. See `docs/website-home-motion.md`.
 
 New product discussion: the owner clarified that the self-ordering concept is
 a shared customer kiosk at the front of the restaurant, not a tablet at every
@@ -40,10 +45,11 @@ The owner then supplied a Facebook Reel as inspiration for the Pokpok website:
 the 12.83-second recording was inspected through ordered frames at 0.5-second
 intervals. It shows a beverage website with a rotating/tilting product, staged
 copy/background transitions and a row of products whose selected item comes
-forward. Suggested Pokpok adaptation: an actual app screen in a tablet as the
+forward. Initial Pokpok adaptation: an actual app screen in a tablet as the
 main visual, successive sales/order/report scenes, and retail/restaurant demo
-selection within the existing white/gray/Burgundy direction. The owner then
-authorized implementation; current progress is above. The recording does not establish the
+selection within the existing white/gray/Burgundy direction. The owner authorized
+implementation, then corrected the hero to physical device formats on 2026-11-22;
+current progress is above. The recording does not establish the
 site's implementation or whether motion is driven by scroll, video or 3D.
 The earlier reference assessment alone made no website change.
 
@@ -632,6 +638,37 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-22 — Device showcase checked and available for local preview
+
+- Phone, tablet and front-of-store display now move/rotate between foreground
+  and side positions via native buttons, Enter and Left/Right arrows. Desktop
+  scroll changes the central device angle. Reduced-motion selection is immediate;
+  no-JS keeps all three device forms and their concept disclosure visible.
+- Focused suite: 12 groups / eight widths, exit 0. Shared marketing regression:
+  18 pages / five widths, exit 0. JavaScript syntax and `git diff --check` passed.
+  Initial focused run found 1 px overflow at 768 px from the perspective stage
+  ellipse; inset its geometry, retained the failing check, and passed after fix.
+- Captured 1440/1280/768/390 views and reviewed rendered screens. Fresh visual
+  reviewer reported no high-severity issue and could distinguish active device
+  support from the kiosk concept. Review was not fully blind: mandatory HANDOFF
+  was read before screenshots. Minor limitations: branded phone art does not
+  demonstrate native mobile UI; trial/download labels share the same entry.
+- Saved desktop/mobile previews and a kiosk-selection capture in `docs/previews/`.
+  Local server HTTP readback returned 200 with device markup and 20261122 script.
+  No push, deployment, real-device test, paid credit use or public post.
+
+### 2026-11-22 — Corrected homepage reference interpretation to device formats
+
+- Owner meant the reference's physical product changes: phone, tablet, then a
+  front-of-store display; a tablet with different app screens was insufficient.
+- Revised the local hero with three CSS device forms, a selector that changes
+  their position/rotation, and matching descriptions. Kept existing app feature
+  chapters and segment/pricing/download navigation below.
+- The only available public app captures are landscape tablet images. Used the
+  actual tablet capture plus explicitly branded phone/kiosk illustrations, not
+  a stretched or fabricated portrait app screen. Kiosk remains labelled concept.
+- Verification in progress; no paid tools, deployment or native app changes.
 
 ### 2026-11-21 — Homepage motion checked and available for owner preview
 

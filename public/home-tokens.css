@@ -53,4 +53,25 @@
   --home-motion-long: 500ms;
   --home-ease: cubic-bezier(.22,.61,.36,1);
   --home-layer: 1;
+  /* Device showcase: proportions are hardware illustrations, not app layouts. */
+  --device-stage-height: clamp(280px, 36vw, 460px);
+  --device-stage-mobile-height: clamp(250px, 72vw, 460px);
+  --device-type-backdrop: clamp(40px, 8vw, 110px);
+  --device-type-screen: clamp(14px, 3cqw, 23px);
+  --device-type-micro: clamp(7px, 1.3cqw, 10px);
+  --device-bezel: clamp(5px, 1.3cqw, 10px);
+  --device-edge-depth: 5px;
+  --device-radius: clamp(14px, 3cqw, 24px);
+  --device-shadow: 8px 12px 0 #625b5c, 16px 32px 32px #30252630;
+  --device-metal: #d3d0cc;
+  --device-metal-edge: #aaa5a1;
+  --device-backdrop-ink: #dfd9d3;
+  --device-transition: 850ms;
+  --device-side-angle: 28deg;
+  --device-center-angle: -8deg;
+  --device-phone-width: 176px;
+  --device-tablet-width: 440px;
+  --device-kiosk-width: 196px;
+  --device-showcase-width: 720px;
+  --device-description-height: 100px;
 }

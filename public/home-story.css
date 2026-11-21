@@ -17,10 +17,6 @@
 .cinematic-hero .hero-desc { font-size: var(--home-type-intro); line-height: var(--home-leading); max-width: var(--home-readable); margin-bottom: var(--home-space-md); }
 .cinematic-hero .hero-ctas { gap: var(--home-space-sm); }
 .cinematic-hero .hero-note { font-size: var(--home-type-small); }
-.cinematic-hero .hero-visual { padding: var(--home-space-lg) 0 var(--home-space-md); border: 0; border-radius: 0; background: transparent; }
-.cinematic-hero .hero-visual::before { inset: 0; border-radius: var(--home-radius-lg); background: var(--home-stage); transform: scale(.94,.84); }
-.cinematic-hero .hero-visual::after { display: none; }
-.cinematic-hero .hero-visual > a { animation: none; width: 94%; }
 .tablet-frame {
   display: block;
   position: relative;
@@ -33,10 +29,48 @@
 }
 .tablet-frame::before { content: ''; position: absolute; top: var(--home-camera-inset); left: 50%; width: var(--home-camera-size); height: var(--home-camera-size); border-radius: 50%; background: var(--home-camera); }
 .motion-home .tablet-frame img { width: 100%; height: auto; border: 0; border-radius: var(--home-radius-screen); box-shadow: none; margin: 0; }
-.hero-device { transform: perspective(var(--home-device-perspective)) rotateY(calc(var(--home-hero-tilt) * (1 - var(--hero-progress,0)))) rotateX(calc(var(--home-hero-turn) * (1 - var(--hero-progress,0)))) rotateZ(calc(var(--home-hero-roll) * (1 - var(--hero-progress,0)))); }
-.cinematic-hero .hero-visual figcaption { margin-top: var(--home-space-lg); background: transparent; padding: 0; font-size: var(--home-type-small); color: var(--muted); line-height: var(--home-leading); }
-.hero-scene-label { display: flex; justify-content: space-between; gap: var(--home-space-sm); margin: var(--home-space-md) var(--home-space-sm) 0; font-size: var(--home-type-label); color: var(--ink); }
-.hero-scene-label span:last-child { color: var(--muted); }
+.device-showcase { min-width: 0; container-type: inline-size; }
+.device-stage { height: var(--device-stage-height); position: relative; perspective: var(--home-device-perspective); isolation: isolate; }
+.device-stage::before { content: ''; position: absolute; inset: 18% var(--home-space-md) 8%; background: var(--home-stage); border-radius: 50%; transform: rotateX(65deg); }
+.device-stage-word { position: absolute; top: 8%; width: 100%; text-align: center; font-size: var(--device-type-backdrop); line-height: 1; letter-spacing: -.04em; font-weight: 700; color: var(--device-backdrop-ink); }
+.device-model { position: absolute; left: 50%; top: 51%; transform: translate(-50%,-50%) rotateY(calc(var(--device-center-angle) + var(--hero-progress,0) * 18deg)) rotateX(3deg); transition: left var(--device-transition) var(--home-ease), transform var(--device-transition) var(--home-ease); }
+.device-model[data-position="center"] { z-index: 3; }
+.device-model[data-position="left"] { left: 14%; transform: translate(-50%,-50%) scale(.76) rotateY(var(--device-side-angle)) rotateZ(-5deg); z-index: 1; }
+.device-model[data-position="right"] { left: 85%; transform: translate(-50%,-50%) scale(.76) rotateY(calc(var(--device-side-angle) * -1)) rotateZ(4deg); z-index: 1; }
+.device-shell { position: relative; padding: var(--device-bezel); background: var(--home-device); border: var(--home-border) solid var(--home-device-edge); border-radius: var(--device-radius); box-shadow: var(--device-shadow); }
+.device-glass { position: relative; overflow: hidden; background: var(--home-ground); border-radius: calc(var(--device-radius) - var(--device-bezel)); }
+.device-glass > img { display: block; width: 100%; height: auto; }
+.device-phone { width: 28%; max-width: var(--device-phone-width); }
+.device-phone .device-glass { aspect-ratio: 9 / 19; }
+.device-phone .device-shell::before { content: ''; position: absolute; z-index: 1; width: 28%; height: var(--device-bezel); top: calc(var(--device-bezel) * 1.7); left: 36%; border-radius: var(--home-radius-sm); background: var(--home-camera); }
+.device-phone .device-glass::after { content: ''; position: absolute; width: 35%; height: var(--home-focus); bottom: var(--device-bezel); border-radius: var(--home-radius-sm); background: var(--home-device); }
+.device-tablet { width: 67%; max-width: var(--device-tablet-width); }
+.device-tablet[data-position="left"] { left: 24%; transform: translate(-50%,-50%) scale(.62) rotateY(var(--device-side-angle)) rotateZ(-5deg); }
+.device-tablet[data-position="right"] { left: 76%; transform: translate(-50%,-50%) scale(.62) rotateY(calc(var(--device-side-angle) * -1)) rotateZ(4deg); }
+.device-tablet .device-glass { aspect-ratio: 1480 / 924; }
+.device-kiosk { width: 31%; max-width: var(--device-kiosk-width); aspect-ratio: 1 / 2.12; }
+.device-kiosk .device-shell { border-radius: var(--home-radius-screen); padding-bottom: 12%; background: var(--device-metal); border-color: var(--device-metal-edge); box-shadow: var(--device-edge-depth) var(--device-edge-depth) 0 var(--device-metal-edge), var(--home-shadow); }
+.device-kiosk .device-glass { aspect-ratio: 3 / 4; border-radius: var(--home-camera-inset); border: var(--device-bezel) solid var(--home-device); }
+.kiosk-pedestal { position: absolute; top: 60%; bottom: 3%; width: 24%; left: 38%; background: var(--device-metal); border-inline: var(--home-border) solid var(--device-metal-edge); box-shadow: var(--device-edge-depth) 0 var(--device-metal-edge); }
+.kiosk-foot { position: absolute; bottom: 0; left: 10%; width: 80%; height: 6%; border-radius: 50%; background: var(--device-metal); box-shadow: 0 var(--device-edge-depth) 0 var(--device-metal-edge), var(--home-shadow); }
+.kiosk-slot { position: absolute; bottom: 5%; left: 36%; width: 28%; height: var(--home-focus); background: var(--home-device); border-radius: var(--home-radius-sm); }
+.branded-screen { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: var(--home-space-sm); color: var(--ink); text-align: center; }
+.branded-screen > img { width: 65%; height: auto; }
+.branded-screen > span { font-size: var(--device-type-screen); line-height: var(--home-leading-heading); }
+.branded-screen > small { font-size: var(--device-type-micro); color: var(--muted); }
+.device-picker { display: grid; grid-template-columns: .85fr 1fr 1.4fr; gap: var(--home-space-xs); }
+.device-picker[hidden] { display: none; }
+.device-picker button { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; column-gap: var(--home-space-xs); min-height: var(--home-control-height); padding: var(--home-space-xs); border: var(--home-border) solid var(--home-control-edge); border-radius: var(--home-radius-sm); background: var(--surface); color: var(--ink); font: inherit; font-size: var(--home-type-label); cursor: pointer; }
+.device-picker button > span { color: var(--muted); font-size: var(--home-type-small); }
+.device-picker button > small { font-size: var(--home-type-small); color: var(--muted); }
+.device-picker button[aria-pressed="true"] { background: var(--rose); color: var(--wine); border-color: var(--wine); box-shadow: inset 0 calc(var(--home-focus) * -1) var(--wine); }
+.device-picker button:hover { border-color: var(--wine); }
+.device-description { margin-top: var(--home-space-md); min-height: var(--device-description-height); text-align: center; }
+.device-description p { margin: 0; font-size: var(--home-type-small); color: var(--muted); line-height: var(--home-leading); }
+.device-description p:first-child { margin-bottom: var(--home-space-xs); font-size: var(--home-type-body); color: var(--ink); }
+.device-description strong { display: block; font-weight: var(--home-weight); }
+.device-description a { color: var(--wine); text-underline-offset: var(--home-focus); display: inline-flex; align-items: center; min-height: var(--home-control-height); }
+.device-concept-note { font-size: var(--home-type-small); color: var(--muted); text-align: center; line-height: var(--home-leading); border-top: var(--home-border) solid var(--line); padding-top: var(--home-space-sm); }
 .motion-home .shop-strip { max-width: var(--home-width); }
 .motion-home .product-story { max-width: var(--home-width); padding-block: var(--home-section-gap) var(--home-space-xl); }
 .story-intro { display: flex; align-items: end; justify-content: space-between; gap: var(--home-space-lg); margin-bottom: var(--home-space-lg); }
@@ -88,8 +122,8 @@
   .motion-home .cinematic-hero { grid-template-columns: 1fr; gap: var(--home-space-md); min-height: 0; padding-block: var(--home-space-lg); }
   .cinematic-hero h1 { max-width: var(--home-copy-width); }
   .cinematic-hero .hero-desc { max-width: var(--home-readable); }
-  .cinematic-hero .hero-visual { max-width: var(--home-width); width: 100%; margin: auto; }
-  .hero-device { transform: none; }
+  .device-stage { height: var(--device-stage-mobile-height); }
+  .device-showcase { width: 100%; max-width: var(--device-showcase-width); margin-inline: auto; }
   .story-intro { display: block; }
   .business-picker { margin-top: var(--home-space-md); }
   .motion-home .product-story { padding-top: var(--home-space-xl); }
@@ -97,14 +131,16 @@
 @media (max-width: 600px) {
   .motion-home .cinematic-hero { padding-top: var(--home-space-md); }
   .cinematic-hero .hero-desc { font-size: var(--home-type-body); }
-  .hero-scene-label { flex-direction: column; gap: 0; }
-  .cinematic-hero .hero-visual { padding-top: var(--home-space-sm); }
   .tablet-frame { padding: var(--home-space-xs); border-radius: var(--home-radius-screen); }
-  .hero-scene-label, .cinematic-hero .hero-visual figcaption { margin-top: var(--home-space-sm); }
+  .device-picker button { font-size: var(--home-type-small); gap: var(--home-camera-inset); }
+  .device-picker button > span { display: none; }
+  .branded-screen { gap: var(--home-space-xs); }
   .story-links { gap: var(--home-space-sm); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .hero-device, .story-ready .story-display .tablet-frame { transform: none; }
+  .story-ready .story-display .tablet-frame { transform: none; }
+  .device-model { transition: none; }
+  .device-model[data-position="center"] { transform: translate(-50%,-50%); }
 }
 @media (forced-colors: active) {
   .tablet-frame { border-color: CanvasText; }

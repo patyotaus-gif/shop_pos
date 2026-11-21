@@ -29,6 +29,7 @@ async function load(page, suffix = '/') {
 async function capture(page, name) {
   await page.evaluate(() => Promise.all([...document.querySelectorAll('.masthead-motion, .masthead-motion *')].flatMap(e => e.getAnimations()).map(a => a.finished.catch(() => {}))));
   await page.waitForFunction(() => [...document.querySelectorAll('.story-screen-stack img')].every(i => Number(getComputedStyle(i).opacity) === (i.classList.contains('is-current') ? 1 : 0)));
+  await page.evaluate(() => Promise.all([...document.querySelectorAll('.device-model')].flatMap(e => e.getAnimations()).map(a => a.finished.catch(() => {}))));
   await page.screenshot({path:path.join(output, name + '.png')});
 }
 async function scene(page, index) {
@@ -56,18 +57,51 @@ async function scene(page, index) {
     await context.route('**/*', local);
     const page = await context.newPage();
     page.on('pageerror', e => errors.push(e.message));
-    for (const width of [320,360,390,768,1024,1440,1920]) {
+    for (const width of [320,360,390,768,1024,1280,1440,1920]) {
       await page.setViewportSize({width,height:960});
       await load(page);
       assert.equal(await page.locator('h1').count(), 1);
-      assert.equal(await page.locator('.hero-device img').evaluate(i => i.complete && i.naturalWidth > 0), true);
-      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `Overflow ${width}`);
+      assert.equal(await page.locator('.device-tablet img').evaluate(i => i.complete && i.naturalWidth > 0), true);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
+      if (overflow) {
+        console.error(await page.evaluate(() => ({width:innerWidth,scroll:document.documentElement.scrollWidth,elements:[...document.querySelectorAll('body *')].map(e=>({tag:e.tagName,cls:e.className,left:e.getBoundingClientRect().left,right:e.getBoundingClientRect().right})).filter(e=>e.left<0||e.right>innerWidth)})));
+        await page.screenshot({path:path.join(output, `overflow-${width}.png`)});
+      }
+      assert.equal(overflow, false, `Overflow ${width}`);
       const cta = await page.locator('.cinematic-hero .btn-lg').boundingBox();
       assert.ok(cta.y + cta.height <= 960, `Hero action visible ${width}`);
-      for (const control of await page.locator('.business-picker button').all()) {
+      for (const control of await page.locator('.business-picker button, .device-picker button').all()) {
         const box = await control.boundingBox(); assert.ok(box.height >= 44 && box.width >= 44);
       }
-      if ([390,768,1440].includes(width)) await capture(page, `hero-${width}`);
+      if ([390,768,1280,1440].includes(width)) {
+        await capture(page, `hero-${width}`);
+        await page.locator('.cinematic-hero').screenshot({path:path.join(output, `hero-full-${width}.png`)});
+      }
+      // The devices themselves change position, not only a text label or screen.
+      const tabletPose = await page.locator('.device-tablet').evaluate(e => getComputedStyle(e).transform);
+      await page.locator('[data-device="phone"]').click();
+      assert.equal(await page.locator('[data-model="phone"]').getAttribute('data-position'), 'center');
+      assert.match(await page.locator('#device-description').innerText(), /มือถือ.*งานร้าน/s);
+      assert.match(await page.locator('[data-device-detail]').innerText(), /ภาพจำลอง/);
+      await page.waitForFunction(pose => getComputedStyle(document.querySelector('.device-tablet')).transform !== pose, tabletPose);
+      await page.evaluate(() => Promise.all([...document.querySelectorAll('.device-model')].flatMap(e => e.getAnimations()).map(a => a.finished.catch(() => {}))));
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `Phone overflow ${width}`);
+      if ([390,1280,1440].includes(width)) await capture(page, `device-phone-${width}`);
+      await page.locator('[data-device="kiosk"]').focus(); await page.keyboard.press('Enter');
+      assert.equal(await page.locator('[data-model="kiosk"]').getAttribute('data-position'), 'center');
+      assert.equal(await page.locator('.device-picker [aria-pressed="true"]').count(), 1);
+      assert.match(await page.locator('#device-description').innerText(), /ยังไม่เปิดให้ใช้งาน/);
+      assert.equal(await page.locator('.device-concept-note').isVisible(), true);
+      await page.evaluate(() => Promise.all([...document.querySelectorAll('.device-model')].flatMap(e => e.getAnimations()).map(a => a.finished.catch(() => {}))));
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `Kiosk overflow ${width}`);
+      if ([390,768,1280,1440].includes(width)) {
+        await capture(page, `device-kiosk-${width}`);
+        await page.locator('.cinematic-hero').screenshot({path:path.join(output, `kiosk-full-${width}.png`)});
+      }
+      await page.keyboard.press('ArrowLeft');
+      assert.equal(await page.locator('[data-device="tablet"]').getAttribute('aria-pressed'), 'true');
+      assert.equal(await page.locator('[data-device="tablet"]').evaluate(e => e === document.activeElement), true);
+      assert.match(await page.locator('[data-device-detail] a').getAttribute('href'), /pos-1.2.78.png$/);
       await page.locator('[data-business="retail"]').click();
       assert.equal(await page.locator('[data-business="retail"]').getAttribute('aria-pressed'), 'true');
       assert.match(await page.locator('#tour-manage h3').innerText(), /สินค้าคงเหลือ/);
@@ -88,9 +122,9 @@ async function scene(page, index) {
     }
     await page.setViewportSize({width:1440,height:960});
     await load(page);
-    const initialPose = await page.locator('.hero-device').evaluate(e => getComputedStyle(e).transform);
+    const initialPose = await page.locator('.device-tablet').evaluate(e => getComputedStyle(e).transform);
     await page.evaluate(() => scrollTo({top:400,behavior:'instant'}));
-    await page.waitForFunction(pose => getComputedStyle(document.querySelector('.hero-device')).transform !== pose, initialPose);
+    await page.waitForFunction(pose => getComputedStyle(document.querySelector('.device-tablet')).transform !== pose, initialPose);
     await load(page, '/#tour-manage'); await scene(page, 1);
     assert.match(await page.locator('.story-screen-link').getAttribute('href'), /orders/);
     await capture(page, 'story-orders-1440');
@@ -107,8 +141,13 @@ async function scene(page, index) {
     await page.emulateMedia({reducedMotion:'reduce'});
     assert.equal(await page.locator('.story-display').isVisible(), false);
     assert.equal(await page.locator('.story-mobile-image:visible').count(), 3);
-    assert.equal(await page.locator('.hero-device').evaluate(e => getComputedStyle(e).transform), 'none');
+    assert.equal(await page.locator('.device-tablet').evaluate(e => getComputedStyle(e).transitionDuration), '0s');
     await load(page); await capture(page, 'reduced-motion-1440');
+    await page.locator('[data-device="kiosk"]').click();
+    assert.equal(await page.locator('[data-model="kiosk"]').getAttribute('data-position'), 'center');
+    const reducedPose = await page.locator('.device-kiosk').evaluate(e => getComputedStyle(e).transform);
+    await page.evaluate(() => scrollTo({top:200,behavior:'instant'}));
+    assert.equal(await page.locator('.device-kiosk').evaluate(e => getComputedStyle(e).transform), reducedPose);
     await page.emulateMedia({reducedMotion:'no-preference'});
     await page.setViewportSize({width:1440,height:600});
     assert.equal(await page.locator('.story-display').isVisible(), false);
@@ -131,9 +170,12 @@ async function scene(page, index) {
     assert.equal(await fallback.locator('.story-chapter').count(), 3);
     assert.equal(await fallback.locator('.story-mobile-image:visible').count(), 3);
     assert.equal(await fallback.locator('.business-picker').isVisible(), false);
+    assert.equal(await fallback.locator('.device-picker').isVisible(), false);
+    assert.equal(await fallback.locator('.device-model:visible').count(), 3);
+    assert.match(await fallback.locator('.device-concept-note').innerText(), /ยังไม่เปิดให้ใช้งาน/);
     assert.equal(await fallback.locator('.cinematic-hero a[href="/#download"]').isVisible(), true);
     await noJs.close(); checks++;
     assert.deepEqual(errors, []);
-    console.log(`PASS ${checks} groups: 7 widths, business selection/keyboard, scroll/deep-link stages, reduced motion/short viewport, image failure, no-JS.`);
+    console.log(`PASS ${checks} groups: 8 widths, physical device selection/keyboard/concept status, business selection, scroll/deep-link stages, reduced motion/short viewport, image failure, no-JS.`);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error.stack); process.exitCode = 1; });
