@@ -15,19 +15,21 @@ Rules:
 
 ## Current state (updated 2026-11-22)
 
-The owner clarified the website reference: replace the cans with a phone,
-tablet and front-of-store display to communicate different device formats.
-The local hero now shows three device illustrations; selecting one rotates and
-moves it forward. The tablet retains a real public demo screenshot; phone and
-kiosk use labelled branded illustrations. Kiosk self-ordering is still an
-unimplemented concept, disclosed beside the selector and in a persistent note.
-The three-chapter app story and retail/restaurant selection remain below.
-The revised homepage passed 12 browser groups across eight widths, keyboard,
-reduced-motion and no-JS paths; shared regression passed 18 pages at five widths.
-A fresh screenshot walkthrough found no material comprehension issue; it was
-not fully blind because the reviewer first read mandatory HANDOFF instructions.
-Phone artwork is illustrative because no public portrait app capture exists in
-the current library. Desktop/phone/kiosk captures are saved in `docs/previews/`.
+Latest owner revision is complete locally: all three device screens now
+use the app's Burgundy launch background and official white mortar/wordmark.
+The separate device selector and on-device/under-device copy were removed.
+Devices themselves are interactive: tap/click, horizontal touch/mouse drag, or
+keyboard arrows. Vertical page scrolling is verified through native browser touch
+events; pinch zoom is allowed by touch-action (not tested on physical hardware).
+The focused suite passed 13 groups at eight widths including touch cancellation,
+short swipes, wrap-around, reduced-motion and no-JS. Shared marketing regression
+passed 18 pages at five widths. A fresh visual walkthrough found a kiosk shell
+alignment gap, which was reproduced, fixed and rechecked successfully. The review
+was not fully blind because mandatory project docs were read before screenshots.
+Native app logo copies are byte-identical to their sources. Kiosk self-ordering
+remains an unimplemented concept, disclosed in the hero copy and accessible name.
+The lower three-chapter app story and real screenshots remain. Updated desktop,
+phone and kiosk captures are in `docs/previews/`.
 Local preview: `http://127.0.0.1:4178/`. No website publication or native-app
 change in this task. See `docs/website-home-motion.md`.
 
@@ -638,6 +640,40 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-22 — Launch-logo swipe preview verified
+
+- All three device screens show only the actual app launch logo on Burgundy.
+  Separate labels/buttons and the changing description below the devices are
+  removed; tap/click the device itself or swipe/drag horizontally to switch.
+- Final focused run: 13 groups at eight widths, exit 0. Native Chromium touch
+  dispatch verifies both swipe directions, direct taps, wrap-around, short gesture
+  snapback, cancellation, vertical scroll and reduced motion. Keyboard/mouse,
+  story links, broken images and no-JS fallback also passed. No hardware claim.
+- Fixed two reproduced interaction/geometry issues: initial CSS transitions could
+  briefly overflow at 1280 px; bubbled loss of a button's implicit touch capture
+  cancelled legitimate swipes. Transitions now start on interaction; cancellation
+  only handles capture loss from the stage itself.
+- Visual walkthrough found a 40.65 px blank area above the kiosk shell at 390 px
+  caused by native button content centering. Anchored its shell to the top;
+  rendered geometry regression and follow-up screenshots pass. Owner-requested
+  absence of separate controls makes gestures less discoverable, a known minor
+  tradeoff. No helper text was added to the device artwork.
+- Updated preview captures/docs. No deployment, push, paid credit use, native-app
+  change, customer data access or public posting.
+
+### 2026-11-22 — Replaced hero screens with app launch branding and direct gestures
+
+- Owner requested the actual startup logo on all three devices, without added
+  descriptions, and swiping the device imagery instead of a row of selector buttons.
+- Copied the native app's white bowl/pestle and wordmark assets without repainting;
+  launch composition follows `PokpokLaunchMotion` / `PoundingPokpokMark`, with no
+  additional tagline or sound. Existing lower app screenshots are unchanged.
+- Device artwork is now the native button target, with accessible names/state and
+  keyboard access. Pointer gestures use horizontal intent, thresholds and cancel
+  handling; vertical scroll remains native. Verification is in progress.
+- Kiosk remains a concept, stated in the existing hero copy and its accessible
+  name. No kiosk feature, native app, transaction or production change.
 
 ### 2026-11-22 — Device showcase checked and available for local preview
 

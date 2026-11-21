@@ -57,8 +57,6 @@
   --device-stage-height: clamp(280px, 36vw, 460px);
   --device-stage-mobile-height: clamp(250px, 72vw, 460px);
   --device-type-backdrop: clamp(40px, 8vw, 110px);
-  --device-type-screen: clamp(14px, 3cqw, 23px);
-  --device-type-micro: clamp(7px, 1.3cqw, 10px);
   --device-bezel: clamp(5px, 1.3cqw, 10px);
   --device-edge-depth: 5px;
   --device-radius: clamp(14px, 3cqw, 24px);
@@ -73,5 +71,5 @@
   --device-tablet-width: 440px;
   --device-kiosk-width: 196px;
   --device-showcase-width: 720px;
-  --device-description-height: 100px;
+  --launch-logo-width: 146px;
 }

@@ -52,9 +52,9 @@
   <link rel="stylesheet" href="/brand/wordmark.css?v=20261118-motion">
 <link rel="stylesheet" href="/site-pages.css?v=20261112-direction"><script src="/js/site.js?v=20261113-pricing" defer></script><noscript><style>.mobile-nav{display:block;position:static;max-height:none}.hamburger{display:none}.guide-tools{display:none}</style></noscript><link rel="stylesheet" href="/pricing.css?v=20261113">
 <link rel="stylesheet" href="/marketing-background.css?v=20261113">
-<link rel="stylesheet" href="/home-tokens.css?v=20261122">
-<link rel="stylesheet" href="/home-story.css?v=20261122">
-<script src="/js/home-story.js?v=20261122" defer></script>
+<link rel="stylesheet" href="/home-tokens.css?v=20261122-swipe">
+<link rel="stylesheet" href="/home-story.css?v=20261122-swipe">
+<script src="/js/home-story.js?v=20261122-swipe" defer></script>
 </head>
 <body class="motion-home">
 <a class="skip-link" href="#main">ข้ามไปเนื้อหา</a>
@@ -89,29 +89,20 @@
     <p class="hero-note">เริ่มจากติดตั้งแอป แล้วสมัครใช้งาน<br>Android · iOS ผ่าน TestFlight</p>
   </div>
   <div class="device-showcase" data-device-showcase>
-    <div class="device-stage hero-device" role="img" aria-label="ภาพจำลองมือถือ แท็บเล็ต และจอกลางหน้าร้าน แท็บเล็ตแสดงภาพแอปจริง ส่วนจอกลางหน้าร้านเป็นแนวคิด">
+    <div class="device-stage hero-device" role="group" aria-label="รูปแบบอุปกรณ์ แสดงโลโก้ตอนเปิดแอป Pokpok แตะอุปกรณ์หรือปัดซ้ายขวาเพื่อสลับ ใช้ปุ่มลูกศรบนคีย์บอร์ดได้">
       <span class="device-stage-word" aria-hidden="true">POKPOK</span>
-      <div class="device-model device-phone" data-model="phone" data-position="left" aria-hidden="true">
-        <div class="device-shell"><div class="device-glass branded-screen"><img src="/brand/pokpok-wordmark.svg" alt="" width="2022" height="548"><span>งานร้าน<br>ในมือคุณ</span><small>POKPOK POS</small></div></div>
-      </div>
-      <div class="device-model device-tablet" data-model="tablet" data-position="center" aria-hidden="true">
-        <div class="device-shell"><div class="device-glass"><img src="/screens/story/pos-1.2.78.webp" width="1480" height="924" alt="" loading="eager" fetchpriority="high"></div></div>
-      </div>
-      <div class="device-model device-kiosk" data-model="kiosk" data-position="right" aria-hidden="true">
-        <div class="kiosk-pedestal"></div><div class="kiosk-foot"></div>
-        <div class="device-shell"><div class="device-glass branded-screen"><img src="/brand/pokpok-wordmark.svg" alt="" width="2022" height="548"><span>พบกัน<br>ที่หน้าร้าน</span><small>แนวคิดจอสั่งอาหาร</small></div><div class="kiosk-slot"></div></div>
-      </div>
+      <button type="button" class="device-model device-phone" data-model="phone" data-position="left" aria-label="มือถือ" aria-pressed="false" disabled>
+        <span class="device-shell"><span class="device-glass launch-screen"><span class="launch-logo" aria-hidden="true"><span class="launch-mark"><img src="/brand/launch/white-pestle.png" alt="" width="1024" height="1024" draggable="false"><img src="/brand/launch/white-bowl.png" alt="" width="1024" height="1024" draggable="false"></span><img class="launch-wordmark" src="/brand/launch/wordmark.png" alt="" width="1011" height="274" draggable="false"></span></span></span>
+      </button>
+      <button type="button" class="device-model device-tablet" data-model="tablet" data-position="center" aria-label="แท็บเล็ต" aria-pressed="true" disabled>
+        <span class="device-shell"><span class="device-glass launch-screen"><span class="launch-logo" aria-hidden="true"><span class="launch-mark"><img src="/brand/launch/white-pestle.png" alt="" width="1024" height="1024" draggable="false"><img src="/brand/launch/white-bowl.png" alt="" width="1024" height="1024" draggable="false"></span><img class="launch-wordmark" src="/brand/launch/wordmark.png" alt="" width="1011" height="274" draggable="false"></span></span></span>
+      </button>
+      <button type="button" class="device-model device-kiosk" data-model="kiosk" data-position="right" aria-label="จอกลางหน้าร้าน แนวคิดที่ยังไม่เปิดให้ใช้งาน" aria-pressed="false" disabled>
+        <span class="kiosk-pedestal" aria-hidden="true"></span><span class="kiosk-foot" aria-hidden="true"></span>
+        <span class="device-shell"><span class="device-glass launch-screen"><span class="launch-logo" aria-hidden="true"><span class="launch-mark"><img src="/brand/launch/white-pestle.png" alt="" width="1024" height="1024" draggable="false"><img src="/brand/launch/white-bowl.png" alt="" width="1024" height="1024" draggable="false"></span><img class="launch-wordmark" src="/brand/launch/wordmark.png" alt="" width="1011" height="274" draggable="false"></span></span><span class="kiosk-slot" aria-hidden="true"></span></span>
+      </button>
     </div>
-    <div class="device-picker" role="group" aria-label="เลือกดูรูปแบบอุปกรณ์" hidden>
-      <button type="button" data-device="phone" aria-pressed="false" aria-controls="device-description"><span>01</span> มือถือ</button>
-      <button type="button" data-device="tablet" aria-pressed="true" aria-controls="device-description"><span>02</span> แท็บเล็ต</button>
-      <button type="button" data-device="kiosk" aria-pressed="false" aria-controls="device-description"><span>03</span> จอกลางหน้าร้าน<small>แนวคิด</small></button>
-    </div>
-    <div class="device-description" id="device-description" aria-live="polite" aria-atomic="true">
-      <p><strong data-device-title>แท็บเล็ต</strong><span data-device-copy>พื้นที่สำหรับงานขายหน้าร้าน</span></p>
-      <p data-device-detail>ภาพแอปจริงจากร้านทดสอบ · 1.2.78 (95) <a href="/screens/pos-1.2.78.png" target="_blank" rel="noopener">ดูภาพเต็ม ↗</a></p>
-    </div>
-    <p class="device-concept-note">มือถือและแท็บเล็ตใช้งานผ่านแอปได้ · จอกลางหน้าร้านเป็นแนวคิด โหมดลูกค้าสั่งเองยังไม่เปิดให้ใช้งาน</p>
+    <span class="device-sr-status" aria-live="polite" aria-atomic="true">แท็บเล็ต</span>
   </div>
 </section>
 <nav class="shop-strip" aria-label="เลือกประเภทธุรกิจ"><span>เลือกดูฟังก์ชันสำหรับร้านของคุณ</span><a href="/retail/">ร้านค้าปลีก / มินิมาร์ท ↗</a><a href="/restaurant/">ร้านอาหาร / คาเฟ่ ↗</a></nav>

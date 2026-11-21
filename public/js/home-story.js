@@ -12,14 +12,7 @@
   const hero = document.querySelector('.cinematic-hero');
   const device = hero.querySelector('.hero-device');
   const showcase = hero.querySelector('[data-device-showcase]');
-  const devicePicker = showcase.querySelector('.device-picker');
-  const deviceButtons = [...devicePicker.querySelectorAll('button')];
   const models = [...showcase.querySelectorAll('[data-model]')];
-  const deviceDetails = {
-    phone: {title: 'มือถือ', copy: 'งานร้านในอุปกรณ์ที่พกไปด้วยได้', detail: 'ภาพจำลองอุปกรณ์ · ใช้งานผ่านแอป Android และ iOS ผ่าน TestFlight'},
-    tablet: {title: 'แท็บเล็ต', copy: 'พื้นที่สำหรับงานขายหน้าร้าน', detail: 'ภาพแอปจริงจากร้านทดสอบ · 1.2.78 (95)'},
-    kiosk: {title: 'จอกลางหน้าร้าน · แนวคิด', copy: 'อีกมุมมองของการสั่งอาหารด้วยตัวเอง', detail: 'ภาพจำลองแนวคิด · โหมดลูกค้าสั่งเองยังอยู่ระหว่างออกแบบ ยังไม่เปิดให้ใช้งาน'}
-  };
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const wide = matchMedia('(min-width: 1000px) and (min-height: 700px)');
   const middle = chapters[1];
@@ -44,34 +37,84 @@
   let active = true;
   let business = 'restaurant';
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  let selectedDevice = 1;
+  let gesture = null;
+  let suppressClick = false;
 
   function selectDevice(index) {
-    const key = deviceButtons[index].dataset.device;
-    const detail = deviceDetails[key];
-    deviceButtons.forEach((button, i) => button.setAttribute('aria-pressed', String(i === index)));
-    models.forEach((model, i) => { model.dataset.position = i === index ? 'center' : (i === (index + 1) % models.length ? 'right' : 'left'); });
-    showcase.querySelector('[data-device-title]').textContent = detail.title;
-    showcase.querySelector('[data-device-copy]').textContent = detail.copy;
-    const description = showcase.querySelector('[data-device-detail]');
-    description.textContent = detail.detail;
-    if (key === 'tablet') {
-      const fullImage = document.createElement('a');
-      fullImage.href = '/screens/pos-1.2.78.png'; fullImage.target = '_blank'; fullImage.rel = 'noopener';
-      fullImage.textContent = 'ดูภาพเต็ม ↗'; fullImage.setAttribute('aria-label', 'ดูภาพหน้าขายขนาดเต็ม (เปิดแท็บใหม่)');
-      description.append(' ', fullImage);
-    }
+    device.classList.add('devices-ready');
+    selectedDevice = (index + models.length) % models.length;
+    models.forEach((model, i) => {
+      model.setAttribute('aria-pressed', String(i === selectedDevice));
+      model.dataset.position = i === selectedDevice ? 'center' : (i === (selectedDevice + 1) % models.length ? 'right' : 'left');
+    });
+    showcase.querySelector('.device-sr-status').textContent = models[selectedDevice].getAttribute('aria-label');
   }
-  deviceButtons.forEach((button, index) => {
+  models.forEach((button, index) => {
+    button.disabled = false;
     button.addEventListener('click', () => selectDevice(index));
     button.addEventListener('keydown', event => {
       const direction = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
       if (!direction) return;
       event.preventDefault();
-      const next = (index + direction + deviceButtons.length) % deviceButtons.length;
-      deviceButtons[next].focus(); selectDevice(next);
+      const next = (index + direction + models.length) % models.length;
+      models[next].focus({preventScroll: true}); selectDevice(next);
     });
   });
-  devicePicker.hidden = false;
+  // Only horizontal intent captures the pointer. Native vertical scroll and
+  // pinch zoom remain available; cancellation never commits a selection.
+  function finishGesture(event, cancelled = false) {
+    if (!gesture || event.pointerId !== gesture.id) return;
+    const ended = gesture;
+    gesture = null;
+    device.classList.remove('is-dragging');
+    device.style.removeProperty('--device-drag');
+    if (device.hasPointerCapture(ended.id)) device.releasePointerCapture(ended.id);
+    const dx = event.clientX - ended.x;
+    const dy = event.clientY - ended.y;
+    const threshold = Math.max(32, device.clientWidth * .08);
+    if (!cancelled && ended.axis === 'x' && Math.abs(dx) >= threshold && Math.abs(dx) > Math.abs(dy) * 1.25) {
+      selectDevice(ended.index + (dx < 0 ? 1 : -1));
+    }
+  }
+  device.addEventListener('pointerdown', event => {
+    if (!event.isPrimary) {
+      if (gesture) finishGesture({pointerId:gesture.id}, true);
+      return;
+    }
+    if (event.button !== 0) return;
+    device.classList.add('devices-ready');
+    suppressClick = false;
+    gesture = {id:event.pointerId, x:event.clientX, y:event.clientY, index:selectedDevice, axis:null};
+  });
+  window.addEventListener('pointermove', event => {
+    if (!gesture || event.pointerId !== gesture.id) return;
+    const dx = event.clientX - gesture.x, dy = event.clientY - gesture.y;
+    if (!gesture.axis && Math.max(Math.abs(dx), Math.abs(dy)) >= 8) {
+      if (Math.abs(dx) > Math.abs(dy) * 1.25) gesture.axis = 'x';
+      else if (Math.abs(dy) > Math.abs(dx)) gesture.axis = 'y';
+    }
+    if (gesture.axis !== 'x') return;
+    suppressClick = true;
+    if (!device.hasPointerCapture(event.pointerId)) device.setPointerCapture(event.pointerId);
+    device.classList.add('is-dragging');
+    if (!reduced.matches) {
+      const limit = Math.min(32, device.clientWidth * .06);
+      device.style.setProperty('--device-drag', `${clamp(dx * .35, -limit, limit)}px`);
+    }
+  }, {passive:true});
+  window.addEventListener('pointerup', event => finishGesture(event));
+  window.addEventListener('pointercancel', event => finishGesture(event, true));
+  device.addEventListener('lostpointercapture', event => {
+    // Touch starts with implicit capture on the device button. Its bubbled loss
+    // when transferring capture to the stage is not a cancelled swipe.
+    if (event.target === device) finishGesture(event, true);
+  });
+  device.addEventListener('click', event => {
+    const wasDrag = suppressClick;
+    suppressClick = false;
+    if (wasDrag && event.detail !== 0) { event.preventDefault(); event.stopPropagation(); }
+  }, true);
 
   function updateLink() {
     const image = screens[current];

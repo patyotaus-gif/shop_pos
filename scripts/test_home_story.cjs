@@ -32,6 +32,30 @@ async function capture(page, name) {
   await page.evaluate(() => Promise.all([...document.querySelectorAll('.device-model')].flatMap(e => e.getAnimations()).map(a => a.finished.catch(() => {}))));
   await page.screenshot({path:path.join(output, name + '.png')});
 }
+async function settleDevices(page) {
+  await page.evaluate(() => Promise.all([...document.querySelectorAll('.device-model')].flatMap(e => e.getAnimations()).map(a => a.finished.catch(() => {}))));
+}
+async function mouseSwipe(page, dx, dy = 0) {
+  await settleDevices(page);
+  const box = await page.locator('.device-model[data-position="center"]').boundingBox();
+  const x = box.x + box.width / 2, y = box.y + box.height / 2;
+  await page.mouse.move(x,y); await page.mouse.down();
+  await page.mouse.move(x+dx,y+dy,{steps:12}); await page.mouse.up();
+  await settleDevices(page);
+}
+async function touchSwipe(page, session, dx, dy = 0, cancel = false) {
+  await settleDevices(page);
+  const box = await page.locator('.device-model[data-position="center"]').boundingBox();
+  const x = box.x + box.width / 2, y = box.y + box.height / 2;
+  const point = (px,py) => [{x:px,y:py,id:1,radiusX:4,radiusY:4,force:1}];
+  await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:point(x,y)});
+  for (let i=1;i<=8;i++) {
+    await session.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:point(x+dx*i/8,y+dy*i/8)});
+    await page.waitForTimeout(20);
+  }
+  await session.send('Input.dispatchTouchEvent',{type:cancel?'touchCancel':'touchEnd',touchPoints:[]});
+  await settleDevices(page);
+}
 async function scene(page, index) {
   try {
     await page.evaluate(() => new Promise(resolve => {
@@ -61,7 +85,9 @@ async function scene(page, index) {
       await page.setViewportSize({width,height:960});
       await load(page);
       assert.equal(await page.locator('h1').count(), 1);
-      assert.equal(await page.locator('.device-tablet img').evaluate(i => i.complete && i.naturalWidth > 0), true);
+      assert.equal(await page.locator('.device-stage img').evaluateAll(images => images.length === 9 && images.every(i => i.complete && i.naturalWidth > 0)), true);
+      assert.equal(await page.locator('.device-picker, .device-description').count(), 0);
+      assert.equal(await page.locator('.device-glass').evaluateAll(screens => screens.every(s => s.textContent.trim() === '' && getComputedStyle(s).backgroundColor === 'rgb(122, 31, 43)')), true);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
       if (overflow) {
         console.error(await page.evaluate(() => ({width:innerWidth,scroll:document.documentElement.scrollWidth,elements:[...document.querySelectorAll('body *')].map(e=>({tag:e.tagName,cls:e.className,left:e.getBoundingClientRect().left,right:e.getBoundingClientRect().right})).filter(e=>e.left<0||e.right>innerWidth)})));
@@ -70,7 +96,7 @@ async function scene(page, index) {
       assert.equal(overflow, false, `Overflow ${width}`);
       const cta = await page.locator('.cinematic-hero .btn-lg').boundingBox();
       assert.ok(cta.y + cta.height <= 960, `Hero action visible ${width}`);
-      for (const control of await page.locator('.business-picker button, .device-picker button').all()) {
+      for (const control of await page.locator('.business-picker button, .device-model').all()) {
         const box = await control.boundingBox(); assert.ok(box.height >= 44 && box.width >= 44);
       }
       if ([390,768,1280,1440].includes(width)) {
@@ -79,29 +105,31 @@ async function scene(page, index) {
       }
       // The devices themselves change position, not only a text label or screen.
       const tabletPose = await page.locator('.device-tablet').evaluate(e => getComputedStyle(e).transform);
-      await page.locator('[data-device="phone"]').click();
+      await page.locator('[data-model="phone"]').click();
       assert.equal(await page.locator('[data-model="phone"]').getAttribute('data-position'), 'center');
-      assert.match(await page.locator('#device-description').innerText(), /มือถือ.*งานร้าน/s);
-      assert.match(await page.locator('[data-device-detail]').innerText(), /ภาพจำลอง/);
       await page.waitForFunction(pose => getComputedStyle(document.querySelector('.device-tablet')).transform !== pose, tabletPose);
       await page.evaluate(() => Promise.all([...document.querySelectorAll('.device-model')].flatMap(e => e.getAnimations()).map(a => a.finished.catch(() => {}))));
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `Phone overflow ${width}`);
       if ([390,1280,1440].includes(width)) await capture(page, `device-phone-${width}`);
-      await page.locator('[data-device="kiosk"]').focus(); await page.keyboard.press('Enter');
+      await page.locator('[data-model="kiosk"]').focus(); await page.keyboard.press('Enter');
       assert.equal(await page.locator('[data-model="kiosk"]').getAttribute('data-position'), 'center');
-      assert.equal(await page.locator('.device-picker [aria-pressed="true"]').count(), 1);
-      assert.match(await page.locator('#device-description').innerText(), /ยังไม่เปิดให้ใช้งาน/);
-      assert.equal(await page.locator('.device-concept-note').isVisible(), true);
+      assert.equal(await page.locator('.device-model[aria-pressed="true"]').count(), 1);
+      assert.match(await page.locator('.device-sr-status').innerText(), /ยังไม่เปิดให้ใช้งาน/);
+      assert.match(await page.locator('.hero-desc').innerText(), /แนวคิดจอกลางหน้าร้าน/);
       await page.evaluate(() => Promise.all([...document.querySelectorAll('.device-model')].flatMap(e => e.getAnimations()).map(a => a.finished.catch(() => {}))));
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `Kiosk overflow ${width}`);
+      assert.equal(await page.locator('.device-kiosk').evaluate(e => Math.abs(e.querySelector('.device-shell').getBoundingClientRect().top - e.getBoundingClientRect().top) < 3), true, `Kiosk screen must start at top of its focus target ${width}`);
       if ([390,768,1280,1440].includes(width)) {
         await capture(page, `device-kiosk-${width}`);
         await page.locator('.cinematic-hero').screenshot({path:path.join(output, `kiosk-full-${width}.png`)});
       }
       await page.keyboard.press('ArrowLeft');
-      assert.equal(await page.locator('[data-device="tablet"]').getAttribute('aria-pressed'), 'true');
-      assert.equal(await page.locator('[data-device="tablet"]').evaluate(e => e === document.activeElement), true);
-      assert.match(await page.locator('[data-device-detail] a').getAttribute('href'), /pos-1.2.78.png$/);
+      assert.equal(await page.locator('[data-model="tablet"]').getAttribute('aria-pressed'), 'true');
+      assert.equal(await page.locator('[data-model="tablet"]').evaluate(e => e === document.activeElement), true);
+      await mouseSwipe(page, -100);
+      assert.equal(await page.locator('[data-model="kiosk"]').getAttribute('aria-pressed'), 'true');
+      await mouseSwipe(page, 100);
+      assert.equal(await page.locator('[data-model="tablet"]').getAttribute('aria-pressed'), 'true');
       await page.locator('[data-business="retail"]').click();
       assert.equal(await page.locator('[data-business="retail"]').getAttribute('aria-pressed'), 'true');
       assert.match(await page.locator('#tour-manage h3').innerText(), /สินค้าคงเหลือ/);
@@ -143,7 +171,7 @@ async function scene(page, index) {
     assert.equal(await page.locator('.story-mobile-image:visible').count(), 3);
     assert.equal(await page.locator('.device-tablet').evaluate(e => getComputedStyle(e).transitionDuration), '0s');
     await load(page); await capture(page, 'reduced-motion-1440');
-    await page.locator('[data-device="kiosk"]').click();
+    await page.locator('[data-model="kiosk"]').click();
     assert.equal(await page.locator('[data-model="kiosk"]').getAttribute('data-position'), 'center');
     const reducedPose = await page.locator('.device-kiosk').evaluate(e => getComputedStyle(e).transform);
     await page.evaluate(() => scrollTo({top:200,behavior:'instant'}));
@@ -170,12 +198,45 @@ async function scene(page, index) {
     assert.equal(await fallback.locator('.story-chapter').count(), 3);
     assert.equal(await fallback.locator('.story-mobile-image:visible').count(), 3);
     assert.equal(await fallback.locator('.business-picker').isVisible(), false);
-    assert.equal(await fallback.locator('.device-picker').isVisible(), false);
+    assert.equal(await fallback.locator('.device-picker').count(), 0);
     assert.equal(await fallback.locator('.device-model:visible').count(), 3);
-    assert.match(await fallback.locator('.device-concept-note').innerText(), /ยังไม่เปิดให้ใช้งาน/);
+    assert.equal(await fallback.locator('.device-model:disabled').count(), 3);
+    assert.match(await fallback.locator('.hero-desc').innerText(), /แนวคิดจอกลางหน้าร้าน/);
     assert.equal(await fallback.locator('.cinematic-hero a[href="/#download"]').isVisible(), true);
     await noJs.close(); checks++;
+    // Real browser touch dispatch exercises native pointer cancellation/scroll,
+    // instead of synthetic events that bypass touch-action and gesture routing.
+    const touchContext = await browser.newContext({viewport:{width:390,height:960},hasTouch:true,isMobile:true,colorScheme:'light'});
+    await touchContext.route('**/*', local);
+    const touchPage = await touchContext.newPage();
+    touchPage.on('pageerror', e => errors.push(e.message));
+    const touchSession = await touchContext.newCDPSession(touchPage);
+    await load(touchPage);
+    await touchPage.locator('.device-stage').scrollIntoViewIfNeeded();
+    await touchSwipe(touchPage,touchSession,-110);
+    assert.equal(await touchPage.locator('[data-model="kiosk"]').getAttribute('aria-pressed'), 'true');
+    await touchSwipe(touchPage,touchSession,110);
+    assert.equal(await touchPage.locator('[data-model="tablet"]').getAttribute('aria-pressed'), 'true');
+    await touchPage.locator('[data-model="phone"]').tap(); await settleDevices(touchPage);
+    assert.equal(await touchPage.locator('[data-model="phone"]').getAttribute('aria-pressed'), 'true');
+    await touchSwipe(touchPage,touchSession,110);
+    assert.equal(await touchPage.locator('[data-model="kiosk"]').getAttribute('aria-pressed'), 'true', 'Wrap around on touch swipe');
+    await touchSwipe(touchPage,touchSession,-12);
+    assert.equal(await touchPage.locator('[data-model="kiosk"]').getAttribute('aria-pressed'), 'true', 'Small gesture must snap back');
+    await touchSwipe(touchPage,touchSession,-110,0,true);
+    assert.equal(await touchPage.locator('[data-model="kiosk"]').getAttribute('aria-pressed'), 'true', 'Cancelled gesture must not select');
+    assert.equal(await touchPage.locator('.is-dragging').count(),0);
+    const beforeScroll = await touchPage.evaluate(() => scrollY);
+    await touchSwipe(touchPage,touchSession,2,-150);
+    await touchPage.waitForFunction(y => scrollY > y + 30,beforeScroll);
+    assert.equal(await touchPage.locator('[data-model="kiosk"]').getAttribute('aria-pressed'), 'true', 'Vertical scroll must not select');
+    await touchPage.emulateMedia({reducedMotion:'reduce'});
+    await touchPage.locator('.device-stage').scrollIntoViewIfNeeded();
+    await touchSwipe(touchPage,touchSession,-110);
+    assert.equal(await touchPage.locator('[data-model="phone"]').getAttribute('aria-pressed'), 'true');
+    assert.equal(await touchPage.locator('.device-phone').evaluate(e => getComputedStyle(e).transitionDuration),'0s');
+    await touchContext.close(); checks++;
     assert.deepEqual(errors, []);
-    console.log(`PASS ${checks} groups: 8 widths, physical device selection/keyboard/concept status, business selection, scroll/deep-link stages, reduced motion/short viewport, image failure, no-JS.`);
+    console.log(`PASS ${checks} groups: 8 widths, launch logos, direct tap/keyboard/mouse drag, native touch swipe/cancel/scroll/reduced motion, business selection, deep links, image failure, no-JS.`);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error.stack); process.exitCode = 1; });

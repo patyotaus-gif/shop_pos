@@ -3,29 +3,42 @@
 The owner clarified on 2026-11-22 that the cans in the reference should become
 three physical devices: a phone, tablet and front-of-store display. The previous
 tablet-only hero misunderstood that emphasis. The revised hero keeps all three
-devices visible; selecting one rotates and moves that device to the front,
-with its use and availability shown below. Scroll also changes the central
+devices visible; selecting one rotates and moves that device to the front.
+The owner's next revision replaces all three screens with app launch branding
+and replaces the separate selector with direct tap and horizontal drag/swipe.
+Scroll also changes the central
 device's angle on desktop. This work changes the local marketing homepage,
 not the customer ordering app or kiosk. Publication is a separate step.
 
-The phone and kiosk show branded device illustrations, explicitly labelled as
-illustrations rather than native app screenshots. The tablet uses the existing
-real demo screenshot without stretching or cropping it into a portrait screen.
-The kiosk option and persistent caption identify it as a concept: customer
-self-ordering has not been built. Do not remove that distinction to imply that
-three fully working client modes are available.
+All three screens use the native app's Burgundy launch ground and white mortar
+plus Pokpok wordmark. No added screen copy or below-device description is shown.
+The existing hero text still identifies the front-of-store display as a future
+concept; its accessible name also says it is unavailable. Self-ordering has not
+been built. Actual app feature screenshots remain in the story below the hero.
 
 ## Jobs and direction
 
 | Visitor's job | Surface | Question answered | Primary action |
 | --- | --- | --- | --- |
 | Understand whether this POS is for my shop | Hero | What is Pokpok and who is it for? | Download app |
-| See which device fits my shop | Hero device selector | What can I use now, and what is a future concept? | Select phone, tablet or front-of-store display |
+| See which device fits my shop | Hero device imagery | Which device formats are shown? | Tap a device or drag/swipe horizontally |
 | See how the app handles a day's work | Three-scene product story | What happens during sales, order/stock management and daily overview? | Move through examples or open a full image |
 | Find the relevant business functions | Business picker and existing segment links | What fits a restaurant versus a retail shop? | Open the relevant segment page |
 
 Device silhouettes are the hero's main visual, following the owner's correction.
-Native buttons select each form; Left/Right arrows also move selection and focus.
+The device illustrations themselves are native buttons; no separate selector is
+shown. Tap/click chooses a device, horizontal touch or mouse drag advances one
+position and wraps, and Left/Right arrows also move selection and focus. A short
+drag snaps back; pointer cancellation does not select. Vertical gestures retain
+native page scrolling, and the touch surface allows pinch zoom. Reduced motion
+removes drag feedback and transitions while keeping selection functional.
+Without JavaScript the three splash screens remain visible as disabled controls.
+
+Owner preference (2026-11-22): no explanatory copy inside the devices or separate
+labelled device controls. This overrides the earlier labelled selector; the
+visible instructions and changing captions were removed to keep the imagery
+clean. Accessible names, pressed state, focus outline and a screen-reader status
+remain. The cursor signals drag on desktop; there is no autoplay gesture hint.
 The desktop story below keeps the tablet
 visible while each chapter changes its screen. There is no continuous autoplay,
 scroll interception or forced scrolling. The mobile, short-window, reduced-motion
@@ -54,6 +67,15 @@ updates the full-image link, accessible labels and segment destination.
 
 ## Image provenance
 
+`public/brand/launch/white-{bowl,pestle}.png` are byte-identical copies of
+`assets/icon/splash/white-{bowl,pestle}.png`; `wordmark.png` is a byte-identical
+copy of `assets/brand/pokpok-wordmark.png`. The wordmark's CSS white tint matches
+the native widget's white `srcIn` tint. The launch color is `--wine` (#7a1f2b),
+matching `lib/widgets/pokpok_launch_motion.dart`. Mark/letter proportions follow
+the settled native launch composition (146:125, mark height .84). The owner's
+no-description request omits the native `POINT OF SALE` line. No raster edits,
+generated logos, sound, or ongoing launch animation are introduced.
+
 `public/screens/story/*.webp` are 1480x924 optimized derivatives of already
 published `public/screens/{pos,orders,inventory,overview}-1.2.78.png`. They retain
 the actual UI and demo data without repainting or changing numbers. The four
@@ -66,7 +88,7 @@ screen is used. Screenshot refresh to a later released build is a separate task.
 
 ## Verification and preview
 
-Latest automated evidence: 2026-11-22 device revision. The following browser
+Latest automated evidence: 2026-11-22 launch-logo and swipe revision. The following browser
 suites are manual local checks, not a deployed-site or native-device test.
 
 Browser checks use the local static files, bundled Thai fonts and an isolated
@@ -81,53 +103,51 @@ node scripts/preview_marketing.cjs --port 4178
 ```
 
 The homepage suite covers eight widths (320, 360, 390, 768, 1024, 1280, 1440,
-1920), physical-device selection by click/Enter/arrow keys, the selected model's
-actual transform, concept disclosure, overflow for each selected device,
-business selection, scroll and direct anchors, reduced-motion changes, short
-windows, failed optimized images, and a no-JavaScript fallback.
-Initial harness runs exposed capture/scroll-settling timing and a cached-image
-failure simulation; captures now await transition completion, navigation waits
-for scroll settling, and failed-image checks use a fresh isolated context.
+1920), the official logos without on-screen prose, direct device click/Enter/arrow
+keys and mouse dragging, the selected model's actual transform, overflow for each
+selected device, business selection, scroll/direct anchors, reduced motion,
+short windows, failed story images, and a no-JavaScript fallback. A dedicated
+touch context uses Chromium's native touch dispatch to test left/right swipes,
+wrap-around, direct tap, short-drag snapback, cancellation, vertical page scrolling
+without a selection change, and reduced-motion swiping. These are browser touch
+events, not an Android/iOS hardware test.
 
-Final focused run: **12 groups passed, exit 0**, including the selected hardware
-changing with click and its angle changing with actual scroll. Shared marketing
-regression: **18 pages at five widths passed, exit 0**. Script syntax and
-`git diff --check` passed. Device captures are in
-`D:/PokpokWork/home-devices-20261122/`. The first run caught a 1 px horizontal
-overflow at 768 px: perspective enlarged the decorative stage ellipse. Insetting
-that ellipse fixed it without hiding overflow. The same geometry check passed
-after the fix; device selection is checked at all eight widths.
+Final focused touch/launch run, including kiosk alignment: **13 groups passed,
+exit 0**. Shared marketing regression: **18 pages at five widths passed, exit 0**.
+Script syntax and `git diff --check` passed.
+Captures are in `D:/PokpokWork/home-swipe-20261122/`. Initial findings were
+reproduced and fixed before the passing run:
 
-The 2026-11-22 device walkthrough reviewed six captures at 1280, 768 and 390 px.
-It found no high-severity problem and correctly distinguished currently supported
-phone/tablet formats from the kiosk concept. It was a fresh session, but not a
-fully blind review: mandatory HANDOFF was read before screenshots. Two minor
-limitations remain: the branded phone illustration cannot demonstrate native
-mobile UI, and the existing nav's trial link has a different label from the hero
-download link although both reach installation. The hero explains install then
-signup; a verified portrait app screenshot is future evidence, not a fabricated
-screen in this revision.
+- At 1280 px the initial transform transition could briefly put devices outside
+  the viewport. Transitions now start with interaction, avoiding an entrance
+  animation from an unpositioned state; geometry remains checked without clipping.
+- Native touch implicitly captured the device button; transferring capture to
+  the stage bubbled a child `lostpointercapture` event that cancelled the swipe.
+  Only loss from the stage itself now cancels. The same native touch test that
+  failed before the fix passed after it; mouse-only checks had not caught this.
+- Visual review found that a native button vertically centered the kiosk shell
+  in its tall target, leaving a 40.65 px gap above it at 390 px. Anchored the shell
+  at the top; the regression checks its rendered top against the button bounds.
+  A second visual pass confirmed that the gap is gone at 390 and 1280 px.
 
-The preceding 2026-11-21 tablet implementation had two newcomer visual passes.
-The first identified an unclear install/signup sequence; the hero now states it.
-Incomplete wordmarks were screenshots taken during the existing 880 ms masthead
-animation, not missing artwork; captures now wait for its completion. Retained
-minor limitations: small app details require the clearly offered full-image link
-on phones, retail/restaurant choices follow the hero on narrow screens, and the
-public overview image shows a demo day with zero totals. Replace that image only
-with a verified app capture if the screenshot library is refreshed.
+A fresh screenshot walkthrough reviewed five desktop/phone/tablet captures and
+found no high/medium comprehension issue. It noticed the kiosk focus gap (fixed)
+and two minor tradeoffs: without visible controls swiping is less discoverable,
+and the foreground tablet partly covers the phone on narrow screens. The owner
+explicitly requested direct manipulation without labelled controls; no helper
+copy was added. Review was not fully blind because mandatory project docs were
+read first. Actual feature UI remains available in the lower story, with full-image
+links. Captures wait for device transitions and the existing masthead animation.
 
 Manual design audit, rechecked for the device revision: accessibility **4/4**, payload and
 motion **4/4**, theme/token consistency **4/4**, responsive **4/4**, implementation
 integrity **3/4** (**19/20**). No P0/P1 finding remained. This is a bounded design
 check, not a repository security/performance audit or a native-device test.
-Hero text contrast is **5.99:1** for secondary text and **14.07:1** for primary
-text; selected Burgundy text is **8.56:1** on its rose ground. Control edges are
-**3.74:1** against the hero ground. Existing story surfaces retain at least
-**5.28:1** text and **3.30:1** control-edge contrast. Device geometry and small
-on-device lettering are decorative illustrations, hidden from assistive tech;
-their meaningful descriptions are ordinary page text. New primitive colors use
-tokens; both JavaScript progress variables have explicit zero fallbacks.
+Hero text retains **5.99:1** secondary and **14.07:1** primary contrast. Existing
+story surfaces retain at least **5.28:1** text and **3.30:1** control-edge contrast.
+The entire device silhouette is the action target, with a keyboard focus outline;
+the decorative logo layers are excluded from assistive tech while native buttons
+provide names and pressed state. All launch artwork matches the app source bytes.
 
 Preview: <http://127.0.0.1:4178/> (loopback only). Local HTTP readback confirmed
 the new homepage marker, JavaScript, CSS and WebP asset MIME types. The server

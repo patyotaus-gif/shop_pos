@@ -30,15 +30,19 @@
 .tablet-frame::before { content: ''; position: absolute; top: var(--home-camera-inset); left: 50%; width: var(--home-camera-size); height: var(--home-camera-size); border-radius: 50%; background: var(--home-camera); }
 .motion-home .tablet-frame img { width: 100%; height: auto; border: 0; border-radius: var(--home-radius-screen); box-shadow: none; margin: 0; }
 .device-showcase { min-width: 0; container-type: inline-size; }
-.device-stage { height: var(--device-stage-height); position: relative; perspective: var(--home-device-perspective); isolation: isolate; }
+.device-stage { height: var(--device-stage-height); position: relative; perspective: var(--home-device-perspective); isolation: isolate; touch-action: pan-y pinch-zoom; user-select: none; }
 .device-stage::before { content: ''; position: absolute; inset: 18% var(--home-space-md) 8%; background: var(--home-stage); border-radius: 50%; transform: rotateX(65deg); }
 .device-stage-word { position: absolute; top: 8%; width: 100%; text-align: center; font-size: var(--device-type-backdrop); line-height: 1; letter-spacing: -.04em; font-weight: 700; color: var(--device-backdrop-ink); }
-.device-model { position: absolute; left: 50%; top: 51%; transform: translate(-50%,-50%) rotateY(calc(var(--device-center-angle) + var(--hero-progress,0) * 18deg)) rotateX(3deg); transition: left var(--device-transition) var(--home-ease), transform var(--device-transition) var(--home-ease); }
-.device-model[data-position="center"] { z-index: 3; }
+.device-model { appearance: none; display: block; margin: 0; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: inherit; position: absolute; left: 50%; top: 51%; transform: translate(-50%,-50%) rotateY(calc(var(--device-center-angle) + var(--hero-progress,0) * 18deg)) rotateX(3deg); cursor: grab; -webkit-tap-highlight-color: transparent; }
+.device-stage.devices-ready .device-model { transition: left var(--device-transition) var(--home-ease), transform var(--device-transition) var(--home-ease), translate var(--home-motion) var(--home-ease); }
+.device-model:disabled { opacity: 1; cursor: default; }
+.device-model > * { pointer-events: none; }
+.device-model[data-position="center"] { z-index: 3; translate: var(--device-drag,0px) 0; }
+.device-stage.is-dragging .device-model { cursor: grabbing; transition: none; }
 .device-model[data-position="left"] { left: 14%; transform: translate(-50%,-50%) scale(.76) rotateY(var(--device-side-angle)) rotateZ(-5deg); z-index: 1; }
 .device-model[data-position="right"] { left: 85%; transform: translate(-50%,-50%) scale(.76) rotateY(calc(var(--device-side-angle) * -1)) rotateZ(4deg); z-index: 1; }
-.device-shell { position: relative; padding: var(--device-bezel); background: var(--home-device); border: var(--home-border) solid var(--home-device-edge); border-radius: var(--device-radius); box-shadow: var(--device-shadow); }
-.device-glass { position: relative; overflow: hidden; background: var(--home-ground); border-radius: calc(var(--device-radius) - var(--device-bezel)); }
+.device-shell { display: block; position: relative; padding: var(--device-bezel); background: var(--home-device); border: var(--home-border) solid var(--home-device-edge); border-radius: var(--device-radius); box-shadow: var(--device-shadow); }
+.device-glass { display: block; position: relative; overflow: hidden; background: var(--home-ground); border-radius: calc(var(--device-radius) - var(--device-bezel)); }
 .device-glass > img { display: block; width: 100%; height: auto; }
 .device-phone { width: 28%; max-width: var(--device-phone-width); }
 .device-phone .device-glass { aspect-ratio: 9 / 19; }
@@ -49,28 +53,18 @@
 .device-tablet[data-position="right"] { left: 76%; transform: translate(-50%,-50%) scale(.62) rotateY(calc(var(--device-side-angle) * -1)) rotateZ(4deg); }
 .device-tablet .device-glass { aspect-ratio: 1480 / 924; }
 .device-kiosk { width: 31%; max-width: var(--device-kiosk-width); aspect-ratio: 1 / 2.12; }
-.device-kiosk .device-shell { border-radius: var(--home-radius-screen); padding-bottom: 12%; background: var(--device-metal); border-color: var(--device-metal-edge); box-shadow: var(--device-edge-depth) var(--device-edge-depth) 0 var(--device-metal-edge), var(--home-shadow); }
+.device-kiosk .device-shell { position: absolute; inset: 0 0 auto; border-radius: var(--home-radius-screen); padding-bottom: 12%; background: var(--device-metal); border-color: var(--device-metal-edge); box-shadow: var(--device-edge-depth) var(--device-edge-depth) 0 var(--device-metal-edge), var(--home-shadow); }
 .device-kiosk .device-glass { aspect-ratio: 3 / 4; border-radius: var(--home-camera-inset); border: var(--device-bezel) solid var(--home-device); }
 .kiosk-pedestal { position: absolute; top: 60%; bottom: 3%; width: 24%; left: 38%; background: var(--device-metal); border-inline: var(--home-border) solid var(--device-metal-edge); box-shadow: var(--device-edge-depth) 0 var(--device-metal-edge); }
 .kiosk-foot { position: absolute; bottom: 0; left: 10%; width: 80%; height: 6%; border-radius: 50%; background: var(--device-metal); box-shadow: 0 var(--device-edge-depth) 0 var(--device-metal-edge), var(--home-shadow); }
 .kiosk-slot { position: absolute; bottom: 5%; left: 36%; width: 28%; height: var(--home-focus); background: var(--home-device); border-radius: var(--home-radius-sm); }
-.branded-screen { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: var(--home-space-sm); color: var(--ink); text-align: center; }
-.branded-screen > img { width: 65%; height: auto; }
-.branded-screen > span { font-size: var(--device-type-screen); line-height: var(--home-leading-heading); }
-.branded-screen > small { font-size: var(--device-type-micro); color: var(--muted); }
-.device-picker { display: grid; grid-template-columns: .85fr 1fr 1.4fr; gap: var(--home-space-xs); }
-.device-picker[hidden] { display: none; }
-.device-picker button { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; column-gap: var(--home-space-xs); min-height: var(--home-control-height); padding: var(--home-space-xs); border: var(--home-border) solid var(--home-control-edge); border-radius: var(--home-radius-sm); background: var(--surface); color: var(--ink); font: inherit; font-size: var(--home-type-label); cursor: pointer; }
-.device-picker button > span { color: var(--muted); font-size: var(--home-type-small); }
-.device-picker button > small { font-size: var(--home-type-small); color: var(--muted); }
-.device-picker button[aria-pressed="true"] { background: var(--rose); color: var(--wine); border-color: var(--wine); box-shadow: inset 0 calc(var(--home-focus) * -1) var(--wine); }
-.device-picker button:hover { border-color: var(--wine); }
-.device-description { margin-top: var(--home-space-md); min-height: var(--device-description-height); text-align: center; }
-.device-description p { margin: 0; font-size: var(--home-type-small); color: var(--muted); line-height: var(--home-leading); }
-.device-description p:first-child { margin-bottom: var(--home-space-xs); font-size: var(--home-type-body); color: var(--ink); }
-.device-description strong { display: block; font-weight: var(--home-weight); }
-.device-description a { color: var(--wine); text-underline-offset: var(--home-focus); display: inline-flex; align-items: center; min-height: var(--home-control-height); }
-.device-concept-note { font-size: var(--home-type-small); color: var(--muted); text-align: center; line-height: var(--home-leading); border-top: var(--home-border) solid var(--line); padding-top: var(--home-space-sm); }
+.launch-screen { display: grid; place-items: center; background: var(--wine); }
+.launch-logo { display: flex; flex-direction: column; align-items: center; width: 68%; max-width: var(--launch-logo-width); }
+.device-tablet .launch-logo { width: 30%; }
+.launch-mark { display: block; position: relative; width: 100%; aspect-ratio: 1 / .84; }
+.launch-mark img { position: absolute; inset: 0; width: 100%; height: auto; }
+.launch-wordmark { display: block; width: 85.6164%; height: auto; filter: brightness(0) invert(1); }
+.device-sr-status { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .motion-home .shop-strip { max-width: var(--home-width); }
 .motion-home .product-story { max-width: var(--home-width); padding-block: var(--home-section-gap) var(--home-space-xl); }
 .story-intro { display: flex; align-items: end; justify-content: space-between; gap: var(--home-space-lg); margin-bottom: var(--home-space-lg); }
@@ -132,14 +126,11 @@
   .motion-home .cinematic-hero { padding-top: var(--home-space-md); }
   .cinematic-hero .hero-desc { font-size: var(--home-type-body); }
   .tablet-frame { padding: var(--home-space-xs); border-radius: var(--home-radius-screen); }
-  .device-picker button { font-size: var(--home-type-small); gap: var(--home-camera-inset); }
-  .device-picker button > span { display: none; }
-  .branded-screen { gap: var(--home-space-xs); }
   .story-links { gap: var(--home-space-sm); }
 }
 @media (prefers-reduced-motion: reduce) {
   .story-ready .story-display .tablet-frame { transform: none; }
-  .device-model { transition: none; }
+  .device-stage.devices-ready .device-model { transition: none; }
   .device-model[data-position="center"] { transform: translate(-50%,-50%); }
 }
 @media (forced-colors: active) {
