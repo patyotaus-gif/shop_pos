@@ -16,16 +16,18 @@ Rules:
 ## Current state (updated 2026-11-21)
 
 The owner authorized publication of this table-sales change on 2026-11-21
-("ปล่อยอัพเดท"). Android **1.2.81 (98)** is being prepared from `b0f7ac1` plus
-the version bump and cash-close table recovery fix. Final release-session tests
-passed **131 cases in 18 suites** and analysis of 11 production Dart files plus
-the new test passed. The initial 421 native inputs matched the D: build copy;
+("ปล่อยอัพเดท"). Android **1.2.81 (98)** was built from `a602c8d` and installed
+on the connected SM-X900, preserving app data. Native smoke verified table entry,
+the full sales workspace, local item selection/quantity editing and discard;
+the existing bill remained unchanged. The tablet is left on the new sales page
+with no draft. No real sale, kitchen send or payment was exercised.
+All **131 cases in 18 suites** and analysis of 11 production Dart files plus
+the new test passed. All 422 native source inputs match the isolated build copy;
 the tracked-file credential/signing scan had zero matches. Three fresh release
 review rounds completed, with the final delta clear of material new failures.
-The signed build including cash-close recovery is running. Live Hosting
-baseline is `18b6c596b2d82616` with 79 matching files;
-publication will change only APK and version manifest. SM-X900 is connected and
-still reports 1.2.80 (97). See `docs/release-1.2.81.md` for the active release.
+The signed APK and manifest are staged; preflight against live Hosting baseline
+`18b6c596b2d82616` (79 files) found only those two paths changed. Publication and
+live download verification are next. See `docs/release-1.2.81.md`.
 
 The owner rejected the first full-page catalog on 2026-11-21 and clarified:
 pressing Add product at a table must open the same sales workspace as takeaway.
@@ -48,8 +50,8 @@ two Low UI/recovery limitations and accepted continued authoritative quote sync;
 the reviewer-rated High did not demonstrate a wrong-bill/amount or duplicate
 payment because the backend still validates bill pointer, signature, revision
 and total. See `docs/table-takeaway-review-20261121.md` for the exact triggers and
-pre-release follow-up. This is a local implementation, not a device-tested or
-released build. The prior preview below is superseded.
+pre-release follow-up. This describes the implementation-stage evidence; the
+release/device status above supersedes it. The prior preview below is superseded.
 
 Earlier local revision: the owner requested a full-page product catalog when adding items to a table,
 with checkout displayed as a popup. The local Flutter implementation now pushes
@@ -63,9 +65,9 @@ Flutter previews were rendered at 1480, 768 and 390 px. Independent review
 completed with no remaining substantiated findings after the Back-button,
 isolated Auth fixture and keyboard-geometry test follow-ups. See
 `docs/table-catalog-review-20261121.md`. The implementation was prepared in the
-D: worktree `table-catalog-page-20261121`; it has not been installed or released.
-The connected tablet still runs 1.2.80 (97), and its earlier footage therefore
-shows the old product popup. See `docs/android-user-feedback.md`.
+D: worktree `table-catalog-page-20261121`. At that earlier stage the tablet ran
+1.2.80 (97), so its earlier footage shows the old product popup. The current
+release uses the replacement workspace above. See `docs/android-user-feedback.md`.
 
 The owner changed the Reel's visual direction from 3D to original 2D dog/cat
 characters with Japanese anime and Disney-style hand-drawn animation appeal.
@@ -595,6 +597,21 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-21 — Signed build 98 installed; native smoke and staging passed
+
+- Source/version/cash-close fix committed as `a602c8d`. Final signed build exit 0;
+  422 native inputs match the isolated build copy. APK package/version, three
+  ABIs and prior release signer match were verified; all three `libapp.so` hashes
+  differ from build 97. APK SHA-256 is recorded in the release document.
+- Installed with `adb install -r` on SM-X900; readback is 1.2.81 / 98. Initial
+  black captures were caused by the dozing/locked screen. After the owner unlocked,
+  native entry, full catalog/cart, draft selection, quantity 1 to 2 and Back/discard
+  passed. The table returned to the same saved lines/total and pending-kitchen count.
+  No test draft was persisted and no payment/kitchen action was invoked.
+- Staged APK/manifest; Hosting preflight has exactly two changed paths. Native
+  captures stay outside Git under `D:/pokpok-release-1.2.81/device/` because the
+  device data is not certified synthetic. Source push and live publication follow.
 
 ### 2026-11-21 — Release review fixes and final app gate
 

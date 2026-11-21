@@ -1,6 +1,12 @@
 # Android pilot feedback — 2026-10-03
 
-## Table sales like takeaway — owner clarification 2026-11-21 (local)
+## Table sales like takeaway — Android 1.2.81 (98), 2026-11-21
+
+The owner authorized release. The signed build is installed on SM-X900 and
+native table entry, shared sales layout, draft quantity editing and discard
+passed without a sale or kitchen/payment action. Public APK publication is in
+progress; see [release evidence](release-1.2.81.md). Final release tests passed
+131 cases in 18 suites; the implementation-stage evidence below remains useful.
 
 The owner rejected the first full-page picker and clarified that **เพิ่มสินค้า**
 at a table should open the same sales workspace as takeaway. The implementation
@@ -30,7 +36,7 @@ wide widths; the existing catalog/cart switcher on compact screens.
 - [Actual Flutter sales preview](previews/table-takeaway-sales-20261121.png) and
   [payment over the sales screen](previews/table-takeaway-payment-20261121.png)
   use synthetic products; layouts were also checked at 390 px. The connected
-  tablet has not been updated and remains on 1.2.80 (97).
+  tablet now runs 1.2.81 (98); native captures remain outside Git.
 
 ## Table catalog and payment presentation — 2026-11-21 (local, not released)
 
@@ -57,8 +63,8 @@ This initial layout was rejected and superseded by the takeaway workspace above.
   and [tablet payment dialog](previews/table-payment-popup-20261121.png).
   The payment background is a minimal test host, not the production table screen.
   Layouts were also rendered at 768 and 390 px. These are local fixture previews;
-  this change has not been installed on SM-X900 or released. The tablet still
-  runs 1.2.80 (97), and its previously captured media shows the old layout.
+  this first layout was superseded before release. At that stage the tablet ran
+  1.2.80 (97), and its previously captured media shows the old layout.
 
 ## Promotion editor readability — 2026-11-07 (local, not released)
 

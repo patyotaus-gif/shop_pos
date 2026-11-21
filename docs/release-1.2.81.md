@@ -38,8 +38,24 @@ update manifest; iOS uses the separate manually triggered Codemagic workflow.
 - The staging script's app-id and version regex now requires literal periods.
   APK source-input, signer, version/ABI and final live-byte checks remain separate
   operator checks; static review alone is not artifact verification.
-- The initial signed build succeeded; the build including cash-close recovery
-  is running. SM-X900 still reports 1.2.80 (97) until installation verification.
+- Final signed build from `a602c8d` passed, exit 0. All 422 native source inputs
+  match the isolated build copy after normalizing line endings; tracked credential
+  and signing-file scan covered 1,136 paths with zero matches.
+- APK: `app.pokpok.pos`, 1.2.81 / 98, **93,116,248 bytes**, SHA-256
+  `4546aeb0a2612c75bdc21d47d9ca42cbd328a861484a9c3cc2be56f86306aae2`.
+  Signer matches build 97. arm64-v8a, armeabi-v7a and x86_64 libraries exist;
+  each compiled `libapp.so` differs from the old release. Evidence: `artifact.json`,
+  `native-code.json`, `source-verified.json`, `build.log`.
+- Installed via `adb install -r` on Samsung SM-X900, retaining app data. Package
+  readback reports 1.2.81 / 98. After the owner unlocked the screen, table entry,
+  full catalog/cart, local draft selection, quantity 1 to 2 and Back/discard passed.
+  Original table lines, total and pending-kitchen count remained unchanged. Left
+  the new sales page open with no draft. No real sale, kitchen send or payment
+  was invoked; popup/payment behavior was tested with fixtures, not shop data.
+  Native captures are in `device/updated-*.png` and XML outside Git.
+- APK/manifest staging succeeded. Hosting preflight confirms exactly the two
+  allowed changed paths; all other 77 live files match. Source publication and
+  full live APK download verification remain to be recorded below.
 
 ## Retained limitations
 
@@ -59,7 +75,6 @@ lost write or incorrect charge. Terminal permission/record errors that cannot
 recover require reopening or repairing the session; automatic retry recovery is
 for transient network errors, not a promise to bypass terminal failures.
 
-This file will record build, signature/device evidence and live readback before
-the release is reported complete. Hosting rollback uses the unchanged previous
+Hosting rollback uses the unchanged previous
 version above; it restores download/manifest availability, not already-installed
 Android clients (those require a higher build number).

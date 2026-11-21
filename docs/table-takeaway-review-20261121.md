@@ -87,6 +87,7 @@ The workspace labels its amount as product subtotal; the payment popup uses the
 authoritative promotion/service/loyalty total. Incoming background polls are
 deferred while the sales page is open, with fresh reads for save/payment/return.
 
-No APK build, tablet installation, real transaction, payment provider change,
-backend deployment or public release was performed. The connected SM-X900 still
-runs 1.2.80 (97); earlier real-tablet recordings show the old product popup.
+At this pre-release review, no APK build, tablet installation, real transaction,
+payment provider change, backend deployment or public release was performed.
+The tablet then ran 1.2.80 (97); earlier recordings show the old product popup.
+Subsequent build, device and publication evidence is in [release 1.2.81](release-1.2.81.md).
