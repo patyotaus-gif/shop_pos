@@ -302,7 +302,8 @@ class _OpenOrderViewState extends State<TableOrderView> {
   }
 
   Future<void> _addItem() async {
-    await showTableProductPicker(context, orderId: _order.id);
+    await showTableProductPicker(context,
+        orderId: _order.id, tableName: _order.tableName);
   }
 
   Future<void> _changeQty(int index, num delta) async {

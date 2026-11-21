@@ -30,8 +30,7 @@ class PaymentResult {
   });
 }
 
-/// In-cart payment flow shown as a draggable bottom sheet after the
-/// cashier hits "ชำระเงิน" on the POS screen.
+/// Payment content shared by the tablet dine-in dialog and the compact sheet.
 ///
 /// Why a sheet instead of inline chips:
 ///   - Method selection is irrelevant while the cashier is still
@@ -44,12 +43,14 @@ class _PaymentSheet extends StatefulWidget {
   final SalesChannel initialChannel;
   final String? summary;
   final bool showOmiseSandbox;
+  final bool centered;
 
   const _PaymentSheet(
       {required this.total,
       required this.initialChannel,
       this.summary,
-      this.showOmiseSandbox = false});
+      this.showOmiseSandbox = false,
+      this.centered = false});
 
   @override
   State<_PaymentSheet> createState() => _PaymentSheetState();
@@ -245,23 +246,20 @@ class _PaymentSheetState extends State<_PaymentSheet> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    // Dialog already accounts for the keyboard in its animated inset.
+    final bottomInset =
+        widget.centered ? 0.0 : MediaQuery.of(context).viewInsets.bottom;
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.78,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (ctx, scroll) {
-        return Padding(
-          padding: EdgeInsets.only(bottom: bottomInset),
-          child: SingleChildScrollView(
-            controller: scroll,
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Drag handle
+    Widget content(BuildContext ctx, ScrollController? scroll) {
+      return Padding(
+        padding: EdgeInsets.only(bottom: bottomInset),
+        child: SingleChildScrollView(
+          controller: scroll,
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (!widget.centered)
                 Center(
                   child: Container(
                     width: 40,
@@ -273,105 +271,113 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                     ),
                   ),
                 ),
-                Text('ยอดสุทธิ',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: cs.onSurfaceVariant,
-                    ),
-                    textAlign: TextAlign.center),
-                const SizedBox(height: 4),
-                Text('฿${_baht.format(_total)}',
-                    style: TextStyle(
-                      fontSize: 38,
-                      fontWeight: FontWeight.bold,
-                      color: cs.primary,
-                    ),
-                    textAlign: TextAlign.center),
-                const SizedBox(height: 20),
-                if (widget.summary != null) ...[
-                  Text(widget.summary!),
-                  const SizedBox(height: 16),
-                ],
-                Text('วิธีชำระเงิน',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: cs.onSurface.withValues(alpha: 0.7),
-                    )),
-                const SizedBox(height: 8),
-                Row(
-                  children: _selectable
-                      .map((m) => Expanded(
-                            child: Padding(
-                              padding: EdgeInsets.only(
-                                  right: m == _selectable.last ? 0 : 8),
-                              child: _MethodButton(
-                                method: m,
-                                selected: _method == m,
-                                onTap: () => _selectMethod(m),
-                              ),
-                            ),
-                          ))
-                      .toList(),
-                ),
-                const SizedBox(height: 20),
-                _buildMethodBody(cs),
-                if (widget.showOmiseSandbox) ...[
-                  const SizedBox(height: 12),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: OutlinedButton.icon(
-                      onPressed: _openingSandbox ? null : _openOmiseSandbox,
-                      icon: const Icon(Icons.science_outlined),
-                      label: const Text('ทดลองชำระผ่าน Omise'),
-                    ),
+              Text('ยอดสุทธิ',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: cs.onSurfaceVariant,
                   ),
-                  const Text(
-                      'Test Mode · พร้อมเพย์ / บัตร / TrueMoney · เงินจำลอง 100 บาท',
-                      style: TextStyle(fontSize: 12)),
-                ],
-                const SizedBox(height: 12),
-                DropdownButtonFormField<SalesChannel>(
-                    isExpanded: true,
-                    itemHeight: null,
-                    initialValue: _channel,
-                    decoration: const InputDecoration(labelText: 'ช่องทางขาย'),
-                    items: [
-                      for (final c in SalesChannel.values
-                          .where((c) => c != SalesChannel.unspecified))
-                        DropdownMenuItem(value: c, child: Text(c.label))
-                    ],
-                    onChanged: (value) {
-                      if (value != null) setState(() => _channel = value);
-                    }),
-                const SizedBox(height: 20),
-                CompactAction(
-                    primary: true,
-                    child: FilledButton(
-                      onPressed: _canConfirm ? _confirm : null,
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 14),
-                      ),
-                      child: Text(
-                          _method == PaymentMethod.cash
-                              ? 'ยืนยันการชำระเงิน'
-                              : 'ได้รับเงินแล้ว ยืนยัน',
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w700)),
-                    )),
-                const SizedBox(height: 6),
-                CompactAction(
-                    primary: true,
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('ยกเลิก'),
-                    )),
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 4),
+              Text('฿${_baht.format(_total)}',
+                  style: TextStyle(
+                    fontSize: 38,
+                    fontWeight: FontWeight.bold,
+                    color: cs.primary,
+                  ),
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 20),
+              if (widget.summary != null) ...[
+                Text(widget.summary!),
+                const SizedBox(height: 16),
               ],
-            ),
+              Text('วิธีชำระเงิน',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: cs.onSurface.withValues(alpha: 0.7),
+                  )),
+              const SizedBox(height: 8),
+              Row(
+                children: _selectable
+                    .map((m) => Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                                right: m == _selectable.last ? 0 : 8),
+                            child: _MethodButton(
+                              method: m,
+                              selected: _method == m,
+                              onTap: () => _selectMethod(m),
+                            ),
+                          ),
+                        ))
+                    .toList(),
+              ),
+              const SizedBox(height: 20),
+              _buildMethodBody(cs),
+              if (widget.showOmiseSandbox) ...[
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    onPressed: _openingSandbox ? null : _openOmiseSandbox,
+                    icon: const Icon(Icons.science_outlined),
+                    label: const Text('ทดลองชำระผ่าน Omise'),
+                  ),
+                ),
+                const Text(
+                    'Test Mode · พร้อมเพย์ / บัตร / TrueMoney · เงินจำลอง 100 บาท',
+                    style: TextStyle(fontSize: 12)),
+              ],
+              const SizedBox(height: 12),
+              DropdownButtonFormField<SalesChannel>(
+                  isExpanded: true,
+                  itemHeight: null,
+                  initialValue: _channel,
+                  decoration: const InputDecoration(labelText: 'ช่องทางขาย'),
+                  items: [
+                    for (final c in SalesChannel.values
+                        .where((c) => c != SalesChannel.unspecified))
+                      DropdownMenuItem(value: c, child: Text(c.label))
+                  ],
+                  onChanged: (value) {
+                    if (value != null) setState(() => _channel = value);
+                  }),
+              const SizedBox(height: 20),
+              CompactAction(
+                  primary: true,
+                  child: FilledButton(
+                    onPressed: _canConfirm ? _confirm : null,
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 14),
+                    ),
+                    child: Text(
+                        _method == PaymentMethod.cash
+                            ? 'ยืนยันการชำระเงิน'
+                            : 'ได้รับเงินแล้ว ยืนยัน',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w700)),
+                  )),
+              const SizedBox(height: 6),
+              CompactAction(
+                  primary: true,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('ยกเลิก'),
+                  )),
+            ],
           ),
-        );
-      },
+        ),
+      );
+    }
+
+    if (widget.centered) return content(context, null);
+    return DraggableScrollableSheet(
+      initialChildSize: 0.78,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: content,
     );
   }
 
@@ -594,7 +600,8 @@ class _MethodButton extends StatelessWidget {
   }
 }
 
-/// Show the payment sheet and await the cashier's choice.
+/// Show dine-in payment centered on tablets, or a sheet on compact screens
+/// and other sales channels, then await the cashier's choice.
 /// Returns null if they cancel.
 Future<PaymentResult?> showPaymentSheet(
   BuildContext context, {
@@ -606,6 +613,28 @@ Future<PaymentResult?> showPaymentSheet(
   // Clear the caller's focus history before opening the sheet. Otherwise the
   // catalog search regains focus (and reopens the keyboard) when this route pops.
   FocusManager.instance.primaryFocus?.unfocus();
+  // Choose the route when opening; rotation keeps entered payment state while
+  // the dialog/sheet content resizes and remains scrollable.
+  if (initialChannel == SalesChannel.dineIn &&
+      MediaQuery.sizeOf(context).width >= 600) {
+    return showDialog<PaymentResult>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Dialog(
+        clipBehavior: Clip.antiAlias,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+              maxWidth: 560, maxHeight: MediaQuery.sizeOf(ctx).height * .9),
+          child: _PaymentSheet(
+              total: total,
+              initialChannel: initialChannel,
+              summary: summary,
+              showOmiseSandbox: showOmiseSandbox,
+              centered: true),
+        ),
+      ),
+    );
+  }
   return showModalBottomSheet<PaymentResult>(
     context: context,
     isScrollControlled: true,

@@ -1,5 +1,31 @@
 # Android pilot feedback — 2026-10-03
 
+## Table catalog and payment presentation — 2026-11-21 (local, not released)
+
+- Job: the cashier opens a table, taps **เพิ่มสินค้า**, selects a batch, confirms
+  **เพิ่มลงโต๊ะ**, then receives payment from the table details.
+- The real catalog now fills the page instead of opening in a modal. Its app bar
+  identifies the table and provides Back. Search, categories, display modes,
+  modifiers, quantities, batch saving and unsaved-draft confirmation are retained.
+- **รับชำระเงิน** opens a centered dialog for dine-in on screens >=600 logical px.
+  The scrollable content accommodates the keyboard and enlarged text. Compact
+  screens and other sales channels retain their sheet. Cash/transfer calculations,
+  payment recording and provider/security settings are unchanged.
+- Local verification: 60 focused widget tests passed across the table catalog,
+  payment journey, sale display and table promotion suites; targeted analysis
+  passed. Coverage includes the actual catalog entry point, draft/back handling,
+  retry and duplicate-save protection, payment cancellation, insufficient cash,
+  change, keyboard/large text, rotation while entering cash and table discount
+  summaries. While saving, the catalog Back button is explicitly disabled.
+  A payment route keeps its original presentation while rotating, preserving
+  the entered cash; its content resizes and remains scrollable.
+- Actual Flutter widget previews using synthetic products: [tablet catalog](previews/table-catalog-page-20261121.png)
+  and [tablet payment dialog](previews/table-payment-popup-20261121.png).
+  The payment background is a minimal test host, not the production table screen.
+  Layouts were also rendered at 768 and 390 px. These are local fixture previews;
+  this change has not been installed on SM-X900 or released. The tablet still
+  runs 1.2.80 (97), and its previously captured media shows the old layout.
+
 ## Promotion editor readability — 2026-11-07 (local, not released)
 
 - Job: owners configure bundle quantities/prices, buy/get limits, and coupon eligibility, then verify the conditions before saving. Updated sales-tool descriptions to state supported channels and manual product pinning clearly.

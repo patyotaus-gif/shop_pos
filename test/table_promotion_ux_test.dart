@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'helpers/signed_out_firebase.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -42,6 +43,7 @@ TableOrder tab(int quantity, {bool quoted = false, bool sent = false}) {
 }
 
 void main() {
+  setupSignedOutFirebase();
   testWidgets(
       'rapid edits coalesce into one automatic calculation without sending kitchen',
       (tester) async {
@@ -148,7 +150,7 @@ void main() {
       expect(find.textContaining('ค่าสินค้า ฿100.00'), findsOneWidget);
       expect(
           find.descendant(
-              of: find.byType(BottomSheet),
+              of: find.byType(width >= 600 ? Dialog : BottomSheet),
               matching: find.textContaining('ส่วนลด ฿10.00')),
           findsOneWidget);
       expect(find.byType(TablePromotionDialog), findsNothing);

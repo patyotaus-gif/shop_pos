@@ -20,6 +20,7 @@ void main() {
       double total = 75.91,
       bool showOmiseSandbox = false,
       bool searchBeforePayment = false,
+      SalesChannel channel = SalesChannel.takeaway,
       TargetPlatform platform = TargetPlatform.android,
       ValueChanged<PaymentResult?>? onResult}) async {
     tester.view.physicalSize = size;
@@ -49,7 +50,7 @@ void main() {
                         final result = await showPaymentSheet(context,
                             showOmiseSandbox: showOmiseSandbox,
                             total: total,
-                            initialChannel: SalesChannel.takeaway);
+                            initialChannel: channel);
                         onResult?.call(result);
                       },
                       child: const Text('ชำระเงิน'),
@@ -64,6 +65,105 @@ void main() {
     }
     await tester.tap(find.text('ชำระเงิน'));
     await tester.pumpAndSettle();
+  }
+
+  testWidgets('dine-in payment opens a centered tablet popup and cancels',
+      (tester) async {
+    var returned = false;
+    await openPayment(tester,
+        size: const Size(1480, 924),
+        channel: SalesChannel.dineIn, onResult: (value) {
+      returned = true;
+      expect(value, isNull);
+    });
+    expect(find.byType(Dialog), findsOneWidget);
+    expect(find.byType(BottomSheet), findsNothing);
+    final surface = find.descendant(
+        of: find.byType(Dialog),
+        matching: find.byWidgetPredicate((widget) =>
+            widget is Material && widget.type == MaterialType.card));
+    final bounds = tester.getRect(surface);
+    expect(bounds.width, lessThan(1480));
+    expect(bounds.center.dx, closeTo(740, 1));
+    await tester.ensureVisible(find.text('ยกเลิก'));
+    await tester.tap(find.text('ยกเลิก'));
+    await tester.pumpAndSettle();
+    expect(returned, isTrue);
+    expect(find.byType(Dialog), findsNothing);
+  });
+
+  testWidgets(
+      'tablet dine-in popup handles keyboard, short cash and confirmation',
+      (tester) async {
+    PaymentResult? result;
+    await openPayment(tester,
+        size: const Size(1480, 924),
+        scale: 1.5,
+        total: 155,
+        channel: SalesChannel.dineIn,
+        onResult: (value) => result = value);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 360);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.enterText(
+        find.widgetWithText(TextField, 'จำนวนเงินที่รับ'), '150');
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(
+        tester
+            .widget<FilledButton>(
+                find.widgetWithText(FilledButton, 'ยืนยันการชำระเงิน'))
+            .onPressed,
+        isNull);
+    await tester.enterText(
+        find.widgetWithText(TextField, 'จำนวนเงินที่รับ'), '200');
+    await tester.pumpAndSettle();
+    expect(find.text('฿45.00'), findsOneWidget);
+    await tester.ensureVisible(find.text('ยืนยันการชำระเงิน'));
+    await tester.tap(find.text('ยืนยันการชำระเงิน'));
+    await tester.pumpAndSettle();
+    expect(result!.paid, 200);
+    expect(result!.method, PaymentMethod.cash);
+    expect(result!.salesChannel, SalesChannel.dineIn);
+  });
+
+  testWidgets('phone dine-in payment remains a usable sheet', (tester) async {
+    await openPayment(tester,
+        size: const Size(390, 844), channel: SalesChannel.dineIn);
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.byType(Dialog), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final start in [const Size(844, 390), const Size(390, 844)]) {
+    testWidgets('dine-in payment survives rotating from $start',
+        (tester) async {
+      PaymentResult? result;
+      await openPayment(tester,
+          size: start,
+          total: 155,
+          channel: SalesChannel.dineIn,
+          onResult: (value) => result = value);
+      await tester.enterText(
+          find.widgetWithText(TextField, 'จำนวนเงินที่รับ'), '200');
+      tester.view.physicalSize = Size(start.height, start.width);
+      tester.view.viewInsets = const FakeViewPadding(bottom: 180);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text('200'), findsOneWidget);
+      final confirm = find.text('ยืนยันการชำระเงิน');
+      await tester.ensureVisible(confirm);
+      await tester.pumpAndSettle();
+      final keyboardTop =
+          (tester.view.physicalSize.height - tester.view.viewInsets.bottom) /
+              tester.view.devicePixelRatio;
+      expect(tester.getCenter(confirm).dy, lessThan(keyboardTop));
+      expect(confirm.hitTestable(), findsOneWidget);
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+      expect(result!.paid, 200);
+      expect(result!.salesChannel, SalesChannel.dineIn);
+    });
   }
 
   for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {

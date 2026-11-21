@@ -276,20 +276,19 @@ void main() {
         home: Scaffold(
             body: Builder(
           builder: (context) => TextButton(
-              onPressed: () => showModalBottomSheet<void>(
-                  context: context,
-                  isScrollControlled: true,
-                  builder: (_) => SaleDisplayScope(
-                      controller: c,
-                      child: TableProductPicker(
-                          products: Stream.value(products),
-                          save: (items, _) async {
-                            expect(items, hasLength(1));
-                            expect(items.single.productId, '1');
-                            expect(items.single.quantity, 2);
-                            expect(items.single.unitPrice, 70);
-                            saved = true;
-                          }))),
+              onPressed: () =>
+                  Navigator.of(context).push<void>(MaterialPageRoute<void>(
+                      builder: (_) => SaleDisplayScope(
+                          controller: c,
+                          child: TableProductPicker(
+                              products: Stream.value(products),
+                              save: (items, _) async {
+                                expect(items, hasLength(1));
+                                expect(items.single.productId, '1');
+                                expect(items.single.quantity, 2);
+                                expect(items.single.unitPrice, 70);
+                                saved = true;
+                              })))),
               child: const Text('open')),
         ))));
     await tester.tap(find.text('open'));

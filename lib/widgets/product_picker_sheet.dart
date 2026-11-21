@@ -17,27 +17,28 @@ import '../services/sale_display_service.dart';
 import '../services/auth_service.dart';
 
 Future<void> showTableProductPicker(BuildContext context,
-        {required String orderId}) =>
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      isDismissible: false,
-      enableDrag: false,
+        {required String orderId, String? tableName}) =>
+    Navigator.of(context).push<void>(MaterialPageRoute<void>(
       builder: (_) => SaleDisplayScope(
           controller: SaleDisplayService.forShop(AuthService.shopId),
           child: TableProductPicker(
+            tableName: tableName,
             save: (items, requestId) =>
                 TableService.addItems(orderId, items, requestId: requestId),
           )),
-    );
+    ));
 
 /// A local draft keeps the catalog open between selections. Nothing is sent
 /// to the table (or kitchen) until the cashier confirms the complete batch.
 class TableProductPicker extends StatefulWidget {
   const TableProductPicker(
-      {super.key, required this.save, this.products, this.chooseModifiers});
+      {super.key,
+      required this.save,
+      this.products,
+      this.chooseModifiers,
+      this.tableName});
 
+  final String? tableName;
   final Future<void> Function(List<TableOrderItem>, String requestId) save;
   final Stream<List<Product>>? products;
   final Future<ModifierPick?> Function(BuildContext, Product)? chooseModifiers;
@@ -163,83 +164,76 @@ class _TableProductPickerState extends State<TableProductPicker> {
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _close();
       },
-      child: FractionallySizedBox(
-        heightFactor: .95,
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: EdgeInsets.only(
-                bottom: MediaQuery.viewInsetsOf(context).bottom),
-            child: Column(children: [
-              if (MediaQuery.viewInsetsOf(context).bottom == 0)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
-                  child: Row(children: [
-                    Expanded(
-                        child: Text('เพิ่มสินค้าลงโต๊ะ',
-                            style: Theme.of(context).textTheme.titleMedium)),
-                    IconButton(
-                        tooltip: 'ปิด',
-                        onPressed: _saving || _configuring ? null : _close,
-                        icon: const Icon(Icons.close)),
-                  ]),
-                ),
-              if (MediaQuery.viewInsetsOf(context).bottom == 0)
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(children: [
-                    ChoiceChip(
-                        label: const Text('เลือกสินค้า'),
-                        selected: !_review,
-                        onSelected: (_) => setState(() => _review = false)),
-                    const SizedBox(width: 8),
-                    ChoiceChip(
-                        label: Text('รายการที่เลือก (${_draft.length})'),
-                        selected: _review,
-                        onSelected: (_) {
-                          FocusScope.of(context).unfocus();
-                          setState(() => _review = true);
-                        }),
-                  ]),
-                ),
-              Expanded(
-                  child: IndexedStack(
-                index: _review
-                    ? 1
-                    : _error != null
-                        ? 2
-                        : 0,
-                children: [
-                  _catalog(),
-                  _basket(),
-                  SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(children: [
-                        Text(_error ?? '',
-                            style: TextStyle(
-                                color: Theme.of(context).colorScheme.error)),
-                        const Text(
-                            'ลองบันทึกซ้ำได้ ระบบจะไม่เพิ่มรายการชุดนี้ซ้ำ'),
-                      ])),
-                ],
-              )),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      FilledButton(
-                        onPressed: _saving || _configuring || _draft.isEmpty
-                            ? null
-                            : _save,
-                        child: Text(_saving
-                            ? 'กำลังเพิ่มลงโต๊ะ…'
-                            : '${_submission == null ? 'เพิ่มลงโต๊ะ' : 'ลองบันทึกอีกครั้ง'} · ${formatBaht(total)}'),
-                      ),
-                    ]),
-              ),
-            ]),
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.tableName == null
+              ? 'เพิ่มสินค้าลงโต๊ะ'
+              : 'เพิ่มสินค้า · โต๊ะ ${widget.tableName}'),
+          leading: IconButton(
+            key: const ValueKey('table-catalog-back'),
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+            icon: const BackButtonIcon(),
+            onPressed: _saving || _configuring ? null : _close,
           ),
+        ),
+        body: SafeArea(
+          top: false,
+          child: Column(children: [
+            if (MediaQuery.viewInsetsOf(context).bottom == 0)
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(children: [
+                  ChoiceChip(
+                      label: const Text('เลือกสินค้า'),
+                      selected: !_review,
+                      onSelected: (_) => setState(() => _review = false)),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                      label: Text('รายการที่เลือก (${_draft.length})'),
+                      selected: _review,
+                      onSelected: (_) {
+                        FocusScope.of(context).unfocus();
+                        setState(() => _review = true);
+                      }),
+                ]),
+              ),
+            Expanded(
+                child: IndexedStack(
+              index: _review
+                  ? 1
+                  : _error != null
+                      ? 2
+                      : 0,
+              children: [
+                _catalog(),
+                _basket(),
+                SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(children: [
+                      Text(_error ?? '',
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.error)),
+                      const Text(
+                          'ลองบันทึกซ้ำได้ ระบบจะไม่เพิ่มรายการชุดนี้ซ้ำ'),
+                    ])),
+              ],
+            )),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    FilledButton(
+                      onPressed: _saving || _configuring || _draft.isEmpty
+                          ? null
+                          : _save,
+                      child: Text(_saving
+                          ? 'กำลังเพิ่มลงโต๊ะ…'
+                          : '${_submission == null ? 'เพิ่มลงโต๊ะ' : 'ลองบันทึกอีกครั้ง'} · ${formatBaht(total)}'),
+                    ),
+                  ]),
+            ),
+          ]),
         ),
       ),
     );

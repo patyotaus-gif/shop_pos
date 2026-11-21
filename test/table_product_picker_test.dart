@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'helpers/signed_out_firebase.dart';
 
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -58,17 +59,14 @@ Future<void> openPicker(WidgetTester tester,
     home: Scaffold(
         body: Builder(
             builder: (context) => TextButton(
-                  onPressed: () => showModalBottomSheet<void>(
-                    context: context,
-                    isScrollControlled: true,
-                    useSafeArea: true,
-                    isDismissible: false,
-                    enableDrag: false,
+                  onPressed: () =>
+                      Navigator.of(context).push<void>(MaterialPageRoute<void>(
                     builder: (_) => TableProductPicker(
+                        tableName: '2',
                         save: save,
                         products: stream ?? Stream.value(products),
                         chooseModifiers: chooseModifiers),
-                  ),
+                  )),
                   child: const Text('open'),
                 ))),
   ));
@@ -77,6 +75,53 @@ Future<void> openPicker(WidgetTester tester,
 }
 
 void main() {
+  setupSignedOutFirebase();
+
+  testWidgets(
+      'production picker entry opens a full page for the selected table',
+      (tester) async {
+    final db = FakeFirebaseFirestore();
+    ShopDatabase.overrideShop = db.collection('shops').doc('fixture');
+    addTearDown(() => ShopDatabase.overrideShop = null);
+    await ShopDatabase.shop
+        .collection('products')
+        .doc('brownie')
+        .set(brownie.toFirestore());
+    tester.view.physicalSize = const Size(1480, 924);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+            body: Builder(
+                builder: (context) => TextButton(
+                    onPressed: () => showTableProductPicker(context,
+                        orderId: 'fixture-order', tableName: '2'),
+                    child: const Text('เพิ่มสินค้า'))))));
+    await tester.tap(find.text('เพิ่มสินค้า'));
+    await tester.pumpAndSettle();
+    expect(find.text('เพิ่มสินค้า · โต๊ะ 2'), findsOneWidget);
+    expect(find.byKey(const ValueKey('pick-brownie')), findsOneWidget);
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(
+        tester.getSize(find.byType(TableProductPicker)), const Size(1480, 924));
+    await tester.tap(find.byKey(const ValueKey('table-catalog-back')));
+    await tester.pumpAndSettle();
+    expect(find.text('เพิ่มสินค้า'), findsOneWidget);
+  });
+
+  testWidgets('table catalog fills the tablet page instead of a modal',
+      (tester) async {
+    await openPicker(tester, (_, __) async {}, size: const Size(1480, 924));
+    expect(find.byType(BottomSheet), findsNothing);
+    final bounds = tester.getRect(find.byType(TableProductPicker));
+    expect(bounds.left, 0);
+    expect(bounds.width, 1480);
+    expect(bounds.height, 924);
+    expect(find.byKey(const ValueKey('table-catalog-back')), findsOneWidget);
+    expect(find.text('เพิ่มสินค้า · โต๊ะ 2'), findsOneWidget);
+  });
+
   testWidgets(
       'required modifiers cannot be skipped and cancelling adds nothing',
       (tester) async {
@@ -239,6 +284,12 @@ void main() {
         isNull);
     await tester.tap(find.text('ลองบันทึกอีกครั้ง · ฿35.00'));
     await tester.pump();
+    expect(
+        tester
+            .widget<IconButton>(
+                find.byKey(const ValueKey('table-catalog-back')))
+            .onPressed,
+        isNull);
     await tester.tap(find.text('กำลังเพิ่มลงโต๊ะ…'));
     await tester.binding.handlePopRoute();
     await tester.pump();
@@ -265,6 +316,22 @@ void main() {
     await tester.pumpAndSettle();
     expect(saves, 0);
     expect(find.byType(TableProductPicker), findsNothing);
+  });
+
+  testWidgets('page back keeps draft when discard is declined', (tester) async {
+    var saves = 0;
+    await openPicker(tester, (_, __) async {
+      saves++;
+    });
+    await tester.tap(find.byKey(const ValueKey('pick-brownie')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('table-catalog-back')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('เลือกสินค้าต่อ'));
+    await tester.pumpAndSettle();
+    expect(find.text('รายการที่เลือก (1)'), findsOneWidget);
+    expect(saves, 0);
+    expect(find.byType(TableProductPicker), findsOneWidget);
   });
 
   for (final size in [

@@ -15,6 +15,22 @@ Rules:
 
 ## Current state (updated 2026-11-21)
 
+The owner requested a full-page product catalog when adding items to a table,
+with checkout displayed as a popup. The local Flutter implementation now pushes
+the real catalog as a page with the table name and back navigation, preserving
+the draft/confirm-to-table workflow. Dine-in checkout is centered on screens
+at least 600 logical px wide; compact screens retain the scrollable payment sheet.
+Cash/transfer calculations and table writes are unchanged. The four focused
+widget suites passed all 60 tests, and final targeted analysis of eight Dart files
+passed. Synthetic-data
+Flutter previews were rendered at 1480, 768 and 390 px. Independent review
+completed with no remaining substantiated findings after the Back-button,
+isolated Auth fixture and keyboard-geometry test follow-ups. See
+`docs/table-catalog-review-20261121.md`. The implementation was prepared in the
+D: worktree `table-catalog-page-20261121`; it has not been installed or released.
+The connected tablet still runs 1.2.80 (97), and its earlier footage therefore
+shows the old product popup. See `docs/android-user-feedback.md`.
+
 The owner changed the Reel's visual direction from 3D to original 2D dog/cat
 characters with Japanese anime and Disney-style hand-drawn animation appeal.
 The owner selected the plump, soft-furred v3 with “เอาตามนี้” on 2026-11-21.
@@ -543,6 +559,33 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-21 — Full-page table catalog and tablet payment popup (local)
+
+- Owner request: add products to a table in the main screen area, then use a
+  payment popup. Changed `showTableProductPicker` to a page route using the real
+  catalog and selected table name. Back navigation keeps the existing unsaved
+  draft confirmation, busy-state protection and save/retry request handling.
+- Dine-in payment on widths >=600 logical px uses a centered, scrollable dialog;
+  phone and other-channel sheets keep their existing presentation. Keyboard
+  insets are handled by the dialog. No monetary or backend behavior was changed.
+- Verification: first reproduced the old modal/missing-dialog behavior with
+  failing tests; after implementation and review fixes all 60 tests in `table_product_picker`,
+  `payment_journey`, `sale_display`, and `table_promotion_ux` passed. Targeted
+  analysis of all eight changed Dart files passed.
+  Explicit Firebase Core/Auth fakes isolate the table journey fixtures; the
+  already-locked platform interface packages are now dev dependencies, without
+  version upgrades. The page Back button is explicitly disabled during saving.
+  New rotation tests confirm that entered cash survives either direction across
+  the payment breakpoint and remains payable with the keyboard present.
+- Generated actual Flutter widget previews with synthetic products at 1480,
+  768 and 390 logical px. Three fresh read-only Codex review rounds completed;
+  the final assertion-only round found no substantiated defect. Both rotation
+  tests also passed with explicit keyboard-boundary and hit-test assertions.
+  Review scope, triage and limits are in `docs/table-catalog-review-20261121.md`.
+  Local build
+  and test outputs use D: because C: remains low on space. No APK build, device
+  installation, real sale/payment, deployment or public post occurred.
 
 - 2026-11-21 — Fulfilled the owner's request to capture real screens/menus from
   the currently connected tablet. Verified SM-X900 via ADB and installed Pokpok
