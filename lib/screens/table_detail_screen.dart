@@ -30,9 +30,34 @@ import 'kitchen_screen.dart';
 /// 1. No open tab → big "เปิดออเดอร์" CTA
 /// 2. Tab open, empty → "เพิ่มสินค้า" prompt + add button
 /// 3. Tab open with items → cart list + add/close/cancel actions
-class TableDetailScreen extends StatelessWidget {
-  const TableDetailScreen({super.key, required this.table});
+class TableDetailScreen extends StatefulWidget {
+  const TableDetailScreen({super.key, required this.table, this.orders});
   final RestaurantTable table;
+  final Stream<TableOrder?>? orders;
+
+  @override
+  State<TableDetailScreen> createState() => _TableDetailScreenState();
+}
+
+class _TableDetailScreenState extends State<TableDetailScreen> {
+  TableOrder? _lastOrder;
+  late Stream<TableOrder?> _orders;
+  RestaurantTable get table => widget.table;
+
+  @override
+  void initState() {
+    super.initState();
+    _orders = widget.orders ?? TableService.watchOpenOrderForTable(table.id);
+  }
+
+  @override
+  void didUpdateWidget(covariant TableDetailScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.table.id != table.id || oldWidget.orders != widget.orders) {
+      if (oldWidget.table.id != table.id) _lastOrder = null;
+      _orders = widget.orders ?? TableService.watchOpenOrderForTable(table.id);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,19 +87,36 @@ class TableDetailScreen extends StatelessWidget {
         ],
       ),
       body: StreamBuilder<TableOrder?>(
-        stream: TableService.watchOpenOrderForTable(table.id),
+        stream: _orders,
         builder: (context, snap) {
-          if (snap.hasError) {
+          if (!snap.hasError &&
+              snap.connectionState != ConnectionState.waiting) {
+            _lastOrder = snap.data;
+          }
+          if (snap.hasError && _lastOrder == null) {
             return Center(child: Text(operationError(snap.error!)));
           }
-          if (snap.connectionState == ConnectionState.waiting) {
+          if (snap.connectionState == ConnectionState.waiting &&
+              _lastOrder == null) {
             return const Center(child: CircularProgressIndicator());
           }
-          final order = snap.data;
+          final order = _lastOrder;
           if (order == null) {
             return _OpenOrderPrompt(table: table);
           }
-          return TableOrderView(order: order);
+          return Column(children: [
+            if (snap.hasError)
+              Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Text(operationError(snap.error!))),
+            Expanded(
+                child: AbsorbPointer(
+                    absorbing: snap.hasError,
+                    child: TableOrderView(
+                        key: ValueKey(order.id),
+                        order: order,
+                        orderError: snap.error))),
+          ]);
         },
       ),
     );
@@ -160,8 +202,13 @@ class TableOrderView extends StatefulWidget {
       this.loyaltyEnabled,
       this.setLoyalty,
       this.pickLoyaltyCustomer,
-      this.loadCustomerPoints});
+      this.loadCustomerPoints,
+      this.closeOrder,
+      this.receiptBuilder,
+      this.readOrder,
+      this.orderError});
   final TableOrder order;
+  final Object? orderError;
 
   /// Null means decide from the shop plan (owner devices on Full/Restaurant).
   final bool? loyaltyEnabled;
@@ -173,6 +220,9 @@ class TableOrderView extends StatefulWidget {
   final Future<void> Function(String, String, num, num)? changeQuantity;
   final Future<double> Function()? loadServiceCharge;
   final SyncTablePromotion? syncPromotions;
+  final Future<String> Function(TableOrder, PaymentResult, int)? closeOrder;
+  final Widget Function(String)? receiptBuilder;
+  final Future<TableOrder> Function(String)? readOrder;
 
   @override
   State<TableOrderView> createState() => _OpenOrderViewState();
@@ -186,11 +236,15 @@ class _OpenOrderViewState extends State<TableOrderView> {
   bool _loyaltySaving = false;
   bool _loyaltyEnabled = false;
   late final TablePromotionController _promotions;
+  late final ValueNotifier<TableOrder> _salesOrder;
+  bool _catalogActive = false;
+  int _orderEpoch = 0;
   TableOrder get _order => _promotions.order;
   final Map<String, num> _quantityPreview = {};
   final Map<String, QuantityEditQueue> _quantityQueues = {};
   @override
   void dispose() {
+    _salesOrder.dispose();
     _promotions.dispose();
     for (final queue in _quantityQueues.values) {
       queue.dispose();
@@ -216,10 +270,14 @@ class _OpenOrderViewState extends State<TableOrderView> {
   @override
   void initState() {
     super.initState();
+    _salesOrder = ValueNotifier(widget.order);
     _promotions = TablePromotionController(
         widget.order, widget.syncPromotions ?? TableService.syncPromotions)
       ..addListener(() {
-        if (mounted) setState(() {});
+        if (mounted) {
+          _salesOrder.value = _order;
+          setState(() {});
+        }
       });
     (widget.loadServiceCharge ?? SettingsService.getServiceChargePercent)()
         .then((pct) {
@@ -298,12 +356,69 @@ class _OpenOrderViewState extends State<TableOrderView> {
   @override
   void didUpdateWidget(covariant TableOrderView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.order != widget.order) _promotions.update(widget.order);
+    if (oldWidget.order != widget.order && !_catalogActive) {
+      _orderEpoch++;
+      _promotions.update(widget.order);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _salesOrder.value = _order;
+      });
+    }
   }
 
   Future<void> _addItem() async {
-    await showTableProductPicker(context,
-        orderId: _order.id, tableName: _order.tableName);
+    if (_catalogActive || _busy || widget.orderError != null) return;
+    final orderId = _order.id;
+    void checkSession() {
+      if (widget.orderError != null) throw widget.orderError!;
+      if (!mounted || widget.order.id != orderId || _order.id != orderId) {
+        throw StateError('บิลของโต๊ะเปลี่ยนแล้ว กรุณากลับไปเปิดหน้าโต๊ะใหม่');
+      }
+    }
+
+    _catalogActive = true;
+    _orderEpoch++;
+    try {
+      await showTableProductPicker(context,
+          orderId: orderId,
+          tableName: _order.tableName,
+          order: _salesOrder, save: (items, requestId) async {
+        checkSession();
+        final epoch = ++_orderEpoch;
+        await TableService.addItems(orderId, items, requestId: requestId);
+        final fresh =
+            await (widget.readOrder ?? TableService.readOrder)(orderId);
+        // A timed-out request must not overwrite a newer retry's readback.
+        if (epoch != _orderEpoch) return;
+        checkSession();
+        _promotions.update(fresh);
+        _salesOrder.value = fresh;
+        setState(() {});
+      }, checkout: (salesContext) async {
+        checkSession();
+        await _close(paymentContext: salesContext, expectedOrderId: orderId);
+        if (mounted && _promotions.error != null) throw _promotions.error!;
+      });
+    } finally {
+      _catalogActive = false;
+      final epoch = ++_orderEpoch;
+      // Polls received while the catalog was open may predate the last save.
+      // Rejoin table details from a fresh read, never a queued snapshot.
+      if (mounted && widget.order.id == orderId) {
+        try {
+          final fresh =
+              await (widget.readOrder ?? TableService.readOrder)(orderId);
+          if (mounted && epoch == _orderEpoch && widget.order.id == orderId) {
+            _promotions.update(fresh);
+            _salesOrder.value = fresh;
+            setState(() {});
+          }
+        } catch (error) {
+          if (mounted && epoch == _orderEpoch) {
+            setState(() => _promotions.error = error);
+          }
+        }
+      }
+    }
   }
 
   Future<void> _changeQty(int index, num delta) async {
@@ -465,7 +580,10 @@ class _OpenOrderViewState extends State<TableOrderView> {
     }
   }
 
-  Future<void> _close({int splitCount = 1}) async {
+  Future<void> _close(
+      {int splitCount = 1,
+      BuildContext? paymentContext,
+      String? expectedOrderId}) async {
     if (_busy) return;
     if (_order.items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -488,11 +606,29 @@ class _OpenOrderViewState extends State<TableOrderView> {
       }
     }
     final payableOrder = confirmedOrder;
+    if (expectedOrderId != null &&
+        (widget.order.id != expectedOrderId ||
+            confirmedOrder.id != expectedOrderId)) {
+      setState(() {
+        _closing = false;
+        _promotions.error =
+            StateError('บิลของโต๊ะเปลี่ยนแล้ว กรุณากลับไปเปิดหน้าโต๊ะใหม่');
+      });
+      return;
+    }
     final promotion = confirmedOrder.promotion!;
     final confirmedServiceCharge =
         (promotion['serviceChargePercent'] as num).toDouble();
     setState(() => _paymentOpen = true);
-    final result = await showPaymentSheet(context,
+    final checkoutContext = paymentContext ?? context;
+    if (!checkoutContext.mounted) {
+      setState(() {
+        _paymentOpen = false;
+        _closing = false;
+      });
+      return;
+    }
+    final result = await showPaymentSheet(checkoutContext,
         showOmiseSandbox: AuthService.isFounder,
         total: (promotion['totalMinor'] as num).toDouble() / 100,
         summary: [
@@ -503,15 +639,19 @@ class _OpenOrderViewState extends State<TableOrderView> {
         ].join('\n'),
         initialChannel: SalesChannel.dineIn);
     if (mounted) setState(() => _paymentOpen = false);
-    if (result == null || !mounted) {
+    if (result == null || !mounted || !checkoutContext.mounted) {
       if (mounted) setState(() => _closing = false);
       return;
     }
     try {
-      final navigator = Navigator.of(context);
+      final navigator = Navigator.of(checkoutContext);
+      final salesRoute =
+          paymentContext == null ? null : ModalRoute.of(checkoutContext);
       final saleId = await runShopOperation(
-          context,
-          () => TableService.closeOrder(
+          checkoutContext,
+          () =>
+              widget.closeOrder?.call(payableOrder, result, splitCount) ??
+              TableService.closeOrder(
                 order: payableOrder,
                 paid: result.paid,
                 discount: (promotion['discountMinor'] as num).toDouble() / 100,
@@ -521,8 +661,11 @@ class _OpenOrderViewState extends State<TableOrderView> {
                 splitCount: splitCount,
               ));
       if (navigator.mounted) {
+        if (salesRoute?.isActive == true) navigator.removeRoute(salesRoute!);
         navigator.pushReplacement(MaterialPageRoute<void>(
-            builder: (_) => SaleReceiptScreen(saleId: saleId)));
+            builder: (_) =>
+                widget.receiptBuilder?.call(saleId) ??
+                SaleReceiptScreen(saleId: saleId)));
       }
     } catch (e) {
       if (mounted) {

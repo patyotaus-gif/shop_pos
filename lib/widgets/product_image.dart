@@ -48,7 +48,13 @@ class ProductImage extends StatelessWidget {
             return Center(
                 child: ExcludeSemantics(
                     child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Icon(icon, size: spacious ? 32 : 24, color: cs.onSurfaceVariant),
+              Icon(icon,
+                  size: spacious
+                      ? 32
+                      : constraints.biggest.shortestSide
+                          .clamp(0.0, 24.0)
+                          .toDouble(),
+                  color: cs.onSurfaceVariant),
               if (spacious) ...[
                 const SizedBox(height: 8),
                 Padding(

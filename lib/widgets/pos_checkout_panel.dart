@@ -15,19 +15,22 @@ class PosCheckoutPanel extends StatelessWidget {
       required this.canDiscount,
       required this.canDebt,
       this.compact = false,
-      this.horizontalTotal = false});
+      this.horizontalTotal = false,
+      this.amountLabel = 'ยอดสุทธิ',
+      this.checkoutLabel = 'ชำระเงิน'});
 
   final double subtotal, discount, total;
   final VoidCallback onDiscount, onCheckout, onDebt;
   final bool hasItems, canDiscount, canDebt, compact;
   final bool horizontalTotal;
+  final String amountLabel, checkoutLabel;
 
   @override
   Widget build(BuildContext context) {
     final baht = NumberFormat('#,##0.00', 'th_TH');
     final cs = Theme.of(context).colorScheme;
     final totalTexts = <Widget>[
-      Text('ยอดสุทธิ',
+      Text(amountLabel,
           style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
       Text('฿${baht.format(total)}',
           style: TextStyle(
@@ -77,7 +80,7 @@ class PosCheckoutPanel extends StatelessWidget {
                 minimumSize: const Size(112, 48),
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 10)),
-            child: const Text('ชำระเงิน'),
+            child: Text(checkoutLabel),
           ),
         ]);
     return SafeArea(

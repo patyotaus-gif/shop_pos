@@ -9,10 +9,12 @@ class CartItemTile extends StatelessWidget {
       {super.key,
       required this.item,
       required this.onRemove,
-      required this.onQtyChanged});
+      required this.onQtyChanged,
+      this.onEditQuantity});
   final CartItem item;
   final VoidCallback onRemove;
   final ValueChanged<num> onQtyChanged;
+  final VoidCallback? onEditQuantity;
 
   @override
   Widget build(BuildContext context) {
@@ -85,18 +87,20 @@ class CartItemTile extends StatelessWidget {
                                         icon: const Icon(
                                             Icons.remove_circle_outline)),
                                     TextButton(
-                                        onPressed: () async {
-                                          final quantity =
-                                              await showStockQuantity(context,
-                                                  unit: item.product.unit,
-                                                  weighed:
-                                                      item.product.isWeighed,
-                                                  initial: item.quantity);
-                                          if (quantity != null &&
-                                              context.mounted) {
-                                            onQtyChanged(quantity);
-                                          }
-                                        },
+                                        onPressed: onEditQuantity ??
+                                            () async {
+                                              final quantity =
+                                                  await showStockQuantity(
+                                                      context,
+                                                      unit: item.product.unit,
+                                                      weighed: item
+                                                          .product.isWeighed,
+                                                      initial: item.quantity);
+                                              if (quantity != null &&
+                                                  context.mounted) {
+                                                onQtyChanged(quantity);
+                                              }
+                                            },
                                         style: TextButton.styleFrom(
                                             minimumSize: const Size(48, 48)),
                                         child: Text('${item.quantity}',

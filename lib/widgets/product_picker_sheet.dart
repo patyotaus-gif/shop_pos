@@ -1,72 +1,76 @@
-import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
-
+import '../models/cart_item.dart';
 import '../models/product.dart';
 import '../models/table_order.dart';
+import '../services/auth_service.dart';
 import '../services/product_service.dart';
+import '../services/sale_display_service.dart';
 import '../services/table_service.dart';
 import '../utils/money_format.dart';
 import '../utils/operation_error.dart';
 import '../utils/stock_quantity.dart';
+import 'cart_item_tile.dart';
 import 'modifier_picker_sheet.dart';
-import 'sale_product_grid.dart';
-import 'stock_quantity_dialog.dart';
+import 'pos_basket.dart';
+import 'pos_catalog.dart';
+import 'pos_checkout_panel.dart';
+import 'pos_sales_workspace.dart';
 import 'sale_display_controls.dart';
-import '../services/sale_display_service.dart';
-import '../services/auth_service.dart';
+import 'stock_quantity_dialog.dart';
 
-Future<void> showTableProductPicker(BuildContext context,
-        {required String orderId, String? tableName}) =>
+Future<void> showTableProductPicker(
+  BuildContext context, {
+  required String orderId,
+  String? tableName,
+  ValueListenable<TableOrder>? order,
+  Future<void> Function(List<TableOrderItem>, String)? save,
+  Future<void> Function(BuildContext)? checkout,
+}) =>
     Navigator.of(context).push<void>(MaterialPageRoute<void>(
       builder: (_) => SaleDisplayScope(
-          controller: SaleDisplayService.forShop(AuthService.shopId),
-          child: TableProductPicker(
+        controller: SaleDisplayService.forShop(AuthService.shopId),
+        child: TableProductPicker(
             tableName: tableName,
-            save: (items, requestId) =>
-                TableService.addItems(orderId, items, requestId: requestId),
-          )),
+            order: order,
+            checkout: checkout,
+            save: save ??
+                (items, requestId) => TableService.addItems(orderId, items,
+                    requestId: requestId)),
+      ),
     ));
 
-/// A local draft keeps the catalog open between selections. Nothing is sent
-/// to the table (or kitchen) until the cashier confirms the complete batch.
+/// The takeaway sales workspace with a local draft attached to an existing tab.
+/// Saving a batch is idempotent; checkout waits for the refreshed table order.
 class TableProductPicker extends StatefulWidget {
   const TableProductPicker(
       {super.key,
       required this.save,
       this.products,
       this.chooseModifiers,
-      this.tableName});
-
+      this.tableName,
+      this.order,
+      this.checkout});
   final String? tableName;
   final Future<void> Function(List<TableOrderItem>, String requestId) save;
   final Stream<List<Product>>? products;
   final Future<ModifierPick?> Function(BuildContext, Product)? chooseModifiers;
-
+  final ValueListenable<TableOrder>? order;
+  final Future<void> Function(BuildContext)? checkout;
   @override
   State<TableProductPicker> createState() => _TableProductPickerState();
 }
 
 class _TableProductPickerState extends State<TableProductPicker> {
-  late final _products = widget.products ?? ProductService.watchAll();
-  final _requestId = const Uuid().v4();
-  final _search = TextEditingController();
+  String _requestId = const Uuid().v4();
   List<TableOrderItem> _draft = [];
   List<TableOrderItem>? _submission;
-  String _category = 'ทั้งหมด';
-  bool _review = false;
+  TableOrder? _orderBeforeSubmission;
   bool _saving = false;
   bool _configuring = false;
   String? _error;
-
-  // Once submitted, retries must contain the exact same batch and key.
   bool get _locked => _saving || _configuring || _submission != null;
-
-  @override
-  void dispose() {
-    _search.dispose();
-    super.dispose();
-  }
 
   Future<void> _pick(Product product, {bool customize = false}) async {
     if (_locked) return;
@@ -92,14 +96,26 @@ class _TableProductPickerState extends State<TableProductPicker> {
     }
   }
 
-  Future<void> _editQuantity(int index) async {
+  void _quantity(int index, num value) {
     if (_locked) return;
+    final item = _draft[index];
+    if (value <= 0) {
+      setState(() => _draft.removeAt(index));
+    } else if (validStockQuantity(value, weight: item.isWeighed)) {
+      setState(() => _draft[index] = item.copyWith(quantity: value));
+    }
+  }
+
+  Future<void> _editQuantity(String itemId) async {
+    if (_locked) return;
+    final item = _draft.firstWhere((i) => i.id == itemId);
     setState(() => _configuring = true);
     try {
-      final item = _draft[index];
       final quantity = await showStockQuantity(context,
           unit: item.unit, weighed: item.isWeighed, initial: item.quantity);
-      if (quantity != null && mounted) {
+      if (!mounted || quantity == null) return;
+      final index = _draft.indexWhere((i) => i.id == itemId);
+      if (index >= 0) {
         setState(() => _draft[index] = item.copyWith(quantity: quantity));
       }
     } finally {
@@ -111,44 +127,60 @@ class _TableProductPickerState extends State<TableProductPicker> {
     if (_saving || _configuring) return;
     if (_draft.isNotEmpty) {
       final discard = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('ออกจากการเลือกสินค้า?'),
-          content: Text(_submission == null
-              ? 'รายการที่เลือกไว้ยังไม่ได้เพิ่มลงโต๊ะ'
-              : 'ยังยืนยันผลการบันทึกไม่ได้ กรุณาตรวจรายการบนโต๊ะก่อนเพิ่มซ้ำ'),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('เลือกสินค้าต่อ')),
-            TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('ออกจากหน้านี้')),
-          ],
-        ),
-      );
+          context: context,
+          builder: (context) => AlertDialog(
+                title: const Text('ออกจากการเลือกสินค้า?'),
+                content: Text(_submission == null
+                    ? 'รายการที่เลือกไว้ยังไม่ได้เพิ่มลงโต๊ะ'
+                    : 'ยังยืนยันผลการบันทึกไม่ได้ กรุณาตรวจรายการบนโต๊ะก่อนเพิ่มซ้ำ'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('เลือกสินค้าต่อ')),
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('ออกจากหน้านี้')),
+                ],
+              ));
       if (discard != true || !mounted) return;
     }
     if (mounted) Navigator.pop(context);
   }
 
-  Future<void> _save() async {
-    if (_saving || _configuring || _draft.isEmpty) return;
-    FocusScope.of(context).unfocus();
-    _submission ??= List.unmodifiable(_draft);
+  Future<void> _save({bool checkout = false}) async {
+    if (_saving || _configuring || (!checkout && _draft.isEmpty)) return;
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
       _saving = true;
       _error = null;
     });
     try {
-      await widget
-          .save(_submission!, _requestId)
-          .timeout(const Duration(seconds: 25));
+      if (_draft.isNotEmpty) {
+        if (_submission == null) {
+          _orderBeforeSubmission = widget.order?.value;
+          _submission = List.unmodifiable(_draft);
+        }
+        // The caller refreshes its confirmed order before acknowledging success.
+        await widget
+            .save(_submission!, _requestId)
+            .timeout(const Duration(seconds: 25));
+        if (!mounted) return;
+        setState(() {
+          _draft = [];
+          _submission = null;
+          _orderBeforeSubmission = null;
+          _requestId = const Uuid().v4();
+        });
+      }
       if (!mounted) return;
-      final messenger = ScaffoldMessenger.of(context);
-      Navigator.pop(context);
-      messenger.showSnackBar(
-          const SnackBar(content: Text('เพิ่มรายการรอส่งครัวแล้ว')));
+      if (checkout && widget.checkout != null) {
+        await widget.checkout!(context);
+      } else {
+        final messenger = ScaffoldMessenger.of(context);
+        Navigator.pop(context);
+        messenger.showSnackBar(
+            const SnackBar(content: Text('เพิ่มรายการรอส่งครัวแล้ว')));
+      }
     } catch (error) {
       if (mounted) setState(() => _error = operationError(error));
     } finally {
@@ -157,234 +189,135 @@ class _TableProductPickerState extends State<TableProductPicker> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final total = _draft.fold<double>(0, (sum, item) => sum + item.subtotal);
-    return PopScope(
-      canPop: !_saving && !_configuring && _draft.isEmpty,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _close();
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(widget.tableName == null
-              ? 'เพิ่มสินค้าลงโต๊ะ'
-              : 'เพิ่มสินค้า · โต๊ะ ${widget.tableName}'),
-          leading: IconButton(
-            key: const ValueKey('table-catalog-back'),
-            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-            icon: const BackButtonIcon(),
-            onPressed: _saving || _configuring ? null : _close,
-          ),
+  Widget build(BuildContext context) => PopScope(
+        canPop: !_saving && !_configuring && _draft.isEmpty,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) _close();
+        },
+        child: Scaffold(
+          appBar: AppBar(
+              title: Text(widget.tableName == null
+                  ? 'ขายที่โต๊ะ'
+                  : 'ขายที่โต๊ะ ${widget.tableName}'),
+              leading: IconButton(
+                  key: const ValueKey('table-catalog-back'),
+                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                  icon: const BackButtonIcon(),
+                  onPressed: _saving || _configuring ? null : _close)),
+          body: SafeArea(
+              top: false,
+              child: widget.order == null
+                  ? _workspace(null)
+                  : ValueListenableBuilder<TableOrder>(
+                      valueListenable: widget.order!,
+                      builder: (_, order, __) => _workspace(order))),
         ),
-        body: SafeArea(
-          top: false,
-          child: Column(children: [
-            if (MediaQuery.viewInsetsOf(context).bottom == 0)
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(children: [
-                  ChoiceChip(
-                      label: const Text('เลือกสินค้า'),
-                      selected: !_review,
-                      onSelected: (_) => setState(() => _review = false)),
-                  const SizedBox(width: 8),
-                  ChoiceChip(
-                      label: Text('รายการที่เลือก (${_draft.length})'),
-                      selected: _review,
-                      onSelected: (_) {
-                        FocusScope.of(context).unfocus();
-                        setState(() => _review = true);
-                      }),
-                ]),
-              ),
-            Expanded(
-                child: IndexedStack(
-              index: _review
-                  ? 1
-                  : _error != null
-                      ? 2
-                      : 0,
-              children: [
-                _catalog(),
-                _basket(),
-                SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(children: [
-                      Text(_error ?? '',
-                          style: TextStyle(
-                              color: Theme.of(context).colorScheme.error)),
-                      const Text(
-                          'ลองบันทึกซ้ำได้ ระบบจะไม่เพิ่มรายการชุดนี้ซ้ำ'),
-                    ])),
-              ],
-            )),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    FilledButton(
-                      onPressed: _saving || _configuring || _draft.isEmpty
-                          ? null
-                          : _save,
-                      child: Text(_saving
-                          ? 'กำลังเพิ่มลงโต๊ะ…'
-                          : '${_submission == null ? 'เพิ่มลงโต๊ะ' : 'ลองบันทึกอีกครั้ง'} · ${formatBaht(total)}'),
-                    ),
-                  ]),
-            ),
-          ]),
-        ),
-      ),
-    );
-  }
+      );
 
-  Widget _catalog() => CustomScrollView(
-          key: const PageStorageKey('table-product-catalog'),
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          slivers: [
-            SliverToBoxAdapter(
-                child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: TextField(
-                controller: _search,
-                decoration: const InputDecoration(
-                    hintText: 'ค้นหาสินค้า…',
-                    prefixIcon: Icon(Icons.search),
-                    isDense: true),
-                onChanged: (_) => setState(() {}),
-              ),
-            )),
-            StreamBuilder<List<Product>>(
-              stream: _products,
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return SliverToBoxAdapter(
-                      child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Text(operationError(snapshot.error!))));
-                }
-                if (!snapshot.hasData) {
-                  return const SliverToBoxAdapter(
-                      child: Center(child: CircularProgressIndicator()));
-                }
-                final all = snapshot.data!;
-                final categories =
-                    {'ทั้งหมด', ...all.map((p) => p.category)}.toList();
-                final category =
-                    categories.contains(_category) ? _category : 'ทั้งหมด';
-                final query = _search.text.trim().toLowerCase();
-                final filtered = all
-                    .where((p) =>
-                        (category == 'ทั้งหมด' || p.category == category) &&
-                        (p.name.toLowerCase().contains(query) ||
-                            p.barcode.toLowerCase().contains(query)))
-                    .toList();
-                return SliverMainAxisGroup(slivers: [
-                  SliverToBoxAdapter(
-                      child: SaleDisplayControls(
-                          categories: categories.skip(1).toList())),
-                  SliverToBoxAdapter(
-                      child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                        children: categories
-                            .map((c) => Padding(
-                                  padding: const EdgeInsets.only(right: 6),
-                                  child: ChoiceChip(
-                                      label: Text(c),
-                                      selected: c == category,
-                                      onSelected: (_) =>
-                                          setState(() => _category = c)),
-                                ))
-                            .toList()),
+  Widget _workspace(TableOrder? order) {
+    // A live snapshot may already include a batch whose response was lost.
+    // Keep the displayed baseline stable until that same batch is acknowledged.
+    if (_submission != null) order = _orderBeforeSubmission;
+    final existing = order?.items ?? const <TableOrderItem>[];
+    final items = [...existing, ..._draft];
+    final subtotal = items.fold<double>(0, (sum, item) => sum + item.subtotal);
+    final canPay = widget.checkout != null;
+    return LayoutBuilder(
+        builder: (context, constraints) => PosSalesWorkspace(
+              itemCount: items.fold<num>(0, (sum, item) => sum + item.quantity),
+              total: subtotal,
+              catalog: AbsorbPointer(
+                  absorbing: _locked,
+                  child: PosCatalog(
+                    loadProducts: widget.products == null
+                        ? ProductService.watchAll
+                        : () => widget.products!,
+                    onAdd: _pick, onCustomize: (p) => _pick(p, customize: true),
+                    // Preserve table ordering's pending-item behavior; the existing
+                    // kitchen/checkout service remains responsible for stock validation.
+                    enforceStockAvailability: false,
                   )),
-                  if (filtered.isEmpty)
-                    const SliverToBoxAdapter(
-                        child: Center(child: Text('ไม่พบสินค้า')))
-                  else
-                    SliverPadding(
-                      padding: const EdgeInsets.all(12),
-                      sliver:
-                          SliverLayoutBuilder(builder: (context, constraints) {
-                        final available = constraints.crossAxisExtent;
-                        final columns = available < 276
-                            ? 1
-                            : math.max(2, ((available + 12) / 212).ceil());
-                        final width =
-                            (available - (columns - 1) * 12) / columns;
-                        return SliverGrid(
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: columns,
-                            mainAxisExtent: SaleDisplayScope.of(context)
-                                        ?.value
-                                        .mode ==
-                                    SaleDisplayMode.names
-                                ? saleNameTileHeight(context, width, filtered,
-                                    footerExtent: 48)
-                                : width * .78 +
-                                    MediaQuery.textScalerOf(context).scale(66) +
-                                    76,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                          ),
-                          delegate: SliverChildBuilderDelegate((_, index) {
-                            final product = filtered[index];
-                            final quantity = _draft
-                                .where((i) => i.productId == product.id)
-                                .fold<num>(0, (sum, i) => sum + i.quantity);
-                            return SaleProductCard(
-                              key: ValueKey('pick-${product.id}'),
-                              product: product,
-                              unavailableLabel: quantity > 0
-                                  ? 'เลือก ${stockText(quantity)} ${product.unit}'
-                                  : null,
-                              selected: quantity > 0,
-                              onTap: _locked ? null : () => _pick(product),
-                              footer: SizedBox(
-                                  height: 48,
-                                  child: TextButton(
-                                    onPressed: _locked
-                                        ? null
-                                        : () => _pick(product, customize: true),
-                                    child: const Text('ตัวเลือก / หมายเหตุ',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis),
-                                  )),
-                            );
-                          }, childCount: filtered.length),
-                        );
-                      }),
-                    ),
-                ]);
-              },
-            ),
-          ]);
-
-  Widget _basket() => _draft.isEmpty
-      ? const Center(child: Text('ยังไม่ได้เลือกสินค้า'))
-      : ListView.builder(
-          itemCount: _draft.length,
-          itemBuilder: (context, index) {
-            final item = _draft[index];
-            return ListTile(
-              title: Text(item.productName),
-              subtitle: Text([
-                '${stockText(item.quantity)} ${item.unit} × ${formatBaht(item.unitPrice)} = ${formatBaht(item.subtotal)}',
-                ...item.modifiers.map((m) => m.optionName),
-                if (item.notes?.isNotEmpty == true) item.notes!,
-                'แตะเพื่อแก้จำนวน',
-              ].join('\n')),
-              onTap: _locked ? null : () => _editQuantity(index),
-              trailing: IconButton(
-                  tooltip: 'นำรายการออก',
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: _locked
-                      ? null
-                      : () => setState(() => _draft.removeAt(index))),
-            );
-          },
-        );
+              basket: PosBasket(
+                  itemCount: items.length,
+                  itemBuilder: (_, index) {
+                    final item = items[index];
+                    if (index < existing.length) {
+                      return Card(
+                          child: ListTile(
+                              title: Text(item.productName),
+                              subtitle: Text([
+                                'บนโต๊ะแล้ว · ${item.quantity} ${item.unit}',
+                                ...item.modifiers.map((m) => m.optionName),
+                                if (item.notes?.isNotEmpty == true) item.notes!
+                              ].join('\n')),
+                              trailing: Text(formatBaht(item.subtotal))));
+                    }
+                    final draftIndex = index - existing.length;
+                    return AbsorbPointer(
+                        absorbing: _locked,
+                        child: CartItemTile(
+                            item: CartItem(
+                                product: Product(
+                                    id: item.productId,
+                                    name: item.productName,
+                                    barcode: '',
+                                    price: item.price,
+                                    stock: 0,
+                                    unit: item.unit,
+                                    isWeighed: item.isWeighed),
+                                quantity: item.quantity,
+                                modifiers: item.modifiers,
+                                notes: item.notes),
+                            onRemove: () => _quantity(draftIndex, 0),
+                            onEditQuantity: () => _editQuantity(item.id),
+                            onQtyChanged: (quantity) =>
+                                _quantity(draftIndex, quantity)));
+                  }),
+              checkout: Column(mainAxisSize: MainAxisSize.min, children: [
+                if (_saving && (ModalRoute.of(context)?.isCurrent ?? true))
+                  const LinearProgressIndicator(),
+                if (_error != null)
+                  Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text(_error!,
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.error))),
+                if (_submission != null && !_saving)
+                  const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(
+                          'ลองบันทึกซ้ำได้ ระบบจะไม่เพิ่มรายการชุดนี้ซ้ำ')),
+                if (canPay && _draft.isNotEmpty)
+                  Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+                      child: SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                              onPressed: _saving || _configuring
+                                  ? null
+                                  : () => _save(),
+                              child: Text(_submission == null
+                                  ? 'เพิ่มลงโต๊ะ'
+                                  : 'ลองบันทึกอีกครั้ง')))),
+                PosCheckoutPanel(
+                    subtotal: subtotal,
+                    discount: 0,
+                    total: subtotal,
+                    amountLabel: 'ยอดสินค้า',
+                    checkoutLabel: canPay
+                        ? 'ชำระเงิน'
+                        : (_saving
+                            ? 'กำลังเพิ่มลงโต๊ะ…'
+                            : '${_submission == null ? 'เพิ่มลงโต๊ะ' : 'ลองบันทึกอีกครั้ง'} · ${formatBaht(subtotal)}'),
+                    compact: constraints.maxWidth < 900,
+                    horizontalTotal: constraints.maxHeight < 300,
+                    hasItems: items.isNotEmpty && !_saving && !_configuring,
+                    canDiscount: false,
+                    canDebt: false,
+                    onCheckout: () => _save(checkout: canPay),
+                    onDiscount: () {},
+                    onDebt: () {}),
+              ]),
+            ));
+  }
 }

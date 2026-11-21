@@ -12,11 +12,18 @@ class PosCatalog extends StatefulWidget {
       {super.key,
       required this.loadProducts,
       required this.onAdd,
-      required this.onScan,
-      required this.onChooseBundle});
+      this.onScan,
+      this.onChooseBundle,
+      this.onCustomize,
+      this.enforceStockAvailability = true});
   final Stream<List<Product>> Function() loadProducts;
   final ValueChanged<Product> onAdd;
-  final VoidCallback onScan, onChooseBundle;
+  final VoidCallback? onScan, onChooseBundle;
+  final ValueChanged<Product>? onCustomize;
+  final bool enforceStockAvailability;
+
+  bool unavailable(Product p) =>
+      enforceStockAvailability && !p.isRecipeMode && p.saleable <= 0;
 
   @override
   State<PosCatalog> createState() => _PosCatalogState();
@@ -115,10 +122,12 @@ class _PosCatalogState extends State<PosCatalog> {
             onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
                 hintText: 'ค้นหาสินค้า',
-                prefixIcon: IconButton(
-                    tooltip: 'สแกนบาร์โค้ด',
-                    icon: const Icon(Icons.barcode_reader),
-                    onPressed: widget.onScan),
+                prefixIcon: widget.onScan == null
+                    ? const Icon(Icons.search)
+                    : IconButton(
+                        tooltip: 'สแกนบาร์โค้ด',
+                        icon: const Icon(Icons.barcode_reader),
+                        onPressed: widget.onScan),
                 suffixIcon: _search.text.isNotEmpty
                     ? IconButton(
                         tooltip: 'ล้างการค้นหา',
@@ -161,14 +170,15 @@ class _PosCatalogState extends State<PosCatalog> {
                       _chip('ทั้งหมด', 'all', tab),
                       _chip('รายการโปรด', 'favorites', tab,
                           icon: Icons.push_pin_outlined),
-                      Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ActionChip(
-                              key: const ValueKey('sales-bundles'),
-                              avatar: const Icon(Icons.inventory_2_outlined,
-                                  size: 18),
-                              label: const Text('ชุดสินค้า'),
-                              onPressed: widget.onChooseBundle)),
+                      if (widget.onChooseBundle != null)
+                        Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: ActionChip(
+                                key: const ValueKey('sales-bundles'),
+                                avatar: const Icon(Icons.inventory_2_outlined,
+                                    size: 18),
+                                label: const Text('ชุดสินค้า'),
+                                onPressed: widget.onChooseBundle)),
                       for (final category in categories)
                         _chip(category, 'category:$category', tab),
                     ])),
@@ -204,46 +214,70 @@ class _PosCatalogState extends State<PosCatalog> {
                 itemCount: products.length,
                 itemBuilder: (context, i) {
                   final p = products[i];
-                  final unavailable = !p.isRecipeMode && p.saleable <= 0;
+                  final unavailable = widget.unavailable(p);
                   return Card(
                       margin: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 4),
-                      child: ListTile(
-                        key: ValueKey('sale-search-${p.id}'),
-                        enabled: !unavailable,
-                        trailing: Icon(unavailable
-                            ? Icons.block
-                            : Icons.add_circle_outline),
-                        title: Text(p.name),
-                        subtitle: Text([
-                          p.isOnSale
-                              ? '${formatBaht(p.effectivePrice)} (ปกติ ${formatBaht(p.price)})'
-                              : formatBaht(p.effectivePrice),
-                          if (p.barcode.isNotEmpty) 'บาร์โค้ด ${p.barcode}',
-                          if (!p.isRecipeMode)
-                            'คงเหลือ ${p.saleable} ${p.unit}',
-                          if (unavailable) 'หมด',
-                        ].join('\n')),
-                        onTap: unavailable
-                            ? null
-                            : () {
-                                setState(_search.clear);
-                                FocusManager.instance.primaryFocus?.unfocus();
-                                widget.onAdd(p);
-                              },
-                      ));
+                      child: Column(children: [
+                        ListTile(
+                          key: ValueKey('sale-search-${p.id}'),
+                          enabled: !unavailable,
+                          trailing: Icon(unavailable
+                              ? Icons.block
+                              : Icons.add_circle_outline),
+                          title: Text(p.name),
+                          subtitle: Text([
+                            p.isOnSale
+                                ? '${formatBaht(p.effectivePrice)} (ปกติ ${formatBaht(p.price)})'
+                                : formatBaht(p.effectivePrice),
+                            if (p.barcode.isNotEmpty) 'บาร์โค้ด ${p.barcode}',
+                            if (!p.isRecipeMode)
+                              'คงเหลือ ${p.saleable} ${p.unit}',
+                            if (unavailable) 'หมด',
+                          ].join('\n')),
+                          onTap: unavailable
+                              ? null
+                              : () {
+                                  setState(_search.clear);
+                                  FocusManager.instance.primaryFocus?.unfocus();
+                                  widget.onAdd(p);
+                                },
+                        ),
+                        if (widget.onCustomize != null)
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: unavailable
+                                  ? null
+                                  : () => widget.onCustomize!(p),
+                              child: const Text('ตัวเลือก / หมายเหตุ'),
+                            ),
+                          ),
+                      ]));
                 });
           } else {
             body = SaleProductGrid(
+                footerExtent: widget.onCustomize == null ? 0 : 48,
                 products: products,
                 itemCount: products.length,
                 itemBuilder: (_, i) {
                   final p = products[i];
-                  final unavailable = !p.isRecipeMode && p.saleable <= 0;
+                  final unavailable = widget.unavailable(p);
                   return SaleProductCard(
                       key: ValueKey('sale-product-${p.id}'),
                       product: p,
                       unavailableLabel: unavailable ? 'หมด' : null,
+                      footer: widget.onCustomize == null
+                          ? null
+                          : SizedBox(
+                              height: 48,
+                              child: TextButton(
+                                onPressed: unavailable
+                                    ? null
+                                    : () => widget.onCustomize!(p),
+                                child: const Text('ตัวเลือก / หมายเหตุ'),
+                              ),
+                            ),
                       onTap: unavailable ? null : () => widget.onAdd(p));
                 });
           }

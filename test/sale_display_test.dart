@@ -293,19 +293,24 @@ void main() {
         ))));
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('pick-1')));
+    await tester.tap(find.byKey(const ValueKey('sale-product-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('sale-display-settings')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('ปุ่มชื่อสินค้า'));
     await tester.pumpAndSettle();
-    expect(find.byType(ProductImage), findsNothing);
-    expect(find.text('เลือก 1 ชิ้น'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('pick-1')));
+    await tester.tap(find.text('เสร็จ'));
     await tester.pumpAndSettle();
-    expect(find.text('เลือก 2 ชิ้น'), findsOneWidget);
-    expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
+    expect(find.byType(ProductImage), findsNothing);
+    expect(find.text('ตะกร้า 1 หน่วย · ฿70.00'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('sale-product-1')));
+    await tester.pumpAndSettle();
+    expect(find.text('ตะกร้า 2 หน่วย · ฿140.00'), findsOneWidget);
     if (Platform.environment['SALE_CAPTURES'] == '1') {
       await capture(tester, tableCapture, '768-table-picker');
     }
+    await tester.tap(find.text('ตะกร้า 2 หน่วย · ฿140.00'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('เพิ่มลงโต๊ะ · ฿140.00'));
     await tester.pumpAndSettle();
     expect(saved, isTrue);

@@ -1,6 +1,40 @@
 # Android pilot feedback — 2026-10-03
 
+## Table sales like takeaway — owner clarification 2026-11-21 (local)
+
+The owner rejected the first full-page picker and clarified that **เพิ่มสินค้า**
+at a table should open the same sales workspace as takeaway. The implementation
+now uses the shared `PosCatalog`, `PosSalesWorkspace`, `PosBasket`, `CartItemTile`
+and `PosCheckoutPanel`: products on the left and a 380 px cart on the right at
+wide widths; the existing catalog/cart switcher on compact screens.
+
+- The selected table name stays in the header. The cart shows existing table
+  lines and editable new selections, including weight, modifiers and notes.
+  Existing saved lines can still be edited from table details.
+- **ชำระเงิน** saves the pending batch with its idempotency key, rereads the table,
+  then invokes the existing quote/kitchen/payment flow above this sales screen.
+  Cancellation keeps the screen open; subsequent checkout does not add the batch
+  twice. **เพิ่มลงโต๊ะ** remains a secondary action for ordering without payment.
+- Product subtotal is labelled **ยอดสินค้า**; the payment popup uses the confirmed
+  promotion/service/loyalty total. Backend, staff access and payment providers are
+  unchanged. Takeaway defaults retain scanner/bundle/stock behavior; table entry
+  retains its existing pending-item stock validation path.
+- The sales session stays bound to its original bill. It defers background polls
+  while editing and gets a fresh order for payment/return to details; late retry
+  replies cannot overwrite newer results. Transient stream errors retain the
+  existing table state. Search offers notes, quantity dialogs survive rotation,
+  and **ขายต่อ** after payment returns directly to table selection.
+- Validation: all 105 tests in 11 focused/shared suites passed.
+  Targeted analysis passed. New entry-to-payment tests use fake Firestore; no
+  real sale, kitchen send, payment or database write was performed.
+- [Actual Flutter sales preview](previews/table-takeaway-sales-20261121.png) and
+  [payment over the sales screen](previews/table-takeaway-payment-20261121.png)
+  use synthetic products; layouts were also checked at 390 px. The connected
+  tablet has not been updated and remains on 1.2.80 (97).
+
 ## Table catalog and payment presentation — 2026-11-21 (local, not released)
+
+This initial layout was rejected and superseded by the takeaway workspace above.
 
 - Job: the cashier opens a table, taps **เพิ่มสินค้า**, selects a batch, confirms
   **เพิ่มลงโต๊ะ**, then receives payment from the table details.

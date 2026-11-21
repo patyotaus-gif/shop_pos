@@ -13,6 +13,9 @@ import 'package:shop_pos/theme/pokpok_theme.dart';
 import 'package:shop_pos/widgets/product_picker_sheet.dart';
 import 'package:shop_pos/widgets/modifier_picker_sheet.dart';
 import 'package:shop_pos/widgets/stock_quantity_dialog.dart';
+import 'package:shop_pos/widgets/pos_catalog.dart';
+import 'package:shop_pos/widgets/pos_basket.dart';
+import 'package:shop_pos/widgets/cart_item_tile.dart';
 
 const brownie = Product(
     id: 'brownie',
@@ -41,7 +44,7 @@ Future<void> openPicker(WidgetTester tester,
     Future<void> Function(List<TableOrderItem>, String) save,
     {List<Product> products = const [brownie, cookie, weighed],
     Stream<List<Product>>? stream,
-    Size size = const Size(390, 844),
+    Size size = const Size(1480, 924),
     double textScale = 1,
     Future<ModifierPick?> Function(BuildContext, Product)?
         chooseModifiers}) async {
@@ -100,8 +103,8 @@ void main() {
                     child: const Text('เพิ่มสินค้า'))))));
     await tester.tap(find.text('เพิ่มสินค้า'));
     await tester.pumpAndSettle();
-    expect(find.text('เพิ่มสินค้า · โต๊ะ 2'), findsOneWidget);
-    expect(find.byKey(const ValueKey('pick-brownie')), findsOneWidget);
+    expect(find.text('ขายที่โต๊ะ 2'), findsOneWidget);
+    expect(find.byKey(const ValueKey('sale-product-brownie')), findsOneWidget);
     expect(find.byType(BottomSheet), findsNothing);
     expect(
         tester.getSize(find.byType(TableProductPicker)), const Size(1480, 924));
@@ -119,7 +122,11 @@ void main() {
     expect(bounds.width, 1480);
     expect(bounds.height, 924);
     expect(find.byKey(const ValueKey('table-catalog-back')), findsOneWidget);
-    expect(find.text('เพิ่มสินค้า · โต๊ะ 2'), findsOneWidget);
+    expect(find.text('ขายที่โต๊ะ 2'), findsOneWidget);
+    final catalog = tester.getRect(find.byType(PosCatalog));
+    final basket = tester.getRect(find.byType(PosBasket));
+    expect(catalog.right, lessThanOrEqualTo(basket.left));
+    expect(basket.width, 380);
   });
 
   testWidgets(
@@ -143,14 +150,14 @@ void main() {
             ])
       ]),
     );
-    await tester.tap(find.byKey(const ValueKey('pick-brownie')));
+    await tester.tap(find.byKey(const ValueKey('sale-product-brownie')));
     await tester.pumpAndSettle();
     final add = find.widgetWithText(FilledButton, 'เพิ่มเข้าตะกร้า');
     expect(tester.widget<FilledButton>(add).onPressed, isNull);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
-    expect(find.text('รายการที่เลือก (0)'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('pick-brownie')));
+    expect(find.text('รายการขาย · 0 รายการ'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('sale-product-brownie')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('ใหญ่'));
     await tester.pumpAndSettle();
@@ -171,48 +178,46 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     final productName = find.descendant(
-        of: find.byKey(const ValueKey('pick-brownie')),
+        of: find.byKey(const ValueKey('sale-search-brownie')),
         matching: find.text('Brownie'));
     await tester.ensureVisible(productName);
     await tester.pumpAndSettle();
     await tester.tap(productName);
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    expect(find.text('เพิ่มลงโต๊ะ · ฿35.00'), findsOneWidget);
+    expect(find.text('ตะกร้า 1 หน่วย · ฿35.00'), findsOneWidget);
   });
 
   testWidgets('catalog errors are shown instead of an empty catalog',
       (tester) async {
     await openPicker(tester, (_, __) async {},
         stream: Stream.error(StateError('โหลดสินค้าไม่ได้')));
-    expect(find.text('โหลดสินค้าไม่ได้'), findsOneWidget);
+    expect(
+        find.text('โหลดสินค้าไม่สำเร็จ กรุณาตรวจการเชื่อมต่อ'), findsOneWidget);
     expect(find.text('ไม่พบสินค้า'), findsNothing);
   });
 
-  testWidgets('tap products repeatedly, preserve filter, and save one batch',
+  testWidgets('tap products repeatedly, preserve category, and save one batch',
       (tester) async {
     final saves = <List<TableOrderItem>>[];
     await openPicker(tester, (items, key) async => saves.add(items));
     await tester.tap(find.text('ขนม'));
     await tester.enterText(find.byType(TextField), 'brown');
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('pick-brownie')));
+    await tester.tap(find.byKey(const ValueKey('sale-search-brownie')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('pick-brownie')));
+    await tester.tap(find.byKey(const ValueKey('sale-product-brownie')));
     await tester.pumpAndSettle();
     expect(saves, isEmpty);
-    expect(find.text('เลือก 2 ชิ้น'), findsOneWidget);
-    expect(find.byKey(const ValueKey('pick-cookie')), findsNothing);
-    expect(find.text('brown'), findsOneWidget);
-    await tester.tap(find.text('รายการที่เลือก (1)'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('เลือกสินค้า'));
-    await tester.pumpAndSettle();
-    expect(find.text('brown'), findsOneWidget);
-    expect(find.text('เลือก 2 ชิ้น'), findsOneWidget);
-    await tester.enterText(find.byType(TextField), '');
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('pick-cookie')));
+    expect(find.widgetWithText(TextButton, '2'), findsOneWidget);
+    expect(
+        tester
+            .widget<ChoiceChip>(
+                find.byKey(const ValueKey('sales-tab-category:ขนม')))
+            .selected,
+        isTrue);
+    expect(find.text('รายการขาย · 1 รายการ'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('sale-product-cookie')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('เพิ่มลงโต๊ะ · ฿95.00'));
     await tester.pumpAndSettle();
@@ -229,7 +234,7 @@ void main() {
     List<TableOrderItem>? saved;
     await openPicker(tester, (items, key) async => saved = items,
         products: const [weighed, brownie]);
-    await tester.tap(find.byKey(const ValueKey('pick-weight')));
+    await tester.tap(find.byKey(const ValueKey('sale-product-weight')));
     await tester.pumpAndSettle();
     expect(find.byType(StockQuantityDialog), findsOneWidget);
     await tester.enterText(
@@ -239,18 +244,17 @@ void main() {
         '0.250');
     await tester.tap(find.text('ตกลง'));
     await tester.pumpAndSettle();
-    await tester.tap(find.descendant(
-        of: find.byKey(const ValueKey('pick-brownie')),
-        matching: find.text('ตัวเลือก / หมายเหตุ')));
+    await tester.enterText(
+        find.byKey(const ValueKey('sales-search')), 'Brownie');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ตัวเลือก / หมายเหตุ'));
     await tester.pumpAndSettle();
     final noteField = find.byType(TextField).last;
     await tester.enterText(noteField, 'ไม่อุ่น');
     await tester.tap(find.text('เพิ่มเข้าตะกร้า'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('รายการที่เลือก (2)'));
-    await tester.pumpAndSettle();
     expect(find.textContaining('ไม่อุ่น'), findsOneWidget);
-    await tester.tap(find.byTooltip('นำรายการออก').first);
+    await tester.tap(find.byTooltip('ลบรายการ').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('เพิ่มลงโต๊ะ · ฿35.00'));
     await tester.pumpAndSettle();
@@ -269,19 +273,16 @@ void main() {
       if (keys.length == 1) throw StateError('เครือข่ายขัดข้อง');
       await completed.future;
     });
-    await tester.tap(find.byKey(const ValueKey('pick-brownie')));
+    await tester.tap(find.byKey(const ValueKey('sale-product-brownie')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('เพิ่มลงโต๊ะ · ฿35.00'));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('pick-cookie')), findsNothing);
-    await tester.tap(find.text('รายการที่เลือก (1)'));
-    await tester.pumpAndSettle();
     expect(
-        tester
-            .widget<IconButton>(
-                find.widgetWithIcon(IconButton, Icons.delete_outline))
-            .onPressed,
-        isNull);
+        find.ancestor(
+            of: find.byType(CartItemTile),
+            matching: find
+                .byWidgetPredicate((w) => w is AbsorbPointer && w.absorbing)),
+        findsOneWidget);
     await tester.tap(find.text('ลองบันทึกอีกครั้ง · ฿35.00'));
     await tester.pump();
     expect(
@@ -307,7 +308,7 @@ void main() {
     await openPicker(tester, (_, __) async {
       saves++;
     });
-    await tester.tap(find.byKey(const ValueKey('pick-brownie')));
+    await tester.tap(find.byKey(const ValueKey('sale-product-brownie')));
     await tester.pumpAndSettle();
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
@@ -323,13 +324,13 @@ void main() {
     await openPicker(tester, (_, __) async {
       saves++;
     });
-    await tester.tap(find.byKey(const ValueKey('pick-brownie')));
+    await tester.tap(find.byKey(const ValueKey('sale-product-brownie')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('table-catalog-back')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('เลือกสินค้าต่อ'));
     await tester.pumpAndSettle();
-    expect(find.text('รายการที่เลือก (1)'), findsOneWidget);
+    expect(find.text('รายการขาย · 1 รายการ'), findsOneWidget);
     expect(saves, 0);
     expect(find.byType(TableProductPicker), findsOneWidget);
   });
@@ -347,7 +348,7 @@ void main() {
       await tester.tap(find.text('Brownie'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      expect(find.text('รายการที่เลือก (1)'), findsOneWidget);
+      expect(find.text('ตะกร้า 1 หน่วย · ฿35.00'), findsOneWidget);
     });
   }
 

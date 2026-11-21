@@ -15,7 +15,30 @@ Rules:
 
 ## Current state (updated 2026-11-21)
 
-The owner requested a full-page product catalog when adding items to a table,
+The owner rejected the first full-page catalog on 2026-11-21 and clarified:
+pressing Add product at a table must open the same sales workspace as takeaway.
+The follow-up implementation is in the D: worktree
+`table-catalog-page-20261121`, based on `5b8557d`. It reuses `PosCatalog`,
+`PosSalesWorkspace`, `PosBasket`, cart tiles and checkout controls, with existing
+table lines plus a local draft and direct popup payment from that page.
+The pending batch is saved with its request ID and the order reread before
+calling the existing table checkout/promotions flow. All 105 tests across the
+11 focused/shared suites passed; targeted analysis of ten Dart files passed.
+Actual Flutter previews were checked at 1480 and 390 px. The first independent
+review identified session/lifecycle, search-note and navigation issues; these
+have fixes and regression coverage. A follow-up identified two further cases
+in that same session mechanism. One order epoch now covers save/readback,
+accepted snapshots and catalog return. Any order-stream error preserves the
+draft but blocks new catalog save/checkout attempts until recovery, and displays
+the actual error. Three source-review rounds are complete. Final triage retained
+two Low UI/recovery limitations and accepted continued authoritative quote sync;
+the reviewer-rated High did not demonstrate a wrong-bill/amount or duplicate
+payment because the backend still validates bill pointer, signature, revision
+and total. See `docs/table-takeaway-review-20261121.md` for the exact triggers and
+pre-release follow-up. This is a local implementation, not a device-tested or
+released build. The prior preview below is superseded.
+
+Earlier local revision: the owner requested a full-page product catalog when adding items to a table,
 with checkout displayed as a popup. The local Flutter implementation now pushes
 the real catalog as a page with the table name and back navigation, preserving
 the draft/confirm-to-table workflow. Dine-in checkout is centered on screens
@@ -559,6 +582,47 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-21 — Follow-up: use takeaway sales workspace for table ordering (local)
+
+- Owner rejected the first preview and clarified that Add product should open
+  the same sales screen as takeaway. Reusing the shared catalog/cart workspace
+  and preserving the table checkout backend. Existing table lines are shown
+  alongside editable new selections; payment saves and refreshes the batch
+  before opening the existing popup over the sales screen.
+- First regressions exposed missing footer height for modifier actions, an
+  undersized placeholder image, and an obsolete finder. These are fixed. The
+  payment flow check also exposed an indeterminate progress indicator behind
+  the modal; it now stops when the sales route is not current, retaining locks.
+- Final combined run: all 105 tests across 11 suites passed; targeted analysis
+  of ten Dart files passed. The new flow checks exercise
+  the real table Add-product entry, fake Firestore batch write/read, promotion
+  quote, popup cancellation/reopen, next batch, quote failure, and lost-response
+  retry with a stable displayed baseline. Existing table line edits remain in
+  table details; new draft lines have the shared cart's quantity/remove actions.
+- Flutter previews at 1480 and 390 px use synthetic products and the real shared
+  widgets. The catalog labels its amount as product subtotal; the payment popup
+  uses the existing confirmed promotion/service/loyalty total.
+- The first independent review found six issues. Added a bound order ID and
+  pre-write session guard; deferred potentially old parent polls during sales;
+  added save/read generations; kept table state through transient stream errors;
+  restored notes from search; moved quantity dialogs to the persistent page;
+  and restored receipt-to-table-selection navigation. Seven recovery tests cover
+  these cases (including a real simulated 25-second timeout and late read), and
+  the existing notes test now uses search. The second review found cached-order
+  writes during stream errors and a late return-read overwrite. The final
+  session revision blocks new catalog save/checkout attempts on stream errors, preserves draft/state,
+  and uses one epoch for accepted snapshots and all catalog reads. Both cases
+  have regression coverage. Round 3 raised three further cases: an already-open
+  payment dialog can finish a still-valid bill after stream error; automatic
+  quote sync can continue; and reversed poll/read ordering can briefly show an
+  old cart. Manual triage checked the backend pointer/revision/signature/total
+  guards: no wrong-bill/amount or duplicate write was demonstrated. The first
+  and third are retained Low recovery limitations; quote sync remains intended
+  maintenance. No additional state machinery was added. Full triggers and
+  pre-release revisit conditions are in `docs/table-takeaway-review-20261121.md`.
+  See `docs/android-user-feedback.md` for the new previews.
+- No install, APK build, release, provider changes or real transactions.
 
 ### 2026-11-21 — Full-page table catalog and tablet payment popup (local)
 
