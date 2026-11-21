@@ -15,6 +15,17 @@ Rules:
 
 ## Current state (updated 2026-11-21)
 
+Homepage motion implementation is complete locally following the owner's "เริ่มทำเลย".
+The local homepage now has a tablet hero, a three-chapter sales/order/overview
+story, a retail/restaurant picker, and static mobile/reduced-motion/no-JS layouts.
+It uses optimized derivatives of existing public 1.2.78 demo-shop screenshots,
+with their version labels intact. The focused browser suite passed 11 groups;
+shared marketing regression passed 18 pages at five widths. Two fresh visual
+walkthroughs completed; the install/signup hint was clarified. Desktop/phone
+captures are saved in `docs/previews/pokpok-home-motion-*.png`. A read-only local
+preview is running at `http://127.0.0.1:4178/` for owner review. No website
+publication has occurred. See `docs/website-home-motion.md`.
+
 New product discussion: the owner clarified that the self-ordering concept is
 a shared customer kiosk at the front of the restaurant, not a tablet at every
 table. This is a direction clarification, not an implementation or release.
@@ -31,10 +42,10 @@ intervals. It shows a beverage website with a rotating/tilting product, staged
 copy/background transitions and a row of products whose selected item comes
 forward. Suggested Pokpok adaptation: an actual app screen in a tablet as the
 main visual, successive sales/order/report scenes, and retail/restaurant demo
-selection within the existing white/gray/Burgundy direction. These are design
-suggestions, not an accepted redesign. The recording does not establish the
+selection within the existing white/gray/Burgundy direction. The owner then
+authorized implementation; current progress is above. The recording does not establish the
 site's implementation or whether motion is driven by scroll, video or 3D.
-No website change has been made.
+The earlier reference assessment alone made no website change.
 
 The owner authorized publication of this table-sales change on 2026-11-21
 ("ปล่อยอัพเดท"). Android **1.2.81 (98)** is now published at
@@ -621,6 +632,41 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-21 — Homepage motion checked and available for owner preview
+
+- Focused browser checks passed 11 groups (exit 0): seven viewport widths,
+  business picker/keyboard, actual hero pose change, scroll scenes and direct
+  anchors, live reduced-motion changes, short windows, image-failure fallback,
+  and no-JavaScript content. Shared marketing checks passed 18 pages at five
+  widths, including menu, existing routes, pricing, guides and FAQ behavior.
+- Fresh visual walkthrough ran twice against generated screenshots. Clarified
+  install then signup under the download action; captures wait for the existing
+  masthead reveal and image transitions. No material new visual issue remained.
+  Small screenshot text is inspectable through full-size links; the overview
+  still shows the existing demo day's zero totals, with explicit provenance.
+- Changed-surface design audit: 19/20, no P0/P1; measured text contrast at least
+  5.28:1 and checked control-edge contrast at least 3.30:1. Script syntax and
+  whitespace checks passed. No native-device or production-data test claimed.
+- Started the GET/HEAD-only loopback preview with
+  `node scripts/preview_marketing.cjs --port 4178`; HTTP readback confirmed the
+  correct homepage/assets. Saved desktop/mobile captures under `docs/previews/`.
+  The website work is local and ready for the owner's look/motion review;
+  no push, Hosting deploy, APK release or public post was performed.
+
+### 2026-11-21 — Implemented local homepage tablet motion and story
+
+- Added isolated homepage tokens/styles and progressive enhancement; kept existing
+  navigation, segment routes, pricing, installation guidance and footer.
+- Hero tablet straightens with scroll. The desktop story changes the visible app
+  screenshot with its chapter; normal anchors support direct entry and keyboard
+  navigation. Retail selection shows inventory; restaurant selection shows orders.
+- Four optimized public demo screenshots total 198,596 bytes, preserving source
+  content and version labels. No private tablet captures or paid media used.
+- Focused browser run passed 11 groups across seven widths, keyboard/selection,
+  scroll/deep-link states, reduced motion, short viewport, image failure and no-JS.
+  Shared marketing regressions and fresh visual inspection are running. Native
+  app/backend and published website remain unchanged.
 
 ### 2026-11-21 — Inspected supplied website motion reference recording
 

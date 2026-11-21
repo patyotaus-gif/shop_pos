@@ -51,8 +51,12 @@
   <link rel="stylesheet" href="/brand.css?v=20261113-release78">
   <link rel="stylesheet" href="/brand/wordmark.css?v=20261118-motion">
 <link rel="stylesheet" href="/site-pages.css?v=20261112-direction"><script src="/js/site.js?v=20261113-pricing" defer></script><noscript><style>.mobile-nav{display:block;position:static;max-height:none}.hamburger{display:none}.guide-tools{display:none}</style></noscript><link rel="stylesheet" href="/pricing.css?v=20261113">
-<link rel="stylesheet" href="/marketing-background.css?v=20261113"></head>
-<body>
+<link rel="stylesheet" href="/marketing-background.css?v=20261113">
+<link rel="stylesheet" href="/home-tokens.css?v=20261121">
+<link rel="stylesheet" href="/home-story.css?v=20261121">
+<script src="/js/home-story.js?v=20261121" defer></script>
+</head>
+<body class="motion-home">
 <a class="skip-link" href="#main">ข้ามไปเนื้อหา</a>
 <nav class="site-nav" aria-label="เมนูหลัก"><a href="/" class="logo masthead-motion" aria-label="Pokpok หน้าแรก">
   <svg width="40" height="40" viewBox="82 52 860 860" aria-hidden="true" focusable="false" fill="currentColor">
@@ -76,21 +80,72 @@
 <li><a href="/supplier">ผู้จำหน่าย</a></li></ul><div class="nav-end"><a href="/subscribe" class="btn-ghost">เข้าสู่ระบบ</a><a href="/#download" class="btn-ruby">ทดลองใช้ฟรี</a><button type="button" class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="เปิดเมนู" aria-controls="mobileNav" aria-expanded="false"><span></span><span></span><span></span></button></div></nav><div class="mobile-nav" id="mobileNav"><a href="/features/">ฟีเจอร์</a><a href="/pricing/">ราคา</a><a href="/guides/">คู่มือ</a><a href="/marketplace/">สั่งซื้อสินค้าเข้าร้าน</a><a href="/blog/">บทความ</a><a href="/supplier">ผู้จำหน่าย</a><a href="/subscribe">เข้าสู่ระบบ</a><a href="/#download">ทดลองใช้ฟรี</a></div>
 <main id="main">
 <!-- HERO -->
-<section class="hero" aria-labelledby="hero-heading">
+<section class="hero cinematic-hero" aria-labelledby="hero-heading">
   <div>
-    <p class="eyebrow">จัดการหน้าร้านและหลังร้านอย่างเป็นระบบ ด้วย Pokpok POS</p>
-    <h1 id="hero-heading">แอป POS<br>สำหรับร้านค้าปลีก<br><em>และร้านอาหาร</em></h1>
-    <p class="hero-desc">ขายและรับชำระเงิน ตรวจสอบสินค้าคงเหลือ และติดตามยอดขายบนสมาร์ตโฟนหรือแท็บเล็ต พร้อมฟังก์ชันจัดการโต๊ะและครัวสำหรับร้านอาหาร</p>
-    <div class="hero-ctas"><a class="btn-lg btn-lg-ruby" href="/#download">ทดลองใช้งานฟรี 60 วัน</a><a class="text-link" href="/features/">ดูวิธีใช้งานและฟังก์ชัน ↗</a></div>
-    <p class="hero-note">ไม่ต้องผูกบัตร · Android / iOS ผ่าน TestFlight<br>หลังทดลอง เริ่มต้น 199 บาท/เดือน</p>
+    <p class="hero-product-label">สำหรับร้านค้าปลีก ร้านอาหาร และคาเฟ่</p>
+    <h1 id="hero-heading">จัดการงานร้าน<br>ให้เห็นภาพ<br><em>ด้วย Pokpok POS</em></h1>
+    <p class="hero-desc">จากรายการขายหน้าร้าน ถึงภาพรวมของวัน ดูแลงานร้านของคุณผ่านแอปบนสมาร์ตโฟนและแท็บเล็ต</p>
+    <div class="hero-ctas"><a class="btn-lg btn-lg-ruby" href="/#download">ดาวน์โหลดแอป</a><a class="text-link" href="#product-story">ดูการทำงานของ Pokpok ↓</a></div>
+    <p class="hero-note">เริ่มจากติดตั้งแอป แล้วสมัครใช้งาน<br>Android · iOS ผ่าน TestFlight</p>
   </div>
   <figure class="hero-visual">
-    <span class="margin-note">เลือกสินค้า<br>แล้วรับชำระเงินในหน้าเดียว</span>
-    <a href="/screens/pos-1.2.78.png" target="_blank" rel="noopener" aria-label="ดูภาพหน้าขายขนาดเต็ม (เปิดแท็บใหม่)"><img src="/screens/pos-1.2.78.png" width="2960" height="1848" alt="หน้าขาย Pokpok บนแท็บเล็ต แสดงภาพเมนูพาสต้า รายการในตะกร้า และยอดรวมก่อนชำระเงิน" loading="eager" fetchpriority="high"></a>
-    <figcaption>ภาพจากแอปจริงบนแท็บเล็ต · 1.2.78 (95) · 13 พ.ย. 2026<br>ข้อมูลร้านทดสอบ · แตะภาพเพื่อดูขนาดเต็ม</figcaption>
+    <a class="tablet-frame hero-device" href="/screens/pos-1.2.78.png" target="_blank" rel="noopener" aria-label="ดูภาพหน้าขายขนาดเต็ม (เปิดแท็บใหม่)"><img src="/screens/story/pos-1.2.78.webp" width="1480" height="924" alt="หน้าขาย Pokpok บนแท็บเล็ต แสดงเมนู รายการในตะกร้า และยอดรวมจากร้านทดสอบ" loading="eager" fetchpriority="high"></a>
+    <div class="hero-scene-label"><span>เลือกสินค้า ดูรายการ พร้อมคิดเงิน</span><span lang="en">Sales &amp; Checkout</span></div>
+    <figcaption>ภาพแอปจริง · ข้อมูลร้านทดสอบ · เวอร์ชัน 1.2.78 (95)<br>แตะภาพเพื่อดูขนาดเต็ม</figcaption>
   </figure>
 </section>
 <nav class="shop-strip" aria-label="เลือกประเภทธุรกิจ"><span>เลือกดูฟังก์ชันสำหรับร้านของคุณ</span><a href="/retail/">ร้านค้าปลีก / มินิมาร์ท ↗</a><a href="/restaurant/">ร้านอาหาร / คาเฟ่ ↗</a></nav>
+
+<section class="product-story" id="product-story" data-product-story aria-labelledby="product-story-heading">
+  <div class="story-intro">
+    <div><h2 id="product-story-heading">จากรายการแรก<br>ถึงภาพรวมของวัน</h2><p>ดูหน้าจอที่ช่วยจัดการงานแต่ละช่วงของร้าน</p></div>
+    <div class="business-picker" role="group" aria-label="เลือกตัวอย่างตามประเภทร้าน" hidden>
+      <button type="button" data-business="retail" aria-pressed="false">ร้านค้าปลีก</button>
+      <button type="button" data-business="restaurant" aria-pressed="true">ร้านอาหาร / คาเฟ่</button>
+    </div>
+  </div>
+  <div class="story-layout">
+    <div class="story-chapters">
+      <article class="story-chapter" id="tour-sale" aria-labelledby="tour-sale-heading">
+        <p class="chapter-kicker">01 / <span lang="en">Sales &amp; Checkout</span></p>
+        <h3 id="tour-sale-heading">เลือกสินค้า<br>พร้อมดูรายการขาย</h3>
+        <p class="chapter-description">รูปสินค้า หมวดหมู่ และตะกร้าอยู่ในหน้าขายเดียวกัน ตรวจจำนวนและยอดรวมก่อนบันทึกการรับชำระเงิน</p>
+        <p class="chapter-detail">ใช้บนสมาร์ตโฟนและแท็บเล็ต</p>
+        <figure class="story-mobile-image"><a class="tablet-frame" href="/screens/pos-1.2.78.png" target="_blank" rel="noopener" aria-label="ดูหน้าขายขนาดเต็ม (เปิดแท็บใหม่)"><img src="/screens/story/pos-1.2.78.webp" width="1480" height="924" alt="หน้าขายและตะกร้าสินค้า Pokpok จากร้านทดสอบ" loading="lazy"></a><figcaption>ภาพแอปจริง · ข้อมูลร้านทดสอบ · 1.2.78 (95) · แตะเพื่อขยาย</figcaption></figure>
+      </article>
+      <article class="story-chapter" id="tour-manage" aria-labelledby="tour-manage-heading">
+        <p class="chapter-kicker">02 / <span lang="en" data-chapter-english>Order Management</span></p>
+        <h3 id="tour-manage-heading">ติดตามออเดอร์<br>ได้เป็นขั้นตอน</h3>
+        <p class="chapter-description">ดูรายการที่รอยืนยันและกำลังเตรียม แยกสถานะให้เห็นชัด พร้อมเปิดรายละเอียดออเดอร์ได้จากหน้าจอเดียว</p>
+        <p class="chapter-detail">สำหรับร้านอาหารและคาเฟ่</p>
+        <figure class="story-mobile-image"><a class="tablet-frame" href="/screens/orders-1.2.78.png" target="_blank" rel="noopener" aria-label="ดูออเดอร์ขนาดเต็ม (เปิดแท็บใหม่)"><img src="/screens/story/orders-1.2.78.webp" width="1480" height="924" alt="หน้าจอออเดอร์ Pokpok แสดงรายการ DEMO-001 และสถานะรอชำระจากร้านทดสอบ" loading="lazy"></a><figcaption>ภาพแอปจริง · ข้อมูลร้านทดสอบ · 1.2.78 (95) · แตะเพื่อขยาย</figcaption></figure>
+      </article>
+      <article class="story-chapter" id="tour-report" aria-labelledby="tour-report-heading">
+        <p class="chapter-kicker">03 / <span lang="en">Sales Overview</span></p>
+        <h3 id="tour-report-heading">จบวัน<br>ด้วยภาพรวมที่ชัดเจน</h3>
+        <p class="chapter-description">ดูยอดขายสุทธิ จำนวนบิล ยอดรับเงินสด และยอดค้างชำระวันนี้ ก่อนเข้าสู่ขั้นตอนปิดยอดสิ้นวัน</p>
+        <p class="chapter-detail">ฟังก์ชันขึ้นอยู่กับประเภทร้านและแพ็กเกจ</p>
+        <figure class="story-mobile-image"><a class="tablet-frame" href="/screens/overview-1.2.78.png" target="_blank" rel="noopener" aria-label="ดูภาพรวมยอดขายขนาดเต็ม (เปิดแท็บใหม่)"><img src="/screens/story/overview-1.2.78.webp" width="1480" height="924" alt="หน้าภาพรวมยอดขาย Pokpok จากร้านทดสอบที่ยังไม่มียอดขายในวันนั้น" loading="lazy"></a><figcaption>ภาพแอปจริง · ข้อมูลร้านทดสอบ · 1.2.78 (95) · แตะเพื่อขยาย</figcaption></figure>
+      </article>
+    </div>
+    <div class="story-display" data-scene="0">
+      <a class="tablet-frame story-screen-link" href="/screens/pos-1.2.78.png" target="_blank" rel="noopener" aria-label="ดูหน้าขายขนาดเต็ม (เปิดแท็บใหม่)">
+        <span class="story-screen-stack">
+          <img class="is-current" src="/screens/story/pos-1.2.78.webp" data-full="/screens/pos-1.2.78.png" width="1480" height="924" alt="หน้าขายและตะกร้าสินค้า Pokpok จากร้านทดสอบ" loading="lazy">
+          <img src="/screens/story/orders-1.2.78.webp" data-full="/screens/orders-1.2.78.png" width="1480" height="924" alt="หน้าจอออเดอร์ Pokpok แสดงรายการ DEMO-001 และสถานะรอชำระจากร้านทดสอบ" loading="lazy" aria-hidden="true">
+          <img src="/screens/story/overview-1.2.78.webp" data-full="/screens/overview-1.2.78.png" width="1480" height="924" alt="หน้าภาพรวมยอดขาย Pokpok จากร้านทดสอบที่ยังไม่มียอดขายในวันนั้น" loading="lazy" aria-hidden="true">
+        </span>
+      </a>
+      <nav class="story-tabs" aria-label="ดูขั้นตอนการทำงาน">
+        <a href="#tour-sale" aria-current="step">01 <span>เริ่มขาย</span></a>
+        <a href="#tour-manage">02 <span>จัดการออเดอร์</span></a>
+        <a href="#tour-report">03 <span>ดูยอดขาย</span></a>
+      </nav>
+      <p class="story-caption"><span data-current-caption>หน้าขายและตะกร้าสินค้า Pokpok จากร้านทดสอบ</span><br>ภาพแอปจริง · 1.2.78 (95) · แตะภาพเพื่อขยาย</p>
+    </div>
+  </div>
+  <div class="story-links"><p>เลือกดูรายละเอียดฟังก์ชันและแพ็กเกจที่เหมาะกับร้านของคุณ</p><a class="btn-outline" href="/restaurant/" data-business-link>ดูฟังก์ชันสำหรับร้านอาหาร</a><a href="/features/">ดูฟังก์ชันทั้งหมด ↗</a><a href="/pricing/">เปรียบเทียบแพ็กเกจ ↗</a></div>
+</section>
 
 <section id="features" aria-labelledby="features-heading">
   <div class="feature-head">
