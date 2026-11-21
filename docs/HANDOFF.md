@@ -15,11 +15,23 @@ Rules:
 
 ## Current state (updated 2026-11-22)
 
-Latest revision is complete locally: replaced the CSS-drawn device shells with
+The owner authorized publication ("ปล่อยเว็บจริง"). The homepage is now live at
+`https://pok-pok.app`, deployed from `9291481` to Hosting version
+`9703c7514cedaa31` at 2026-11-22 02:01 AEDT (2026-11-21 15:01 UTC).
+All 92 hosted file hashes match the release checkout; the 14 changed homepage
+files also match direct public downloads. Hosting configuration and Android
+1.2.81 (98) APK/manifest remain unchanged. Live Chromium checks at 1440, 768 and
+390 px passed image loading, tap/keyboard selection, mobile touch swipe, business
+selection, no overflow and no page errors. No physical-device browser check.
+Fresh independent source review retained four Low presentation/navigation items;
+triage and revisit triggers are in `docs/release-website-2026-11-22.md`.
+Rollback version: `3e7b45bdbd61440b`.
+
+This revision replaced the CSS-drawn device shells with
 licensed realistic Mobile FIRST frames (Galaxy S24 Ultra, Galaxy Tab S7, and a
 self-service kiosk). All retain Pokpok launch logos and direct swipe/tap behavior.
 The free standard exports total 29,186 bytes; sources and usage restrictions are
-in `docs/website-device-image-sources.md`. No purchase or website publication.
+in `docs/website-device-image-sources.md`. No purchase was required.
 
 All three device screens use the app's Burgundy launch background and official
 white mortar/wordmark.
@@ -36,8 +48,9 @@ Native app logo copies are byte-identical to their sources. Kiosk self-ordering
 remains an unimplemented concept, disclosed in the hero copy and accessible name.
 The lower three-chapter app story and real screenshots remain. Updated desktop,
 phone and kiosk captures are in `docs/previews/`.
-Local preview: `http://127.0.0.1:4178/`. No website publication or native-app
-change in this task. See `docs/website-home-motion.md`.
+Local preview remains `http://127.0.0.1:4178/`; the same homepage is published at
+`https://pok-pok.app`. No native-app change in this website release.
+See `docs/website-home-motion.md`.
 
 New product discussion: the owner clarified that the self-ordering concept is
 a shared customer kiosk at the front of the restaurant, not a tablet at every
@@ -646,6 +659,28 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-22 — Homepage device showcase published and verified
+
+- Owner explicitly authorized production publication. Pushed reviewed source
+  `92914818a0d3c658ba40510acf764057d11c342f` to `origin/master`; deployed Hosting
+  only to project/site `shop-pos-89294`, version `9703c7514cedaa31`, exit 0.
+- Reran the focused suite (13 groups/eight widths), shared marketing suite
+  (18 pages/five widths), cache regression (48 URLs), JS syntax and diff checks.
+  Fresh isolated read-only Codex CLI review covered `2fa94e1..9291481`; Grok and
+  Claude CLIs were unavailable. Four Low findings were independently triaged
+  and retained with reasons/triggers in `docs/release-website-2026-11-22.md`.
+- Preflight found exactly the intended 14 changed files against the 79-file
+  live baseline. Post-deploy: all 92 hosted hashes match; Hosting config is
+  identical; direct HTTPS bytes of all 14 changed files match. Android APK hash
+  and 1.2.81 (98) manifest remain unchanged.
+- Live browser smoke at 1440/768/390 px passed device images, tap/keyboard,
+  mobile touch swipe, business selector, overflow and page-error checks.
+  Live cache smoke also passed 48 URLs. Inspected the actual mobile screenshot.
+  No physical-device browser test,
+  backend deployment, app release, account write or real transaction.
+- Evidence: `D:/PokpokWork/home-release-20261122/`. Rollback Hosting version is
+  `3e7b45bdbd61440b`. Publication does not implement the kiosk concept.
 
 ### 2026-11-22 — Realistic hardware images verified for local preview
 

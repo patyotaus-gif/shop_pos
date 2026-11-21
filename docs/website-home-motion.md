@@ -7,8 +7,10 @@ devices visible; selecting one rotates and moves that device to the front.
 The owner's next revision replaces all three screens with app launch branding
 and replaces the separate selector with direct tap and horizontal drag/swipe.
 Scroll also changes the central
-device's angle on desktop. This work changes the local marketing homepage,
-not the customer ordering app or kiosk. Publication is a separate step.
+device's angle on desktop. This work changes the marketing homepage,
+not the customer ordering app or kiosk. The owner authorized publication on
+2026-11-22; the reviewed revision is live at <https://pok-pok.app>.
+See [the release record](release-website-2026-11-22.md).
 
 All three screens use the native app's Burgundy launch ground and white mortar
 plus Pokpok wordmark. No added screen copy or below-device description is shown.
@@ -166,5 +168,6 @@ serves only GET/HEAD from `public/`, with no write endpoint or deployment.
 
 Saved captures: [desktop](previews/pokpok-home-motion-desktop.png),
 [phone](previews/pokpok-home-motion-mobile.png),
-[kiosk selected](previews/pokpok-home-devices-kiosk.png). The owner can review the motion
-and look locally; the public website has not been changed by this task.
+[kiosk selected](previews/pokpok-home-devices-kiosk.png). The same revision is now
+published at <https://pok-pok.app>; live verification and retained Low findings
+are recorded in [the release record](release-website-2026-11-22.md).
