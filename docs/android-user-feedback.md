@@ -4,8 +4,9 @@
 
 The owner authorized release. The signed build is installed on SM-X900 and
 native table entry, shared sales layout, draft quantity editing and discard
-passed without a sale or kitchen/payment action. Public APK publication is in
-progress; see [release evidence](release-1.2.81.md). Final release tests passed
+passed without a sale or kitchen/payment action. The public APK and manifest
+are live and verified by full download; see [release evidence](release-1.2.81.md).
+Final release tests passed
 131 cases in 18 suites; the implementation-stage evidence below remains useful.
 
 The owner rejected the first full-page picker and clarified that **เพิ่มสินค้า**

@@ -16,7 +16,8 @@ Rules:
 ## Current state (updated 2026-11-21)
 
 The owner authorized publication of this table-sales change on 2026-11-21
-("ปล่อยอัพเดท"). Android **1.2.81 (98)** was built from `a602c8d` and installed
+("ปล่อยอัพเดท"). Android **1.2.81 (98)** is now published at
+`https://pok-pok.app/app/pokpok.apk`. It was built from `a602c8d` and installed
 on the connected SM-X900, preserving app data. Native smoke verified table entry,
 the full sales workspace, local item selection/quantity editing and discard;
 the existing bill remained unchanged. The tablet is left on the new sales page
@@ -25,9 +26,11 @@ All **131 cases in 18 suites** and analysis of 11 production Dart files plus
 the new test passed. All 422 native source inputs match the isolated build copy;
 the tracked-file credential/signing scan had zero matches. Three fresh release
 review rounds completed, with the final delta clear of material new failures.
-The signed APK and manifest are staged; preflight against live Hosting baseline
-`18b6c596b2d82616` (79 files) found only those two paths changed. Publication and
-live download verification are next. See `docs/release-1.2.81.md`.
+Release metadata/source commit `2fa94e1` was pushed and deployed to Hosting
+version `3e7b45bdbd61440b`. Only APK and manifest changed from the 79-file baseline;
+post-deploy hashes of all 79 files match. A full download from the public URL
+matches the signed 93,116,248-byte APK and manifest SHA-256 at 03:32:34 UTC.
+No backend deployment or iOS release was performed. See `docs/release-1.2.81.md`.
 
 The owner rejected the first full-page catalog on 2026-11-21 and clarified:
 pressing Add product at a table must open the same sales workspace as takeaway.
@@ -597,6 +600,25 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-21 — Android 1.2.81 (98) published and verified
+
+- Committed release manifest/device evidence as `2fa94e1` and pushed `master`;
+  remote HEAD readback matched `2fa94e13aaa950c81aa13a8ce83d7a6a85174feb`.
+- Explicit `firebase deploy --only hosting --project shop-pos-89294` from the
+  clean release commit completed with exit 0 at 03:32 UTC, stamped with that SHA.
+  Live Hosting version is `3e7b45bdbd61440b`; all 79 live file hashes match staging.
+  Preflight limited the change to `/app/pokpok.apk` and `/app/version.json`.
+- Downloaded the full public APK and version manifest with cache-busting at
+  03:32:34 UTC: 1.2.81 / 98, 93,116,248 bytes, SHA-256
+  `4546aeb0a2612c75bdc21d47d9ca42cbd328a861484a9c3cc2be56f86306aae2`.
+  Homepage and wordmark CSS also match. Evidence: `deploy.log`,
+  `live-verification.json`, `git-2fa94e1.json`, `device-smoke.json` under
+  `D:/pokpok-release-1.2.81/`. The tablet already runs the same tested APK.
+- Release record/current state updated for the completed publication. No iOS,
+  backend, rules or payment-provider deployment; no real transaction was used.
+  Rollback Hosting version remains `18b6c596b2d82616`; installed clients would
+  need a subsequent higher build for a binary rollback.
 
 ### 2026-11-21 — Signed build 98 installed; native smoke and staging passed
 

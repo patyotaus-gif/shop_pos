@@ -6,7 +6,7 @@ source is `372a8ab` (1.2.80 / 97). Root `master` is the source branch; Firebase
 Hosting is an explicit deployment. This release publishes Android APK and its
 update manifest; iOS uses the separate manually triggered Codemagic workflow.
 
-## Scope and release progress
+## Scope and verification
 
 - Table **เพิ่มสินค้า** opens the shared takeaway catalog/cart workspace.
   **ชำระเงิน** saves the draft once and opens the existing centered tablet payment
@@ -53,9 +53,29 @@ update manifest; iOS uses the separate manually triggered Codemagic workflow.
   the new sales page open with no draft. No real sale, kitchen send or payment
   was invoked; popup/payment behavior was tested with fixtures, not shop data.
   Native captures are in `device/updated-*.png` and XML outside Git.
-- APK/manifest staging succeeded. Hosting preflight confirms exactly the two
-  allowed changed paths; all other 77 live files match. Source publication and
-  full live APK download verification remain to be recorded below.
+- APK/manifest staging succeeded. Hosting preflight confirmed exactly the two
+  allowed changed paths; all other 77 live files matched.
+
+## Published release
+
+- Release metadata/device evidence commit:
+  `2fa94e13aaa950c81aa13a8ce83d7a6a85174feb`; pushed to `origin/master` and remote
+  HEAD verified. Native inputs remain identical to source commit `a602c8d`.
+- Deployment from that clean commit:
+  `firebase deploy --only hosting --project shop-pos-89294 --non-interactive`
+  with message `Pokpok 1.2.81 (98) 2fa94e13aaa950c81aa13a8ce83d7a6a85174feb`.
+  Exit 0; live release at **2026-11-21 03:32 UTC**, Hosting version
+  `sites/shop-pos-89294/versions/3e7b45bdbd61440b`.
+- Post-deploy comparison: all **79 hosted file hashes match**, no drift, and
+  deployment message identifies the release commit. Public version manifest
+  reports 1.2.81 / 98. Full cache-busted APK download at **03:32:34 UTC** matches
+  the exact size/hash above. Homepage and wordmark CSS match their existing files.
+- Public download: <https://pok-pok.app/app/pokpok.apk>. No iOS release, backend
+  deployment, payment-mode change or real payment acceptance is claimed.
+- Evidence directory: `D:/pokpok-release-1.2.81/`, including `deploy.log`
+  (`DEPLOY_EXIT=0`), `live-verification.json`, `git-2fa94e1.json` and
+  `device-smoke.json`. Following documentation-only commits do not change the
+  deployed artifact or require another upload.
 
 ## Retained limitations
 
