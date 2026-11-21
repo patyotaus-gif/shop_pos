@@ -15,6 +15,18 @@ Rules:
 
 ## Current state (updated 2026-11-21)
 
+The owner authorized publication of this table-sales change on 2026-11-21
+("ปล่อยอัพเดท"). Android **1.2.81 (98)** is being prepared from `b0f7ac1` plus
+the version bump and cash-close table recovery fix. Final release-session tests
+passed **131 cases in 18 suites** and analysis of 11 production Dart files plus
+the new test passed. The initial 421 native inputs matched the D: build copy;
+the tracked-file credential/signing scan had zero matches. Three fresh release
+review rounds completed, with the final delta clear of material new failures.
+The signed build including cash-close recovery is running. Live Hosting
+baseline is `18b6c596b2d82616` with 79 matching files;
+publication will change only APK and version manifest. SM-X900 is connected and
+still reports 1.2.80 (97). See `docs/release-1.2.81.md` for the active release.
+
 The owner rejected the first full-page catalog on 2026-11-21 and clarified:
 pressing Add product at a table must open the same sales workspace as takeaway.
 The follow-up implementation was committed as `b2d3499` in the D: worktree
@@ -583,6 +595,35 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-21 — Release review fixes and final app gate
+
+- Whole native-release review identified a second table entry point in cash-close
+  issues that disposed the callback owner on stream failure. It now preserves
+  the keyed view through retryable errors, blocks catalog writes until recovery,
+  and keeps the explicit raw `open` record-status requirement.
+- Reproduced the disposed-view failure and malformed-status regression against
+  the broken implementations. Final gate: 131 tests/18 suites, exit 0; 12-file
+  analysis, exit 0. A time-sensitive test-only route assertion was removed while
+  retaining state identity and stored-write assertions. Reports and logs live
+  under `D:/pokpok-release-1.2.81/`.
+- Three fresh read-only review rounds completed. Final delta review found no
+  material introduced failure. The staging guard now matches literal app/version
+  periods. Existing terminal-error and multi-device display limitations are
+  explicitly retained in `docs/release-1.2.81.md`; no incorrect charge or duplicate
+  write was demonstrated. Initial APK build passed; final rebuild is running.
+
+### 2026-11-21 — Owner authorized Android 1.2.81 (98)
+
+- Prepared an isolated native build under `D:/pokpok-release-1.2.81/source` to
+  keep large outputs off the nearly-full C: drive. Version bump is 1.2.81+98.
+- Re-ran 17 relevant app suites: 129 passed, exit 0. Targeted analysis of all
+  ten production Dart files changed since released commit `372a8ab` passed,
+  exit 0. Verified 421 build inputs and no tracked signing/credential matches.
+- Verified Hosting baseline `18b6c596b2d82616`, 79 files, no public drift before
+  staging; Git origin has no remote-only commits. Signed build and independent
+  source review are running. Captured existing tablet version/UI before update;
+  no sale/payment or app-data clear. No new publication yet.
 
 ### 2026-11-21 — Integrated the table takeaway-style sales workspace
 
