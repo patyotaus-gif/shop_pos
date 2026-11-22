@@ -19,8 +19,11 @@ The owner authorized release of the sales color revision ("ปล่อยอั
 Preparing Android 1.2.82 (99): first release gate passed (62 cases and six-file
 analysis); independent review identified release-script guard gaps, a release
 note encoding issue and low focused-label contrast on two tinted name cards.
-Strengthened the options/notes foreground to `onSurface`; final gate, rebuild,
-follow-up review and connected-tablet smoke pending. Still not published; live Android
+Strengthened the options/notes foreground to `onSurface`; the final 62-case gate
+and six-file analysis passed, and the actual Flutter previews were regenerated.
+Pinned-source rejection probes passed for changed and extra Android manifests;
+the CLI-resolved Hosting config matches the live baseline. Final rebuild,
+follow-up operator review and connected-tablet smoke pending. Still not published; live Android
 remains 1.2.81 (98). Preserve the currently published homepage and all Hosting
 files except the APK/update manifest. Release evidence will be recorded in
 `docs/release-1.2.82.md`.
@@ -681,6 +684,21 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-22 — Final color gate and release preparation checks
+
+- Final source `fbcf582`: 62 tests in seven suites and targeted analysis of six
+  widgets passed. Regenerated the synthetic Flutter previews after the focused
+  options-label contrast adjustment.
+- Source-check probes reject both a changed tracked Android manifest and an
+  extra untracked release manifest. Read-only Firebase CLI config resolution
+  matches the live headers/rewrites before staging the APK.
+- Review follow-up found no Dart regression; strengthened the build receipt
+  and preflight configuration comparison. A missing ignored wrapper JAR is a
+  deliberate fail-closed prerequisite, not a release defect: both local copies
+  exist and match. Fresh review of the operator delta is running.
+- Final APK rebuild, device smoke and publication remain pending; no sale or
+  payment was made. Public version remains 1.2.81 (98).
 
 ### 2026-11-22 — Release review follow-up for color focus and artifact checks
 
