@@ -15,6 +15,12 @@ Rules:
 
 ## Current state (updated 2026-11-22)
 
+The owner asked for an opinion on website/app color pairing. Reviewed shared
+theme tokens and the latest saved homepage/table-sales previews. Assessment:
+retain wine/warm-neutral branding; consider reducing accent use on routine app
+prices/secondary actions so checkout stands out. This is advice, not an approved
+palette change or full accessibility audit; no website/app code was changed.
+
 The owner authorized publication ("ปล่อยเว็บจริง"). The homepage is now live at
 `https://pok-pok.app`, deployed from `9291481` to Hosting version
 `9703c7514cedaa31` at 2026-11-22 02:01 AEDT (2026-11-21 15:01 UTC).
@@ -659,6 +665,18 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-22 — Website/app color assessment requested
+
+- Read the current website brand/home tokens, Flutter theme and operational,
+  category and report palettes; inspected saved homepage and table-sales views.
+- Both use wine `#7A1F2B`, warm paper `#F7F5F1`, ink `#302526` and white surfaces.
+  Recomputed contrast: white/wine 10.20:1, ink/paper 13.60:1, muted/paper 5.78:1.
+  These are token-pair calculations, not a claim that every screen is accessible.
+- Recommendation: preserve the palette, make primary action emphasis clearer
+  in sales views, retain separate status colors with labels/icons, and use real
+  product imagery to add visual variety. Owner has not selected a new palette.
+  No UI edit, device check or deployment; recorded discussion only.
 
 ### 2026-11-22 — Homepage device showcase published and verified
 
