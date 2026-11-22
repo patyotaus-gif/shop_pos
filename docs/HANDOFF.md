@@ -15,6 +15,15 @@ Rules:
 
 ## Current state (updated 2026-11-22)
 
+Owner authorized publication of the channel-choice fix and refresh of every
+app screenshot displayed on the website. Preparing Android 1.2.83 (100), followed
+by fresh connected-tablet captures of Sales, Products, Orders, Overview and
+Kitchen. Inventory found nine HTML pages plus the homepage story script using
+the old 1.2.78 images/derivatives. Preserve the approved device frames and launch
+logos. Verify capture content before public use and keep personal data private.
+Release and screenshot replacement are in progress; live/installed baseline is
+still Android 1.2.82 (99), Hosting `c698ab63be2f8a3b`.
+
 The owner reported that the dine-in/takeaway choices blend into the sales-entry
 background. Local fix in `restaurant_sales_screen.dart`: both choices keep equal
 priority and use an opaque theme surface, stronger theme outline and light
@@ -696,6 +705,17 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-22 — Android 100 and complete website screenshot refresh authorized
+
+- Owner requested release and updating all website app screenshots to the current
+  version. Bumped candidate to 1.2.83+100; no new product behavior beyond the
+  reviewed channel-choice visibility fix.
+- Found five screenshot subjects reused in nine HTML pages, plus four WebP story
+  derivatives. Will capture the installed candidate, update every reference and
+  version/date caption, and retain old asset URLs for cached pages.
+- Publication, installation and screenshot capture pending. Rollback baseline:
+  Hosting `c698ab63be2f8a3b` (Android 99 and existing website).
 
 ### 2026-11-22 — Sales-channel button visibility follow-up
 
