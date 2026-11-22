@@ -22,8 +22,11 @@ note encoding issue and low focused-label contrast on two tinted name cards.
 Strengthened the options/notes foreground to `onSurface`; the final 62-case gate
 and six-file analysis passed, and the actual Flutter previews were regenerated.
 Pinned-source rejection probes passed for changed and extra Android manifests;
-the CLI-resolved Hosting config matches the live baseline. Final rebuild,
-follow-up operator review and connected-tablet smoke pending. Still not published; live Android
+the CLI-resolved Hosting config matches the live baseline. Signed build 99 is
+installed on the connected SM-X900; launch, takeaway catalog, display-controls
+dialog, local cart quantity edit and removal passed. Cart restored to empty;
+no sale/payment/table-save performed. Final operator review and public upload
+remain pending. Still not published; live Android
 remains 1.2.81 (98). Preserve the currently published homepage and all Hosting
 files except the APK/update manifest. Release evidence will be recorded in
 `docs/release-1.2.82.md`.
@@ -36,8 +39,8 @@ actions retain the brand accent, including its light-on-dark variant. The shared
 catalog covers takeaway and table sales. All 62 cases in seven existing suites
 and targeted analysis of all six files passed. Actual Flutter before/after
 captures cover 1440/768/390 px in light/dark themes with synthetic data; a fresh
-visual walkthrough found no blocking issue. No APK build, installation, release,
-backend change or website edit in this revision. See
+visual walkthrough found no blocking issue. The Android release and device
+verification are tracked above; no backend change or website edit. See
 `docs/sales-color-hierarchy-20261122.md` and its saved previews.
 
 The owner authorized publication ("ปล่อยเว็บจริง"). The homepage is now live at
@@ -684,6 +687,23 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-22 — Android 99 installed and checked on connected tablet
+
+- Data-preserving `adb install -r` succeeded on the connected SM-X900; package
+  readback confirms `app.pokpok.pos`, 1.2.82, versionCode 99.
+- Opened takeaway sales and the display-controls dialog. Visually confirmed
+  neutral product prices/settings/quantity and brand-accent total/checkout.
+- Added one item to the local cart, increased its quantity to two, removed it
+  and confirmed an empty cart. Source inspection confirmed these actions use
+  local state; no checkout, table save or sale write was performed.
+- APK SHA-256 `3d672c9a665b5f179cfb65c83ca04da6dd8a450efd53914285b9f2af7aaf2062`;
+  signed by the existing release certificate. Private device captures remain
+  outside Git. Dark mode and phone layout were checked in synthetic Flutter
+  captures/tests, not on an additional physical device.
+- Follow-up operator launch guard was verified for success, nonzero exit and
+  missing command in a PowerShell script; final review/build receipt pending.
+  Public Hosting still serves 1.2.81 (98).
 
 ### 2026-11-22 — Final color gate and release preparation checks
 

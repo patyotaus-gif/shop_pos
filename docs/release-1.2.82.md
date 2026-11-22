@@ -15,14 +15,53 @@ This release updates the signed Android APK and its manifest at
    `a602c8d`, published with `2fa94e1`. Native inputs did not change between that
    release and the reviewed/deployed website source `9291481`; current native
    delta is six sales widgets plus the new version.
-2. Gate: pending release rerun of seven relevant existing suites and analysis.
-3. Independent review: pending fresh isolated read-only source review.
-4. Build: pending signed APK in `D:/pokpok-release-1.2.82/source/` using the
-   existing ignored key; verify app ID, version, signer, ABIs and source inputs.
-5. Device: pending data-preserving install and read-only visual/navigation smoke
-   on the connected SM-X900. No real sale, table save or payment is required.
+2. Gate: final rerun passed all 62 cases in seven existing sales/catalog/table/
+   checkout suites. Targeted analysis of all six changed widgets found no issues.
+   Actual Flutter light/dark previews were regenerated after the focused-label
+   adjustment; these use synthetic data at 1440/768/390 logical pixels.
+3. Independent review: fresh Codex CLI processes, read-only, ephemeral, no user
+   config/rules, MCP or inherited build conversation; `gpt-6.2-sol` at `xhigh`.
+   Grok and Claude were unavailable, so Codex was the fallback. The full native
+   unreleased range was reviewed, then the follow-up delta. The focused-label
+   contrast issue was fixed with `onSurface`; follow-up found no Dart regression.
+   Final operator-script delta review is pending.
+4. Build: signed APK built successfully from pinned native source
+   `fbcf582f379a9ce98ef329d20b3a068077623765` in
+   `D:/pokpok-release-1.2.82/source/`. Package `app.pokpok.pos`, version
+   `1.2.82`, build `99`; release certificate matches the existing signer.
+   All three ABI app libraries differ from published build 98. The final APK
+   also differs from the earlier candidate made before the focused-label fix.
+   422 native inputs match the pinned Git blobs; drift and extra-manifest
+   rejection probes passed. Successful-build receipt validation is in progress.
+5. Device: data-preserving install succeeded on the connected SM-X900; package
+   readback confirms 1.2.82/99. Launch, takeaway catalog and display-controls
+   dialog passed; prices/settings/quantity are neutral while total/checkout
+   retain the accent. Added one item to the local in-memory cart, increased its
+   quantity to two, removed it and confirmed an empty cart. No checkout, table
+   save or sale write. Physical smoke used light mode; dark and phone layouts
+   were covered by synthetic Flutter captures/tests.
 6. Publish: pending exact-two-file Hosting preflight, source push, Hosting-only
    deploy and direct public APK/manifest readback. Preserve the live homepage.
 
 Evidence/logs and private device captures stay outside Git under
 `D:/pokpok-release-1.2.82/`. Current public Android is still 1.2.81 (98).
+
+## Review dispositions and scope
+
+- Fixed operator checks for source drift, unexpected native inputs, Thai release
+  note encoding, and Hosting configuration. The official installed Firebase CLI
+  resolves the local configuration against existing backends; it matches the
+  live baseline before publication. Staging requires a successful pinned build
+  receipt containing the APK digest.
+- The warning that removing the ignored Gradle wrapper JAR would block staging
+  was rejected as a release defect: staging should fail if a required verified
+  input disappears. Both copies exist and match on this release machine.
+- Existing Kotlin incremental-cache cross-drive warnings used the compiler
+  fallback during the first build; it completed successfully. No dependency,
+  Flutter SDK, backend, payment mode or security policy was changed.
+- Source review is static; widget captures and physical-device checks are
+  separate evidence. No whole-app accessibility or payment certification claim.
+
+Rollback baseline: Hosting version `9703c7514cedaa31` (current homepage plus
+Android 1.2.81/98). Only `/app/pokpok.apk` and `/app/version.json` may change in
+this publication; all other 90 hosted files and Hosting config must match.
