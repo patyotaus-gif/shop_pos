@@ -25,8 +25,9 @@ Pinned-source rejection probes passed for changed and extra Android manifests;
 the CLI-resolved Hosting config matches the live baseline. Signed build 99 is
 installed on the connected SM-X900; launch, takeaway catalog, display-controls
 dialog, local cart quantity edit and removal passed. Cart restored to empty;
-no sale/payment/table-save performed. Final operator review and public upload
-remain pending. Still not published; live Android
+no sale/payment/table-save performed. Operator review triage and artifact staging
+are complete; exact-two-file Hosting preflight passed with unchanged config.
+Public upload remains pending. Still not published; live Android
 remains 1.2.81 (98). Preserve the currently published homepage and all Hosting
 files except the APK/update manifest. Release evidence will be recorded in
 `docs/release-1.2.82.md`.
@@ -687,6 +688,19 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-22 — Android 99 candidate ready for authorized publication
+
+- Final successful build receipt matches the APK installed/tested on the tablet;
+  staging verified package/version/signer/three ABIs, digest and Thai notes.
+- Hosting preflight found exactly `/app/pokpok.apk` and `/app/version.json`
+  changed among 92 files. Official CLI config conversion matches the live
+  headers/rewrites. Rollback is Hosting version `9703c7514cedaa31`.
+- Fresh review follow-ups and actual PowerShell launch-guard probes completed.
+  Final review's custom caller with a shadowed automatic exit-code variable is
+  outside this run's fresh-process invocation; triage recorded in
+  `docs/release-1.2.82.md`. No unresolved applicable release blocker.
+- Publication remains pending; owner release authorization is already given.
 
 ### 2026-11-22 — Android 99 installed and checked on connected tablet
 
