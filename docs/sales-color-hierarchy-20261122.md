@@ -15,7 +15,7 @@ totals and the primary sales action have clearer emphasis.
 | Element | Previous role | Implemented role |
 | --- | --- | --- |
 | Photo-card price | `primary` | `onSurface`, matching normal name-card text |
-| Product options/notes, grid and search | Default accented text button | `onSurfaceVariant` |
+| Product options/notes, grid and search | Default accented text button | `onSurface`; strengthened during release review for focused tinted name cards |
 | Editable basket quantity | Default accented text button | `onSurface` |
 | Display-settings button and mobile continue-shopping | Default accented secondary controls | `onSurfaceVariant` |
 | Secondary Add to table beside checkout | Default accented outlined button | `onSurface` |

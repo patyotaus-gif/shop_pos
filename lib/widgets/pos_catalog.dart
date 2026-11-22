@@ -93,7 +93,7 @@ class _PosCatalogState extends State<PosCatalog> {
   Widget build(BuildContext context) {
     final controller = SaleDisplayScope.of(context);
     final secondaryActionStyle = TextButton.styleFrom(
-        foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant);
+        foregroundColor: Theme.of(context).colorScheme.onSurface);
     return StreamBuilder<List<Product>>(
         stream: _products,
         builder: (context, snapshot) {

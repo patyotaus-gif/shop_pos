@@ -16,8 +16,11 @@ Rules:
 ## Current state (updated 2026-11-22)
 
 The owner authorized release of the sales color revision ("ปล่อยอัพเดท").
-Preparing Android 1.2.82 (99): source bump recorded, release checks/build/review
-and connected-tablet smoke pending. This is not published yet; live Android
+Preparing Android 1.2.82 (99): first release gate passed (62 cases and six-file
+analysis); independent review identified release-script guard gaps, a release
+note encoding issue and low focused-label contrast on two tinted name cards.
+Strengthened the options/notes foreground to `onSurface`; final gate, rebuild,
+follow-up review and connected-tablet smoke pending. Still not published; live Android
 remains 1.2.81 (98). Preserve the currently published homepage and all Hosting
 files except the APK/update manifest. Release evidence will be recorded in
 `docs/release-1.2.82.md`.
@@ -678,6 +681,16 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-22 — Release review follow-up for color focus and artifact checks
+
+- First release gate passed 62 cases and six-file analysis. Native source
+  comparison matched 422 inputs; tracked signing/credential scan had no matches.
+- Fresh source review found two operator guard gaps plus low release-note
+  encoding/focused-tint contrast issues. Operator notes are corrected to UTF-8
+  Thai; source pin/extra-input and Hosting-config checks are being tightened.
+- Changed the notes/options foreground from muted to normal neutral text for
+  clearer keyboard focus on pastel name cards. Final verification/rebuild pending.
 
 ### 2026-11-22 — Android 1.2.82 release authorized
 
