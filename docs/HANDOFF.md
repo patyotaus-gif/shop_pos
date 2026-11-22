@@ -15,43 +15,39 @@ Rules:
 
 ## Current state (updated 2026-11-22)
 
-Owner authorized publication of the channel-choice fix and refresh of every
-app screenshot displayed on the website. Preparing Android 1.2.83 (100), followed
-by fresh connected-tablet captures of Sales, Products, Orders, Overview and
-Kitchen. Inventory found nine HTML pages plus the homepage story script using
-the old 1.2.78 images/derivatives. Preserve the approved device frames and launch
-logos. Verify capture content before public use and keep personal data private.
-Android 1.2.83 (100) is now installed on the connected SM-X900 and the chooser,
-dine-in navigation and takeaway local cart smoke passed. Public release and
-screenshot replacement are in progress; live baseline is still Android 1.2.82
-(99), Hosting `c698ab63be2f8a3b`. Four approved captures are direct tablet PNGs;
-the kitchen uses the current production widget with isolated synthetic tickets
-because the live kitchen contains a customer name. Website captions disclose
-that distinction. Cart cleared; original Android display/S Pen settings restored.
+Android **1.2.83 (100) is published and installed** on the connected SM-X900.
+The owner-authorized channel-choice fix and all displayed website app screenshots
+are released from `2381f3c`, Hosting `e9fc85e582067d26` at 14:23 AEDT (03:23 UTC).
+Public verification at 14:24 passed: all 101 Hosting hashes/config match, the 20
+changed non-APK files match direct downloads, and the full 93,116,248-byte APK
+matches the installed artifact/manifest SHA-256. Live Chromium checks passed on
+all nine changed pages at 1440/768/390, including story business variants, current
+images/full-size links/metadata, no overflow and no page errors.
+Five current UI images replace the old screenshot references, including four
+WebP derivatives; approved hardware frames and launch logos remain unchanged.
+Four PNGs are direct tablet captures; the kitchen uses the production Flutter
+widgets with isolated synthetic tickets and is explicitly labeled as a render.
+No private Settings/customer-name capture was published. Cart cleared and original
+Android display/S Pen settings restored. No sale/payment/table/kitchen update,
+backend or iOS release. Rollback: `c698ab63be2f8a3b` (Android 99 and old images).
+Details/limitations: `docs/release-1.2.83.md` and
+`docs/website-screenshots-2026-11-22.md`. Requested release work is complete.
 
 The owner reported that the dine-in/takeaway choices blend into the sales-entry
-background. Local fix in `restaurant_sales_screen.dart`: both choices keep equal
+background. Released fix in `restaurant_sales_screen.dart`: both choices keep equal
 priority and use an opaque theme surface, stronger theme outline and light
 Material elevation. Labels, hit targets, route callbacks and cart retention are
 unchanged. Nine existing workflow tests and targeted analysis passed; the
 temporary visual harness passed eight after-captures (1440/768/390/320, light/dark,
 320 at 200% text). Visual walkthrough and fresh source review completed with no
 production blocker; limitations and Low observations are recorded below. The
-signed 1.2.83 (100) artifact is staged locally; public publication is pending.
+signed 1.2.83 (100) artifact's public availability checks passed.
 
-The owner authorized release of the sales color revision ("ปล่อยอัพเดท").
-Android **1.2.82 (99) is published** at `https://pok-pok.app/app/pokpok.apk`.
-Release source/metadata `fa1eb3e` was pushed and deployed to Hosting version
-`c698ab63be2f8a3b` at 2026-11-22 12:26 AEDT (01:26 UTC); native source is
-`fbcf582`. Final 62-case gate, six-file analysis, review triage, signed artifact
-validation and connected SM-X900 smoke passed. The same APK is installed on
-the tablet; launch, takeaway catalog, display controls, local cart quantity and
-removal were checked. Cart restored to empty; no sale/payment/table-save made.
-Full public download at 12:27 AEDT matches the tested 93,116,248-byte APK and
-manifest digest. All 92 live Hosting hashes match, with only APK/manifest changed
-from the baseline; homepage and Hosting config are preserved. No iOS/backend
-release. Rollback is Hosting version `9703c7514cedaa31` (Android 98 plus the
-current homepage). Evidence and review limitations: `docs/release-1.2.82.md`.
+Previous release Android 1.2.82 (99), native source `fbcf582`, was published from
+`fa1eb3e` to Hosting `c698ab63be2f8a3b` at 12:26 AEDT. Its 62-case sales gate,
+six-file analysis, independent review, signed artifact/device smoke and public
+download verification passed. It is superseded by Android 100 above; its sales
+color changes remain included. Evidence: `docs/release-1.2.82.md`.
 
 The owner authorized the sales color-hierarchy revision ("เริ่มการแก้ไข").
 Released in six shared Flutter widgets: routine product prices and
@@ -710,6 +706,29 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-22 — Android 100 and website screenshot availability verified
+
+- At 14:24 AEDT, all 101 Hosting file hashes equal local release bytes; resolved
+  live configuration equals baseline. Public APK full download matches size and
+  SHA-256 of the signed/installed 1.2.83 (100) artifact. All 20 other changed
+  public files also match direct downloads.
+- Live Chromium: nine changed pages × 1440/768/390 passed current PNG/WebP URLs,
+  enlarged-image links, social metadata, dynamic restaurant/retail story images,
+  no overflow and no JS page errors. Not a physical-tablet browser test.
+- Physical tablet remains installed on Android 100, empty cart and chooser;
+  original display/S Pen settings restored. No external post or backend change.
+- Release source `2381f3c`, Hosting `e9fc85e582067d26`; evidence and remaining
+  illustration limitations recorded in release/screenshot docs. Work complete;
+  final receipt is a documentation-only commit, with no further public changes.
+
+### 2026-11-22 — Android 100 / current screenshot Hosting deployment
+
+- Pushed and verified `2381f3cd2e7fafe37a7f122d0f051d3c7394bfc1` on origin/master.
+- Hosting-only deploy returned exit 0 at 14:23 AEDT (03:23 UTC), candidate
+  Hosting version `e9fc85e582067d26`. Backend/iOS/config were not changed.
+- Direct public download, full cloud-hash comparison and live browser checks
+  are running; record their results before treating availability as verified.
 
 ### 2026-11-22 — Android 100 / screenshot release gate passed
 

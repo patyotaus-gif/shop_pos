@@ -4,7 +4,8 @@
 รุ่นนี้ทำให้ปุ่มทานที่ร้าน/สั่งกลับบ้านมีพื้นผิวทึบ ขอบชัด และเงาบางตามธีม
 คงเส้นทางการขายและตะกร้าเดิม พร้อมภาพหน้าจอ 5 หน้ารุ่นปัจจุบันบนเว็บ 9 หน้า
 
-สถานะ: ติดตั้งและตรวจบน SM-X900 แล้ว เตรียมเผยแพร่เว็บ/APK
+สถานะ: เผยแพร่เว็บ/APK แล้ว 22 พฤศจิกายน 2026 เวลา 14:23 AEDT
+ติดตั้งและตรวจบน SM-X900 แล้ว ตรวจไฟล์/หน้าจอจากเว็บจริงผ่านเวลา 14:24 AEDT
 
 ## หลักฐานก่อนปล่อย
 
@@ -68,7 +69,16 @@ Candidate `fea2e0f` ผ่าน fresh caption follow-up review (ไม่พบ
 ไม่เปลี่ยน Hosting config, payment mode หรือ security enforcement
 
 Rollback: Hosting version `c698ab63be2f8a3b` (Android 1.2.82/99 และภาพเดิม)
-หลัง deploy ต้องตรวจ cloud file hashes/config, ดาวน์โหลด APK เต็มตรวจ digest,
-ตรวจทุกไฟล์เว็บที่เปลี่ยนและ browser smoke จากโดเมนจริงก่อนถือว่าเสร็จ
+ผลหลัง deploy:
+
+- Release source `2381f3cd2e7fafe37a7f122d0f051d3c7394bfc1` ตรง origin/master
+  ก่อน deploy; Hosting version `e9fc85e582067d26`, 03:23 UTC / 14:23 AEDT
+- Cloud file hashes ทั้ง 101 ไฟล์ตรง local release; config เหมือน baseline
+- ดาวน์โหลด APK เต็มจากโดเมนจริงเวลา 03:24:23 UTC ตรง size/digest ข้างต้น
+  manifest ให้ 1.2.83/100 และไฟล์เว็บที่เปลี่ยนอีก 20 ไฟล์ตรง byte hash ทั้งหมด
+- Live Chromium ตรวจ 9 หน้า × 1440/768/390 ผ่าน current PNG/WebP, ลิงก์เต็ม,
+  metadata, restaurant/retail story variants; ไม่มี overflow หรือ page error
+- ไม่ได้ทดสอบเว็บบน physical tablet; การตรวจอุปกรณ์จริงครอบคลุม native app
+- เก็บ APK เดิมและ Hosting baseline สำหรับ rollback ไม่มี backend/iOS update
 
 หลักฐานภายนอก Git: `D:/pokpok-release-1.2.83/`
