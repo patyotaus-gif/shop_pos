@@ -15,6 +15,13 @@ Rules:
 
 ## Current state (updated 2026-11-22)
 
+The owner authorized release of the sales color revision ("ปล่อยอัพเดท").
+Preparing Android 1.2.82 (99): source bump recorded, release checks/build/review
+and connected-tablet smoke pending. This is not published yet; live Android
+remains 1.2.81 (98). Preserve the currently published homepage and all Hosting
+files except the APK/update manifest. Release evidence will be recorded in
+`docs/release-1.2.82.md`.
+
 The owner authorized the sales color-hierarchy revision ("เริ่มการแก้ไข").
 Implemented locally in six shared Flutter widgets: routine product prices and
 quantity controls use neutral text; notes, display settings, continue-shopping
@@ -671,6 +678,16 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-22 — Android 1.2.82 release authorized
+
+- Owner requested release after the sales color revision. Bumped source to
+  1.2.82+99; scope is the six shared sales widget foreground changes.
+- Rechecked clean starting tree and prior Android/web releases. Connected
+  Samsung SM-X900 is available through ADB. Release preparation uses
+  `D:/pokpok-release-1.2.82/` and the existing signing configuration.
+- Gate, independent source review, signed artifact/device checks and publishing
+  are still pending. No additional owner approval is needed for this release.
 
 ### 2026-11-22 — Sales color hierarchy implemented and verified locally
 
