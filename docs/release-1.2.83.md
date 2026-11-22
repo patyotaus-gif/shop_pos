@@ -59,7 +59,10 @@ responsive 3, implementation integrity 4; ไม่มี P0/P1 ในส่ว�
 
 ## การเผยแพร่
 
-กำลังเตรียม source commit, fresh website review และ Hosting preflight
+Candidate `fea2e0f` ผ่าน fresh caption follow-up review (ไม่พบ defect ใหม่)
+และ marketing gate รอบสุดท้าย 18 หน้า × 5 widths แล้ว Hosting preflight พบ
+21 public-file changes ตามรายการที่กำหนด และ config/live baseline ตรงเดิม
+ใช้คำอนุญาตเผยแพร่ที่เจ้าของให้ในคำขอนี้ เดินหน้าตามขอบเขตดังต่อไปนี้
 เป้าหมาย Firebase Hosting project `shop-pos-89294`, เว็บ `https://pok-pok.app`
 เผยแพร่เฉพาะ Hosting (APK/manifest/ภาพและการอ้างภาพ) ไม่ deploy backend/iOS
 ไม่เปลี่ยน Hosting config, payment mode หรือ security enforcement

@@ -711,6 +711,17 @@ or triggered; its Codemagic workflow does not run automatically on push.
 
 ## Log
 
+### 2026-11-22 — Android 100 / screenshot release gate passed
+
+- Candidate `fea2e0f` includes the explicit kitchen-render caption correction.
+  Fresh follow-up Codex review found no introduced defect. Final marketing gate
+  rerun passed all 18 pages × 5 widths; prior homepage interaction gate passed.
+- Hosting preflight confirms the baseline is still `c698ab63be2f8a3b`, unchanged
+  configuration, and exactly 21 intended public-file changes. Staged APK digest
+  still matches the installed and signed build receipt.
+- Owner's explicit release instruction supplies authorization. Proceeding with
+  source push and Hosting-only deploy; public availability is not yet claimed.
+
 ### 2026-11-22 — Current screenshot candidate and review follow-up
 
 - Committed screenshot/APK metadata candidate `bfb0bd5`; native source remains
