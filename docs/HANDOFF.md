@@ -711,6 +711,22 @@ or triggered; its Codemagic workflow does not run automatically on push.
 
 ## Log
 
+### 2026-11-22 — Current screenshot candidate and review follow-up
+
+- Committed screenshot/APK metadata candidate `bfb0bd5`; native source remains
+  `f5b8cf5`. Four real tablet PNGs and one isolated Flutter kitchen render, plus
+  four optimized WebP derivatives; all 236 renderer lib/asset files match root.
+- Website gate passed 18 pages × 5 widths and homepage 13 groups × 8 widths.
+  Visual pass covers six changed visible routes at 1440/768/390; no page errors,
+  missing current-image targets or horizontal overflow.
+- Fresh website reviewer found one Medium disclosure issue: kitchen caption did
+  not explicitly distinguish a render from a tablet capture. Both placements
+  now say rendered kitchen image. Follow-up gate/review is pending.
+- Low limitation retained: empty Orders queue shows navigation/filters but not
+  a populated ticket's controls. No customer data or synthetic production order
+  is published to fill the screenshot. Further visual limits and audit scores
+  are recorded in `docs/release-1.2.83.md`. Still no public deployment.
+
 ### 2026-11-22 — Android 100 installed; current screenshots prepared
 
 - Built signed Android 1.2.83 (100) from pinned `f5b8cf5`; all 422 native inputs
