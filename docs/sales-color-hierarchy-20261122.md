@@ -59,6 +59,9 @@ products/table data, not screenshots from a live shop or a newly installed APK.
   chip. Neither behavior was introduced by this change.
 - Isolated evidence directory: `D:/PokpokWork/sales-colors-20261122/`.
   All six tested source files match this checkout after baseline capture.
-- **Local implementation only.** No APK build/install, physical-device check,
-  public release, website or backend deployment. Published Android remains
-  1.2.81 (98); this revision requires a subsequent app release to reach devices.
+- **Released as Android 1.2.82 (99) on 2026-11-22.** Final release review
+  strengthened the options/notes foreground to `onSurface` for focused tinted
+  cards; all 62 tests and analysis passed again, and after-captures were refreshed.
+  The signed APK was installed and checked on the connected SM-X900, then
+  published and fully downloaded for digest verification. The website and
+  backend were preserved. See `release-1.2.82.md` for evidence and limits.

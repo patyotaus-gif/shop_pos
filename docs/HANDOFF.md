@@ -16,24 +16,21 @@ Rules:
 ## Current state (updated 2026-11-22)
 
 The owner authorized release of the sales color revision ("ปล่อยอัพเดท").
-Preparing Android 1.2.82 (99): first release gate passed (62 cases and six-file
-analysis); independent review identified release-script guard gaps, a release
-note encoding issue and low focused-label contrast on two tinted name cards.
-Strengthened the options/notes foreground to `onSurface`; the final 62-case gate
-and six-file analysis passed, and the actual Flutter previews were regenerated.
-Pinned-source rejection probes passed for changed and extra Android manifests;
-the CLI-resolved Hosting config matches the live baseline. Signed build 99 is
-installed on the connected SM-X900; launch, takeaway catalog, display-controls
-dialog, local cart quantity edit and removal passed. Cart restored to empty;
-no sale/payment/table-save performed. Operator review triage and artifact staging
-are complete; exact-two-file Hosting preflight passed with unchanged config.
-Public upload remains pending. Still not published; live Android
-remains 1.2.81 (98). Preserve the currently published homepage and all Hosting
-files except the APK/update manifest. Release evidence will be recorded in
-`docs/release-1.2.82.md`.
+Android **1.2.82 (99) is published** at `https://pok-pok.app/app/pokpok.apk`.
+Release source/metadata `fa1eb3e` was pushed and deployed to Hosting version
+`c698ab63be2f8a3b` at 2026-11-22 12:26 AEDT (01:26 UTC); native source is
+`fbcf582`. Final 62-case gate, six-file analysis, review triage, signed artifact
+validation and connected SM-X900 smoke passed. The same APK is installed on
+the tablet; launch, takeaway catalog, display controls, local cart quantity and
+removal were checked. Cart restored to empty; no sale/payment/table-save made.
+Full public download at 12:27 AEDT matches the tested 93,116,248-byte APK and
+manifest digest. All 92 live Hosting hashes match, with only APK/manifest changed
+from the baseline; homepage and Hosting config are preserved. No iOS/backend
+release. Rollback is Hosting version `9703c7514cedaa31` (Android 98 plus the
+current homepage). Evidence and review limitations: `docs/release-1.2.82.md`.
 
 The owner authorized the sales color-hierarchy revision ("เริ่มการแก้ไข").
-Implemented locally in six shared Flutter widgets: routine product prices and
+Released in six shared Flutter widgets: routine product prices and
 quantity controls use neutral text; notes, display settings, continue-shopping
 and secondary table-save actions use neutral theme colors. Totals and primary
 actions retain the brand accent, including its light-on-dark variant. The shared
@@ -48,8 +45,9 @@ The owner authorized publication ("ปล่อยเว็บจริง"). Th
 `https://pok-pok.app`, deployed from `9291481` to Hosting version
 `9703c7514cedaa31` at 2026-11-22 02:01 AEDT (2026-11-21 15:01 UTC).
 All 92 hosted file hashes match the release checkout; the 14 changed homepage
-files also match direct public downloads. Hosting configuration and Android
-1.2.81 (98) APK/manifest remain unchanged. Live Chromium checks at 1440, 768 and
+files also matched direct public downloads. That homepage publication preserved
+Hosting configuration and Android 1.2.81 (98); the subsequent Android 99 release
+above preserves those homepage bytes. Live Chromium checks at 1440, 768 and
 390 px passed image loading, tap/keyboard selection, mobile touch swipe, business
 selection, no overflow and no page errors. No physical-device browser check.
 Fresh independent source review retained four Low presentation/navigation items;
@@ -103,9 +101,9 @@ current progress is above. The recording does not establish the
 site's implementation or whether motion is driven by scroll, video or 3D.
 The earlier reference assessment alone made no website change.
 
-The owner authorized publication of this table-sales change on 2026-11-21
-("ปล่อยอัพเดท"). Android **1.2.81 (98)** is now published at
-`https://pok-pok.app/app/pokpok.apk`. It was built from `a602c8d` and installed
+The previous table-sales release was authorized on 2026-11-21 ("ปล่อยอัพเดท").
+Android **1.2.81 (98)** was published and is now superseded by 1.2.82 (99)
+at the APK URL above. It was built from `a602c8d` and installed
 on the connected SM-X900, preserving app data. Native smoke verified table entry,
 the full sales workspace, local item selection/quantity editing and discard;
 the existing bill remained unchanged. The tablet is left on the new sales page
@@ -688,6 +686,23 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-22 — Android 1.2.82 (99) published and verified
+
+- Pushed release source/metadata `fa1eb3e8238539be1e1ddbff0ffed0adc15afd2c`;
+  Hosting-only deploy succeeded at 12:26 AEDT (01:26 UTC), version
+  `c698ab63be2f8a3b`. Native source remains `fbcf582`.
+- Postflight: all 92 Hosting hashes match the release checkout, no differences;
+  cloud headers/rewrites are unchanged. Only APK and manifest changed from the
+  previous live version, preserving the published homepage and other 90 files.
+- Public manifest reports 1.2.82/99. Full APK download at 12:27 AEDT matches
+  93,116,248 bytes and SHA-256
+  `3d672c9a665b5f179cfb65c83ca04da6dd8a450efd53914285b9f2af7aaf2062`,
+  identical to the APK installed and tested on the connected SM-X900.
+- Local gate: 62 tests and six-file analysis passed. Device smoke and its
+  restored empty cart are recorded above; no real sale or payment was made.
+  No iOS/backend release. Rollback: `9703c7514cedaa31`.
+- Final receipt: `docs/release-1.2.82.md`; private logs/captures remain on D:.
 
 ### 2026-11-22 — Android 99 candidate ready for authorized publication
 

@@ -44,11 +44,16 @@ This release updates the signed Android APK and its manifest at
    save or sale write. Physical smoke used light mode; dark and phone layouts
    were covered by synthetic Flutter captures/tests.
 6. Publish: exact-two-file Hosting preflight passed against 92 live files, with
-   CLI-resolved headers/rewrites equal to the live baseline. Source push,
-   Hosting-only deploy and direct public APK/manifest readback remain pending.
+   CLI-resolved headers/rewrites equal to the live baseline. Source/metadata
+   `fa1eb3e8238539be1e1ddbff0ffed0adc15afd2c` was pushed and deployed Hosting-only
+   at 2026-11-22 12:26 AEDT (01:26 UTC), version `c698ab63be2f8a3b`.
+   All 92 postflight hashes match; Hosting configuration is unchanged. The
+   public manifest and full APK download at 12:27 AEDT match the tested artifact.
+   Direct homepage and wordmark downloads also match the preserved local bytes.
 
 Evidence/logs and private device captures stay outside Git under
-`D:/pokpok-release-1.2.82/`. Current public Android is still 1.2.81 (98).
+`D:/pokpok-release-1.2.82/`. Current public Android is 1.2.82 (99), also installed
+and smoke-tested on the connected tablet. No iOS or backend release.
 
 ## Review dispositions and scope
 
@@ -78,5 +83,5 @@ Rollback baseline: Hosting version `9703c7514cedaa31` (current homepage plus
 Android 1.2.81/98). Only `/app/pokpok.apk` and `/app/version.json` may change in
 this publication; all other 90 hosted files and Hosting config must match.
 
-Candidate artifact: 93,116,248 bytes; SHA-256
+Published and tablet-tested artifact: 93,116,248 bytes; SHA-256
 `3d672c9a665b5f179cfb65c83ca04da6dd8a450efd53914285b9f2af7aaf2062`.
