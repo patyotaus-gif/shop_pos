@@ -80,21 +80,29 @@ class _RestaurantSalesScreenState extends State<RestaurantSalesScreen> {
       );
 
   Widget _choice(BuildContext context, int mode, IconData icon, String title,
-          String description) =>
-      OutlinedButton(
-        key: ValueKey('sales-channel-$mode'),
-        onPressed: () => _open(mode),
-        style: OutlinedButton.styleFrom(padding: const EdgeInsets.all(24)),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 36),
-          const SizedBox(height: 12),
-          Text(title,
-              style: Theme.of(context).textTheme.titleLarge,
-              textAlign: TextAlign.center),
-          const SizedBox(height: 8),
-          Text(description,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium),
-        ]),
-      );
+      String description) {
+    final cs = Theme.of(context).colorScheme;
+    return OutlinedButton(
+      key: ValueKey('sales-channel-$mode'),
+      onPressed: () => _open(mode),
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.all(24),
+        backgroundColor: cs.surface,
+        side: BorderSide(color: cs.outline, width: 1.5),
+        elevation: 2,
+        shadowColor: cs.shadow,
+      ),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 36),
+        const SizedBox(height: 12),
+        Text(title,
+            style: Theme.of(context).textTheme.titleLarge,
+            textAlign: TextAlign.center),
+        const SizedBox(height: 8),
+        Text(description,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium),
+      ]),
+    );
+  }
 }

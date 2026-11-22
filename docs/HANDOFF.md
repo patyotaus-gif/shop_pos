@@ -15,6 +15,16 @@ Rules:
 
 ## Current state (updated 2026-11-22)
 
+The owner reported that the dine-in/takeaway choices blend into the sales-entry
+background. Local fix in `restaurant_sales_screen.dart`: both choices keep equal
+priority and use an opaque theme surface, stronger theme outline and light
+Material elevation. Labels, hit targets, route callbacks and cart retention are
+unchanged. Nine existing workflow tests and targeted analysis passed; the
+temporary visual harness passed eight after-captures (1440/768/390/320, light/dark,
+320 at 200% text). Visual walkthrough and fresh source review completed with no
+production blocker; limitations and Low observations are recorded below. This follow-up is not yet released;
+the installed/public Android version remains 1.2.82 (99).
+
 The owner authorized release of the sales color revision ("ปล่อยอัพเดท").
 Android **1.2.82 (99) is published** at `https://pok-pok.app/app/pokpok.apk`.
 Release source/metadata `fa1eb3e` was pushed and deployed to Hosting version
@@ -686,6 +696,38 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-22 — Sales-channel button visibility follow-up
+
+- Owner: dine-in and takeaway choices disappear into the sales screen background.
+  The existing transparent buttons used `outlineVariant`; resting edge/page
+  contrast was 1.28:1 in light and 2.00:1 in dark.
+- Both choices now use existing `surface`/`outline` tokens, a 1.5 logical-pixel
+  edge and elevation 2 with the theme shadow. Edge/page contrast is 3.97:1 light
+  and 5.56:1 dark. Both remain equal alternatives; no routing or data change.
+- Nine existing `ux_workflows_test.dart` cases passed, including switching modes
+  with a retained takeaway cart; targeted analysis passed. Temporary actual
+  Flutter captures cover four widths in both themes, including 320 at 200% text.
+- Capture harness initially painted Flutter test-only hard shadows; enabled
+  real shadows and corrected debug-flag restoration before invariants. The final
+  capture run exited zero. No production-code change was needed for that fixture.
+- Saved before/light-after/dark-after images under `docs/previews/` with prefix
+  `sales-channel-choice-`. Parent screenshot critique: the question and two
+  equal alternatives lead; edges align, brand icons identify actions, narrow
+  layouts stack correctly, and no content is clipped. No counts/charts apply.
+- A fresh walkthrough inspected six views and found both choices understandable
+  and distinct from the page. At 320 with 200% text, the subtitle wraps within
+  “ออเดอร์”; parent confirmed the same wrap in the before capture. This Low
+  pre-existing text-wrap observation remains; text is complete. The walkthrough
+  read mandatory HANDOFF/design instructions first and was not fully blind.
+- Fresh read-only Codex CLI source review completed. It identified one Low focus
+  outline difference in a plain MaterialApp host; both production themes already
+  used a constant border before this change, and `lib/main.dart` supplies those
+  themes. Focus overlay remains. Recorded as a fallback-host limitation, not a
+  production regression. No workflow/data/layout blocker was found.
+- Local fix only: no APK, tablet install, deployment or public update. Evidence
+  is under `D:/PokpokWork/channel-choice-20261122/`; public/installed version
+  remains 1.2.82 (99).
 
 ### 2026-11-22 — Android 1.2.82 (99) published and verified
 
