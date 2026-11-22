@@ -21,8 +21,13 @@ by fresh connected-tablet captures of Sales, Products, Orders, Overview and
 Kitchen. Inventory found nine HTML pages plus the homepage story script using
 the old 1.2.78 images/derivatives. Preserve the approved device frames and launch
 logos. Verify capture content before public use and keep personal data private.
-Release and screenshot replacement are in progress; live/installed baseline is
-still Android 1.2.82 (99), Hosting `c698ab63be2f8a3b`.
+Android 1.2.83 (100) is now installed on the connected SM-X900 and the chooser,
+dine-in navigation and takeaway local cart smoke passed. Public release and
+screenshot replacement are in progress; live baseline is still Android 1.2.82
+(99), Hosting `c698ab63be2f8a3b`. Four approved captures are direct tablet PNGs;
+the kitchen uses the current production widget with isolated synthetic tickets
+because the live kitchen contains a customer name. Website captions disclose
+that distinction. Cart cleared; original Android display/S Pen settings restored.
 
 The owner reported that the dine-in/takeaway choices blend into the sales-entry
 background. Local fix in `restaurant_sales_screen.dart`: both choices keep equal
@@ -31,8 +36,8 @@ Material elevation. Labels, hit targets, route callbacks and cart retention are
 unchanged. Nine existing workflow tests and targeted analysis passed; the
 temporary visual harness passed eight after-captures (1440/768/390/320, light/dark,
 320 at 200% text). Visual walkthrough and fresh source review completed with no
-production blocker; limitations and Low observations are recorded below. This follow-up is not yet released;
-the installed/public Android version remains 1.2.82 (99).
+production blocker; limitations and Low observations are recorded below. The
+signed 1.2.83 (100) artifact is staged locally; public publication is pending.
 
 The owner authorized release of the sales color revision ("ปล่อยอัพเดท").
 Android **1.2.82 (99) is published** at `https://pok-pok.app/app/pokpok.apk`.
@@ -705,6 +710,26 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-22 — Android 100 installed; current screenshots prepared
+
+- Built signed Android 1.2.83 (100) from pinned `f5b8cf5`; all 422 native inputs
+  match, signer matches build 99, and all three ABI app libraries changed.
+  APK SHA-256 `1d87f9af7bb1cf819bf8ccf82c0d1d5756ef346122dd1c6ac311327f580ba3f6`,
+  93,116,248 bytes. Successful build receipt retained outside Git.
+- Fresh independent native Codex CLI review found no introduced production
+  defect. Nine workflow tests, targeted analysis and eight Flutter visual
+  captures passed; installed version readback is 1.2.83/100.
+- Device smoke opened both sales channels, captured the local three-item cart,
+  then removed all items. No sale, payment, table save or kitchen status update.
+- Four public screenshots use direct current-tablet captures. Kitchen capture
+  uses the actual current Flutter kitchen/sidebar and synthetic in-memory table
+  tickets; no Firebase initialization or writes. The private live kitchen and
+  Settings inspection captures are excluded from publication and Git.
+- Device density stays 320. Restored `policy_control` to absent/null and both
+  `air_button_onoff` / `air_cmd_use_minimized` to 1. Returned to the chooser.
+- Repointing all nine website pages and homepage story variants, including
+  metadata and enlarged-image links, to 1.2.83. Publication/checks still pending.
 
 ### 2026-11-22 — Android 100 and complete website screenshot refresh authorized
 

@@ -85,15 +85,18 @@ the settled native launch composition (146:125, mark height .84). The owner's
 no-description request omits the native `POINT OF SALE` line. No raster edits,
 generated logos, sound, or ongoing launch animation are introduced.
 
-`public/screens/story/*.webp` are 1480x924 optimized derivatives of already
-published `public/screens/{pos,orders,inventory,overview}-1.2.78.png`. They retain
-the actual UI and demo data without repainting or changing numbers. The four
-images total 198,596 bytes. Labels disclose version 1.2.78 (95) and test-shop data;
-the overview's zero sales are not presented as a customer's results or a current
-build screenshot. Original PNG links remain available for inspection.
+`public/screens/story/*-1.2.83.webp` are 1480x924 optimized derivatives of the
+four current `public/screens/{pos,orders,inventory,overview}-1.2.83.png` captures
+from Android 1.2.83 (100) on the connected SM-X900. They retain the actual UI
+without repainting or changing numbers. Original PNG links remain available.
+The Orders image intentionally shows the empty confirmation queue; no longer
+claims to show DEMO-001 or a pending-payment ticket. Captions name the captured
+version without asserting that all current connected-shop data is synthetic.
 
-No private connected-tablet capture, competitor asset or invented current app
-screen is used. Screenshot refresh to a later released build is a separate task.
+The separate kitchen image uses the production Flutter kitchen/sidebar with
+isolated synthetic tickets and is labeled as demonstration data. Device launch
+logos/frames remain the owner-approved artwork. Capture details and byte hashes
+are in `docs/website-screenshots-2026-11-22.md`.
 
 ## Verification and preview
 

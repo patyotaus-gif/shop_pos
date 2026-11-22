@@ -22,14 +22,14 @@
       description: 'ดูรายการที่รอยืนยันและกำลังเตรียม แยกสถานะให้เห็นชัด พร้อมเปิดรายละเอียดออเดอร์ได้จากหน้าจอเดียว',
       detail: 'สำหรับร้านอาหารและคาเฟ่',
       label: 'จัดการออเดอร์', english: 'Order Management', image: 'orders',
-      alt: 'หน้าจอออเดอร์ Pokpok แสดงรายการ DEMO-001 และสถานะรอชำระจากร้านทดสอบ'
+      alt: 'หน้าจอออเดอร์ Pokpok แสดงตัวกรองสถานะและหมวดรอยืนยันที่ยังไม่มีรายการ'
     },
     retail: {
       title: 'เห็นสินค้าคงเหลือ\nก่อนสั่งเพิ่ม',
       description: 'ตรวจจำนวนสินค้าในร้าน ดูรายการที่ใกล้หมด และวางแผนรับสินค้าเข้าให้พร้อมสำหรับการขาย',
       detail: 'สำหรับร้านค้าปลีกและมินิมาร์ท',
       label: 'สินค้าคงเหลือ', english: 'Inventory Management', image: 'inventory',
-      alt: 'หน้าจอสินค้าคงเหลือ Pokpok แสดงรายการสินค้าและจำนวนคงเหลือจากร้านทดสอบ'
+      alt: 'หน้าจอสินค้าคงเหลือ Pokpok แสดงรายการสินค้าและจำนวนคงเหลือบนแท็บเล็ต'
     }
   };
   let current = 0;
@@ -172,8 +172,8 @@
     middle.querySelector('.chapter-detail').textContent = variant.detail;
     middle.querySelector('[data-chapter-english]').textContent = variant.english;
     tabs[1].querySelector('span').textContent = variant.label;
-    const source = `/screens/story/${variant.image}-1.2.78.webp`;
-    const full = `/screens/${variant.image}-1.2.78.png`;
+    const source = `/screens/story/${variant.image}-1.2.83.webp`;
+    const full = `/screens/${variant.image}-1.2.83.png`;
     screens[1].src = source; screens[1].alt = variant.alt; screens[1].dataset.full = full;
     const mobileImage = middle.querySelector('.story-mobile-image img');
     mobileImage.src = source; mobileImage.alt = variant.alt;

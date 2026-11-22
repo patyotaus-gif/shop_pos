@@ -1,10 +1,10 @@
 {
-    "version":  "1.2.82",
-    "build":  99,
+    "version":  "1.2.83",
+    "build":  100,
     "url":  "https://pok-pok.app/app/pokpok.apk",
     "minSupportedBuild":  1,
     "mandatory":  false,
-    "notes":  "ปรับสีหน้าขายให้ราคาสินค้าและปุ่มรองอ่านง่าย เน้นยอดรวมและปุ่มชำระเงิน รองรับธีมสว่างและมืด",
-    "sha256":  "3d672c9a665b5f179cfb65c83ca04da6dd8a450efd53914285b9f2af7aaf2062",
+    "notes":  "ปรับปุ่มทานที่ร้านและสั่งกลับบ้านให้เด่นชัด แยกจากพื้นหลัง รองรับธีมสว่างและมืด",
+    "sha256":  "1d87f9af7bb1cf819bf8ccf82c0d1d5756ef346122dd1c6ac311327f580ba3f6",
     "sizeBytes":  93116248
 }

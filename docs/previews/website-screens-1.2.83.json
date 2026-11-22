@@ -1,0 +1,89 @@
+{
+  "capturedVersion": "1.2.83",
+  "build": 100,
+  "tablet": "SM-X900",
+  "capturedOn": "2026-11-22",
+  "kitchenSource": "Production Flutter widgets with isolated synthetic tickets; not a physical-device capture",
+  "rendererSourceFilesMatched": 236,
+  "htmlPages": [
+    "public/blog/manage-shop-credit/index.html",
+    "public/features/index.html",
+    "public/index.html",
+    "public/blog/index.html",
+    "public/retail/index.html",
+    "public/restaurant/index.html",
+    "public/guides/online-orders/index.html",
+    "public/blog/free-pos-thailand/index.html",
+    "public/guides/closing/index.html"
+  ],
+  "assets": [
+    {
+      "name": "pos",
+      "file": "pos-1.2.83.png",
+      "width": 2960,
+      "height": 1848,
+      "size": 628887,
+      "sha256": "3807c58b65922c4a7f380af9363cc3d8f5b2267f1a86a0798d18656976b14066",
+      "derivative": {
+        "file": "screens/story/pos-1.2.83.webp",
+        "width": 1480,
+        "height": 924,
+        "size": 52214,
+        "sha256": "2cc51367f0b120edcf6f7e9e6e3cb6d22fb54a6c9aa0331b09bb76b4e948ae07"
+      }
+    },
+    {
+      "name": "inventory",
+      "file": "inventory-1.2.83.png",
+      "width": 2960,
+      "height": 1848,
+      "size": 591210,
+      "sha256": "5868d77710a84f7683f20d8fc4b5c51a212d9ce7685fc1210e1d6267ff234d57",
+      "derivative": {
+        "file": "screens/story/inventory-1.2.83.webp",
+        "width": 1480,
+        "height": 924,
+        "size": 42308,
+        "sha256": "dd21e7eec0b6daec67b9cd5944201f91f71d0789812bc511dc9657234ff67b9c"
+      }
+    },
+    {
+      "name": "orders",
+      "file": "orders-1.2.83.png",
+      "width": 2960,
+      "height": 1848,
+      "size": 125422,
+      "sha256": "1367b508bf7314bc9ff00ae59ab683b4b479f7d54205a963c6c7bf27f1155514",
+      "derivative": {
+        "file": "screens/story/orders-1.2.83.webp",
+        "width": 1480,
+        "height": 924,
+        "size": 18658,
+        "sha256": "d56e148b1cdaa782b22eb403e9ed140a7fa4475eae406a0d3fb42496c3d76b52"
+      }
+    },
+    {
+      "name": "overview",
+      "file": "overview-1.2.83.png",
+      "width": 2960,
+      "height": 1848,
+      "size": 167091,
+      "sha256": "3660c2247d08fb5dfe499d6a14acfe73ebd8d16e1dbe614740cdd61295f6ec2f",
+      "derivative": {
+        "file": "screens/story/overview-1.2.83.webp",
+        "width": 1480,
+        "height": 924,
+        "size": 26136,
+        "sha256": "ecc9041ec58bf14ceb5a7e400002eb8cc6b9278fe21a0056339fab9ce3d7566e"
+      }
+    },
+    {
+      "name": "kitchen",
+      "file": "kitchen-1.2.83-tablet.png",
+      "width": 2960,
+      "height": 1848,
+      "size": 132986,
+      "sha256": "b8b810a42655d8a4c468bd79cec76914e0b2bb109f9352d30d8e8b6edd861495"
+    }
+  ]
+}

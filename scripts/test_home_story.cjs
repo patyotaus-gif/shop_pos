@@ -189,12 +189,12 @@ async function scene(page, index) {
 
     // Full screenshot remains available even if an optimized preview fails.
     const blockedContext = await browser.newContext({viewport:{width:1440,height:960},colorScheme:'light'});
-    await blockedContext.route('**/*', route => route.request().url().includes('/screens/story/orders-1.2.78.webp') ? route.abort() : local(route));
+    await blockedContext.route('**/*', route => route.request().url().includes('/screens/story/orders-1.2.83.webp') ? route.abort() : local(route));
     const blocked = await blockedContext.newPage();
     blocked.on('pageerror', e => errors.push(e.message));
     await load(blocked, '/#tour-manage'); await scene(blocked, 1);
     await blocked.waitForFunction(() => document.querySelector('.story-screen-link').dataset.failed === 'true');
-    assert.match(await blocked.locator('.story-screen-link').getAttribute('href'), /screens\/orders-1.2.78.png$/);
+    assert.match(await blocked.locator('.story-screen-link').getAttribute('href'), /screens\/orders-1.2.83.png$/);
     await blockedContext.close();
     checks++;
 
