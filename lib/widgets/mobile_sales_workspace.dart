@@ -37,6 +37,9 @@ class _MobileSalesWorkspaceState extends State<MobileSalesWorkspace> {
                   child: Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
+                  style: TextButton.styleFrom(
+                      foregroundColor:
+                          Theme.of(context).colorScheme.onSurfaceVariant),
                   onPressed: () => setState(() => _cart = false),
                   icon: const Icon(Icons.arrow_back),
                   label: const Text('เลือกสินค้าต่อ'),

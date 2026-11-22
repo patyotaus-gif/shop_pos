@@ -293,6 +293,9 @@ class _TableProductPickerState extends State<TableProductPicker> {
                       child: SizedBox(
                           width: double.infinity,
                           child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                  foregroundColor:
+                                      Theme.of(context).colorScheme.onSurface),
                               onPressed: _saving || _configuring
                                   ? null
                                   : () => _save(),

@@ -90,6 +90,8 @@ class SaleDisplayButton extends StatelessWidget {
     if (controller == null) return const SizedBox.shrink();
     return OutlinedButton.icon(
       key: const ValueKey('sale-display-settings'),
+      style: OutlinedButton.styleFrom(
+          foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant),
       onPressed: () => showDialog<void>(
           context: context,
           builder: (context) => SaleDisplayScope(

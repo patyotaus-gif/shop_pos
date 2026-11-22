@@ -15,11 +15,17 @@ Rules:
 
 ## Current state (updated 2026-11-22)
 
-The owner asked for an opinion on website/app color pairing. Reviewed shared
-theme tokens and the latest saved homepage/table-sales previews. Assessment:
-retain wine/warm-neutral branding; consider reducing accent use on routine app
-prices/secondary actions so checkout stands out. This is advice, not an approved
-palette change or full accessibility audit; no website/app code was changed.
+The owner authorized the sales color-hierarchy revision ("เริ่มการแก้ไข").
+Implemented locally in six shared Flutter widgets: routine product prices and
+quantity controls use neutral text; notes, display settings, continue-shopping
+and secondary table-save actions use neutral theme colors. Totals and primary
+actions retain the brand accent, including its light-on-dark variant. The shared
+catalog covers takeaway and table sales. All 62 cases in seven existing suites
+and targeted analysis of all six files passed. Actual Flutter before/after
+captures cover 1440/768/390 px in light/dark themes with synthetic data; a fresh
+visual walkthrough found no blocking issue. No APK build, installation, release,
+backend change or website edit in this revision. See
+`docs/sales-color-hierarchy-20261122.md` and its saved previews.
 
 The owner authorized publication ("ปล่อยเว็บจริง"). The homepage is now live at
 `https://pok-pok.app`, deployed from `9291481` to Hosting version
@@ -665,6 +671,27 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-22 — Sales color hierarchy implemented and verified locally
+
+- Owner authorized the earlier recommendation. Reused `onSurface` and
+  `onSurfaceVariant` in product prices, customization buttons, quantity editing,
+  display settings, continue-shopping and secondary Add to table. Existing
+  primary totals/checkout, selection and semantic danger colors are retained.
+- Final gate: 62 existing tests across seven catalog/display/workspace/table/
+  basket/checkout suites passed; analysis of six changed Dart files and diff
+  checks passed. No test was added merely to mirror the color substitutions.
+- Rendered actual production widgets with bundled Thai font and synthetic
+  table/products, both before and after, at 1440/768/390 in light/dark themes.
+  Twenty captures include the compact basket; five are saved in `docs/previews`.
+  The isolated test source matches all six edited files in this checkout.
+- Fresh screenshot walkthrough understood selection, quantity and checkout
+  without a blocking issue. It saw mandatory AGENTS/HANDOFF before the images,
+  so was not fully blind. Generic fixture icons and the horizontally scrollable
+  category row were minor observations, unchanged by the color edits.
+- Evidence: `D:/PokpokWork/sales-colors-20261122/`. No real account, transaction,
+  device installation, APK/public release, website or backend change. Details:
+  `docs/sales-color-hierarchy-20261122.md`.
 
 ### 2026-11-22 — Website/app color assessment requested
 

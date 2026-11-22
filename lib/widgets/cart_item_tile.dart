@@ -102,6 +102,7 @@ class CartItemTile extends StatelessWidget {
                                               }
                                             },
                                         style: TextButton.styleFrom(
+                                            foregroundColor: cs.onSurface,
                                             minimumSize: const Size(48, 48)),
                                         child: Text('${item.quantity}',
                                             semanticsLabel:

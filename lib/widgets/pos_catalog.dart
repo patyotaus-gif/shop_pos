@@ -92,6 +92,8 @@ class _PosCatalogState extends State<PosCatalog> {
   @override
   Widget build(BuildContext context) {
     final controller = SaleDisplayScope.of(context);
+    final secondaryActionStyle = TextButton.styleFrom(
+        foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant);
     return StreamBuilder<List<Product>>(
         stream: _products,
         builder: (context, snapshot) {
@@ -247,6 +249,7 @@ class _PosCatalogState extends State<PosCatalog> {
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton(
+                              style: secondaryActionStyle,
                               onPressed: unavailable
                                   ? null
                                   : () => widget.onCustomize!(p),
@@ -272,6 +275,7 @@ class _PosCatalogState extends State<PosCatalog> {
                           : SizedBox(
                               height: 48,
                               child: TextButton(
+                                style: secondaryActionStyle,
                                 onPressed: unavailable
                                     ? null
                                     : () => widget.onCustomize!(p),

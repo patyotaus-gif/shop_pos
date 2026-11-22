@@ -246,7 +246,7 @@ class SaleProductCard extends StatelessWidget {
                                       style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w700,
-                                          color: cs.primary)))),
+                                          color: cs.onSurface)))),
                           if (promotion) ...[
                             const SizedBox(width: 4),
                             Flexible(
