@@ -707,6 +707,13 @@ or triggered; its Codemagic workflow does not run automatically on push.
 
 ## Log
 
+### 2026-11-24 — Mobile homepage feedback reviewed
+
+- Reviewed one reader's five screenshots against the homepage. Suggested making
+  all three story steps specific to the selected business, placing trial/pricing
+  actions at the story end, and testing recognition of the concept kiosk. These
+  are proposals for the owner to consider. Website and release state are unchanged.
+
 ### 2026-11-22 — Android 100 and website screenshot availability verified
 
 - At 14:24 AEDT, all 101 Hosting file hashes equal local release bytes; resolved
