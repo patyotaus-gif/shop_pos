@@ -15,10 +15,9 @@ Rules:
 
 ## Current state (updated 2026-11-24)
 
-The local homepage now has separate restaurant and retail walkthroughs, with a
-trial and a shop-specific pricing link after each. The owner can review it at
-http://127.0.0.1:4184/#product-story on the development machine. The public
-site still serves the 1.2.83 release described below.
+The owner authorized publishing the homepage journeys and responsive pricing
+update. The staged website passes local checks. The public Hosting baseline
+before this release is e9fc85e582067d26.
 
 Android **1.2.83 (100) is published and installed** on the connected SM-X900.
 The owner-authorized channel-choice fix and all displayed website app screenshots
@@ -711,6 +710,20 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-24 — Pricing row and homepage prepared for Hosting
+
+- Both the homepage and pricing page keep Solo, Lite and Full in one row.
+  On overflow the row scrolls natively with touch and trackpad, with previous
+  and next controls and keyboard arrows. The price and trial action in each
+  card align for both billing cycles and business types.
+- Local pricing suite passed 56 states across seven widths, including 200%
+  text and contrast checks. Browser smoke exercised touch on both routes.
+  Marketing regressions passed (18 routes × 5 widths), as did homepage and
+  cache checks. Five new Flutter-rendered screenshots and the earlier homepage
+  changes are included. Preflight compared the working public tree against 101
+  live Firebase Hosting file hashes: exactly 19 expected source/asset changes,
+  with no changes to the APK, manifest, or backend.
 
 ### 2026-11-24 — Reviewed horizontal pricing layout
 

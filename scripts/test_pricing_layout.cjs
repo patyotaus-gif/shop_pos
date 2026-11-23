@@ -47,13 +47,15 @@ function contrast(a,b) {
       assert.ok(measured.section.width<=1061, 'Pricing comparison too wide '+label);
       assert.deepEqual(measured.clipped, [], 'Clipped pricing content '+label);
       assert.equal(measured.cards.length,3);
+      assert.ok(await page.locator('.p-card').evaluateAll(cards=>cards.every(c=>
+        c.querySelector('.p-btn').getBoundingClientRect().bottom <= c.querySelector('.p-feature-title').getBoundingClientRect().top + 1)),
+        'Feature heading precedes the trial action '+label);
       for (const r of measured.targets) assert.ok(r.height>=44 && r.width>=44, 'Small target '+label);
-      if (measured.viewport>=1024) {
-        assert.ok(measured.cards.every(c=>Math.abs(c.y-measured.cards[0].y)<1),'Cards not aligned '+label);
-        assert.ok(measured.cards[1].x>measured.cards[0].right,'Cards not separated '+label);
-      } else {
-        assert.ok(measured.cards.every(c=>c.width<=481),'Stacked card too wide '+label);
-        assert.ok(measured.cards[1].y>measured.cards[0].bottom,'Stacked cards overlap '+label);
+      assert.ok(measured.cards.every(c=>Math.abs(c.y-measured.cards[0].y)<1),'Cards not aligned '+label);
+      assert.ok(measured.cards[1].x>measured.cards[0].right,'Cards not separated '+label);
+      for (const selector of ['.p-plan','.p-price','.p-btn']) {
+        const tops=await page.locator('.pricing '+selector).evaluateAll(nodes=>nodes.map(e=>e.getBoundingClientRect().top));
+        assert.ok(Math.max(...tops)-Math.min(...tops)<2,selector+' alignment '+label);
       }
     }
     for (const width of widths) {
@@ -75,6 +77,19 @@ function contrast(a,b) {
             assert.equal(await page.locator('.p-avg:visible').count(),bill==='m'?0:3);
             await geometry(`${route} ${shop} ${bill} ${width}`); states++;
           }
+        }
+        const row=page.locator('#plan-comparison');
+        const nav=page.locator('.plan-scroll-controls');
+        assert.equal(await nav.isVisible(), width < 1024);
+        if (width < 1024) {
+          const next=nav.locator('[data-plan-step="1"]');
+          await next.click();
+          await row.focus(); await page.keyboard.press('ArrowRight');
+          await page.waitForFunction(()=>document.querySelector('[data-plan-step="1"]').getAttribute('aria-disabled')==='true');
+          assert.equal(await row.evaluate(r=>Math.abs(r.scrollWidth-r.clientWidth-r.scrollLeft)<2), true);
+          await nav.locator('button').first().click();
+          await row.focus(); await page.keyboard.press('ArrowLeft');
+          await page.waitForFunction(()=>document.querySelector('#plan-comparison').scrollLeft<1);
         }
         const samples=await page.locator('.pricing .p-desc,.pricing .p-fit,.pricing .p-list li,.pricing .period,.pricing .p-avg,.pricing .p-btn,.pricing .bill-btn,.pricing-trial,.pricing-terms').evaluateAll(nodes=>nodes.filter(e=>e.getClientRects().length).map(e=>{
           let parent=e,bg;

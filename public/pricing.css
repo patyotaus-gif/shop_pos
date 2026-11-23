@@ -23,7 +23,31 @@ main > .pricing-intro { padding-block: var(--pricing-block-gap); }
 .pricing .save-pill { font-size: var(--pricing-note); margin: 0; }
 .pricing-trial { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--pricing-heading-gap) var(--pricing-small-gap); margin-block: var(--pricing-padding); color: var(--ink); font-size: var(--pricing-note); text-align: center; }
 .pricing-trial strong { font-weight: var(--pricing-weight); }
-.pricing .pricing-cards { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: var(--pricing-gap); border: 0; background: transparent; border-radius: 0; overflow: visible; margin-top: 0; }
+.pricing .pricing-cards {
+  display: grid;
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: max(calc((100% - 2 * var(--pricing-gap)) / 3), min(86%, 18rem));
+  gap: 0 var(--pricing-gap);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  margin-top: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.plan-scroll-controls { display: flex; justify-content: flex-end; gap: var(--pricing-small-gap); margin-bottom: var(--pricing-small-gap); }
+.plan-scroll-controls[hidden] { display: none; }
+.plan-scroll-controls button { min-width: 44px; min-height: 44px; font-size: 1.25rem; background: var(--surface); color: var(--wine); border: 1px solid currentColor; border-radius: var(--pricing-radius); cursor: pointer; }
+.plan-scroll-controls button[aria-disabled="true"] { color: var(--muted); opacity: .65; cursor: default; }
+.pricing .p-card { min-width: 0; scroll-snap-align: start; }
+@supports (grid-template-rows: subgrid) {
+  .pricing .p-card { display: grid; grid-row: span 9; grid-template-rows: subgrid; align-items: start; }
+  .pricing .p-card .p-btn { grid-row: 7; }
+  .pricing .p-feature-title { grid-row: 8; }
+  .pricing .p-list { grid-row: 9; }
+}
 .pricing .p-card { padding: var(--pricing-padding); border: var(--hairline) solid var(--line); border-radius: var(--pricing-radius); background: var(--surface); color: var(--ink); }
 .pricing .p-card.featured { border: var(--pricing-selected-border) solid var(--wine); padding: calc(var(--pricing-padding) - var(--hairline)); }
 .p-card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--pricing-small-gap); }
@@ -49,7 +73,6 @@ main > .pricing-intro { padding-block: var(--pricing-block-gap); }
 .pricing .section-links { justify-content: center; }
 .pricing :focus-visible { outline: var(--focus-ring) solid var(--wine); outline-offset: var(--pricing-heading-gap); }
 @media (max-width: 1000px) {
-  .pricing .pricing-cards { grid-template-columns: minmax(0,1fr); max-width: var(--pricing-stacked-width); margin-inline: auto; }
   .pricing-controls { justify-content: center; }
   .pricing .p-desc,
   .pricing .p-fit { min-height: 0; }

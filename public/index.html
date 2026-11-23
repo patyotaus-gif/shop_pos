@@ -50,7 +50,7 @@
 <link rel="stylesheet" href="/site-base.css">
   <link rel="stylesheet" href="/brand.css?v=20261113-release78">
   <link rel="stylesheet" href="/brand/wordmark.css?v=20261118-motion">
-<link rel="stylesheet" href="/site-pages.css?v=20261112-direction"><script src="/js/site.js?v=20261113-pricing" defer></script><noscript><style>.mobile-nav{display:block;position:static;max-height:none}.hamburger{display:none}.guide-tools{display:none}</style></noscript><link rel="stylesheet" href="/pricing.css?v=20261113">
+<link rel="stylesheet" href="/site-pages.css?v=20261112-direction"><script src="/js/site.js?v=20261113-pricing" defer></script><noscript><style>.mobile-nav{display:block;position:static;max-height:none}.hamburger{display:none}.guide-tools{display:none}</style></noscript><link rel="stylesheet" href="/pricing.css?v=20261124-scroll"><script src="/js/pricing-scroll.js?v=20261124" defer></script>
 <link rel="stylesheet" href="/marketing-background.css?v=20261113">
 <link rel="stylesheet" href="/home-tokens.css?v=20261122-devices">
 <link rel="stylesheet" href="/home-story.css?v=20261124-journeys">
@@ -245,7 +245,11 @@
     </div>
   </div>
   <p class="pricing-trial"><strong>ทดลองใช้งานฟรี 60 วัน</strong><span>ไม่ต้องผูกบัตร · เลือกแพ็กเกจที่ต้องการทดลองตอนสมัครในแอป</span></p>
-  <div class="pricing-cards">
+  <div class="plan-scroll-controls" hidden role="group" aria-label="เลื่อนดูแพ็กเกจ">
+    <button type="button" data-plan-step="-1" aria-controls="plan-comparison" aria-label="แพ็กเกจก่อนหน้า">←</button>
+    <button type="button" data-plan-step="1" aria-controls="plan-comparison" aria-label="แพ็กเกจถัดไป">→</button>
+  </div>
+  <div class="pricing-cards" id="plan-comparison" role="region" aria-label="เปรียบเทียบแพ็กเกจ Solo Lite และ Full" tabindex="0">
     <article class="p-card" aria-labelledby="plan-name-0">
       <div class="p-card-head"><h3 class="p-plan" id="plan-name-0">Solo</h3></div>
       <p class="p-desc" id="plan-desc-0">ขายหน้าร้านและสรุปยอดขาย</p>
