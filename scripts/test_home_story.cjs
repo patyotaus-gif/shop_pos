@@ -28,7 +28,6 @@ async function load(page, suffix = '/') {
 }
 async function capture(page, name) {
   await page.evaluate(() => Promise.all([...document.querySelectorAll('.masthead-motion, .masthead-motion *')].flatMap(e => e.getAnimations()).map(a => a.finished.catch(() => {}))));
-  await page.waitForFunction(() => [...document.querySelectorAll('.story-screen-stack img')].every(i => Number(getComputedStyle(i).opacity) === (i.classList.contains('is-current') ? 1 : 0)));
   await page.evaluate(() => Promise.all([...document.querySelectorAll('.device-model')].flatMap(e => e.getAnimations()).map(a => a.finished.catch(() => {}))));
   await page.screenshot({path:path.join(output, name + '.png')});
 }
@@ -56,21 +55,6 @@ async function touchSwipe(page, session, dx, dy = 0, cancel = false) {
   await session.send('Input.dispatchTouchEvent',{type:cancel?'touchCancel':'touchEnd',touchPoints:[]});
   await settleDevices(page);
 }
-async function scene(page, index) {
-  try {
-    await page.evaluate(() => new Promise(resolve => {
-      let previous = scrollY, stable = 0;
-      function frame() { const y = scrollY; stable = Math.abs(y - previous) < .5 ? stable + 1 : 0; previous = y; if (stable >= 8) resolve(); else requestAnimationFrame(frame); }
-      requestAnimationFrame(frame);
-    }));
-    await page.waitForFunction(i => document.querySelector('.story-display').dataset.scene === String(i), index, {timeout:10000});
-  }
-  catch (error) {
-    console.error(await page.evaluate(() => ({hash:location.hash, y:scrollY,scene:document.querySelector('.story-display').dataset.scene,chapters:[...document.querySelectorAll('.story-chapter')].map(e=>({id:e.id,top:e.getBoundingClientRect().top,height:e.getBoundingClientRect().height}))})));
-    await page.screenshot({path:path.join(output,'failed-scene.png')}); throw error;
-  }
-}
-
 (async () => {
   fs.mkdirSync(output, {recursive:true});
   const browser = await chromium.launch({headless:true,executablePath:process.env.BROWSER_EXECUTABLE});
@@ -136,20 +120,38 @@ async function scene(page, index) {
       assert.equal(await page.locator('[data-model="kiosk"]').getAttribute('aria-pressed'), 'true');
       await mouseSwipe(page, 100);
       assert.equal(await page.locator('[data-model="tablet"]').getAttribute('aria-pressed'), 'true');
-      await page.locator('[data-business="retail"]').click();
-      assert.equal(await page.locator('[data-business="retail"]').getAttribute('aria-pressed'), 'true');
-      assert.match(await page.locator('#tour-manage h3').innerText(), /สินค้าคงเหลือ/);
-      assert.match(await page.locator('#tour-manage img').getAttribute('src'), /inventory/);
-      assert.equal(await page.locator('[data-business-link]').getAttribute('href'), '/retail/');
-      await page.locator('[data-business="restaurant"]').focus();
-      await page.keyboard.press('Enter');
-      assert.match(await page.locator('#tour-manage h3').innerText(), /ออเดอร์/);
-      assert.match(await page.locator('#tour-manage img').getAttribute('src'), /orders/);
-      if (width < 1000) {
-        assert.equal(await page.locator('.story-display').isVisible(), false);
-        assert.equal(await page.locator('.story-mobile-image:visible').count(), 3);
-        await page.locator('#tour-manage').scrollIntoViewIfNeeded();
-        if ([390,768].includes(width)) await capture(page, `story-${width}`);
+      for (const type of ['retail','restaurant']) {
+        const button = page.locator(`[data-business="${type}"]`);
+        await button.focus();
+        await page.keyboard.press('Enter');
+        const panel = page.locator(`#journey-${type}`);
+        assert.equal(await button.getAttribute('aria-pressed'), 'true');
+        assert.equal(await page.locator('[data-journey]:visible').count(), 1);
+        const shots = panel.locator('.story-shot img');
+        const expected = type === 'retail' ? ['retail-sale','retail-stock','retail-report'] : ['restaurant-table','kitchen','restaurant-bill'];
+        assert.equal(await shots.count(), 3);
+        for (let i=0; i<expected.length; i++) {
+          const shot = shots.nth(i);
+          await shot.scrollIntoViewIfNeeded();
+          await shot.evaluate(img => img.decode());
+          assert.ok((await shot.getAttribute('src')).includes('/' + expected[i] + '-1.2.83.'));
+          const full = await panel.locator('.story-shot').nth(i).getAttribute('href');
+          assert.ok(fs.existsSync(path.join(root, full)));
+        }
+        assert.equal(await panel.locator('a[href="/#download"]').isVisible(), true);
+        assert.equal(await panel.locator(`a[href="/pricing/?shop=${type}"]`).isVisible(), true);
+        const second = panel.locator('article').nth(1);
+        const copy = await second.locator('.chapter-copy').boundingBox();
+        const image = await second.locator('figure').boundingBox();
+        assert.ok(width >= 768 ? image.x < copy.x : copy.y < image.y);
+        if ([390,768,1280,1440].includes(width)) {
+          await panel.screenshot({style: '.site-nav, .skip-link {visibility:hidden!important}',path:path.join(output, `journey-${type}-${width}.png`)});
+        }
+      }
+      assert.equal(await page.locator('.feature-details').evaluate(d => d.open), width >= 900);
+      if (width === 390) {
+        await page.locator('.feature-details summary').click();
+        assert.equal(await page.locator('.feature-details .feature-card:visible').count(), 4);
       }
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `Switched layout overflow ${width}`);
       checks++;
@@ -159,22 +161,26 @@ async function scene(page, index) {
     const initialPose = await page.locator('.device-tablet').evaluate(e => getComputedStyle(e).transform);
     await page.evaluate(() => scrollTo({top:400,behavior:'instant'}));
     await page.waitForFunction(pose => getComputedStyle(document.querySelector('.device-tablet')).transform !== pose, initialPose);
-    await load(page, '/#tour-manage'); await scene(page, 1);
-    assert.match(await page.locator('.story-screen-link').getAttribute('href'), /orders/);
-    await capture(page, 'story-orders-1440');
-    await page.locator('.story-tabs a[href="#tour-report"]').click(); await scene(page, 2);
-    assert.match(await page.locator('.story-screen-link').getAttribute('href'), /overview/);
-    assert.equal(await page.locator('.story-tabs a[aria-current="step"]').count(), 1);
-    await capture(page, 'story-report-1440');
-    await page.locator('.story-tabs a[href="#tour-sale"]').focus(); await page.keyboard.press('Enter'); await scene(page, 0);
-    assert.match(await page.locator('.story-screen-link').getAttribute('href'), /pos/);
-    await capture(page, 'story-sales-1440');
+    for (const [hash,type] of [['tour-manage','restaurant'],['retail-stock','retail']]) {
+      await load(page, '/#' + hash);
+      assert.equal(await page.locator('#' + hash).isVisible(), true);
+      assert.equal(await page.locator(`[data-business="${type}"]`).getAttribute('aria-pressed'), 'true');
+    }
     checks++;
 
+    for (const type of ['restaurant','retail']) {
+      await load(page);
+      await page.locator(`[data-business="${type}"]`).click();
+      await page.locator(`#journey-${type} a[href^="/pricing/"]`).click();
+      assert.equal(await page.locator(`#type-${type}`).getAttribute('aria-pressed'), 'true');
+    }
+    await load(page);
+    await page.locator('#journey-restaurant a[href="/#download"]').click();
+    assert.ok(page.url().endsWith('/#download'));
+    assert.equal(await page.locator('#download').isVisible(), true);
     // Resize and live OS setting changes must reveal all content without motion.
     await page.emulateMedia({reducedMotion:'reduce'});
-    assert.equal(await page.locator('.story-display').isVisible(), false);
-    assert.equal(await page.locator('.story-mobile-image:visible').count(), 3);
+    assert.equal(await page.locator('.story-shot:visible').count(), 3);
     assert.equal(await page.locator('.device-tablet').evaluate(e => getComputedStyle(e).transitionDuration), '0s');
     await load(page); await capture(page, 'reduced-motion-1440');
     await page.locator('[data-model="kiosk"]').click();
@@ -184,25 +190,28 @@ async function scene(page, index) {
     assert.equal(await page.locator('.device-kiosk').evaluate(e => getComputedStyle(e).transform), reducedPose);
     await page.emulateMedia({reducedMotion:'no-preference'});
     await page.setViewportSize({width:1440,height:600});
-    assert.equal(await page.locator('.story-display').isVisible(), false);
     checks++;
 
     // Full screenshot remains available even if an optimized preview fails.
     const blockedContext = await browser.newContext({viewport:{width:1440,height:960},colorScheme:'light'});
-    await blockedContext.route('**/*', route => route.request().url().includes('/screens/story/orders-1.2.83.webp') ? route.abort() : local(route));
+    await blockedContext.route('**/*', route => route.request().url().includes('/screens/story/kitchen-1.2.83.webp') ? route.abort() : local(route));
     const blocked = await blockedContext.newPage();
     blocked.on('pageerror', e => errors.push(e.message));
-    await load(blocked, '/#tour-manage'); await scene(blocked, 1);
-    await blocked.waitForFunction(() => document.querySelector('.story-screen-link').dataset.failed === 'true');
-    assert.match(await blocked.locator('.story-screen-link').getAttribute('href'), /screens\/orders-1.2.83.png$/);
+    await load(blocked, '/#tour-manage');
+    const failed = blocked.locator('#tour-manage img');
+    await failed.scrollIntoViewIfNeeded();
+    await failed.evaluate(i => i.decode().catch(() => {}));
+    assert.equal(await failed.evaluate(i => i.naturalWidth), 0);
+    assert.ok(await failed.getAttribute('alt'));
+    assert.match(await blocked.locator('#tour-manage a').getAttribute('href'), /kitchen-1.2.83-tablet.png$/);
     await blockedContext.close();
     checks++;
 
     const noJs = await browser.newContext({javaScriptEnabled:false,viewport:{width:390,height:960},colorScheme:'light'});
     await noJs.route('**/*', local);
     const fallback = await noJs.newPage(); await fallback.goto(origin + '/');
-    assert.equal(await fallback.locator('.story-chapter').count(), 3);
-    assert.equal(await fallback.locator('.story-mobile-image:visible').count(), 3);
+    assert.equal(await fallback.locator('.story-chapter').count(), 6);
+    assert.equal(await fallback.locator('.story-shot:visible').count(), 6);
     assert.equal(await fallback.locator('.business-picker').isVisible(), false);
     assert.equal(await fallback.locator('.device-picker').count(), 0);
     assert.equal(await fallback.locator('.device-model:visible').count(), 3);

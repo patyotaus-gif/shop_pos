@@ -13,7 +13,12 @@ Rules:
 
 ---
 
-## Current state (updated 2026-11-22)
+## Current state (updated 2026-11-24)
+
+The local homepage now has separate restaurant and retail walkthroughs, with a
+trial and a shop-specific pricing link after each. The owner can review it at
+http://127.0.0.1:4184/#product-story on the development machine. The public
+site still serves the 1.2.83 release described below.
 
 Android **1.2.83 (100) is published and installed** on the connected SM-X900.
 The owner-authorized channel-choice fix and all displayed website app screenshots
@@ -706,6 +711,24 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-24 — Implemented homepage changes from the mobile feedback
+
+- Each business selection changes all three steps, their app images and the
+  pricing destination. A tablet order, kitchen ticket and cash dialog show
+  the same three dishes and ฿230 total for table 01. Retail uses water and
+  milk, their stock list, and one ฿25 cash sale in the report.
+- Mobile shows one workflow, cropped details link to full PNGs, and the
+  additional feature gallery starts collapsed. Desktop alternates copy and
+  images. Without JavaScript both journeys are reachable. The device stage
+  uses the official wordmark and a face-on concept kiosk with the reader visible.
+- The five new PNGs use the current Flutter widgets and isolated demo inputs
+  in scripts/fixtures/website_story_capture.dart. The kitchen crop uses the
+  existing 1.2.83 tablet-layout render. All asset generation was local.
+- Checked Chromium layouts, real browser touch events, keyboard, no-JS,
+  reduced motion, deep links and pricing selection. The independent screenshot
+  walkthrough identified the empty retail report; it now displays the sample
+  bill. No physical-device test or public deployment for this change.
 
 ### 2026-11-24 — Mobile homepage feedback reviewed
 
