@@ -15,9 +15,10 @@ Rules:
 
 ## Current state (updated 2026-11-24)
 
-The owner authorized publishing the homepage journeys and responsive pricing
-update. The staged website passes local checks. The public Hosting baseline
-before this release is e9fc85e582067d26.
+The homepage journeys and horizontal package comparison are live at
+https://pok-pok.app/ and https://pok-pok.app/pricing/. Firebase Hosting version
+393cdb2c01979735 was published from 952e785. All 115 file hashes match the
+release tree. The previous Hosting version is e9fc85e582067d26.
 
 Android **1.2.83 (100) is published and installed** on the connected SM-X900.
 The owner-authorized channel-choice fix and all displayed website app screenshots
@@ -710,6 +711,17 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-24 — Verified homepage and pricing release
+
+- Published Hosting only from 952e785 after the owner’s instruction and the
+  independent follow-up review. Production version 393cdb2c01979735, previous
+  e9fc85e582067d26. All 115 Hosting hashes and Hosting configuration verified.
+  Downloaded all 19 changed files and the Android manifest from the custom
+  domain and compared their bytes with the release.
+- Live Chrome checks on both routes passed at 390, 768, 1280 and 1440 CSS px,
+  including touch emulation, arrows, keyboard, shop and billing selection.
+  The retail homepage walkthrough also passed. No physical-device test.
 
 ### 2026-11-24 — Pricing row and homepage prepared for Hosting
 
