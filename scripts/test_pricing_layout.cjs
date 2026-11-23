@@ -99,6 +99,10 @@ function contrast(a,b) {
         for(const s of samples)assert.ok(contrast(s.color,s.bg)>=4.5,`Contrast ${s.role} ${route}`);
         assert.ok(samples.filter(s=>['p-desc','p-fit','LI'].includes(s.role)).every(s=>s.size>=16),'Core feature text below 16px');
         if(width===390) {
+          await nav.locator('button').last().focus();
+          await page.setViewportSize({width:1440,height:960});
+          await page.waitForFunction(()=>document.activeElement===document.getElementById('plan-comparison'));
+          await page.setViewportSize({width,height:960});
           await page.locator('#by').click();
           await page.evaluate(()=>{const nodes=[...document.querySelectorAll('.pricing *')];const sizes=nodes.map(e=>parseFloat(getComputedStyle(e).fontSize));nodes.forEach((e,i)=>e.style.fontSize=sizes[i]*2+'px');});
           await geometry('200% text '+route);

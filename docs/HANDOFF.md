@@ -724,6 +724,12 @@ or triggered; its Codemagic workflow does not run automatically on push.
   changes are included. Preflight compared the working public tree against 101
   live Firebase Hosting file hashes: exactly 19 expected source/asset changes,
   with no changes to the APK, manifest, or backend.
+- Review follow-ups pinned the monthly feature heading below its trial action,
+  preserved keyboard focus when the scroll controls disappear and kept the
+  feature disclosure open across viewport changes. The restaurant journey
+  has a static plan guide for no-JS and opens selected pricing with JS. The
+  stock caption now names the two visible products. Modern subgrid engines
+  align the comparison rows; older engines retain individual readable cards.
 
 ### 2026-11-24 — Reviewed horizontal pricing layout
 

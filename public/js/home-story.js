@@ -113,12 +113,13 @@
     if (selectHashJourney()) document.getElementById(location.hash.slice(1)).scrollIntoView();
   });
   story.classList.add('story-ready');
+  const restaurantPricing = story.querySelector('[data-restaurant-pricing]');
+  if (restaurantPricing) restaurantPricing.href = '/pricing/?shop=restaurant';
   picker.hidden = false;
 
   const details = document.querySelector('.feature-details');
   const desktop = matchMedia('(min-width: 900px)');
   details.open = desktop.matches;
-  desktop.addEventListener('change', () => { details.open = desktop.matches; });
 
   function paintHero() {
     queued = false;

@@ -213,6 +213,7 @@ async function touchSwipe(page, session, dx, dy = 0, cancel = false) {
     assert.equal(await fallback.locator('.story-chapter').count(), 6);
     assert.equal(await fallback.locator('.story-shot:visible').count(), 6);
     assert.equal(await fallback.locator('.business-picker').isVisible(), false);
+    assert.equal(await fallback.locator('[data-restaurant-pricing]').getAttribute('href'), '/restaurant/#fit-heading');
     assert.equal(await fallback.locator('.device-picker').count(), 0);
     assert.equal(await fallback.locator('.device-model:visible').count(), 3);
     assert.equal(await fallback.locator('.device-model:disabled').count(), 3);

@@ -7,6 +7,7 @@
 
   function update() {
     const end = row.scrollWidth - row.clientWidth;
+    if (end <= epsilon && controls.contains(document.activeElement)) row.focus({preventScroll: true});
     controls.hidden = end <= epsilon;
     row.tabIndex = controls.hidden ? -1 : 0;
     previous.setAttribute('aria-disabled', String(row.scrollLeft <= epsilon));
