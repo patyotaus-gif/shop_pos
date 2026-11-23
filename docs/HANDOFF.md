@@ -712,6 +712,13 @@ or triggered; its Codemagic workflow does not run automatically on push.
 
 ## Log
 
+### 2026-11-24 — Reviewed horizontal pricing layout
+
+- The homepage and pricing page share a three-card grid that stacks at 1000px
+  and below. Recommended a single horizontal row that scrolls only when the
+  cards do not fit, with a visible next-card edge and mouse/keyboard controls.
+  This was a design discussion; the pricing layout has not been changed.
+
 ### 2026-11-24 — Implemented homepage changes from the mobile feedback
 
 - Each business selection changes all three steps, their app images and the
