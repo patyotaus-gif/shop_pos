@@ -128,7 +128,7 @@ async function touchSwipe(page, session, dx, dy = 0, cancel = false) {
         assert.equal(await button.getAttribute('aria-pressed'), 'true');
         assert.equal(await page.locator('[data-journey]:visible').count(), 1);
         const shots = panel.locator('.story-shot img');
-        const expected = type === 'retail' ? ['retail-checkout-1.2.84','retail-payment-1.2.84','retail-receipt-1.2.84'] : ['restaurant-table-1.2.84','kitchen-1.2.83','restaurant-bill-1.2.83'];
+        const expected = type === 'retail' ? ['retail-checkout-1.2.84','retail-payment-1.2.84','retail-receipt-1.2.84'] : ['restaurant-table-1.2.84','kitchen-1.2.83','restaurant-bill-1.2.84'];
         assert.equal(await shots.count(), 3);
         for (let i=0; i<expected.length; i++) {
           const shot = shots.nth(i);
@@ -176,7 +176,7 @@ async function touchSwipe(page, session, dx, dy = 0, cancel = false) {
     await load(page, '/#retail-sale');
     await page.locator('[data-business="restaurant"]').click();
     await page.locator('.hero-ctas a[href="#retail-sale"]').click();
-    assert.ok(await page.locator('#retail-sale').isVisible());
+    await page.waitForFunction(() => { const rect = document.getElementById('retail-sale').getBoundingClientRect(); return rect.top >= -8 && rect.top < innerHeight / 2; });
 
     for (const type of ['restaurant','retail']) {
       await load(page);
@@ -229,6 +229,11 @@ async function touchSwipe(page, session, dx, dy = 0, cancel = false) {
     assert.equal(await fallback.locator('.device-model:disabled').count(), 3);
     assert.match(await fallback.locator('.hero-desc').innerText(), /แนวคิดจอกลางหน้าร้าน/);
     assert.equal(await fallback.locator('.cinematic-hero a[href="/#download"]').isVisible(), true);
+    for (const [shop, anchor] of [['retail', 'retail-sale'], ['restaurant', 'tour-sale']]) {
+      await fallback.goto(origin + '/' + shop + '/');
+      await fallback.locator('a[href="/#' + anchor + '"]').click();
+      await fallback.waitForFunction(id => { const r = document.getElementById(id).getBoundingClientRect(); return r.top >= -8 && r.top < innerHeight / 2; }, anchor);
+    }
     await noJs.close(); checks++;
     // Real browser touch dispatch exercises native pointer cancellation/scroll,
     // instead of synthetic events that bypass touch-action and gesture routing.

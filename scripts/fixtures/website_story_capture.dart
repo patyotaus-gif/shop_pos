@@ -294,8 +294,29 @@ void main() {
             tableName: '01',
             products: Stream.value(food),
             order: order,
-            save: (_, __) async => throw StateError('capture never saves'),
-            checkout: (_) async {},
+            save: (added, _) async {
+              final existing = order.value;
+              order.value = TableOrder(
+                  id: existing.id,
+                  tableId: existing.tableId,
+                  tableName: existing.tableName,
+                  openedAt: existing.openedAt,
+                  items: [...existing.items, ...added]);
+            },
+            checkout: (context) async {
+              final saved = order.value.items;
+              final total =
+                  saved.fold<double>(0, (sum, item) => sum + item.subtotal);
+              await showPaymentSheet(context,
+                  total: total,
+                  initialChannel: SalesChannel.dineIn,
+                  summary: [
+                    ...saved.map((i) => '${i.productName} × ${i.quantity}'),
+                    'ค่าสินค้า ฿${total.toStringAsFixed(2)}',
+                    'ส่วนลด ฿0.00',
+                    'ค่าบริการ ฿0.00'
+                  ].join('\n'));
+            },
             chooseModifiers: (_, __) async => null),
         const Size(960, 640));
     expect(find.text('ขายที่โต๊ะ 01'), findsOneWidget);
@@ -304,20 +325,14 @@ void main() {
     expect(find.text('รายการใหม่ · ยังไม่บันทึก'), findsOneWidget);
     expect(find.textContaining('ส่งครัวแล้ว'), findsOneWidget);
     await save('restaurant-table');
-    final total =
-        items.fold<double>(0, (sum, item) => sum + item.price * item.quantity);
-    showPaymentSheet(navigator.currentState!.overlay!.context,
-        total: total,
-        initialChannel: SalesChannel.dineIn,
-        summary: [
-          ...items.map((i) => '${i.productName} × ${i.quantity}'),
-          'ค่าสินค้า ฿${total.toStringAsFixed(2)}',
-          'ส่วนลด ฿0.00',
-          'ค่าบริการ ฿0.00'
-        ].join('\n'));
+    await tester.tap(find.byKey(const ValueKey('checkout-pay')));
     await tester.pumpAndSettle();
     expect(find.byType(Dialog), findsOneWidget);
+    expect(order.value.items, hasLength(2));
+    expect(find.text('฿230.00'), findsWidgets);
     await save('restaurant-bill');
+    navigator.currentState!.pop();
+    await tester.pumpAndSettle();
     await tester.pumpWidget(const SizedBox.shrink());
     display.dispose();
     order.dispose();
