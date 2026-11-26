@@ -128,13 +128,16 @@ async function touchSwipe(page, session, dx, dy = 0, cancel = false) {
         assert.equal(await button.getAttribute('aria-pressed'), 'true');
         assert.equal(await page.locator('[data-journey]:visible').count(), 1);
         const shots = panel.locator('.story-shot img');
-        const expected = type === 'retail' ? ['retail-sale','retail-stock','retail-report'] : ['restaurant-table','kitchen','restaurant-bill'];
+        const expected = type === 'retail' ? ['retail-checkout-1.2.84','retail-payment-1.2.84','retail-receipt-1.2.84'] : ['restaurant-table-1.2.84','kitchen-1.2.83','restaurant-bill-1.2.83'];
         assert.equal(await shots.count(), 3);
         for (let i=0; i<expected.length; i++) {
           const shot = shots.nth(i);
           await shot.scrollIntoViewIfNeeded();
           await shot.evaluate(img => img.decode());
-          assert.ok((await shot.getAttribute('src')).includes('/' + expected[i] + '-1.2.83.'));
+          assert.ok((await shot.getAttribute('src')).includes('/' + expected[i] + '.'));
+          const selected = await shot.evaluate(img => new URL(img.currentSrc).pathname);
+          const mobile = (type === 'retail' && i === 0 && width <= 600) || (type === 'restaurant' && i !== 1 && width <= 767);
+          assert.equal(selected, '/screens/story/' + (mobile ? expected[i].replace('-1.2.', '-mobile-1.2.') : expected[i]) + '.webp');
           const full = await panel.locator('.story-shot').nth(i).getAttribute('href');
           assert.ok(fs.existsSync(path.join(root, full)));
         }
@@ -161,12 +164,19 @@ async function touchSwipe(page, session, dx, dy = 0, cancel = false) {
     const initialPose = await page.locator('.device-tablet').evaluate(e => getComputedStyle(e).transform);
     await page.evaluate(() => scrollTo({top:400,behavior:'instant'}));
     await page.waitForFunction(pose => getComputedStyle(document.querySelector('.device-tablet')).transform !== pose, initialPose);
-    for (const [hash,type] of [['tour-manage','restaurant'],['retail-stock','retail']]) {
+    for (const [hash,type] of [['tour-manage','restaurant'],['retail-receipt','retail']]) {
       await load(page, '/#' + hash);
       assert.equal(await page.locator('#' + hash).isVisible(), true);
       assert.equal(await page.locator(`[data-business="${type}"]`).getAttribute('aria-pressed'), 'true');
     }
     checks++;
+
+    await load(page, '/#retail-report');
+    assert.ok(await page.locator('#retail-report img').isVisible());
+    await load(page, '/#retail-sale');
+    await page.locator('[data-business="restaurant"]').click();
+    await page.locator('.hero-ctas a[href="#retail-sale"]').click();
+    assert.ok(await page.locator('#retail-sale').isVisible());
 
     for (const type of ['restaurant','retail']) {
       await load(page);

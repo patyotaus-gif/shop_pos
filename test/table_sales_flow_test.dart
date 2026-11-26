@@ -113,9 +113,12 @@ void main() {
     expect(find.text('ขายที่โต๊ะ 2'), findsOneWidget);
     expect(tester.getRect(find.byType(PosCatalog)).right,
         lessThanOrEqualTo(tester.getRect(find.byType(PosBasket)).left));
-    expect(find.textContaining('บนโต๊ะแล้ว'), findsOneWidget);
+    expect(find.text('ค้นหาเมนูอาหาร'), findsOneWidget);
+    expect(
+        find.textContaining('สถานะเมื่อโหลดบิล · ส่งครัวแล้ว'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('sale-product-rice')));
     await tester.pumpAndSettle();
+    expect(find.text('รายการใหม่ · ยังไม่บันทึก'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('sale-product-rice')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('checkout-pay')));

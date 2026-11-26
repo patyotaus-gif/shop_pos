@@ -12,7 +12,14 @@ enum TableOrderStatus { open, closed, cancelled }
 /// - `pending`: just added by cashier, kitchen hasn't seen it
 /// - `sent`: sent to the kitchen, being cooked
 /// - `ready`: kitchen marked it done — ready to serve
-enum KitchenStatus { pending, sent, ready }
+enum KitchenStatus {
+  pending('รอส่งครัว'),
+  sent('ส่งครัวแล้ว'),
+  ready('พร้อมเสิร์ฟ');
+
+  const KitchenStatus(this.label);
+  final String label;
+}
 
 /// One line on an open tab. Mirrors the fields of `SaleItem` so closing the
 /// tab can build the Sale doc with no field translation.

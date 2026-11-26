@@ -98,11 +98,20 @@
       button.setAttribute('aria-pressed', String(button.dataset.business === type));
     });
   }
-  function selectHashJourney() {
-    const panel = document.getElementById(location.hash.slice(1))?.closest('[data-journey]');
+  function selectHashJourney(hash = location.hash) {
+    const target = document.getElementById(hash.slice(1));
+    const details = target?.closest('details');
+    if (details) details.open = true;
+    const panel = target?.closest('[data-journey]');
     if (panel) selectJourney(panel.dataset.journey);
     return panel;
   }
+  // Reveal the target before native anchor scrolling, even on a repeat visit to the same hash.
+  hero.querySelectorAll('.hero-ctas a[href^="#"]').forEach(link => {
+    link.addEventListener('click', event => {
+      if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) selectHashJourney(link.hash);
+    });
+  });
   picker.addEventListener('click', event => {
     const button = event.target.closest('button[data-business]');
     if (button) selectJourney(button.dataset.business);

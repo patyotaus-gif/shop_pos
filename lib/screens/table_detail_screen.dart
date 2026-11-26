@@ -1143,10 +1143,10 @@ class _KitchenStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (label, color) = switch (status) {
-      KitchenStatus.sent => ('ครัวรับแล้ว', Colors.amber.shade700),
-      KitchenStatus.ready => ('พร้อมเสิร์ฟ', Colors.green),
-      KitchenStatus.pending => ('รอส่งครัว', Colors.blueGrey),
+    final color = switch (status) {
+      KitchenStatus.sent => Colors.amber.shade700,
+      KitchenStatus.ready => Colors.green,
+      KitchenStatus.pending => Colors.blueGrey,
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -1156,7 +1156,7 @@ class _KitchenStatusChip extends StatelessWidget {
         border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Text(
-        label,
+        status.label,
         style:
             TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600),
       ),

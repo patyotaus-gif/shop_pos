@@ -229,6 +229,7 @@ class _TableProductPickerState extends State<TableProductPicker> {
               catalog: AbsorbPointer(
                   absorbing: _locked,
                   child: PosCatalog(
+                    isFoodMenu: true,
                     loadProducts: widget.products == null
                         ? ProductService.watchAll
                         : () => widget.products!,
@@ -247,6 +248,7 @@ class _TableProductPickerState extends State<TableProductPicker> {
                               title: Text(item.productName),
                               subtitle: Text([
                                 'บนโต๊ะแล้ว · ${item.quantity} ${item.unit}',
+                                'สถานะเมื่อโหลดบิล · ${item.kitchenStatus.label}',
                                 ...item.modifiers.map((m) => m.optionName),
                                 if (item.notes?.isNotEmpty == true) item.notes!
                               ].join('\n')),
@@ -256,6 +258,9 @@ class _TableProductPickerState extends State<TableProductPicker> {
                     return AbsorbPointer(
                         absorbing: _locked,
                         child: CartItemTile(
+                            statusLabel: _submission == null
+                                ? 'รายการใหม่ · ยังไม่บันทึก'
+                                : 'รอยืนยันผลการบันทึก',
                             item: CartItem(
                                 product: Product(
                                     id: item.productId,

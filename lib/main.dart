@@ -309,7 +309,7 @@ class _MainShellState extends State<MainShell> {
               AppNavigationItem(
                 screen: hasTables
                     ? const RestaurantSalesScreen()
-                    : const PosScreen(),
+                    : PosScreen(isFoodMenu: shopType == ShopType.restaurant),
                 icon: hasTables
                     ? Icons.table_restaurant_outlined
                     : Icons.point_of_sale_outlined,

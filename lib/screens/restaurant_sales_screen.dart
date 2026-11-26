@@ -50,9 +50,9 @@ class _RestaurantSalesScreenState extends State<RestaurantSalesScreen> {
                               MediaQuery.textScalerOf(context).scale(16) <= 24;
                           final choices = [
                             _choice(context, 1, Icons.restaurant, 'ทานที่ร้าน',
-                                'เลือกโต๊ะและรับออเดอร์'),
+                                'เปิดโต๊ะหรือเพิ่มอาหารในบิลเดิม'),
                             _choice(context, 2, Icons.takeout_dining,
-                                'สั่งกลับบ้าน', 'เลือกสินค้าและชำระเงิน'),
+                                'สั่งกลับบ้าน', 'เลือกเมนูแล้วรับชำระเงิน'),
                           ];
                           return wide
                               ? Row(

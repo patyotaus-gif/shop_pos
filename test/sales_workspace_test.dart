@@ -131,6 +131,7 @@ void main() {
         .tap(find.byKey(const ValueKey('sales-tab-category:รายการโปรด')));
     await tester.pumpAndSettle();
     expect(find.text('บราวนี่'), findsOneWidget);
+    expect(find.byTooltip('สแกนบาร์โค้ด').hitTestable(), findsOneWidget);
     expect(find.text('ข้าวกะเพราหมูสับไข่ดาว'), findsNothing);
     await tester.ensureVisible(find.byKey(const ValueKey('sales-tab-all')));
     await tester.tap(find.byKey(const ValueKey('sales-tab-all')));

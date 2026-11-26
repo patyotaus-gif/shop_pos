@@ -283,6 +283,8 @@ void main() {
             matching: find
                 .byWidgetPredicate((w) => w is AbsorbPointer && w.absorbing)),
         findsOneWidget);
+    expect(find.text('รอยืนยันผลการบันทึก'), findsOneWidget);
+    expect(find.text('รายการใหม่ · ยังไม่บันทึก'), findsNothing);
     await tester.tap(find.text('ลองบันทึกอีกครั้ง · ฿35.00'));
     await tester.pump();
     expect(

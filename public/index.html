@@ -40,7 +40,7 @@
     "description": "ระบบ POS สำหรับร้านค้าปลีกและร้านอาหารไทย ขายหน้าร้าน จัดการสต็อก ลูกหนี้ โต๊ะอาหาร และคำสั่งซื้อออนไลน์",
     "inLanguage": "th",
     "screenshot": [
-      "https://pok-pok.app/screens/pos-1.2.83.png",
+      "https://pok-pok.app/screens/retail-checkout-1.2.84.png",
       "https://pok-pok.app/screens/orders-1.2.83.png"
     ],
     "offers": { "@type": "Offer", "price": "199", "priceCurrency": "THB", "description": "เริ่มต้น ฿199/เดือน · ทดลองใช้ฟรี 60 วัน" },
@@ -53,8 +53,8 @@
 <link rel="stylesheet" href="/site-pages.css?v=20261112-direction"><script src="/js/site.js?v=20261113-pricing" defer></script><noscript><style>.mobile-nav{display:block;position:static;max-height:none}.hamburger{display:none}.guide-tools{display:none}</style></noscript><link rel="stylesheet" href="/pricing.css?v=20261124-scroll"><script src="/js/pricing-scroll.js?v=20261124" defer></script>
 <link rel="stylesheet" href="/marketing-background.css?v=20261113">
 <link rel="stylesheet" href="/home-tokens.css?v=20261122-devices">
-<link rel="stylesheet" href="/home-story.css?v=20261124-journeys">
-<script src="/js/home-story.js?v=20261124-journeys" defer></script>
+<link rel="stylesheet" href="/home-story.css?v=20261126-shopflows">
+<script src="/js/home-story.js?v=20261126-retail" defer></script>
 </head>
 <body class="motion-home">
 <a class="skip-link" href="#main">ข้ามไปเนื้อหา</a>
@@ -85,7 +85,7 @@
     <p class="hero-product-label">สำหรับร้านค้าปลีก ร้านอาหาร และคาเฟ่</p>
     <h1 id="hero-heading">Pokpok POS<br>ในรูปแบบ<br><em>ที่เข้ากับร้านคุณ</em></h1>
     <p class="hero-desc">ดูแลงานร้านบนมือถือและแท็บเล็ต พร้อมแนวคิดจอกลางหน้าร้านสำหรับให้ลูกค้าสั่งอาหารเอง</p>
-    <div class="hero-ctas"><a class="btn-lg btn-lg-ruby" href="/#download">ดาวน์โหลดแอป</a><a class="text-link" href="#product-story">ดูการทำงานของ Pokpok ↓</a></div>
+    <div class="hero-ctas"><a class="btn-lg btn-lg-ruby" href="/#download">ดาวน์โหลดแอป</a><a class="text-link" href="#retail-sale">ดูหน้าขายปลีก ↓</a><a class="text-link" href="#journey-restaurant">ดูตัวอย่างร้านอาหาร ↓</a></div>
     <p class="hero-note">เริ่มทดลองใช้ฟรีโดยติดตั้งแอปแล้วสมัครใช้งาน<br>Android · iOS ผ่าน TestFlight</p>
   </div>
   <div class="device-showcase" data-device-showcase>
@@ -106,7 +106,7 @@
 </section>
 <section class="product-story" id="product-story" data-product-story aria-labelledby="product-story-heading">
   <div class="story-intro">
-    <div><h2 id="product-story-heading">ดูวิธีใช้ Pokpok ในร้านของคุณ</h2><p>เลือกประเภทร้านเพื่อดูหน้าจอแอปพร้อมข้อมูลสาธิต แตะภาพเพื่อขยาย</p></div>
+    <div><h2 id="product-story-heading">ดูวิธีใช้ Pokpok ในร้านของคุณ</h2><p>เลือกประเภทร้าน แล้วดูตัวอย่างหนึ่งบิลตั้งแต่เริ่มขายถึงหน้าชำระเงิน แตะภาพเพื่อดูรายละเอียด</p></div>
     <div class="business-picker" role="group" aria-label="เลือกประเภทร้าน" hidden>
       <button type="button" data-business="restaurant" aria-controls="journey-restaurant" aria-pressed="true">ร้านอาหาร / คาเฟ่</button>
       <button type="button" data-business="retail" aria-controls="journey-retail" aria-pressed="false">ร้านค้าปลีก</button>
@@ -116,8 +116,8 @@
   <section class="story-journey" id="journey-restaurant" data-journey="restaurant" aria-label="ร้านอาหารและคาเฟ่">
     <h3 class="journey-fallback-title">ร้านอาหารและคาเฟ่</h3>
     <article class="story-chapter" id="tour-sale" aria-labelledby="tour-sale-heading">
-      <div class="chapter-copy"><h4 id="tour-sale-heading">รับออเดอร์ที่โต๊ะ</h4><p>เปิดโต๊ะ 01 แล้วเพิ่มพาสต้ากุ้ง 2 จานกับสปาเกตตี 1 จานในหน้าขายของโต๊ะ</p></div>
-      <figure><a class="story-shot" href="/screens/restaurant-table-1.2.83.png" target="_blank" rel="noopener" aria-label="ขยายภาพหน้าขายอาหารพร้อมรายการของโต๊ะ 01 (เปิดแท็บใหม่)"><picture><source media="(max-width: 767px)" srcset="/screens/story/restaurant-table-mobile-1.2.83.webp" width="754" height="480"><img src="/screens/story/restaurant-table-1.2.83.webp" width="1920" height="1280" alt="รายการอาหารและจำนวนจานที่บันทึกในโต๊ะ 01" loading="lazy"></picture></a></figure>
+      <div class="chapter-copy"><h4 id="tour-sale-heading">รับออเดอร์ที่โต๊ะ</h4><p>โต๊ะ 01 สั่งพาสต้ากุ้ง 2 จาน ส่งครัวแล้ว เมื่อลูกค้าสั่งสปาเกตตีเพิ่มอีกจาน พนักงานเห็นทั้งรายการเดิมและรายการใหม่ในบิลเดียว</p></div>
+      <figure><a class="story-shot" href="/screens/restaurant-table-1.2.84.png" target="_blank" rel="noopener" aria-label="ขยายภาพหน้าขายอาหารพร้อมรายการของโต๊ะ 01 (เปิดแท็บใหม่)"><picture><source media="(max-width: 767px)" srcset="/screens/story/restaurant-table-mobile-1.2.84.webp" width="754" height="580"><img src="/screens/story/restaurant-table-1.2.84.webp" width="1200" height="800" alt="พาสต้ากุ้งที่ส่งครัวแล้ว และสปาเกตตีที่เพิ่งเพิ่มในโต๊ะ 01" loading="lazy"></picture></a></figure>
     </article>
     <article class="story-chapter" id="tour-manage" aria-labelledby="tour-manage-heading">
       <div class="chapter-copy"><h4 id="tour-manage-heading">ส่งรายการให้ครัว</h4><p>ครัวเห็นว่าโต๊ะ 01 สั่งอะไร กี่จาน และจานไหนลูกค้าขอไม่ใส่พริก</p></div>
@@ -127,24 +127,33 @@
       <div class="chapter-copy"><h4 id="tour-report-heading">เช็กบิลที่โต๊ะ</h4><p>ทวนอาหารทั้ง 3 จานและยอด 230 บาท ก่อนเลือกวิธีรับชำระเงิน</p></div>
       <figure><a class="story-shot" href="/screens/restaurant-bill-1.2.83.png" target="_blank" rel="noopener" aria-label="ขยายภาพหน้ารับชำระเงินพร้อมรายการอาหารและยอด 230 บาท (เปิดแท็บใหม่)"><picture><source media="(max-width: 767px)" srcset="/screens/story/restaurant-bill-mobile-1.2.83.webp" width="1120" height="706"><img src="/screens/story/restaurant-bill-1.2.83.webp" width="1920" height="1280" alt="สรุปรายการอาหาร ยอด 230 บาท และวิธีชำระเงิน" loading="lazy"></picture></a></figure>
     </article>
+    <p class="tier-note">ขายหน้าเคาน์เตอร์เริ่มที่ Solo · ใช้โต๊ะและส่งครัวเลือก Lite · จัดการสูตรและวัตถุดิบเลือก Full</p>
     <div class="story-links"><a class="btn-lg btn-lg-ruby" href="/#download">ทดลองใช้ฟรี</a><a class="btn-outline" href="/restaurant/#fit-heading" data-restaurant-pricing>ดูแพ็กเกจร้านอาหาร</a><a class="text-link" href="/restaurant/">ดูฟังก์ชันสำหรับร้านอาหารและคาเฟ่ ↗</a></div>
   </section>
 
   <section class="story-journey" id="journey-retail" data-journey="retail" aria-label="ร้านค้าปลีกและมินิมาร์ท">
     <h3 class="journey-fallback-title">ร้านค้าปลีกและมินิมาร์ท</h3>
     <article class="story-chapter" id="retail-sale" aria-labelledby="retail-sale-heading">
-      <div class="chapter-copy"><h4 id="retail-sale-heading">เลือกสินค้าที่เคาน์เตอร์</h4><p>ลูกค้าซื้อน้ำดื่ม 10 บาทกับนมจืด 15 บาท แตะเลือกทั้งสองชิ้นเพื่อคิดเงินที่เคาน์เตอร์</p></div>
-      <figure><a class="story-shot" href="/screens/retail-sale-1.2.83.png" target="_blank" rel="noopener" aria-label="ขยายภาพหน้าขายพร้อมสินค้าในมินิมาร์ทและราคาขาย (เปิดแท็บใหม่)"><img src="/screens/story/retail-sale-1.2.83.webp" width="1180" height="800" alt="หน้าขายพร้อมสินค้าในมินิมาร์ทและราคาขาย" loading="lazy"></a></figure>
+      <div class="chapter-copy"><h4 id="retail-sale-heading">หน้าขายปลีกที่เคาน์เตอร์</h4><p>สแกนบาร์โค้ดหรือแตะสินค้า ลูกค้าซื้อน้ำดื่ม 10 บาทกับนมจืด 15 บาท ตะกร้ารวมเป็น 25 บาท</p></div>
+      <figure><a class="story-shot" href="/screens/retail-checkout-1.2.84.png" target="_blank" rel="noopener" aria-label="ดูหน้าขายปลีกพร้อมตะกร้าบนแท็บเล็ตขนาดเต็ม (เปิดแท็บใหม่)">
+        <picture><source media="(max-width: 600px)" srcset="/screens/story/retail-checkout-mobile-1.2.84.webp" width="780" height="1320"><img src="/screens/story/retail-checkout-1.2.84.webp" width="1200" height="750" alt="หน้าขายปลีกของ Pokpok มีสินค้าให้เลือกและยอดในตะกร้า 2 ชิ้น รวม 25 บาท" loading="lazy"></picture>
+      </a></figure>
     </article>
-    <article class="story-chapter" id="retail-stock" aria-labelledby="retail-stock-heading">
-      <div class="chapter-copy"><h4 id="retail-stock-heading">ตรวจสินค้าคงเหลือ</h4><p>ดูว่าน้ำดื่มและนมจืดเหลือกี่ชิ้น แล้วเลือกรายการที่จะรับเข้าร้าน</p></div>
-      <figure><a class="story-shot" href="/screens/retail-stock-1.2.83.png" target="_blank" rel="noopener" aria-label="ขยายภาพหน้าจัดการสินค้าในมินิมาร์ทพร้อมจำนวนคงเหลือ (เปิดแท็บใหม่)"><img src="/screens/story/retail-stock-1.2.83.webp" width="1180" height="800" alt="หน้าจัดการสินค้าในมินิมาร์ทพร้อมจำนวนคงเหลือ" loading="lazy"></a></figure>
+    <article class="story-chapter" id="retail-payment" aria-labelledby="retail-payment-heading">
+      <div class="chapter-copy"><h4 id="retail-payment-heading">รับเงินที่เคาน์เตอร์</h4><p>ลูกค้าจ่ายเงินสด 25 บาท พนักงานกรอกจำนวนที่รับ หน้าชำระเงินแสดงเงินทอน 0 บาทก่อนกดยืนยัน</p></div>
+      <figure><a class="story-shot" href="/screens/retail-payment-1.2.84.png" target="_blank" rel="noopener" aria-label="ขยายหน้ารับเงินสด 25 บาท (เปิดแท็บใหม่)"><img src="/screens/story/retail-payment-1.2.84.webp" width="870" height="840" alt="หน้าชำระเงินสดสำหรับบิล 25 บาท พร้อมช่องจำนวนเงินที่รับและเงินทอน" loading="lazy"></a></figure>
     </article>
-    <article class="story-chapter" id="retail-report" aria-labelledby="retail-report-heading">
-      <div class="chapter-copy"><h4 id="retail-report-heading">เช็กยอดขายของวัน</h4><p>เปิดรายงานประจำวันเพื่อตรวจยอด บิลน้ำดื่มกับนมจืดรวม 25 บาทอยู่ในยอดขายเงินสดหน้าร้าน</p></div>
-      <figure><a class="story-shot" href="/screens/retail-report-1.2.83.png" target="_blank" rel="noopener" aria-label="ขยายภาพรายงานแสดงยอดขายเงินสดหน้าร้าน (เปิดแท็บใหม่)"><img src="/screens/story/retail-report-1.2.83.webp" width="1180" height="840" alt="รายงานการขาย แสดงบิลเงินสดหน้าร้าน 25 บาท" loading="lazy"></a></figure>
+    <article class="story-chapter" id="retail-receipt" aria-labelledby="retail-receipt-heading">
+      <div class="chapter-copy"><h4 id="retail-receipt-heading">ดูใบเสร็จของบิลนี้</h4><p>ใบเสร็จ PDF แสดงน้ำดื่มกับนมจืดอย่างละหนึ่งชิ้น พร้อมยอดชำระ 25 บาท พนักงานเปิดบิลนี้ดูย้อนหลังได้</p></div>
+      <figure><a class="story-shot" href="/screens/retail-receipt-1.2.84.png" target="_blank" rel="noopener" aria-label="ขยายใบเสร็จสาธิตสำหรับการขายสองรายการ (เปิดแท็บใหม่)"><img src="/screens/story/retail-receipt-1.2.84.webp" width="640" height="963" alt="ใบเสร็จจากแอป Pokpok สำหรับน้ำดื่มและนมจืด รวม 25 บาท" loading="lazy"></a></figure>
     </article>
-    <div class="story-links"><a class="btn-lg btn-lg-ruby" href="/#download">ทดลองใช้ฟรี</a><a class="btn-outline" href="/pricing/?shop=retail">ดูแพ็กเกจร้านค้าปลีก</a><a class="text-link" href="/retail/">ดูฟังก์ชันสำหรับร้านค้าปลีกและมินิมาร์ท ↗</a></div>
+    <details class="retail-examples">
+      <summary>ดูตัวอย่างสต็อกและรายงานยอดขาย</summary>
+      <figure class="feature-shot" id="retail-stock"><a href="/screens/retail-stock-1.2.83.png" target="_blank" rel="noopener"><img src="/screens/story/retail-stock-1.2.83.webp" width="1180" height="800" alt="หน้าจัดการสินค้ามินิมาร์ทและจำนวนคงเหลือ" loading="lazy"></a><figcaption>ตัวอย่างสินค้าคงเหลือในร้าน</figcaption></figure>
+      <figure class="feature-shot" id="retail-report"><a href="/screens/retail-report-1.2.83.png" target="_blank" rel="noopener"><img src="/screens/story/retail-report-1.2.83.webp" width="1180" height="840" alt="รายงานยอดขายเงินสดหน้าร้าน 25 บาท" loading="lazy"></a><figcaption>ตัวอย่างยอดขายประจำวัน</figcaption></figure>
+    </details>
+    <p class="tier-note">ขายหน้าร้านและดูยอดขายเริ่มที่ Solo · จัดการสต็อกและพิมพ์ใบเสร็จด้วยเครื่องพิมพ์ที่รองรับเลือก Lite</p>
+    <div class="story-links"><a class="btn-lg btn-lg-ruby" href="/#download">ทดลองใช้ฟรี</a><a class="btn-outline" href="/pricing/?shop=retail">ดูแพ็กเกจร้านค้าปลีก</a><a class="text-link" href="/retail/#jobs-heading">ดูสต็อกและฟังก์ชันร้านค้าปลีก ↗</a></div>
   </section>
 </section>
 
@@ -166,7 +175,7 @@
     <p class="feature-gain">คิดเงินเร็ว ตรวจรายการขายย้อนหลังได้</p>
     <p class="feature-tier">เริ่มที่ Solo</p>
 
-    <figure class="feature-shot"><a href="/screens/pos-1.2.83.png" target="_blank" rel="noopener" aria-label="ดูหน้าขายและตะกร้าสินค้าขนาดเต็ม (เปิดแท็บใหม่)"><img src="/screens/pos-1.2.83.png" width="2960" height="1848" alt="หน้าขายและตะกร้าสินค้าในแอป Pokpok บนแท็บเล็ต" loading="lazy"></a><figcaption>หน้าขายและตะกร้าสินค้า · 1.2.83 (100)<br>ตัวอย่างหน้าจอการใช้งาน · แตะภาพเพื่อขยาย</figcaption></figure>
+    <figure class="feature-shot"><a href="/screens/retail-checkout-1.2.84.png" target="_blank" rel="noopener" aria-label="ดูหน้าขายปลีกและตะกร้าสินค้าขนาดเต็ม (เปิดแท็บใหม่)"><img src="/screens/story/retail-checkout-1.2.84.webp" width="1200" height="750" alt="สินค้าในมินิมาร์ทและตะกร้าขายหน้าร้านรวม 25 บาท" loading="lazy"></a><figcaption>หน้าขายปลีกและตะกร้า · ข้อมูลสาธิตในแอป 1.2.84 (101)<br>แตะภาพเพื่อขยาย</figcaption></figure>
   </li>
   <li class="feature-card">
     <svg class="feature-icon" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="M3 7.5 12 12l9-4.5M12 12v9"/></svg>

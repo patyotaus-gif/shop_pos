@@ -76,6 +76,10 @@
 .story-chapter figure { margin: 0; min-width: 0; }
 .story-shot { display: block; padding: var(--home-space-sm); border-radius: var(--home-radius-lg); background: var(--home-stage); color: var(--wine); }
 .story-shot img { display: block; width: 100%; height: auto; border: var(--home-border) solid var(--line); border-radius: var(--home-radius-screen); background: var(--surface); }
+.retail-examples { margin-block: var(--home-space-md); }
+.retail-examples summary { cursor: pointer; font-weight: 600; }
+.retail-examples figure { max-width: 40rem; margin: 1rem auto; }
+.story-journey #retail-receipt .story-shot { max-width: 21rem; margin-inline: auto; }
 .story-links { display: flex; flex-wrap: wrap; gap: var(--home-space-sm); align-items: center; border-top: var(--home-border) solid var(--line); padding-block: var(--home-space-md); }
 .story-links a { min-height: var(--home-control-height); display: inline-flex; align-items: center; justify-content: center; }
 .feature-details summary { width: fit-content; cursor: pointer; color: var(--wine); padding-block: var(--home-space-sm); }

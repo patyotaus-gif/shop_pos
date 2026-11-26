@@ -14,9 +14,10 @@ class StaffSalesEntry extends StatefulWidget {
       {super.key,
       this.loadWorkspace,
       this.restaurant = const RestaurantSalesScreen(),
-      this.retail = const PosScreen()});
+      this.retail});
   final Future<Map<String, dynamic>> Function()? loadWorkspace;
-  final Widget restaurant, retail;
+  final Widget restaurant;
+  final Widget? retail;
   @override
   State<StaffSalesEntry> createState() => _StaffSalesEntryState();
 }
@@ -67,6 +68,7 @@ class _StaffSalesEntryState extends State<StaffSalesEntry> {
             orElse: () => ShopType.retail);
         return Entitlements.canUseTables(tier, type)
             ? widget.restaurant
-            : widget.retail;
+            : widget.retail ??
+                PosScreen(isFoodMenu: type == ShopType.restaurant);
       });
 }

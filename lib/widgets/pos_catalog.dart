@@ -13,6 +13,7 @@ class PosCatalog extends StatefulWidget {
       required this.loadProducts,
       required this.onAdd,
       this.onScan,
+      this.isFoodMenu = false,
       this.onChooseBundle,
       this.onCustomize,
       this.enforceStockAvailability = true});
@@ -20,7 +21,7 @@ class PosCatalog extends StatefulWidget {
   final ValueChanged<Product> onAdd;
   final VoidCallback? onScan, onChooseBundle;
   final ValueChanged<Product>? onCustomize;
-  final bool enforceStockAvailability;
+  final bool enforceStockAvailability, isFoodMenu;
 
   bool unavailable(Product p) =>
       enforceStockAvailability && !p.isRecipeMode && p.saleable <= 0;
@@ -123,8 +124,10 @@ class _PosCatalogState extends State<PosCatalog> {
             controller: _search,
             onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
-                hintText: 'ค้นหาสินค้า',
-                prefixIcon: widget.onScan == null
+                hintText: widget.isFoodMenu
+                    ? 'ค้นหาเมนูอาหาร'
+                    : 'ค้นหาชื่อหรือบาร์โค้ด',
+                prefixIcon: widget.onScan == null || !widget.isFoodMenu
                     ? const Icon(Icons.search)
                     : IconButton(
                         tooltip: 'สแกนบาร์โค้ด',
@@ -165,25 +168,38 @@ class _PosCatalogState extends State<PosCatalog> {
             SizedBox(
                 height: math.max(
                     48, MediaQuery.textScalerOf(context).scale(18) + 24),
-                child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    children: [
-                      _chip('ทั้งหมด', 'all', tab),
-                      _chip('รายการโปรด', 'favorites', tab,
-                          icon: Icons.push_pin_outlined),
-                      if (widget.onChooseBundle != null)
-                        Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: ActionChip(
-                                key: const ValueKey('sales-bundles'),
-                                avatar: const Icon(Icons.inventory_2_outlined,
-                                    size: 18),
-                                label: const Text('ชุดสินค้า'),
-                                onPressed: widget.onChooseBundle)),
-                      for (final category in categories)
-                        _chip(category, 'category:$category', tab),
-                    ])),
+                child: Row(children: [
+                  if (!widget.isFoodMenu && widget.onScan != null)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 12),
+                      child: ActionChip(
+                        tooltip: 'สแกนบาร์โค้ด',
+                        avatar: const Icon(Icons.barcode_reader, size: 18),
+                        label: const Text('สแกน'),
+                        onPressed: widget.onScan,
+                      ),
+                    ),
+                  Expanded(
+                      child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          children: [
+                        _chip('ทั้งหมด', 'all', tab),
+                        _chip('รายการโปรด', 'favorites', tab,
+                            icon: Icons.push_pin_outlined),
+                        if (widget.onChooseBundle != null)
+                          Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ActionChip(
+                                  key: const ValueKey('sales-bundles'),
+                                  avatar: const Icon(Icons.inventory_2_outlined,
+                                      size: 18),
+                                  label: const Text('ชุดสินค้า'),
+                                  onPressed: widget.onChooseBundle)),
+                        for (final category in categories)
+                          _chip(category, 'category:$category', tab),
+                      ])),
+                ])),
           ]);
           final Widget body;
           if (snapshot.hasError) {

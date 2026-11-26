@@ -44,8 +44,12 @@ import '../services/sale_display_service.dart';
 import '../widgets/pos_sales_workspace.dart';
 
 class PosScreen extends StatefulWidget {
-  const PosScreen({super.key, this.initialChannel = SalesChannel.storefront});
+  const PosScreen(
+      {super.key,
+      this.initialChannel = SalesChannel.storefront,
+      this.isFoodMenu = false});
   final SalesChannel initialChannel;
+  final bool isFoodMenu;
 
   @override
   State<PosScreen> createState() => _PosScreenState();
@@ -750,6 +754,8 @@ class _PosScreenState extends State<PosScreen> {
                     child: LayoutBuilder(builder: (context, constraints) {
                       final wide = constraints.maxWidth >= 900;
                       final catalog = PosCatalog(
+                        isFoodMenu: widget.isFoodMenu ||
+                            widget.initialChannel == SalesChannel.takeaway,
                         loadProducts: ProductService.watchAll,
                         onAdd: _addToCart,
                         onScan: _openScanner,

@@ -10,8 +10,10 @@ class CartItemTile extends StatelessWidget {
       required this.item,
       required this.onRemove,
       required this.onQtyChanged,
-      this.onEditQuantity});
+      this.onEditQuantity,
+      this.statusLabel});
   final CartItem item;
+  final String? statusLabel;
   final VoidCallback onRemove;
   final ValueChanged<num> onQtyChanged;
   final VoidCallback? onEditQuantity;
@@ -51,6 +53,8 @@ class CartItemTile extends StatelessWidget {
                                         style: const TextStyle(
                                             fontSize: 15,
                                             fontWeight: FontWeight.w600)),
+                                    if (statusLabel != null)
+                                      Text(statusLabel!, style: detailStyle),
                                     const SizedBox(height: 4),
                                     Text(
                                         'หน่วยละ ${formatBaht(item.unitPrice)}',
