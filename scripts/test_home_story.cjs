@@ -176,7 +176,7 @@ async function touchSwipe(page, session, dx, dy = 0, cancel = false) {
     await load(page, '/#retail-sale');
     await page.locator('[data-business="restaurant"]').click();
     await page.locator('.hero-ctas a[href="#retail-sale"]').click();
-    await page.waitForFunction(() => { const rect = document.getElementById('retail-sale').getBoundingClientRect(); return rect.top >= -8 && rect.top < innerHeight / 2; });
+    await page.waitForFunction(() => { const rect = document.getElementById('retail-sale').getBoundingClientRect(); return rect.width > 0 && rect.height > 0 && rect.top >= -8 && rect.top < innerHeight / 2; });
 
     for (const type of ['restaurant','retail']) {
       await load(page);
@@ -235,6 +235,7 @@ async function touchSwipe(page, session, dx, dy = 0, cancel = false) {
       await fallback.waitForURL('**/#' + anchor);
       const target = fallback.locator('#' + anchor);
       const deadline = Date.now() + 5000;
+      await target.waitFor({state:'visible'});
       let bounds;
       do {
         bounds = await target.boundingBox();

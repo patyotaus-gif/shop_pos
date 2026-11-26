@@ -289,21 +289,33 @@ void main() {
         tableName: '01',
         openedAt: DateTime(2026, 11, 22),
         items: [items.first.copyWith(kitchenStatus: KitchenStatus.sent)]));
+    void setDemoItems(List<TableOrderItem> lines) {
+      final existing = order.value;
+      order.value = TableOrder(
+          id: existing.id,
+          tableId: existing.tableId,
+          tableName: existing.tableName,
+          openedAt: existing.openedAt,
+          items: lines);
+    }
+
     await mount(
         TableProductPicker(
             tableName: '01',
             products: Stream.value(food),
             order: order,
             save: (added, _) async {
-              final existing = order.value;
-              order.value = TableOrder(
-                  id: existing.id,
-                  tableId: existing.tableId,
-                  tableName: existing.tableName,
-                  openedAt: existing.openedAt,
-                  items: [...existing.items, ...added]);
+              setDemoItems([...order.value.items, ...added]);
             },
             checkout: (context) async {
+              // Table checkout confirms outstanding kitchen lines before payment.
+              // Model that acknowledgement in the local order, without a live kitchen.
+              setDemoItems([
+                for (final line in order.value.items)
+                  line.kitchenStatus == KitchenStatus.pending
+                      ? line.copyWith(kitchenStatus: KitchenStatus.sent)
+                      : line
+              ]);
               final saved = order.value.items;
               final total =
                   saved.fold<double>(0, (sum, item) => sum + item.subtotal);
@@ -329,6 +341,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(Dialog), findsOneWidget);
     expect(order.value.items, hasLength(2));
+    expect(
+        order.value.items
+            .every((line) => line.kitchenStatus == KitchenStatus.sent),
+        isTrue);
     expect(find.text('฿230.00'), findsWidgets);
     await save('restaurant-bill');
     navigator.currentState!.pop();
