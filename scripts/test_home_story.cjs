@@ -235,14 +235,13 @@ async function touchSwipe(page, session, dx, dy = 0, cancel = false) {
       await fallback.waitForURL('**/#' + anchor);
       const target = fallback.locator('#' + anchor);
       const deadline = Date.now() + 5000;
-      await target.waitFor({state:'visible'});
       let bounds;
       do {
-        bounds = await target.boundingBox();
-        if (bounds && bounds.y >= -8 && bounds.y < 480) break;
+        bounds = await target.boundingBox({timeout: Math.max(1, deadline - Date.now())}).catch(() => null);
+        if (bounds && bounds.width > 0 && bounds.height > 0 && bounds.y >= -8 && bounds.y < 480) break;
         await new Promise(resolve => setTimeout(resolve, 50));
       } while (Date.now() < deadline);
-      assert.ok(bounds && bounds.y >= -8 && bounds.y < 480, 'No-JS fragment scroll: ' + anchor);
+      assert.ok(bounds && bounds.width > 0 && bounds.height > 0 && bounds.y >= -8 && bounds.y < 480, 'No-JS fragment scroll: ' + anchor);
     }
     await noJs.close(); checks++;
     // Real browser touch dispatch exercises native pointer cancellation/scroll,

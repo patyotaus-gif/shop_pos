@@ -15,14 +15,11 @@ Rules:
 
 ## Current state (updated 2026-11-26)
 
-The 1.2.84 (101) retail/restaurant release candidate is being verified in an isolated checkout based on the published source. Public Hosting and Android currently serve the last release described below.
+Android 1.2.84 (101), targeting API 36, and the updated retail and restaurant examples are live at https://pok-pok.app/. Hosting version de92cf4e38010b55 was released from 0ffe0b05. The last confirmed physical SM-X900 installation was build 100. The build 100 → 101 upgrade and cold launch were verified on an Android 16 emulator. Physical scanner, fold/unfold and iOS distribution were not tested in this release.
 
-The homepage journeys and horizontal package comparison are live at
-https://pok-pok.app/ and https://pok-pok.app/pricing/. Firebase Hosting version
-393cdb2c01979735 was published from 952e785. All 115 file hashes match the
-release tree. The previous Hosting version is e9fc85e582067d26.
+The homepage journeys and horizontal package comparison were previously released on 24 November in Hosting 393cdb2c01979735.
 
-Android **1.2.83 (100) is published and installed** on the connected SM-X900.
+Earlier Android **1.2.83 (100)** was published and installed on the SM-X900.
 The owner-authorized channel-choice fix and all displayed website app screenshots
 are released from `2381f3c`, Hosting `e9fc85e582067d26` at 14:23 AEDT (03:23 UTC).
 Public verification at 14:24 passed: all 101 Hosting hashes/config match, the 20
@@ -713,6 +710,13 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-26 — Published Android 1.2.84 (101) and shop-specific website journeys
+
+- Source 0ffe0b0533c52beae26a430ab664af66784cd82c; live Hosting de92cf4e38010b55; previous 393cdb2c01979735. Live configuration matched and all hosted paths matched the staged release. HTTPS downloads of all 21 changed resources matched, including the 93,116,244-byte signed APK (SHA-256 8835ea5408a4605b7387da65c759d5630ef7fc44cb7fb8c47e7240e16654e700). The emulator accepted the update over build 100 and launched MainActivity.
+- Retail has a fixed scan button, and table sales show saved lines with the kitchen status at last load, new items and unconfirmed writes. The website now follows a ฿25 retail bill and a ฿230 table bill, with segment-specific plan guidance and access to prior stock/report examples. Chromium checked both journeys and their pricing links live at 390 and 1440 px.
+- Local evidence: flow/fixture suite (41), targeted regression and entitlement suites (31, overlapping), targeted analysis, homepage across eight widths and marketing pages across five widths. Demo data only. No production sale was made. The kiosk implementation remains a separate local change.
+
 
 ### 2026-11-26 — Retail and restaurant sales release candidate
 
