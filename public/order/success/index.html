@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>สั่งสินค้าสำเร็จ</title>
+  <title>สถานะออเดอร์</title>
   <link rel="icon" type="image/png" href="/favicon.png?v=20261104" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,45 +12,21 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'IBM Plex Sans Thai', system-ui, -apple-system, sans-serif; font-weight: 400; background: #F5F1EC; color: #1F1A1B; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
     .card { background: #FFFFFF; border-radius: 20px; padding: 36px 28px; max-width: 420px; width: 100%; text-align: center; box-shadow: 0 4px 24px rgba(31, 26, 27, 0.06); border: 1px solid #E5DDD3; }
-    .icon { font-size: 72px; margin-bottom: 16px; }
-    h1 { color: #15803d; font-size: 22px; font-weight: 600; margin-bottom: 8px; }
+    h1 { color: #7A1F2B; font-size: 22px; font-weight: 600; margin-bottom: 8px; }
+    h1.confirmed { color: #15803d; }
     .subtitle { color: #6B5E60; font-size: 15px; line-height: 1.6; margin-bottom: 24px; }
-    .steps { text-align: left; background: #F5F1EC; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px; }
-    .step { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; font-size: 14px; color: #1F1A1B; }
-    .step-num { background: #7A1F2B; color: #F5F1EC; border-radius: 50%; width: 22px; height: 22px; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+    .subtitle:empty { display: none; }
     .note { background: #F0E2E4; border-radius: 10px; padding: 12px 16px; color: #7A1F2B; font-size: 13px; font-weight: 500; }
   </style>
 </head>
 <body>
-  <div class="card">
-    <div class="icon">🎉</div>
-    <h1>สั่งสินค้าสำเร็จ!</h1>
-    <p class="subtitle">ขอบคุณที่สั่งซื้อ<br/>ร้านค้าได้รับ order ของคุณแล้ว</p>
+  <main class="card">
+    <h1 aria-live="polite">สถานะออเดอร์</h1>
+    <p id="description" class="subtitle">กำลังตรวจสอบสถานะกับร้าน…</p>
     <p id="orderNumber" class="subtitle" style="overflow-wrap:anywhere"></p>
     <p id="pickup" class="subtitle" style="white-space:pre-line"></p>
-    <div class="steps">
-      <div class="step"><div class="step-num">1</div><span>ร้านค้าตรวจสอบและยืนยัน order</span></div>
-      <div class="step"><div class="step-num">2</div><span>เตรียมสินค้าให้พร้อม</span></div>
-      <div class="step"><div class="step-num">3</div><span>ร้านแจ้งเมื่อสินค้าพร้อมรับ</span></div>
-      <div class="step"><div class="step-num">4</div><span>มารับตามนัดเมื่อร้านยืนยันพร้อมรับ</span></div>
-    </div>
-    <div class="note">ร้านจะติดต่อกลับทางโทรศัพท์เมื่อสินค้าพร้อม</div>
-  </div>
-<script type="module">
-  import {pickupDescription} from '/order/js/order-display.mjs';
-  const number = new URLSearchParams(location.search).get('number') || new URLSearchParams(location.search).get('order');
-  if (number) document.getElementById('orderNumber').textContent = 'เลขออเดอร์ ' + number.slice(0, 128);
-  const queue = new URLSearchParams(location.search).get('queue');
-  if (queue) document.getElementById('orderNumber').textContent = queue.slice(0, 128) + (number ? ' · อ้างอิง ' + number.slice(0, 128) : '');
-  const pickup = new URLSearchParams(location.search).get("pickup");
-  if (pickup) document.getElementById("pickup").textContent = pickupDescription(pickup.slice(0, 100));
-  if (new URLSearchParams(location.search).get('review') === '1') {
-    document.title = 'ส่งสลิปแล้ว รอร้านยืนยัน';
-    document.querySelector('h1').textContent = 'ส่งสลิปแล้ว รอร้านยืนยัน';
-    document.querySelector('.icon').textContent = '🧾';
-    document.querySelector('.subtitle').textContent = 'ร้านได้รับสลิปแล้ว และจะตรวจยอดเงินเข้าก่อนยืนยันออเดอร์';
-    document.querySelector('.note').textContent = 'หากโอนเงินแล้ว ไม่ต้องโอนซ้ำ กรุณารอร้านตรวจสอบ';
-  }
-</script>
+    <div class="note">หากโอนเงินแล้ว ไม่ต้องโอนซ้ำ</div>
+  </main>
+  <script type="module" src="/order/js/receipt.js"></script>
 </body>
 </html>

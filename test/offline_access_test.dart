@@ -30,7 +30,7 @@ void main() {
     final now = DateTime.now();
     permit = {
       'id': 'permit',
-      'uid': 'cashier',
+      'uid': 'staff_cashier',
       'shopId': 'shop',
       'name': 'Cashier',
       'shopName': 'Shop',

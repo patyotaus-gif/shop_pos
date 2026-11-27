@@ -33,18 +33,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscure = true;
   bool _acceptedTerms = false;
   String? _error;
-  bool _accountCreated = false;
+  static String? _consentedUid;
   bool _emailChosen = false;
-  bool _shopStep = false;
   final _scroll = ScrollController();
-  void _nextStep() {
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.completeProfile) {
+      _acceptedTerms = _consentedUid != null &&
+          _consentedUid == AuthService.currentUser?.uid;
+    }
+  }
+
+  Future<void> _createAccount() async {
     if (_loading || !_formKey.currentState!.validate()) return;
-    FocusScope.of(context).unfocus();
+    if (!_acceptedTerms) {
+      setState(() =>
+          _error = 'กรุณายอมรับเงื่อนไขการใช้บริการและนโยบายความเป็นส่วนตัว');
+      return;
+    }
     setState(() {
-      _shopStep = true;
+      _loading = true;
       _error = null;
     });
-    _scroll.jumpTo(0);
+    final error =
+        await AuthService.register(_emailCtrl.text.trim(), _passCtrl.text);
+    if (!mounted) return;
+    if (error == null) {
+      _consentedUid = AuthService.currentUser?.uid;
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    } else {
+      setState(() {
+        _loading = false;
+        _error = error;
+      });
+    }
   }
 
   late final _termsTap = TapGestureRecognizer()
@@ -85,21 +109,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _error = null;
     });
 
-    // สร้าง Firebase Auth account
-    final error = widget.completeProfile || _accountCreated
-        ? null
-        : await AuthService.register(_emailCtrl.text.trim(), _passCtrl.text);
-    if (!mounted) return;
-
-    if (error != null) {
-      setState(() {
-        _loading = false;
-        _error = error;
-      });
-      return;
-    }
-
-    _accountCreated = true;
     // Store business type independently from the selected subscription tier.
     try {
       await ShopService.createShop(
@@ -126,10 +135,50 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     // Auth state stream จะพา navigate ไป MainShell เองผ่าน StreamBuilder
     if (mounted) {
+      _consentedUid = null;
       setState(() => _loading = false);
       Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
+
+  Widget _consentRow(ColorScheme cs) => Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Checkbox(
+            value: _acceptedTerms,
+            onChanged: (v) => setState(() => _acceptedTerms = v ?? false),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 13),
+              child: Text.rich(
+                TextSpan(
+                  style: TextStyle(
+                      fontSize: 12.5,
+                      height: 1.5,
+                      color: cs.onSurface.withValues(alpha: 0.75)),
+                  children: [
+                    const TextSpan(text: 'ฉันยอมรับ '),
+                    TextSpan(
+                      text: 'เงื่อนไขการใช้บริการ',
+                      style: TextStyle(
+                          color: cs.primary, fontWeight: FontWeight.w600),
+                      recognizer: _termsTap,
+                    ),
+                    const TextSpan(text: ' และ '),
+                    TextSpan(
+                      text: 'นโยบายความเป็นส่วนตัว',
+                      style: TextStyle(
+                          color: cs.primary, fontWeight: FontWeight.w600),
+                      recognizer: _privacyTap,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -155,14 +204,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                        widget.completeProfile || _accountCreated || _shopStep
+                        widget.completeProfile
                             ? 'ขั้นตอน 2 จาก 2 · ตั้งค่าร้าน'
                             : 'ขั้นตอน 1 จาก 2 · บัญชีของคุณ',
                         style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 16),
-                    if (!widget.completeProfile &&
-                        !_accountCreated &&
-                        !_shopStep) ...[
+                    if (!widget.completeProfile) ...[
                       SocialAuthButtons(
                           disabled: _loading,
                           onBusyChanged: (busy) {
@@ -181,98 +228,87 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 label: const Text('สมัครด้วยอีเมล'))),
                       if (_emailChosen) ...[
                         const Divider(height: 32),
-                        if (!widget.completeProfile &&
-                            !_accountCreated &&
-                            !_shopStep) ...[
-                          Text('ข้อมูลบัญชี',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleSmall
-                                  ?.copyWith(
-                                      color: cs.primary,
-                                      fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _emailCtrl,
-                            keyboardType: TextInputType.emailAddress,
-                            textInputAction: TextInputAction.next,
-                            decoration: const InputDecoration(
-                              labelText: 'อีเมล',
-                              prefixIcon: Icon(Icons.email_outlined),
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) => (v == null || v.trim().isEmpty)
-                                ? 'กรุณากรอกอีเมล'
-                                : null,
+                        Text('ข้อมูลบัญชี',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(
+                                    color: cs.primary,
+                                    fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _emailCtrl,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          decoration: const InputDecoration(
+                            labelText: 'อีเมล',
+                            prefixIcon: Icon(Icons.email_outlined),
+                            border: OutlineInputBorder(),
                           ),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: _passCtrl,
-                            obscureText: _obscure,
-                            textInputAction: TextInputAction.next,
-                            decoration: InputDecoration(
-                              labelText: 'รหัสผ่าน',
-                              hintText: 'อย่างน้อย 6 ตัวอักษร',
-                              prefixIcon: const Icon(Icons.lock_outline),
-                              border: const OutlineInputBorder(),
-                              suffixIcon: IconButton(
-                                icon: Icon(_obscure
-                                    ? Icons.visibility_off
-                                    : Icons.visibility),
-                                onPressed: () =>
-                                    setState(() => _obscure = !_obscure),
-                              ),
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'กรุณากรอกอีเมล'
+                              : null,
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _passCtrl,
+                          obscureText: _obscure,
+                          textInputAction: TextInputAction.next,
+                          decoration: InputDecoration(
+                            labelText: 'รหัสผ่าน',
+                            hintText: 'อย่างน้อย 6 ตัวอักษร',
+                            prefixIcon: const Icon(Icons.lock_outline),
+                            border: const OutlineInputBorder(),
+                            suffixIcon: IconButton(
+                              icon: Icon(_obscure
+                                  ? Icons.visibility_off
+                                  : Icons.visibility),
+                              onPressed: () =>
+                                  setState(() => _obscure = !_obscure),
                             ),
-                            validator: (v) {
-                              if (v == null || v.isEmpty) {
-                                return 'กรุณากรอกรหัสผ่าน';
-                              }
-                              if (v.length < 6) {
-                                return 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร';
-                              }
-                              return null;
-                            },
                           ),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: _confirmPassCtrl,
-                            obscureText: _obscure,
-                            textInputAction: TextInputAction.done,
-                            onFieldSubmitted: (_) => _nextStep(),
-                            decoration: const InputDecoration(
-                              labelText: 'ยืนยันรหัสผ่าน',
-                              prefixIcon: Icon(Icons.lock_outline),
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (v) {
-                              if (v != _passCtrl.text) {
-                                return 'รหัสผ่านไม่ตรงกัน';
-                              }
-                              return null;
-                            },
+                          validator: (v) {
+                            if (v == null || v.isEmpty) {
+                              return 'กรุณากรอกรหัสผ่าน';
+                            }
+                            if (v.length < 6) {
+                              return 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _confirmPassCtrl,
+                          obscureText: _obscure,
+                          textInputAction: TextInputAction.done,
+                          onFieldSubmitted: (_) => _createAccount(),
+                          decoration: const InputDecoration(
+                            labelText: 'ยืนยันรหัสผ่าน',
+                            prefixIcon: Icon(Icons.lock_outline),
+                            border: OutlineInputBorder(),
                           ),
-                          const SizedBox(height: 16),
-                          FilledButton(
-                              onPressed: _loading ? null : _nextStep,
-                              child: const Text('ถัดไป: ตั้งค่าร้าน')),
-                        ],
+                          validator: (v) {
+                            if (v != _passCtrl.text) {
+                              return 'รหัสผ่านไม่ตรงกัน';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        _consentRow(cs),
+                        if (_error != null)
+                          Text(_error!, style: TextStyle(color: cs.error)),
+                        FilledButton(
+                            onPressed: _loading ? null : _createAccount,
+                            child: const Text('สร้างบัญชีและยืนยันอีเมล')),
                       ],
                     ],
-                    if (widget.completeProfile ||
-                        _accountCreated ||
-                        _shopStep) ...[
-                      if (!widget.completeProfile && !_accountCreated)
-                        TextButton.icon(
-                            onPressed: _loading
-                                ? null
-                                : () => setState(() => _shopStep = false),
-                            icon: const Icon(Icons.arrow_back),
-                            label: const Text('กลับไปแก้ไขบัญชี')),
-                      if (widget.completeProfile || _accountCreated)
-                        TextButton(
-                            onPressed: _loading ? null : AuthService.signOut,
-                            child: const Text(
-                                'มีร้านเดิมแล้ว? กลับไปเข้าสู่ระบบ')),
+                    if (widget.completeProfile) ...[
+                      TextButton(
+                          onPressed: _loading ? null : AuthService.signOut,
+                          child:
+                              const Text('มีร้านเดิมแล้ว? กลับไปเข้าสู่ระบบ')),
                       // Trial banner
                       Container(
                         width: double.infinity,
@@ -393,48 +429,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       // open the hosted policy pages. Helps establish a lawful
                       // basis under Thailand's PDPA since shops store personal data
                       // (their own + their customers' loyalty/debt records).
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Checkbox(
-                            value: _acceptedTerms,
-                            onChanged: (v) =>
-                                setState(() => _acceptedTerms = v ?? false),
-                          ),
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(top: 13),
-                              child: Text.rich(
-                                TextSpan(
-                                  style: TextStyle(
-                                      fontSize: 12.5,
-                                      height: 1.5,
-                                      color:
-                                          cs.onSurface.withValues(alpha: 0.75)),
-                                  children: [
-                                    const TextSpan(text: 'ฉันยอมรับ '),
-                                    TextSpan(
-                                      text: 'เงื่อนไขการใช้บริการ',
-                                      style: TextStyle(
-                                          color: cs.primary,
-                                          fontWeight: FontWeight.w600),
-                                      recognizer: _termsTap,
-                                    ),
-                                    const TextSpan(text: ' และ '),
-                                    TextSpan(
-                                      text: 'นโยบายความเป็นส่วนตัว',
-                                      style: TextStyle(
-                                          color: cs.primary,
-                                          fontWeight: FontWeight.w600),
-                                      recognizer: _privacyTap,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                      _consentRow(cs),
 
                       if (_error != null) ...[
                         const SizedBox(height: 12),

@@ -27,7 +27,7 @@ const snap=d=>({id:d.id,exists:()=>true,data:()=>d});
 function emit(){for(const sub of fixture.subs){const rows=sub.q.path.endsWith('/products')?fixture.products:fixture.orders;sub.cb({empty:!rows.length,forEach:fn=>rows.forEach(d=>fn(snap(d)))});}}
 const onSnapshot=(q,cb,error)=>{const sub={q,cb,error};fixture.subs.push(sub);emit();return()=>{fixture.subs=fixture.subs.filter(s=>s!==sub);};};
 const getDoc=async()=>{if(fixture.failProfile)throw Error('fixture profile unavailable');return {exists:()=>true,data:()=>fixture.profile};};
-const onAuthStateChanged=(_,cb)=>{fixture.auth=cb;cb(null);};
+const watchVerifiedAccount=(_,cb)=>{fixture.auth=cb;cb(null);};
 const signInWithEmailAndPassword=async()=>{if(fixture.failLogin)throw Error('fixture invalid credentials');fixture.user={uid:'supplier-fixture'};setTimeout(()=>fixture.auth(fixture.user),0);};
 const signOut=async()=>{fixture.user=null;await fixture.auth(null);};
 async function write(kind,ref,data){if(fixture.failWrite)throw Error('fixture offline');fixture.writes.push({kind,path:ref.path,data});if(ref.path.includes('/products/')){const id=ref.path.split('/').pop();const prev=fixture.products.find(p=>p.id===id);if(kind==='delete')fixture.products=fixture.products.filter(p=>p.id!==id);else if(prev)Object.assign(prev,data);else fixture.products.push({id,...data});}else Object.assign(fixture.profile,data);emit();}

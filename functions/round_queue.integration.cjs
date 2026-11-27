@@ -78,7 +78,7 @@ const {createWithPickup,slots}=require('./pickup');
     const env=await initializeTestEnvironment({projectId:'demo-pokpok-admin',firestore:{host:'127.0.0.1',port:8181,rules:require('node:fs').readFileSync('../firestore.rules','utf8')}});
     try {
       await assertFails(setDoc(doc(env.authenticatedContext(claims.uid,claims.token).firestore(),`shops/${shopId}/counters/queue-round-b-takeaway`),{seq:0}));
-      await assertFails(setDoc(doc(env.authenticatedContext('other').firestore(),`shops/${shopId}/counters/queue-round-b-takeaway`),{seq:0}));
+      await assertFails(setDoc(doc(env.authenticatedContext('other', {email_verified:true}).firestore(),`shops/${shopId}/counters/queue-round-b-takeaway`),{seq:0}));
     } finally {await env.cleanup();}
     console.log('PASS round queue: concurrent allocation, channel isolation, actual close/open reset, replay, scheduled acceptance, linked receipts, kitchen reprints, staff projection and denied counter writes');
   } finally {await db.recursiveDelete(shop);await deleteApp(app);}

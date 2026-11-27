@@ -10,7 +10,7 @@ const {doc,setDoc,getDoc,writeBatch,serverTimestamp,Timestamp,increment,deleteDo
     firestore:{rules:fs.readFileSync(path.join(__dirname,'../firestore.rules'),'utf8')}});
   try {
     const owner='pos-serializer-owner',root=`shops/${owner}`;
-    const client=env.authenticatedContext(owner).firestore();
+    const client=env.authenticatedContext(owner, {email_verified:true}).firestore();
     await env.withSecurityRulesDisabled(async context=>{
       const db=context.firestore();
       await setDoc(doc(db,root+'/products/brownie'),{name:'Brownie',price:35,stock:20});
@@ -41,7 +41,7 @@ const {doc,setDoc,getDoc,writeBatch,serverTimestamp,Timestamp,increment,deleteDo
     for(const [id,value] of [['refunded',true],['null',null],['string','false']])
       await assertFails(checkout(client,id,value));
     await assertFails(checkout(env.unauthenticatedContext().firestore(),'anonymous',false));
-    await assertFails(checkout(env.authenticatedContext('another-shop').firestore(),'other',false));
+    await assertFails(checkout(env.authenticatedContext('another-shop', {email_verified:true}).firestore(),'other',false));
     await assertFails(checkout(env.authenticatedContext('cashier',{staffRole:'cashier',staffShopId:owner}).firestore(),'staff',false));
     // A duplicate batch cannot mutate a previously saved sale/ledger or deduct twice.
     await assertFails(checkout(client,'old-client','omitted'));

@@ -1,5 +1,6 @@
+import {watchVerifiedAccount} from '/js/merchant-session.js';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
-import {getAuth, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut}
+import {getAuth, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut}
   from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import {getFunctions, httpsCallable} from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js';
 import {setupAppCheck} from '/appcheck.js';
@@ -125,7 +126,7 @@ $('pay').onclick = () => {
     });
   }
 };
-onAuthStateChanged(auth, async account => {
+watchVerifiedAccount(auth, async account => {
   user = account; config = null; saved = null;
   $('loginPanel').hidden = !!account; $('paymentPanel').hidden = true;
   if (!account) {message('เข้าสู่ระบบเพื่อเริ่มทดสอบ'); return;}

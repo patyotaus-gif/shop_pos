@@ -15,6 +15,10 @@ Rules:
 
 ## Current state (updated 2026-11-27)
 
+Android 1.2.85 (102) is signed and the scoped release is being verified. Production transfer handlers already accept new references; the prior public Android APK remains active until the Hosting promotion.
+
+Cloud Functions staffCheckout, staffWorkspace, staffWork and tablePromotions were updated to preserve counter transfer references. Android, Hosting and verification enforcement remain on the previous release pending rollout.
+
 The owner authorized the buyer checkout fixes, recurring in-app update details, and email verification for new and existing non-Google/Apple accounts. For existing accounts the owner selected delivery on next access. Preparing a scoped 1.2.85 (102) candidate from the published branch with the previously tested counter transfer reference fix.
 
 Android 1.2.84 (101), targeting API 36, and the updated retail and restaurant examples are live at https://pok-pok.app/. Hosting version de92cf4e38010b55 was released from 0ffe0b05. The last confirmed physical SM-X900 installation was build 100. The build 100 → 101 upgrade and cold launch were verified on an Android 16 emulator. Physical scanner, fold/unfold and iOS distribution were not tested in this release.
@@ -712,6 +716,17 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-27 — Verify Android and merchant/buyer release candidate
+
+- Final signed APK is 93,230,936 bytes, SHA-256 e80cd891ddba042519f312aa6b5e7350edc91e6100fe1a43b5dd51ef52f94044; its application ID, API 36 target, three ABIs, version and signer match the distribution channel. The first local Gradle warm-up exhausted memory while several emulators ran; the final build completed separately on the verified native sources.
+- Local mobile browser and real Firebase Auth emulator issued one verification action to a synthetic returning password account, suppressed duplicates across refresh and unlocked it only after redemption. The buyer emulator exercised original and reopened payment views and a second purchase without losing the first receipt. Google/Apple and PIN access, link retry and offline permit migration have focused tests. The remote password provider, authorized domains and hosted Auth action handler are available. No production user was contacted in testing.
+- The shipped older APK cannot gain a pre-sign-in update dialog retroactively. The download page and the getting-started guide point legacy users to verification via the merchant portal until they update. The release excludes the local-only kiosk.
+
+### 2026-11-27 — Publish counter transfer support ahead of the app
+
+- The four backward-compatible merchant functions were deployed successfully from the clean counter-only source c3d99dd in asia-southeast1. The change preserves references staff enter on new transfers. The 21 focused backend tests passed. No production transaction or email was created for testing.
+- Before rollout, both live security rule sets matched the published checkout. Prior Cloud Run revisions and ruleset IDs are preserved in the release evidence folder. The web email fallback and APK must be available before enforcement.
 
 ### 2026-11-27 — Prepare payment, update and account verification release
 

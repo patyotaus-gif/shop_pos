@@ -27,7 +27,7 @@ const {handlers}=require('./omise_sandbox');
     assert.equal((await shop.collection('sales').get()).size,1);
     assert.equal((await shop.collection('moneyMovements').get()).size,0);
     assert.equal((await shop.collection('orders').get()).size,0);
-    for(const ctx of [env.unauthenticatedContext(),env.authenticatedContext('founder',{founder:true}),env.authenticatedContext('shop')]){
+    for(const ctx of [env.unauthenticatedContext(),env.authenticatedContext('founder',{founder:true}),env.authenticatedContext('shop', {email_verified:true})]){
       const ref=doc(ctx.firestore(),`omiseSandboxAttempts/${id}`);
       await assertFails(getDoc(ref));await assertFails(setDoc(ref,{status:'successful'}));
     }

@@ -86,9 +86,9 @@ const {HttpsError}=require('firebase-functions/v2/https');
     const counterClosed=await cash.close(owner({sessionId:'counter-session',countedCash:100}));
     assert.equal(counterClosed.expectedCash,100);assert.equal(counterClosed.refundTotal,sale.total);
     assert.equal(counterClosed.grossTotal,Math.round((100-sale.total)*100)/100);
-    const conf=shop.collection('promotionSettings').doc('bundles'),ownerDb=env.authenticatedContext(shopId).firestore();
+    const conf=shop.collection('promotionSettings').doc('bundles'),ownerDb=env.authenticatedContext(shopId, {email_verified:true}).firestore();
     await assertSucceeds(getDoc(doc(ownerDb,conf.path)));await assertFails(updateDoc(doc(ownerDb,conf.path),{bundles:[]}));
-    for(const client of [env.unauthenticatedContext().firestore(),env.authenticatedContext('other').firestore(),env.authenticatedContext('staff',{staffRole:'cashier',staffShopId:shopId}).firestore()]) {
+    for(const client of [env.unauthenticatedContext().firestore(),env.authenticatedContext('other', {email_verified:true}).firestore(),env.authenticatedContext('staff',{staffRole:'cashier',staffShopId:shopId}).firestore()]) {
       await assertFails(getDoc(doc(client,conf.path)));await assertFails(setDoc(doc(client,conf.path),{bundles:[]}));
     }
     await shop.collection('accountingSettings').doc('current').set({enabled:false});

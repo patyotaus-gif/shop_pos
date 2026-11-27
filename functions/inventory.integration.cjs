@@ -32,7 +32,7 @@ const {doc,getDoc,setDoc,updateDoc,deleteDoc}=require('firebase/firestore');
     await Promise.all([require('./refund').refundSale(refund),require('./refund').refundSale(refund)]);
     assert.equal((await shop.collection('products').doc('rice').get()).data().stock,0.5);
     assert.equal((await ref.get()).size,2);
-    const owner=env.authenticatedContext(shopId).firestore(),other=env.authenticatedContext('other').firestore(),anon=env.unauthenticatedContext().firestore();
+    const owner=env.authenticatedContext(shopId, {email_verified:true}).firestore(),other=env.authenticatedContext('other', {email_verified:true}).firestore(),anon=env.unauthenticatedContext().firestore();
     const history='shops/'+shopId+'/products/rice/stockMovements/manual-test';
     await assertSucceeds(setDoc(doc(owner,history),{kind:'count',delta:0}));
     await assertSucceeds(getDoc(doc(owner,history)));

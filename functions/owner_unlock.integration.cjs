@@ -9,7 +9,7 @@ const {readFileSync} = require('node:fs');
   assert.match(process.env.FIRESTORE_EMULATOR_HOST || '', /^(127\.0\.0\.1|localhost):\d+$/);
   const projectId = 'demo-pokpok-admin';
   const app = initializeApp({projectId}, 'owner-unlock'), db = getFirestore(app);
-  let time = Date.now(), user = {disabled: false, tokensValidAfterTime: 'original'}, issued = [];
+  let time = Date.now(), user = {disabled: false, emailVerified: true, tokensValidAfterTime: 'original'}, issued = [];
   const uid = 'owner-unlock-' + randomUUID();
   const other = 'other-' + uid, staffId = 'staff1';
   const service = require('./owner_unlock').createOwnerUnlock({db, Timestamp, now: () => time,
@@ -41,6 +41,16 @@ const {readFileSync} = require('node:fs');
     assert.notEqual(stored.pinHash, data.pin); assert.notEqual(stored.secretHash, data.secret);
     assert.equal((await service.unlock(staff())).token, 'test-token');
     assert.deepEqual(issued[0], {owner: uid, claims: {ownerQuickUnlock: true}});
+    user.emailVerified = false;
+    user.email = 'owner@example.test';
+    user.providerData = [{providerId:'password', email:user.email}];
+    await assert.rejects(service.unlock(staff()), denied);
+    user.providerData.push({providerId:'google.com', email:'different@example.test'});
+    await assert.rejects(service.unlock(staff()), denied);
+    user.providerData = [{providerId:'apple.com', email:user.email}];
+    await service.unlock(staff());
+    assert.deepEqual(issued.at(-1).claims, {ownerQuickUnlock:true, ownerSocialProvider:'apple.com'});
+    user.emailVerified = true;
     await service.unlock(owner()); // Persisted owner session, after relaunch.
     await assert.rejects(service.unlock({...owner(), auth: {uid: other, token: {}}}), denied);
     await assert.rejects(service.unlock(staff({...data, secret: 'c'.repeat(64)})), denied);
@@ -62,7 +72,7 @@ const {readFileSync} = require('node:fs');
     user = {...user, disabled: false, multiFactor: {enrolledFactors: [{}]}};
     await assert.rejects(service.setup(owner()), denied);
     await assert.rejects(service.unlock(owner()), denied);
-    user = {disabled: false, tokensValidAfterTime: 'password-reset'};
+    user = {disabled: false, emailVerified: true, tokensValidAfterTime: 'password-reset'};
     await assert.rejects(service.unlock(owner()), denied);
     await service.setup(owner());
     await service.unlock(owner());
@@ -75,7 +85,7 @@ const {readFileSync} = require('node:fs');
     // Binding secrets and hashes must be inaccessible even to owner clients.
     env = await initializeTestEnvironment({projectId, firestore: {
       rules: readFileSync(require('node:path').join(__dirname, '../firestore.rules'), 'utf8')}});
-    for (const context of [env.unauthenticatedContext(), env.authenticatedContext(uid), env.authenticatedContext('staff_employee', staff().auth.token)]) {
+    for (const context of [env.unauthenticatedContext(), env.authenticatedContext(uid, {email_verified:true}), env.authenticatedContext('staff_employee', staff().auth.token)]) {
       const ref = doc(context.firestore(), 'ownerUnlockDevices', uid, 'devices', data.deviceId);
       await assertFails(getDoc(ref)); await assertFails(setDoc(ref, {pinHash: 'fake'}));
     }

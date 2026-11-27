@@ -1,52 +1,151 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../services/update_service.dart';
 
-/// Shows the "update available" dialog. For a mandatory update the sheet
-/// can't be dismissed until the user updates.
-Future<void> showUpdateDialog(BuildContext context, AppUpdateInfo info) {
-  return showDialog<void>(
-    context: context,
-    barrierDismissible: !info.mandatory,
-    builder: (_) => _UpdateDialog(info: info),
-  );
-}
+/// Owns one reminder above every entry point, including sign-in, staff and
+/// offline mode. Dismissing a reminder only lasts for this visit.
+class AppUpdateReminder extends StatefulWidget {
+  const AppUpdateReminder({
+    super.key,
+    required this.navigatorKey,
+    required this.child,
+    this.check = UpdateService.checkForUpdate,
+  });
 
-class _UpdateDialog extends StatefulWidget {
-  const _UpdateDialog({required this.info});
-  final AppUpdateInfo info;
+  final GlobalKey<NavigatorState> navigatorKey;
+  final Widget child;
+  final Future<AppUpdateInfo?> Function() check;
 
   @override
-  State<_UpdateDialog> createState() => _UpdateDialogState();
+  State<AppUpdateReminder> createState() => _AppUpdateReminderState();
 }
 
-class _UpdateDialogState extends State<_UpdateDialog> {
+class _AppUpdateReminderState extends State<AppUpdateReminder>
+    with WidgetsBindingObserver {
+  DialogRoute<void>? _dialog;
+  AppUpdateInfo? _displayed;
+  bool _checking = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _check());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) unawaited(_check());
+  }
+
+  bool get _foreground {
+    final state = WidgetsBinding.instance.lifecycleState;
+    return state == null || state == AppLifecycleState.resumed;
+  }
+
+  Future<void> _check() async {
+    if (!mounted || _checking || !_foreground) return;
+    _checking = true;
+    try {
+      final info = await widget.check();
+      if (!mounted || !_foreground) return;
+      final nav = widget.navigatorKey.currentState;
+      final overlay = nav?.overlay;
+      if (nav == null || overlay == null) return;
+      if (_dialog?.isActive == true) {
+        if (info != null && info.matches(_displayed)) return;
+        nav.removeRoute(_dialog!);
+      }
+      if (info == null) return;
+      final route = DialogRoute<void>(
+        context: overlay.context,
+        barrierDismissible: !info.mandatory,
+        builder: (_) => UpdateDialog(info: info),
+      );
+      _dialog = route;
+      _displayed = info;
+      unawaited(nav.push(route).whenComplete(() {
+        if (identical(_dialog, route)) {
+          _dialog = null;
+          _displayed = null;
+        }
+      }));
+    } finally {
+      _checking = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
+class UpdateDialog extends StatefulWidget {
+  const UpdateDialog({
+    super.key,
+    required this.info,
+    this.download = UpdateService.downloadApk,
+    this.install = UpdateService.install,
+  });
+  final AppUpdateInfo info;
+  final Future<String> Function(AppUpdateInfo, ValueChanged<double>) download;
+  final Future<void> Function(AppUpdateInfo, String?) install;
+
+  @override
+  State<UpdateDialog> createState() => _UpdateDialogState();
+}
+
+class _UpdateDialogState extends State<UpdateDialog> {
   bool _busy = false;
-  double _progress = 0;
+  bool _openedInstaller = false;
+  double? _progress;
+  String? _downloaded;
   String? _error;
+  final _statusKey = GlobalKey();
+
+  bool get _isAndroid => widget.info.platform == TargetPlatform.android;
 
   Future<void> _update() async {
+    if (_busy) return;
     setState(() {
       _busy = true;
       _error = null;
-      _progress = 0;
+      _progress = null;
     });
     try {
-      final path = await UpdateService.downloadApk(
-        widget.info.url,
-        onProgress: (p) {
+      if (_isAndroid && _downloaded == null) {
+        _downloaded = await widget.download(widget.info, (p) {
           if (mounted) setState(() => _progress = p);
-        },
-      );
-      await UpdateService.install(path);
-      // The system installer is now in front; close the dialog so the app
-      // isn't left blocking behind it.
-      if (mounted) Navigator.of(context).pop();
-    } catch (_) {
+        });
+      }
+      if (!mounted || ModalRoute.of(context)?.isActive == false) return;
+      await widget.install(widget.info, _downloaded);
+      // Opening an installer is not a completed update. Keep the prompt ready
+      // behind it if the owner cancels or returns from system settings.
+      if (mounted) setState(() => _openedInstaller = true);
+    } catch (e) {
+      if (!mounted) return;
+      final failedDownload = _isAndroid && _downloaded == null;
+      if (e is FileSystemException) _downloaded = null;
+      setState(() => _error = failedDownload
+          ? 'ดาวน์โหลดไฟล์อัปเดตไม่สำเร็จ ตรวจการเชื่อมต่อและพื้นที่ว่าง แล้วลองอีกครั้ง'
+          : _isAndroid
+              ? 'เปิดตัวติดตั้งไม่สำเร็จ ตรวจสิทธิ์ติดตั้งแอปของ Pokpok ในการตั้งค่า Android แล้วลองอีกครั้ง'
+              : 'เปิด TestFlight ไม่สำเร็จ ตรวจว่าเครื่องนี้ติดตั้ง TestFlight แล้วลองอีกครั้ง');
+    } finally {
       if (mounted) {
-        setState(() {
-          _busy = false;
-          _error = 'ดาวน์โหลดไม่สำเร็จ ลองใหม่อีกครั้ง หรือเช็กอินเทอร์เน็ต';
+        setState(() => _busy = false);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final status = _statusKey.currentContext;
+          if (status != null) Scrollable.ensureVisible(status);
         });
       }
     }
@@ -55,44 +154,89 @@ class _UpdateDialogState extends State<_UpdateDialog> {
   @override
   Widget build(BuildContext context) {
     final info = widget.info;
+    final theme = Theme.of(context);
+    final size = info.sizeBytes;
+    final versionText = 'เวอร์ชัน ${info.version} (บิลด์ ${info.build})';
     return PopScope(
       canPop: !info.mandatory && !_busy,
       child: AlertDialog(
-        title: Text('มีอัปเดตใหม่  (v${info.version})'),
+        scrollable: true,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        constraints: const BoxConstraints(maxWidth: 540),
+        title: const Text('อัปเดต Pokpok'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (info.notes.isNotEmpty)
-              Text(info.notes, style: const TextStyle(fontSize: 14, height: 1.5)),
-            if (_busy) ...[
-              const SizedBox(height: 18),
-              LinearProgressIndicator(value: _progress > 0 ? _progress : null),
-              const SizedBox(height: 6),
-              Text('กำลังดาวน์โหลด ${(_progress * 100).toStringAsFixed(0)}%',
-                  style: const TextStyle(fontSize: 12)),
+            Text(versionText, style: theme.textTheme.titleMedium),
+            if (_isAndroid && size != null && size > 0)
+              Text('ขนาดไฟล์ ${(size / 1000000).toStringAsFixed(1)} MB',
+                  style: theme.textTheme.bodySmall),
+            if (info.details.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text('สิ่งที่เปลี่ยนในเวอร์ชันนี้',
+                  style: theme.textTheme.titleSmall),
+              for (final item in info.details)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const ExcludeSemantics(child: Text('•  ')),
+                      Expanded(child: Text(item)),
+                    ],
+                  ),
+                ),
             ],
-            if (_error != null) ...[
+            if (info.mandatory) ...[
               const SizedBox(height: 12),
-              Text(_error!,
-                  style: TextStyle(
-                      fontSize: 13, color: Theme.of(context).colorScheme.error)),
+              const Text('กรุณาติดตั้งเวอร์ชันนี้เพื่อใช้งาน Pokpok ต่อ'),
+            ],
+            if (_error != null || _openedInstaller) ...[
+              const SizedBox(height: 12),
+              Semantics(
+                key: _statusKey,
+                liveRegion: true,
+                child: Text(
+                  _error ??
+                      (_isAndroid
+                          ? 'ยืนยันการติดตั้งในหน้าต่างของ Android หากยกเลิก สามารถเปิดตัวติดตั้งอีกครั้งได้'
+                          : 'แตะอัปเดตใน TestFlight แล้วกลับมาเปิด Pokpok'),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                      color: _error == null ? null : theme.colorScheme.error),
+                ),
+              ),
             ],
           ],
         ),
-        actions: _busy
-            ? null
-            : [
-                if (!info.mandatory)
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('ภายหลัง'),
-                  ),
-                FilledButton(
-                  onPressed: _update,
-                  child: Text(_error == null ? 'อัปเดตเลย' : 'ลองอีกครั้ง'),
-                ),
-              ],
+        actions: [
+          if (_busy)
+            Column(mainAxisSize: MainAxisSize.min, children: [
+              LinearProgressIndicator(value: _progress),
+              const SizedBox(height: 8),
+              Text(_isAndroid && _downloaded == null
+                  ? 'กำลังดาวน์โหลด${_progress == null ? '' : ' ${(_progress! * 100).round()}%'}'
+                  : _isAndroid
+                      ? 'กำลังเปิดตัวติดตั้ง'
+                      : 'กำลังเปิด TestFlight'),
+            ])
+          else ...[
+            if (!info.mandatory)
+              OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('ไว้ครั้งหน้า')),
+            FilledButton(
+              onPressed: _update,
+              child: Text(_error != null
+                  ? 'ลองอีกครั้ง'
+                  : !_isAndroid
+                      ? 'เปิด TestFlight'
+                      : _openedInstaller
+                          ? 'เปิดตัวติดตั้งอีกครั้ง'
+                          : 'อัปเดตเลย'),
+            ),
+          ],
+        ],
       ),
     );
   }

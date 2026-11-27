@@ -1,5 +1,6 @@
+import {watchVerifiedAccount} from '/js/merchant-session.js';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
-import {getAuth, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut}
+import {getAuth, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut}
   from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import {getFunctions, httpsCallable} from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js';
 import {setupAppCheck} from '/appcheck.js';
@@ -76,7 +77,7 @@ $('googleLogin').onclick=()=>run(()=>signInWithPopup(auth,new GoogleAuthProvider
 $('logout').onclick=()=>run(()=>signOut(auth));
 $('refresh').onclick=()=>run(()=>refresh(false));$('more').onclick=()=>run(()=>refresh(true));
 $('search').oninput=render;$('filter').onchange=render;
-onAuthStateChanged(auth,async user=>{
+watchVerifiedAccount(auth,async user=>{
   session++;authorized=false;rows=[];next=null;$('chats').replaceChildren();$('workspace').hidden=true;
   $('login').hidden=!!user;$('logout').hidden=!user;$('status').textContent='';
   if(user){try{await refresh();}catch(e){showError(e);}}

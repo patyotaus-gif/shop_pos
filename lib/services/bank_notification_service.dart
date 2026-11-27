@@ -71,7 +71,7 @@ class BankNotificationService {
   }
 
   static Future<void> _onNotification(dynamic event) async {
-    if (event is! ServiceNotificationEvent) return;
+    if (event is! ServiceNotificationEvent || !AuthService.canEnterShop) return;
 
     final pkg = event.packageName ?? '';
     if (!BankNotificationParser.supportedPackages.contains(pkg)) return;

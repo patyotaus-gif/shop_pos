@@ -30,7 +30,7 @@ const root = path.join(__dirname, '..');
     return exports[name];
   }
   try {
-    const attacker = env.authenticatedContext('audit-attacker').firestore();
+    const attacker = env.authenticatedContext('audit-attacker', {email_verified:true}).firestore();
     const victim = 'audit-victim';
     await db.doc(`shops/${victim}`).set({name:'Victim fixture',tier:'full'});
     await db.doc(`shops/${victim}/marketplaceOrders/audit-order`).set({status:'placed',items:[],total:100});

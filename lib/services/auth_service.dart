@@ -50,6 +50,22 @@ class AuthService {
 
   static User? get currentUser => _auth.currentUser;
 
+  static bool get canEnterShop =>
+      currentUser != null &&
+      _claimUid == currentUser!.uid &&
+      (isStaff || acceptsOwnerToken(_claims));
+
+  static bool acceptsOwnerToken(Map<String, dynamic> claims) {
+    final provider = claims['firebase']?['sign_in_provider'];
+    return claims['email_verified'] == true ||
+        provider == 'google.com' ||
+        provider == 'apple.com' ||
+        (provider == 'custom' &&
+            claims['ownerQuickUnlock'] == true &&
+            const ['google.com', 'apple.com']
+                .contains(claims['ownerSocialProvider']));
+  }
+
   static String sessionErrorMessage(Object? error) {
     if (error is TimeoutException ||
         (error is FirebaseAuthException &&

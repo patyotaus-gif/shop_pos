@@ -48,6 +48,35 @@ const {getFirestore} = require('firebase-admin/firestore');
     ? {shopId, orderId: 'table', action: 'preview'}
     : {items: [{productId: 'tea', quantity: 1}]};
   try {
+    // Exercise Firebase's actual verification link in the Auth emulator, with
+    // the same owner both before and after verification. Nothing leaves localhost.
+    const authRoot = 'http://' + process.env.FIREBASE_AUTH_EMULATOR_HOST;
+    const accounts = async (method, payload) => {
+      const response = await fetch(authRoot + '/identitytoolkit.googleapis.com/v1/accounts:' + method + '?key=demo', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+      assert.equal(response.status, 200, method);
+      return response.json();
+    };
+    const credentials = {email:'verify-' + randomUUID() + '@example.test', password:randomUUID(), returnSecureToken:true};
+    const pending = await accounts('signUp', credentials);
+    for (const record of [pending, await accounts('signInWithPassword', credentials)]) {
+      const result = await call('quoteCounterGifts', record.idToken, {items:[]});
+      assert.equal(result.status, 403);
+      assert.match(result.body.error.message, /ยืนยันอีเมล/);
+    }
+    await accounts('sendOobCode', {requestType:'VERIFY_EMAIL', idToken:pending.idToken});
+    const inboxResponse = await fetch(authRoot + '/emulator/v1/projects/demo-pokpok-admin/oobCodes');
+    const inbox = await inboxResponse.json();
+    const verification = inbox.oobCodes.find(entry => entry.email === credentials.email && entry.requestType === 'VERIFY_EMAIL');
+    assert.ok(verification);
+    await accounts('update', {oobCode:verification.oobCode});
+    const verified = await accounts('signInWithPassword', credentials);
+    await db.doc('shops/' + pending.localId).set({name:'Verification test'});
+    const verifiedResult = await call('quoteCounterGifts', verified.idToken, {items:[{productId:'tea',quantity:1}]});
+    assert.equal(verifiedResult.status, 200, JSON.stringify(verifiedResult.body));
+    await db.doc('shops/' + pending.localId).delete();
+    await auth.deleteUser(pending.localId);
+    console.log('PASS new and returning unverified password accounts, local verification email and link, verified callable access');
     await shop.set({tier: 'full', subscriptionStatus: 'active',
       subscriptionEndsAt: new Date(Date.now() + 86400000)});
     await other.set({name: 'another shop'});
@@ -57,6 +86,8 @@ const {getFirestore} = require('firebase-admin/firestore');
     await shop.collection('tableOrders').doc('table').set({tableId: 't', status: 'open', items: [
       {id: 'line', productId: 'tea', productName: 'Tea', quantity: 1, price: 20, kitchenStatus: 'pending'},
     ]});
+    await auth.createUser({uid: shopId, email: shopId + '@example.test', emailVerified: true});
+    await auth.createUser({uid: otherUid, email: otherUid + '@example.test', emailVerified: true});
     const ownerToken = await token(shopId, {ownerQuickUnlock: true});
     const staffToken = await token(staffUid, {staffRole: 'cashier', staffShopId: shopId, staffId, staffVersion: 1});
     const otherToken = await token(otherUid);

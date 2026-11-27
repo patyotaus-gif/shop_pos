@@ -411,6 +411,8 @@ header h1 {
   color: var(--burgundy);
 }
 
+#checkoutActions { border: 0; margin: 0; padding: 0; min-width: 0; }
+#checkoutIssue { color: var(--text-main); font-size: 14px; margin: 0 0 8px; }
 #payBtn {
   width: 100%;
   background: var(--primary); color: white;

@@ -93,13 +93,13 @@ const {refundSale}=require('./refund');
   assert.deepEqual((await shop.collection('cashSessions').doc('reconcile-round').get()).data().summary,reconciledSummary);
   const env=await initializeTestEnvironment({projectId:'demo-pokpok-admin'});
   try {
-    const legacy=env.authenticatedContext('legacy-accounting').firestore();
+    const legacy=env.authenticatedContext('legacy-accounting', {email_verified:true}).firestore();
  const legacyPath='shops/legacy-accounting';
  await assertSucceeds(setDoc(doc(legacy,legacyPath+'/sales/old'),{total:50,paymentMethod:'cash'}));
  await assertSucceeds(updateDoc(doc(legacy,legacyPath+'/sales/old'),{isRefunded:true}));
  await assertFails(setDoc(doc(legacy,legacyPath+'/accountingSettings/current'),{enabled:false}));
  await assertFails(setDoc(doc(legacy,legacyPath+'/sales/forged'),{accountingVersion:1,total:50}));
- const client=env.authenticatedContext(shopId).firestore();
+ const client=env.authenticatedContext(shopId, {email_verified:true}).firestore();
  await assertFails(setDoc(doc(client,`shops/${shopId}/moneyMovements/cash-forged`),{
    kind:'cashOut',amountMinor:-4400,salesMinor:0,debtMinor:0,method:'cash',actor:shopId,reason:'ice',sessionId:'drawer-round'}));
  await assertFails(updateDoc(doc(client,`shops/${shopId}/moneyMovements/cash-ice`),{amountMinor:-1}));

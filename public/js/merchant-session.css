@@ -1,0 +1,23 @@
+.merchant-verification {
+  box-sizing: border-box;
+  width: min(28rem, calc(100% - 2rem));
+  max-height: 90vh;
+  margin: auto;
+  padding: 1.5rem;
+  color: #1f1a1b;
+  background: white;
+  border: 1px solid #e5ddd3;
+  border-radius: 14px;
+  font: inherit;
+}
+.merchant-verification::backdrop { background: rgb(31 26 27 / 65%); }
+.merchant-verification h2 { margin: 0 0 .75rem; font-size: 1.35rem; }
+.merchant-verification p { margin: .75rem 0; }
+.merchant-verification strong { overflow-wrap: anywhere; }
+.merchant-verification button {
+  width: 100%; min-height: 44px; margin: .25rem 0; padding: .6rem;
+  font: inherit; color: #7a1f2b; background: white;
+  border: 1px solid #7a1f2b; border-radius: 8px;
+}
+.merchant-verification [data-check] { color: white; background: #7a1f2b; }
+.merchant-verification button:disabled { opacity: .6; }

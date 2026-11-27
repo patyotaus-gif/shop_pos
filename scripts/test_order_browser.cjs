@@ -12,6 +12,7 @@ const products = [
 ];
 let failKitchen = true, kitchenRequests = [];
 let failSlip = true, slipRequests = [], checkoutRequests = [];
+let missingRecipient = true;
 const fixtureOrders = new Map();
 const pickupSlots = [{id:'1791340200000', label:'07/10/2026 09:30–09:45 น.'}, {id:'1791341100000', label:'07/10/2026 09:45–10:00 น.'}];
 const bundle={id:'tea-water',revision:'b1',name:'ชาคู่น้ำ',priceMinor:5000,maxSets:1,
@@ -48,6 +49,10 @@ const server = http.createServer(async (req,res) => {
     const checkout=JSON.parse(body);
     res.setHeader('Content-Type','application/json');
     if(checkout.action==='quoteGifts') {
+      if(checkout.shopId==='no-promptpay' && missingRecipient) {
+        res.statusCode=400;
+        return res.end(JSON.stringify({error:'ร้านนี้ยังไม่ได้ตั้งค่า PromptPay กรุณาติดต่อร้านโดยตรง'}));
+      }
       const qty=checkout.items.filter(i=>i.productId==='tea').reduce((s,i)=>s+i.quantity,0);
       return res.end(JSON.stringify({bundles:bundleQuote(checkout),buyGet:checkout.shopId==='coupons' && qty>=2 ?
         [{promotionId:'tea',revision:'test',productId:'water',productName:'น้ำดื่ม',quantity:1}] : []}));
@@ -75,18 +80,20 @@ const server = http.createServer(async (req,res) => {
   if(url.pathname.endsWith('/'))file=path.join(file,'index.html');
   if(!fs.existsSync(file)){res.statusCode=404;return res.end();}
   let data=fs.readFileSync(file);
+  if(url.pathname==='/order/js/order-app-check.js') data=Buffer.from('window.__appCheckToken=async()=>"local-browser-fixture";');
   if(file.endsWith('order'+path.sep+'index.html')) {
     data=Buffer.from(data.toString().replace(/<script type="module">[\s\S]*?<\/script>/g,
-      '<script type="module">import "/order/js/main.js?v=20261013b"; window.__startOrderPage();</script>'));
+      '<script type="module">window.__startOrderPage();</script>'));
   }
-  res.setHeader('Content-Type',file.endsWith('.js')?'text/javascript; charset=utf-8':file.endsWith('.css')?'text/css; charset=utf-8':file.endsWith('.html')?'text/html; charset=utf-8':'application/octet-stream');
+  res.setHeader('Content-Type',/\.m?js$/.test(file)?'text/javascript; charset=utf-8':file.endsWith('.css')?'text/css; charset=utf-8':file.endsWith('.html')?'text/html; charset=utf-8':file.endsWith('.svg')?'image/svg+xml':'application/octet-stream');
   res.end(data);
 });
 (async()=>{
   await new Promise(r=>server.listen(0,'127.0.0.1',r));
   const browser=await chromium.launch({headless:true, ...(process.env.BROWSER_EXECUTABLE ? {executablePath:process.env.BROWSER_EXECUTABLE}: {})});
   try {
-    const page=await browser.newPage({viewport:{width:375,height:812}});
+    const customer=await browser.newContext({viewport:{width:375,height:812}});
+    const page=await customer.newPage();
     await page.route('https://**/*',route=>route.abort());
     const errors=[];page.on('pageerror',e=>errors.push(e.message));
     const base=`http://127.0.0.1:${server.address().port}/order/?shop=fixture&table=t1`;
@@ -157,12 +164,83 @@ const server = http.createServer(async (req,res) => {
     failSlip=false;
     await page.locator('#slipFileInput').setInputFiles(slip);
     await page.waitForURL('**/order/success/?order=web-*&review=1');
-    assert.ok((await page.locator('h1').textContent()).includes('รอร้านยืนยัน'));
+    await page.getByRole('heading',{name:'ส่งสลิปแล้ว รอร้านยืนยัน'}).waitFor();
     assert.ok((await page.locator('.note').textContent()).includes('ไม่ต้องโอนซ้ำ'));
     assert.equal(slipRequests.length,2,'same file can be retried');
+    const submitted=fixtureOrders.get(slipRequests[1].orderId);
+    const singleMenu=base.replace('shop=fixture&table=t1','shop=single');
+    const reopened=await page.context().newPage();
+    await reopened.route('https://**/*',route=>route.abort());
+    await reopened.goto(singleMenu);
+    await reopened.locator('#paySlipStatus').filter({hasText:'รอร้านตรวจสอบ'}).waitFor();
+    submitted.status='paid';
+    await reopened.locator('#paySlipStatus').filter({hasText:'ร้านยืนยันรับเงินแล้ว'}).waitFor({timeout:14000});
+    assert.doesNotMatch(await reopened.locator('#payCard').innerText(),/อัปโหลดสลิป|รอร้านตรวจสอบ/);
+    await reopened.close();
+    await page.bringToFront();
+    await page.getByRole('heading',{name:'ร้านยืนยันรับเงินแล้ว'}).waitFor({timeout:14000});
+    assert.ok(!page.url().includes(submitted.customerToken),'private credential stays off receipt URLs');
+    await page.reload();
+    await page.getByRole('heading',{name:'ร้านยืนยันรับเงินแล้ว'}).waitFor();
+    const receiptUrl=page.url();
+    const visitor=await browser.newPage();
+    await visitor.route('https://**/*',route=>route.abort());
+    await visitor.goto(receiptUrl);
+    await visitor.getByRole('heading',{name:'เปิดสถานะออเดอร์บนเครื่องเดิม'}).waitFor();
+    const retention=await visitor.evaluate(async()=>{
+      const {rememberReceipt,findReceipt}=await import('/order/js/customer-payment.js');
+      const clock=Date.now;
+      let now=clock();
+      Date.now=()=>now;
+      try {
+        const ref=id=>({shopId:'test-shop',orderId:'web-'+id,customerToken:'1'.repeat(64)});
+        sessionStorage.setItem('pokpok-open-receipt',JSON.stringify(ref('legacy')));
+        const migrated=findReceipt('web-legacy')?.shopId==='test-shop';
+        for(let i=0;i<20;i++){now+=1000;rememberReceipt(ref(i));}
+        const evicted=findReceipt('web-legacy')===null;
+        const retained=findReceipt('web-0')?.shopId==='test-shop' && findReceipt('web-19')?.shopId==='test-shop';
+        localStorage.setItem('pokpok-payment-v1:test-shop:takeaway',JSON.stringify(ref('oldSlot')));
+        const oldSlot=findReceipt('web-oldSlot')?.shopId==='test-shop';
+        now+=7*86400000+1000;
+        const expired=findReceipt('web-19')===null && findReceipt('web-oldSlot')===null;
+        return {migrated,evicted,retained,oldSlot,expired};
+      }finally{Date.now=clock;}
+    });
+    assert.deepEqual(retention,{migrated:true,evicted:true,retained:true,oldSlot:true,expired:true});
+    await visitor.close();
     await page.goto(base.replace('shop=fixture&table=t1','shop=single'));
+    await page.locator('#payOverlay.open').waitFor();
+    assert.doesNotMatch(await page.locator('#payCard').innerText(),/อัปโหลดสลิป|รอร้านตรวจสอบ/);
+    await page.locator('#payCloseBtn').click();
+    await page.locator('[data-id="tea"] .add-btn').click();
+    await page.locator('#cartBtn').click();await page.locator('#checkoutBtn').click();
+    await page.locator('#customerName').fill('fixture');await page.locator('#customerPhone').fill('0800000000');
+    await page.locator('#payBtn').click();await page.locator('#payOverlay.open').waitFor();
+    await page.locator('#slipFileInput').setInputFiles(slip);
+    await page.waitForURL('**/order/success/**');
+    await page.getByRole('heading',{name:'ส่งสลิปแล้ว รอร้านยืนยัน'}).waitFor();
+    assert.notEqual(page.url(),receiptUrl);
+    await page.goto(receiptUrl);await page.reload();
+    await page.getByRole('heading',{name:'ร้านยืนยันรับเงินแล้ว'}).waitFor();
+    assert.match(await page.locator('#orderNumber').textContent(),new RegExp(submitted.orderId));
+    await page.goto(singleMenu);
     await page.reload();await page.locator('.product-card').first().waitFor();
     assert.equal(await page.locator('#cartCount').textContent(),'0','accepted payment order is not restored as a new cart');
+    const withoutPromptPay=base.replace('shop=fixture&table=t1','shop=no-promptpay');
+    await page.goto(withoutPromptPay);
+    await page.locator('[data-id="tea"] .add-btn').click();
+    await page.locator('#cartBtn').click();await page.locator('#checkoutBtn').click();
+    await page.locator('#checkoutIssue').filter({hasText:'ยังไม่ได้ตั้งค่า PromptPay'}).waitFor();
+    const blockedOrders=checkoutRequests.length;
+    assert.equal(await page.locator('#payBtn').isDisabled(),true);
+    await page.locator('#giftRefresh').click();
+    await page.locator('#checkoutIssue').filter({hasText:'กรุณาติดต่อร้านโดยตรง'}).waitFor();
+    assert.equal(checkoutRequests.length,blockedOrders);
+    assert.equal(await page.locator('#cartCount').textContent(),'1');
+    missingRecipient=false;
+    await page.locator('#giftRefresh').click();
+    await page.locator('#payBtn:enabled').waitFor();
+    assert.equal(await page.locator('#checkoutIssue').isVisible(),false);
     await page.setViewportSize({width:1024,height:800});
     assert.equal(await page.locator('#products').evaluate(n=>getComputedStyle(n).gridTemplateColumns.split(' ').length)>=3,true);
     await page.setViewportSize({width:320,height:640});

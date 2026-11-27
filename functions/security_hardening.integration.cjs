@@ -15,8 +15,8 @@ const fs=require('node:fs'),path=require('node:path');
   const referral=require('./referral').handler({db,Timestamp,FieldValue,HttpsError});
   const owner='secure-shop',other='secure-other',supplier='secure-supplier';
   const request=(uid,data,token={})=>({auth:{uid,token},data});
-  const client=env.authenticatedContext(owner).firestore();
-  const vendor=env.authenticatedContext(supplier).firestore();
+  const client=env.authenticatedContext(owner, {email_verified:true}).firestore();
+  const vendor=env.authenticatedContext(supplier, {email_verified:true}).firestore();
   const staff=env.authenticatedContext('secure-staff',{staffRole:'cashier',staffShopId:owner}).firestore();
   const expiry=Timestamp.fromMillis(Date.now()+60*86400000);
   try {
@@ -52,7 +52,7 @@ const fs=require('node:fs'),path=require('node:path');
     assert.deepEqual((await own.get()).data(),(await copy.get()).data());
     await assertSucceeds(getDoc(doc(client,own.path)));
     await assertSucceeds(getDoc(doc(vendor,copy.path)));
-    await assertFails(getDoc(doc(env.authenticatedContext(other).firestore(),own.path)));
+    await assertFails(getDoc(doc(env.authenticatedContext(other, {email_verified:true}).firestore(),own.path)));
     for(const c of [client,vendor]) {
       await assertFails(updateDoc(doc(c,copy.path),{shopId:other,status:'delivered',takeRate:0}));
       await assertFails(deleteDoc(doc(c,copy.path)));

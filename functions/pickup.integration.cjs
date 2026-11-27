@@ -70,7 +70,7 @@ const { slots, createWithPickup, availability } = require('./pickup');
   assert.equal((await make('1')).orderNumber,concurrent[0].orderNumber);
   const env = await initializeTestEnvironment({ projectId: 'demo-pokpok-admin' });
   try {
-    const owner = env.authenticatedContext('pickup-owner').firestore();
+    const owner = env.authenticatedContext('pickup-owner', {email_verified:true}).firestore();
     await assertFails(setDoc(doc(owner, 'shops/pickup-owner/pickupSlots/control'), { revision: 0 }));
     await assertFails(setDoc(doc(owner, 'shops/pickup-owner/orderCounters/20261029'), { last: 0 }));
     const guest = env.unauthenticatedContext().firestore();

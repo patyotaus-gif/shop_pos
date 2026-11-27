@@ -1,13 +1,23 @@
 // Run against the Firestore emulator only; never production.
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require('@firebase/rules-unit-testing');
-const { doc, setDoc, updateDoc, deleteDoc, Timestamp } = require('firebase/firestore');
+const { doc, getDoc, setDoc, updateDoc, deleteDoc, Timestamp } = require('firebase/firestore');
 const fs = require('node:fs');
 (async () => {
   if (!process.env.FIRESTORE_EMULATOR_HOST) throw Error('Firestore emulator required');
   const env = await initializeTestEnvironment({ projectId: 'demo-pokpok-admin', firestore: { rules: fs.readFileSync(require('node:path').join(__dirname, '..', 'firestore.rules'), 'utf8') } });
   try {
-    const owner = env.authenticatedContext('owner').firestore();
-    const other = env.authenticatedContext('other').firestore();
+    const owner = env.authenticatedContext('owner', {email_verified:true}).firestore();
+    const unverified = env.authenticatedContext('owner', {email_verified:false}).firestore();
+    await assertFails(getDoc(doc(unverified, 'shops/owner')));
+    for (const provider of ['google.com', 'apple.com']) {
+      const social = env.authenticatedContext('owner', {email_verified:false,
+        firebase:{sign_in_provider:provider}}).firestore();
+      await assertSucceeds(getDoc(doc(social, 'shops/owner')));
+      const pin = env.authenticatedContext('owner', {firebase:{sign_in_provider:'custom'},
+        ownerQuickUnlock:true, ownerSocialProvider:provider}).firestore();
+      await assertSucceeds(getDoc(doc(pin, 'shops/owner')));
+    }
+    const other = env.authenticatedContext('other', {email_verified:true}).firestore();
     const anonymous = env.unauthenticatedContext().firestore();
     const data = { name: 'Shop', email: 'owner@example.com', tier: 'full', shopType: 'retail', plan: 'monthly', locations: 1,
       subscriptionStatus: 'trial', subscriptionEndsAt: null, createdAt: Timestamp.now(),
@@ -16,7 +26,7 @@ const fs = require('node:fs');
     for (const shopType of ['retail', 'restaurant']) {
       for (const tier of ['solo', 'lite', 'full']) {
         const id = `${shopType}-${tier}`;
-        await assertSucceeds(setDoc(doc(env.authenticatedContext(id).firestore(), `shops/${id}`), {...data, shopType, tier}));
+        await assertSucceeds(setDoc(doc(env.authenticatedContext(id, {email_verified:true}).firestore(), `shops/${id}`), {...data, shopType, tier}));
       }
     }
     await assertFails(setDoc(doc(other, 'shops/other'), {...data, shopType:'unknown'}));

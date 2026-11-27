@@ -21,6 +21,7 @@ const server=http.createServer((req,res)=>{
       else if(url.endsWith('/firebase-auth.js'))body=`
         const auth={currentUser:{uid:'founder',email:'test@example.test'}};
         export const getAuth=()=>auth;
+        export const getIdTokenResult=async()=>({claims:{email_verified:true}}),reload=async()=>{},sendEmailVerification=async()=>{};
         export const onAuthStateChanged=(_,fn)=>queueMicrotask(()=>fn(auth.currentUser));
         export const signInWithEmailAndPassword=async()=>{},signInWithPopup=async()=>{},signOut=async()=>{};
         export class GoogleAuthProvider{};`;

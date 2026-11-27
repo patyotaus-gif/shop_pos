@@ -10,8 +10,9 @@ const {ref, uploadBytes, getBytes, deleteObject} = require('firebase/storage');
       rules: fs.readFileSync(path.join(__dirname, '../storage.rules'), 'utf8')},
   });
   try {
-    const owner = env.authenticatedContext('shop-a').storage();
-    const other = env.authenticatedContext('shop-b').storage();
+    const owner = env.authenticatedContext('shop-a', {email_verified:true}).storage();
+    const pending = env.authenticatedContext('shop-a', {email_verified:false}).storage();
+    const other = env.authenticatedContext('shop-b', {email_verified:true}).storage();
     const staff = env.authenticatedContext('staff-a', {staffRole: 'cashier', staffShopId: 'shop-a'}).storage();
     const guest = env.unauthenticatedContext().storage();
     const logo = 'shops/shop-a/logo.jpg';
@@ -20,7 +21,7 @@ const {ref, uploadBytes, getBytes, deleteObject} = require('firebase/storage');
     await assertSucceeds(uploadBytes(ref(owner, logo), bytes, image));
     await assertSucceeds(uploadBytes(ref(owner, logo), bytes, image));
     await assertSucceeds(getBytes(ref(guest, logo)));
-    for (const actor of [other, staff, guest]) {
+    for (const actor of [other, staff, guest, pending]) {
       await assertFails(uploadBytes(ref(actor, logo), bytes, image));
       await assertFails(deleteObject(ref(actor, logo)));
     }

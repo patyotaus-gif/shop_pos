@@ -21,6 +21,42 @@ Widget gate(Stream<String?> Function() source) => MaterialApp(
     );
 
 void main() {
+  test('owner access follows the signed token and the active social sign-in',
+      () {
+    expect(AuthService.acceptsOwnerToken({}), false);
+    expect(
+        AuthService.acceptsOwnerToken({
+          'email_verified': false,
+          'firebase': {
+            'sign_in_provider': 'password',
+            'identities': {
+              'google.com': ['linked']
+            }
+          }
+        }),
+        false);
+    expect(AuthService.acceptsOwnerToken({'email_verified': true}), true);
+    for (final provider in ['google.com', 'apple.com']) {
+      expect(
+          AuthService.acceptsOwnerToken({
+            'firebase': {'sign_in_provider': provider}
+          }),
+          true);
+      expect(
+          AuthService.acceptsOwnerToken({
+            'firebase': {'sign_in_provider': 'custom'},
+            'ownerQuickUnlock': true,
+            'ownerSocialProvider': provider
+          }),
+          true);
+    }
+    expect(
+        AuthService.acceptsOwnerToken({
+          'firebase': {'sign_in_provider': 'custom'},
+          'ownerQuickUnlock': true
+        }),
+        false);
+  });
   testWidgets('failed check stays locked and explicit retry restores session',
       (tester) async {
     var calls = 0;

@@ -55,9 +55,9 @@ const {doc, setDoc, getDoc} = require('firebase/firestore');
     for(const collection of ['autoPrintConfig','autoPrintJobs']) {
       const id=collection==='autoPrintConfig'?'current':j.jobId;
       const path=`shops/${shopId}/${collection}/${id}`;
-      await assertSucceeds(getDoc(doc(env.authenticatedContext(shopId).firestore(),path)));
-      await assertFails(setDoc(doc(env.authenticatedContext(shopId).firestore(),path),{enabled:true,status:'pending'}));
-      await assertFails(getDoc(doc(env.authenticatedContext('another-owner').firestore(),path)));
+      await assertSucceeds(getDoc(doc(env.authenticatedContext(shopId, {email_verified:true}).firestore(),path)));
+      await assertFails(setDoc(doc(env.authenticatedContext(shopId, {email_verified:true}).firestore(),path),{enabled:true,status:'pending'}));
+      await assertFails(getDoc(doc(env.authenticatedContext('another-owner', {email_verified:true}).firestore(),path)));
       await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(),path)));
     }
     assert.equal((await shop.collection('sales').get()).size,0);

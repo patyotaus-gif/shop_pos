@@ -115,6 +115,7 @@
       header .btn-ghost { flex-shrink: 0; }
     }
   </style>
+  <link rel="stylesheet" href="/js/merchant-session.css">
 </head>
 <body>
 
@@ -179,8 +180,9 @@
 <div id="modalRoot"></div>
 
 <script type="module">
+  import {watchVerifiedAccount} from '/js/merchant-session.js';
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut }
+  import { getAuth, signInWithEmailAndPassword, signOut }
     from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
   import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, setDoc,
     deleteDoc, deleteField, onSnapshot, query, orderBy }
@@ -290,7 +292,7 @@
       if (version === sessionVersion) $("loginBtn").disabled = false;
     }
   }
-  onAuthStateChanged(auth, loadSupplier);
+  watchVerifiedAccount(auth, loadSupplier);
   $("profileRetry").onclick = () => { if (currentUser) loadSupplier(currentUser); };
 
   function cleanup() {

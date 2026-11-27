@@ -14,7 +14,9 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
    const u=new URL(route.request().url());let body;
    if(u.hostname==='www.gstatic.com'){
     if(u.pathname.endsWith('firebase-app.js'))body='export const initializeApp=()=>({});';
-    if(u.pathname.endsWith('firebase-auth.js'))body=`export const getAuth=()=>({}),GoogleAuthProvider=class{};
+    if(u.pathname.endsWith('firebase-auth.js'))body=`const auth={get currentUser(){return window.testUser;}};
+      export const getAuth=()=>auth,GoogleAuthProvider=class{};
+      export const getIdTokenResult=async()=>({claims:{email_verified:true}}),reload=async()=>{},sendEmailVerification=async()=>{};
       export const onAuthStateChanged=(a,cb)=>{window.authChanged=cb;queueMicrotask(()=>cb(window.testUser));};
       export const signOut=async()=>window.authChanged(null),signInWithPopup=async()=>{},signInWithEmailAndPassword=async()=>{};`;
     if(u.pathname.endsWith('firebase-functions.js'))body=`export const getFunctions=()=>({});export const httpsCallable=(f,name)=>async(data)=>{

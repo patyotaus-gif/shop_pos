@@ -138,7 +138,7 @@
     </div>
     <div class="field">
       <div id="giftStatus" role="status" aria-live="polite" style="white-space:pre-line"></div>
-      <button id="giftRefresh" type="button">ตรวจชุดสินค้าและของแถมอีกครั้ง</button>
+      <button id="giftRefresh" type="button">ตรวจข้อมูลการสั่งซื้ออีกครั้ง</button>
       <p class="coupon-help">เลือกครบชุดรับส่วนลดอัตโนมัติ ของแถมร้านเพิ่มให้โดยไม่ต้องใส่ตะกร้า คูปองคิดจากยอดหลังลดราคาชุด</p>
       <label for="couponCode">โค้ดส่วนลด (ถ้ามี)</label>
       <input id="couponCode" maxlength="24" autocomplete="off" autocapitalize="characters" placeholder="เช่น WELCOME10" />
@@ -147,7 +147,10 @@
       <p id="couponStatus" role="status" aria-live="polite"></p>
       <p>ใช้ได้ 1 โค้ดต่อออเดอร์ คิดจากราคาสินค้าปัจจุบัน รวมราคาโปรโมชั่น ยอดหลังลดขั้นต่ำ 20 บาท</p>
     </div>
-    <button id="payBtn" type="button">ชำระเงิน</button>
+    <p id="checkoutIssue" role="status" hidden></p>
+    <fieldset id="checkoutActions" disabled>
+      <button id="payBtn" type="button" aria-describedby="checkoutIssue">ชำระเงิน</button>
+    </fieldset>
     <button id="cancelBtn" type="button">ยกเลิก</button>
   </div>
 </div>
@@ -180,16 +183,16 @@
         <li>เปิดแอปธนาคาร → สแกน QR</li>
         <li>ตรวจชื่อผู้รับ + จำนวนเงิน ให้ตรงด้านบน</li>
         <li>กดยืนยันโอน + บันทึกสลิป</li>
-        <li>กลับมา <strong>อัปโหลดสลิป</strong> ด้านล่างเพื่อยืนยัน</li>
+        <li>กลับมา <strong>อัปโหลดสลิป</strong> ให้ร้านตรวจยอดเงินเข้า</li>
       </ol>
     </div>
 
     <input type="file" id="slipFileInput" accept="image/*" style="display:none" />
     <button id="paySlipBtn" type="button">
-      📷 อัปโหลดสลิปเพื่อยืนยันการชำระเงิน
+      📷 อัปโหลดสลิปให้ร้านตรวจสอบ
     </button>
-    <div id="paySlipStatus"></div>
-    <p style="font-size:.72rem;color:#6B5E60;line-height:1.5;margin:6px 2px 0">
+    <div id="paySlipStatus" role="status"></div>
+    <p id="slipHelp" style="font-size:.72rem;color:#6B5E60;line-height:1.5;margin:6px 2px 0">
       โอนแล้วอัปโหลดสลิปให้ร้านตรวจสอบ — ออเดอร์จะยืนยันเมื่อร้านตรวจพบยอดเงินเข้า
     </p>
 
@@ -207,22 +210,7 @@
      fetch(), so we run the SDK in a module and expose a best-effort token
      getter that util.js attaches as an X-Firebase-AppCheck header. -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-  import { getToken } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app-check.js";
-  import { setupAppCheck } from "/appcheck.js";
-
-  const app = initializeApp({
-    apiKey: "AIzaSyDfkL865SPzygJ0Kcqb4l0UaoXaSuz63F0",
-    authDomain: "shop-pos-89294.firebaseapp.com",
-    projectId: "shop-pos-89294",
-    storageBucket: "shop-pos-89294.firebasestorage.app",
-    messagingSenderId: "1010156115465",
-    appId: "1:1010156115465:web:01f80dfe21f2767ea68ad8",
-  });
-  const appCheck = setupAppCheck(app);
-  window.__appCheckToken = async () => {
-    try { return (await getToken(appCheck, false)).token; } catch (_) { return null; }
-  };
+  import '/order/js/order-app-check.js';
   // Start the page only once App Check is ready. This guarantees the first
   // /api/shopPublic call carries a token — the endpoint enforces App Check.
   window.__startOrderPage?.();

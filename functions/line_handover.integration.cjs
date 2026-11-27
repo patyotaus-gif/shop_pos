@@ -24,7 +24,7 @@ const {doc,getDoc,setDoc}=require('firebase/firestore');
     assert.equal(outcomes.filter(x=>x.status==='fulfilled').length,1);
     assert.equal(await api.replyIfCurrent(ticket,async()=>assert.fail('stale send')),false);
     env=await initializeTestEnvironment({projectId,firestore:{rules:fs.readFileSync('../firestore.rules','utf8')}});
-    for(const client of [env.unauthenticatedContext(),env.authenticatedContext('shop'),env.authenticatedContext('test-founder',{founder:true})]){
+    for(const client of [env.unauthenticatedContext(),env.authenticatedContext('shop', {email_verified:true}),env.authenticatedContext('test-founder',{founder:true})]){
       const ref=doc(client.firestore(),'lineSupportChats',userId);
       await assertFails(getDoc(ref));await assertFails(setDoc(ref,{mode:'bot'}));
     }

@@ -4,6 +4,22 @@ The app now has Google/Apple choices on login/signup, and Settings → เชื
 
 Signing in with a different Apple private-relay email may create a separate identity. Existing owners should sign in using their original method first, then explicitly link Apple/Google in Settings. No automatic merging of different shop UIDs is attempted.
 
+## Email confirmation
+
+Email registrations confirm their address before setting up a shop. Returning
+email users keep the same shop and trial. An unverified user receives a Firebase
+verification link on their next sign-in or restored session. The native app and
+merchant portals request a Thai email. Each device/browser remembers a successful
+send for 24 hours and allows a manual resend after one minute. After following the
+link, return to the app or use the verification screen's check button.
+
+Firestore, Storage and authenticated callables check Firebase's verified-email
+claim or an active Google/Apple sign-in. Cashier PIN sessions retain their own
+shop permissions. An owner PIN can carry a server-checked social identity for
+the same email address. Public buyer ordering remains available without signing
+in. The subscription page also provides email verification for older installed
+clients at `/subscribe/`.
+
 ## External setup required before release
 
 Project: `shop-pos-89294`. Package/bundle ID: `app.pokpok.pos`.

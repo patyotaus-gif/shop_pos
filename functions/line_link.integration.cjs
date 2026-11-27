@@ -15,7 +15,7 @@ const fs = require('node:fs'), path = require('node:path');
   try {
     await db.doc('shops/'+shopId).set({name:'Test shop'});
     const started = await api.start(request);
-    for (const ctx of [env.unauthenticatedContext(), env.authenticatedContext(shopId), env.authenticatedContext('other'), env.authenticatedContext('staff',{staffRole:'cashier',staffShopId:shopId})]) {
+    for (const ctx of [env.unauthenticatedContext(), env.authenticatedContext(shopId, {email_verified:true}), env.authenticatedContext('other', {email_verified:true}), env.authenticatedContext('staff',{staffRole:'cashier',staffShopId:shopId})]) {
       const ref = doc(ctx.firestore(),'lineLinkChallenges/'+shopId);
       await assertFails(getDoc(ref));
       await assertFails(setDoc(ref,{tokenHash:'forged',expiresAt:Date.now()+10000}));

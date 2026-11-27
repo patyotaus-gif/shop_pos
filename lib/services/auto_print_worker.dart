@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/sale.dart';
 import '../utils/receipt_generator.dart';
 import 'auto_print_service.dart';
+import 'auth_service.dart';
 import 'auto_print_queue.dart';
 import 'bluetooth_printer_service.dart';
 import 'kitchen_print_service.dart';
@@ -38,7 +39,12 @@ class AutoPrintWorker {
       AutoPrintService.channel.invokeMethod<void>('status', {'text': text});
 
   Future<void> start() async {
-    if (!AutoPrintService.matchesUser(shopId)) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null ||
+        user.uid != shopId ||
+        !AuthService.acceptsOwnerToken(
+            (await user.getIdTokenResult()).claims ?? {}) ||
+        !AutoPrintService.matchesUser(shopId)) {
       await stop();
       return;
     }

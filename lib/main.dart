@@ -28,6 +28,7 @@ import 'screens/settings_screen.dart';
 import 'screens/user_switch_screen.dart';
 import 'screens/staff_mode_screen.dart';
 import 'screens/offline_cash_screen.dart';
+import 'screens/verify_email_screen.dart';
 import 'services/offline_service.dart';
 import 'screens/restaurant_sales_screen.dart';
 import 'services/entitlements.dart';
@@ -137,8 +138,13 @@ class _BootErrorScreen extends StatelessWidget {
 }
 
 class ShopPosApp extends StatefulWidget {
-  const ShopPosApp({super.key, this.initialize = _initializeApp});
+  const ShopPosApp({
+    super.key,
+    this.initialize = _initializeApp,
+    this.checkForUpdate = UpdateService.checkForUpdate,
+  });
   final Future<void> Function() initialize;
+  final Future<AppUpdateInfo?> Function() checkForUpdate;
 
   @override
   State<ShopPosApp> createState() => _ShopPosAppState();
@@ -146,6 +152,7 @@ class ShopPosApp extends StatefulWidget {
 
 class _ShopPosAppState extends State<ShopPosApp> {
   late final _initialization = Future<void>.sync(widget.initialize);
+  final _navigatorKey = GlobalKey<NavigatorState>();
 
   Route<void> _rootRoute() => MaterialPageRoute<void>(
         settings: const RouteSettings(name: '/'),
@@ -157,6 +164,7 @@ class _ShopPosAppState extends State<ShopPosApp> {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeNotifier,
       builder: (context, mode, _) => MaterialApp(
+        navigatorKey: _navigatorKey,
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
         supportedLocales: const [Locale('th'), Locale('en')],
         locale: const Locale('th'),
@@ -166,7 +174,11 @@ class _ShopPosAppState extends State<ShopPosApp> {
         theme: PokpokTheme.light(),
         darkTheme: PokpokTheme.dark(),
         builder: (context, child) => AppViewport(
-          child: PokpokLaunchMotion(child: child ?? const SizedBox.shrink()),
+          child: AppUpdateReminder(
+            navigatorKey: _navigatorKey,
+            check: widget.checkForUpdate,
+            child: PokpokLaunchMotion(child: child ?? const SizedBox.shrink()),
+          ),
         ),
         // Always enter through initialization and account selection on cold start.
         // Internal navigation can still open named routes after owner sign-in.
@@ -176,7 +188,7 @@ class _ShopPosAppState extends State<ShopPosApp> {
           if (settings.name == '/product-form' &&
               AuthService.ownerUnlocked &&
               !AuthService.isStaff &&
-              AuthService.currentUser != null) {
+              AuthService.canEnterShop) {
             final barcode = settings.arguments as String?;
             return MaterialPageRoute(
               settings: settings,
@@ -228,6 +240,9 @@ class _BootHome extends StatelessWidget {
                 ])));
               }
               if (snap.data == null) return const LoginScreen();
+              if (!AuthService.canEnterShop) {
+                return VerifyEmailScreen(key: ValueKey(snap.data!.uid), user: snap.data!);
+              }
               // Load the founder custom claim for an already-signed-in user (app
               // relaunch); signIn() covers the fresh-login path. Fire-and-forget —
               // UI gates on the cached value once it resolves.
@@ -267,17 +282,6 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   String _selectedLabel = 'ขาย';
-
-  @override
-  void initState() {
-    super.initState();
-    // Closed-distribution Android update check, once per launch. Silent on
-    // failure / when already current / on iOS (TestFlight handles those).
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final info = await UpdateService.checkForUpdate();
-      if (info != null && mounted) showUpdateDialog(context, info);
-    });
-  }
 
   @override
   Widget build(BuildContext context) {

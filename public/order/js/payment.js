@@ -1,4 +1,5 @@
 import { initPickup, refreshPickup, pickupPayload } from './pickup.js?v=20261029orders';
+import { customerOrderAction, isConfirmedPayment, newReceiptExpiry, rememberReceipt, watchCustomerPayment } from './customer-payment.js';
 import { pickupDescription, orderLabel } from './order-display.mjs';
 // Order form + PromptPay payment + slip verification.
 // Logic moved VERBATIM from the old public/order/index.html inline script —
@@ -15,17 +16,14 @@ export { crc16, buildPromptPayPayload };
 let pendingOrder = null;
 let lastRequest = null;
 let paymentBusy = false;
+let stopReviewWatch;
 const pendingKey = `pokpok-payment-v1:${shopId}:${new URLSearchParams(location.search).get('table') || 'takeaway'}`;
 function savedPayment() { try { return JSON.parse(localStorage.getItem(pendingKey) || 'null'); } catch (_) { return null; } }
 function savePayment(value) { localStorage.setItem(pendingKey, JSON.stringify(value)); }
 function forgetPayment() { localStorage.removeItem(pendingKey); pendingOrder = null; document.getElementById('resumePaymentBtn').hidden = true; }
 const phoneValid = value => /^(?:0\d{8,9}|\+[1-9]\d{7,14})$/.test(value.replace(/[\s().-]/g,''));
-async function customerAction(action, saved = savedPayment()) {
-  const res = await apiFetch('/api/customerOrder', {method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({shopId,orderId:saved.orderId,customerToken:saved.customerToken,action})});
-  const result = await res.json();
-  if(!res.ok) throw Error(result.error || 'ตรวจออเดอร์ไม่ได้ กรุณาลองใหม่ โดยไม่ต้องโอนซ้ำ');
-  return result;
+function customerAction(action, saved = savedPayment()) {
+  return customerOrderAction(action, saved, shopId);
 }
 async function resumePayment() {
   if(paymentBusy) return;
@@ -43,7 +41,7 @@ async function resumePayment() {
         data=await customerAction('status',saved);
       }
     } else data=await customerAction('status',saved);
-    const next={orderId:data.orderId,customerToken:saved.customerToken};
+    const next={orderId:data.orderId,customerToken:saved.customerToken,receiptExpiresAt:saved.receiptExpiresAt || newReceiptExpiry()};
     savePayment(next); pendingOrder={...data,...next};
     clearCart(); closeOrderModal(); showPaymentScreen(pendingOrder);
   } catch(e) {alert(e.message || 'ตรวจออเดอร์ไม่ได้ กรุณาลองใหม่ โดยไม่ต้องโอนซ้ำ');}
@@ -72,6 +70,7 @@ export function initPayment() {
   document.getElementById('payCancelBtn').addEventListener('click', cancelPay);
   document.getElementById('payCloseBtn').addEventListener('click', () => {
     if(paymentBusy) return;
+    stopReviewWatch?.();
     if(pendingOrder?.status && pendingOrder.status !== 'pendingPayment') forgetPayment();
     document.getElementById('payOverlay').classList.remove('open');
   });
@@ -130,8 +129,9 @@ async function submitOrder() {
       if (res.status === 409) {await refreshPickup(); await refreshGifts();}
       return;
     }
-    pendingOrder = {...data,customerToken};
-    savePayment({orderId:data.orderId,customerToken});
+    const receiptExpiresAt = newReceiptExpiry();
+    pendingOrder = {...data,customerToken,receiptExpiresAt};
+    savePayment({orderId:data.orderId,customerToken,receiptExpiresAt});
     lastRequest = null;
     // The server accepted these items. Do not restore them as a new draft.
     clearCart();
@@ -148,6 +148,7 @@ async function submitOrder() {
 }
 
 function showPaymentScreen({ finalAmount, total, promptpayId, promptpayName, pickupLabel, coupon, discount, subtotal, buyGet, bundles }) {
+  stopReviewWatch?.();
   document.getElementById('payGifts').textContent=[bundleText(bundles),giftText(buyGet)].filter(Boolean).join('\n');
   const waiting = !pendingOrder.status || pendingOrder.status === 'pendingPayment';
   const review = pendingOrder.awaitingReview === true;
@@ -155,26 +156,29 @@ function showPaymentScreen({ finalAmount, total, promptpayId, promptpayName, pic
   document.getElementById('payHeading').textContent = !waiting ? 'สถานะออเดอร์' : review ? 'รอร้านตรวจสอบ' : 'สแกนเพื่อชำระเงิน';
   document.querySelector('#payCard .pay-subtitle').hidden = !waiting || review;
   document.querySelector('#payCard .pp-steps').hidden = !waiting || review;
-  document.getElementById('paySlipBtn').disabled = !waiting;
-  document.getElementById('paySlipBtn').hidden = !waiting;
+  document.getElementById('slipHelp').hidden = !waiting || review;
+  document.getElementById('paySlipBtn').disabled = !waiting || review;
+  document.getElementById('paySlipBtn').hidden = !waiting || review;
   document.getElementById('payCancelBtn').hidden = !waiting || review;
   document.getElementById('paySlipStatus').textContent = !waiting
-    ? (pendingOrder.status === 'cancelled' ? 'ยกเลิกออเดอร์แล้ว' : 'ร้านยืนยันรับเงินแล้ว ไม่ต้องโอนซ้ำ')
+    ? (pendingOrder.status === 'cancelled' ? 'ยกเลิกออเดอร์แล้ว' : isConfirmedPayment(pendingOrder.status)
+      ? 'ร้านยืนยันรับเงินแล้ว ไม่ต้องโอนซ้ำ' : 'กรุณาติดต่อร้านเพื่อตรวจสอบออเดอร์')
     : review ? 'ส่งสลิปแล้ว รอร้านตรวจสอบ ไม่ต้องโอนซ้ำ' : '';
   document.getElementById('payOrderId').textContent = orderLabel(pendingOrder);
   document.getElementById('payPickup').textContent = pickupDescription(pickupLabel);
-  const payload = buildPromptPayPayload(promptpayId, finalAmount);
   const qrEl = document.getElementById('payQrCanvas');
   qrEl.innerHTML = '';  // wipe any previous render
-  new QRCode(qrEl, {
-    text: payload,
-    width: 240,
-    height: 240,
-    correctLevel: QRCode.CorrectLevel.M,
-  });
+  if (waiting && !review) {
+    new QRCode(qrEl, {
+      text: buildPromptPayPayload(promptpayId, finalAmount),
+      width: 240,
+      height: 240,
+      correctLevel: QRCode.CorrectLevel.M,
+    });
+  }
   document.getElementById('payAmount').textContent =
     '฿' + Number(finalAmount).toFixed(2);
-  const centsNote = (finalAmount > total)
+  const centsNote = (waiting && !review && finalAmount > total)
     ? `ออเดอร์เดิม: ยอดสินค้า ฿${total.toFixed(2)} + ยอดระบุรายการ ${Math.round((finalAmount - total) * 100)} สตางค์ กรุณาใช้ยอดตาม QR เดิม`
     : '';
   document.getElementById('payCentsNote').textContent = centsNote;
@@ -185,6 +189,21 @@ function showPaymentScreen({ finalAmount, total, promptpayId, promptpayName, pic
   document.getElementById('payReceiverId').textContent =
     'PromptPay ID: ' + maskPromptPayId(promptpayId);
   document.getElementById('payOverlay').classList.add('open');
+  if (review || isConfirmedPayment(pendingOrder.status)) {
+    const reference = {shopId, orderId: pendingOrder.orderId, customerToken: pendingOrder.customerToken};
+    rememberReceipt({...reference, receiptExpiresAt: pendingOrder.receiptExpiresAt});
+    if (waiting && review) {
+      const status = document.getElementById('paySlipStatus');
+      stopReviewWatch = watchCustomerPayment(reference, latest => {
+        if (latest.status !== 'pendingPayment') {
+          Object.assign(pendingOrder, latest);
+          showPaymentScreen(pendingOrder);
+        } else {
+          status.textContent = 'ส่งสลิปแล้ว รอร้านตรวจสอบ ไม่ต้องโอนซ้ำ';
+        }
+      }, () => { status.textContent = 'กำลังเชื่อมต่อใหม่ หากโอนเงินแล้ว ไม่ต้องโอนซ้ำ'; });
+    }
+  }
 }
 
 function maskPromptPayId(id) {
@@ -236,6 +255,7 @@ async function uploadSlip(event) {
 
     status.className = 'ok';
     pendingOrder.awaitingReview = true;
+    rememberReceipt({...uploadingOrder, shopId});
     document.getElementById('payCancelBtn').hidden=true;
     status.textContent = data.awaitingReview ? 'ส่งสลิปแล้ว รอร้านตรวจยอดเงินเข้าและยืนยัน' : 'กำลังเปิดหน้าออเดอร์...';
     setTimeout(() => {

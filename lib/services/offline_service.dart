@@ -60,9 +60,10 @@ class OfflineService {
     if (!RegExp(r'^\d{6,8}$').hasMatch(pin)) {
       throw StateError('ใช้ PIN ออฟไลน์ 6–8 หลัก');
     }
-    if (!(AuthService.isStaff
-        ? StaffAccessService.unlocked.value
-        : AuthService.ownerUnlocked)) {
+    if (!AuthService.canEnterShop ||
+        !(AuthService.isStaff
+            ? StaffAccessService.unlocked.value
+            : AuthService.ownerUnlocked)) {
       throw StateError('กรุณาเข้าสู่ระบบก่อนเตรียมออฟไลน์');
     }
     final local = await store;
@@ -84,6 +85,7 @@ class OfflineService {
           'salt': salt,
           'hash': await _hash(pin, salt),
           'attempts': 0,
+          'verifiedSession': true,
           'lockedUntil': 0,
           'lastSeen': DateTime.now().millisecondsSinceEpoch
         }));
@@ -101,6 +103,17 @@ class OfflineService {
       throw StateError('ไม่พบสิทธิ์ในเครื่อง กรุณาเตรียมใหม่ขณะออนไลน์');
     }
     final secret = Map<String, dynamic>.from(jsonDecode(raw));
+    // Old permits can still sync paid bills. Opening a new owner sale first
+    // requires the verified owner once; cashier PIN identities have no email.
+    if (secret['verifiedSession'] != true &&
+        !p['uid'].toString().startsWith('staff_')) {
+      if (AuthService.currentUser?.uid != p['uid'] ||
+          !AuthService.canEnterShop) {
+        throw StateError(
+            'กรุณาเข้าใช้งานออนไลน์และยืนยันอีเมลเจ้าของร้านก่อนขายออฟไลน์');
+      }
+      secret['verifiedSession'] = true;
+    }
     final now = DateTime.now().millisecondsSinceEpoch;
     if (now < (secret['lockedUntil'] as int)) {
       throw StateError('PIN ผิดหลายครั้ง กรุณารอ 5 นาที');
@@ -209,7 +222,7 @@ class OfflineService {
     if (_syncing) return;
     _syncing = true;
     try {
-      if (AuthService.currentUser == null) return;
+      if (!AuthService.canEnterShop) return;
       final local = await store, profiles = await local.permits();
       for (final p in profiles) {
         if (p['shop'] != AuthService.shopId ||

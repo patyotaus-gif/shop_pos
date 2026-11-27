@@ -62,11 +62,11 @@ const {HttpsError}=require('firebase-functions/v2/https');
     await require('./refund').refundSale({db,FieldValue,shopId,saleId,reason:'test',returnToStock:true,actor:shopId});
     assert.equal((await couponRef.get()).data().claimed,1,'refund does not reset paid redemption');
     assert.equal((await shop.collection('products').doc('tea').get()).data().stock,10);
-    const ownerDb=env.authenticatedContext(shopId).firestore();
+    const ownerDb=env.authenticatedContext(shopId, {email_verified:true}).firestore();
     await assertSucceeds(getDoc(doc(ownerDb,couponRef.path)));
     await assertFails(updateDoc(doc(ownerDb,couponRef.path),{claimed:0}));
     await assertFails(setDoc(doc(ownerDb,`shops/${shopId}/coupons/FAKE`),{active:true}));
-    for(const client of [env.unauthenticatedContext().firestore(),env.authenticatedContext('other').firestore(),env.authenticatedContext('staff',{staffRole:'cashier',staffShopId:shopId}).firestore()]) {
+    for(const client of [env.unauthenticatedContext().firestore(),env.authenticatedContext('other', {email_verified:true}).firestore(),env.authenticatedContext('staff',{staffRole:'cashier',staffShopId:shopId}).firestore()]) {
       await assertFails(getDoc(doc(client,couponRef.path)));
       await assertFails(updateDoc(doc(client,couponRef.path),{claimed:0}));
     }

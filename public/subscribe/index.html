@@ -125,6 +125,7 @@
     }
     .pp-success-date { font-size: 1rem; font-weight: 700; color: var(--green); margin: 8px 0 14px; }
   </style>
+  <link rel="stylesheet" href="/js/merchant-session.css">
 </head>
 <body>
 
@@ -206,8 +207,9 @@
 </div>
 
 <script type="module">
+  import {watchVerifiedAccount} from '/js/merchant-session.js';
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider, OAuthProvider }
+  import { getAuth, signInWithEmailAndPassword, signOut, signInWithPopup, GoogleAuthProvider, OAuthProvider }
     from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
   import { getFirestore, doc, getDoc }
     from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
@@ -306,7 +308,7 @@
     }
   }
 
-  onAuthStateChanged(auth, async (user) => {
+  watchVerifiedAccount(auth, async (user) => {
     if (!user) {
       $("app-view").classList.add("hidden");
       $("login-view").classList.remove("hidden");

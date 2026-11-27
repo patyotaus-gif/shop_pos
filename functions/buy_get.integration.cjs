@@ -85,10 +85,10 @@ const {HttpsError}=require('firebase-functions/v2/https');
     assert.equal(counterClosed.expectedCash,100);
     assert.equal(counterClosed.grossTotal,Math.round((100-sale.total)*100)/100);
     assert.equal(counterClosed.refundTotal,sale.total);assert.equal(counterClosed.byMethod.cash,100);
-    const ownerDb=env.authenticatedContext(shopId).firestore();
+    const ownerDb=env.authenticatedContext(shopId, {email_verified:true}).firestore();
     await assertSucceeds(getDoc(doc(ownerDb,promotion.path)));
     await assertFails(updateDoc(doc(ownerDb,promotion.path),{giftQuantity:99}));
-    for(const client of [env.unauthenticatedContext().firestore(),env.authenticatedContext('other').firestore(),env.authenticatedContext('staff',{staffRole:'cashier',staffShopId:shopId}).firestore()]) {
+    for(const client of [env.unauthenticatedContext().firestore(),env.authenticatedContext('other', {email_verified:true}).firestore(),env.authenticatedContext('staff',{staffRole:'cashier',staffShopId:shopId}).firestore()]) {
       await assertFails(getDoc(doc(client,promotion.path)));
       await assertFails(setDoc(doc(client,promotion.path),{active:true}));
     }

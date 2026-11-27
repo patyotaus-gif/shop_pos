@@ -89,7 +89,19 @@ exports.createOwnerUnlock = ({db, auth, Timestamp, now = () => Date.now()}) => {
     // Recheck account revocation/disablement before issuing a new owner session.
     const latest = await account(uid);
     if (latest.tokensValidAfterTime !== user.tokensValidAfterTime) denied();
-    return {token: await auth.createCustomToken(uid, {ownerQuickUnlock: true})};
+    const claims = {ownerQuickUnlock: true};
+    if (!latest.emailVerified) {
+      // Preserve the original social identity for PIN login. Merely linking
+      // a different email to an unverified password account is insufficient.
+      const normalize = email => String(email || '').trim().toLowerCase();
+      const providers = latest.providerData || [];
+      const social = providers.find(p => ['google.com', 'apple.com'].includes(p.providerId)
+        && ((normalize(latest.email) && normalize(p.email) === normalize(latest.email))
+          || (!latest.email && providers.every(entry => ['google.com', 'apple.com'].includes(entry.providerId)))));
+      if (!social) fail('permission-denied', 'กรุณาเข้าสู่ระบบด้วยบัญชีเดิมและยืนยันอีเมลก่อนใช้ PIN เจ้าของ');
+      claims.ownerSocialProvider = social.providerId;
+    }
+    return {token: await auth.createCustomToken(uid, claims)};
   }
   async function disable(request) {
     const uid = owner(request);
