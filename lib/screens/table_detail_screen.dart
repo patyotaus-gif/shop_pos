@@ -656,6 +656,7 @@ class _OpenOrderViewState extends State<TableOrderView> {
                 paid: result.paid,
                 discount: (promotion['discountMinor'] as num).toDouble() / 100,
                 paymentMethod: result.method,
+                paymentRef: result.ref,
                 salesChannel: result.salesChannel,
                 serviceChargePercent: confirmedServiceCharge,
                 splitCount: splitCount,

@@ -7,7 +7,7 @@ const fields={
  tables:'name capacity section status currentOrderId createdAt sortOrder',
  tableOrders:'tableId tableName items status openedAt closedAt saleId tablePromotion billRequestedAt',
  orders:'orderNumber queueNumber queueChannel queueSessionId customerName customerPhone items total discount coupon bundleDiscount bundles finalAmount paymentMethod paymentRef slipUrl autoConfirmed bankMatchStatus status createdAt paidAt statusUpdatedAt orderType tableName pickupMode pickupStartAt pickupEndAt pickupLabel saleId',
- sales:'queueNumber queueChannel queueSessionId items total discount bundleDiscount bundles serviceCharge serviceChargePercent paid change paymentMethod salesChannel isDebt isRefunded createdAt staffName staffId receiptNo receiptProfile tableName splitCount customerName refundReason refundedAt',
+ sales:'queueNumber queueChannel queueSessionId items total discount bundleDiscount bundles serviceCharge serviceChargePercent paid change paymentMethod paymentRef salesChannel isDebt isRefunded createdAt staffName staffId receiptNo receiptProfile tableName splitCount customerName refundReason refundedAt',
  cashSessions:'openedAt openedBy openedByName closedAt closedBy closedByName openingFloat countedCash status summary accountingVersion accountingStartAt needsReconciliation nextSessionId previousSessionId carriedCash',
  accountingSettings:'enabled defaultOpeningFloat',
 };

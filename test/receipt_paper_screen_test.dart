@@ -44,10 +44,16 @@ void main() {
         discount: 0,
         paid: 25,
         change: 0,
+        paymentMethod: PaymentMethod.transfer,
+        paymentRef: '001-ABC',
         createdAt: DateTime(2026, 10, 11),
         receiptProfile: const ReceiptProfile(name: 'ร้านทดสอบ'));
-    await tester.pumpWidget(MaterialApp(home: SaleReceiptScreen(sale: sale)));
+    await tester.pumpWidget(MaterialApp(
+        home: SaleReceiptScreen(
+            loadSale: () async =>
+                Sale.fromFirestore(sale.toFirestore(), sale.id))));
     await tester.pump();
+    expect(find.text('เลขอ้างอิงเงินโอน 001-ABC'), findsOneWidget);
     expect(tester.widget<PdfPreview>(find.byType(PdfPreview)).initialPageFormat,
         ReceiptGenerator.slip58);
     final slipPreview = tester.widget<PdfPreview>(find.byType(PdfPreview));

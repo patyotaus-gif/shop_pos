@@ -134,6 +134,9 @@ class _SaleReceiptScreenState extends State<SaleReceiptScreen> {
                           'ยอดรวม ฿${sale.total.toStringAsFixed(2)} · ${sale.isDebt ? 'ค้างชำระ' : sale.paymentMethod.label}'
                           '${sale.paymentMethod == PaymentMethod.cash ? '\nเงินทอน ฿${sale.change.toStringAsFixed(2)}' : ''}',
                           textAlign: TextAlign.center)),
+                  if (sale.paymentRef != null)
+                    SelectableText('เลขอ้างอิงเงินโอน ${sale.paymentRef}',
+                        textAlign: TextAlign.center),
                   if ((widget.allowRefund || AuthService.isStaff) &&
                       StaffAccessService.can('refund'))
                     sale.isRefunded

@@ -249,7 +249,7 @@ function handlers({db,FieldValue,HttpsError,now=()=>new Date()}) {
         ...(i.isGift?{isGift:true,promotionId:i.promotionId}:{})})),
         total:p.totalMinor/100,discount:p.discountMinor/100,bundleDiscount:p.bundleDiscountMinor/100,bundles:p.bundles,buyGet:p.buyGet,
         ...(p.coupon?{coupon:p.coupon}:{}),...(p.retainedGifts?{retainedGifts:p.retainedGifts}:{}),serviceCharge:p.serviceMinor/100,paid:raw.paymentMethod==='cash'?raw.paid:p.totalMinor/100,
-        change:raw.paymentMethod==='cash'?(ledger.minor(raw.paid)-p.totalMinor)/100:0,paymentMethod:raw.paymentMethod,
+        change:raw.paymentMethod==='cash'?(ledger.minor(raw.paid)-p.totalMinor)/100:0,paymentMethod:raw.paymentMethod,...ledger.transferReference(raw),
         staffName:actor.name,...(actor.staffId?{staffId:actor.staffId}:{}),salesChannel:'dineIn',tableName:order.tableName,customerName:'โต๊ะ '+order.tableName,splitCount:raw.splitCount,
         createdAt:date,receiptNo:`T-${day}-${String(seq).padStart(3,'0')}`,receiptProfile:require('./receipt_profile').receiptProfile(settings),
         accountingVersion:1,isDebt:false,isRefunded:false,ingredientsDeducted:true,ingredientUsage:inv.usage,

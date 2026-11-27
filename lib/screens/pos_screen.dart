@@ -514,6 +514,7 @@ class _PosScreenState extends State<PosScreen> {
       final retry = _pendingSale != null;
       String? customerName;
       String? debtCustomerId;
+      String? paymentRef;
       double paid = 0;
       var method = _paymentMethod;
       var channel = widget.initialChannel;
@@ -592,6 +593,7 @@ class _PosScreenState extends State<PosScreen> {
               initialChannel: widget.initialChannel);
           if (result == null || !mounted) return;
           method = result.method;
+          paymentRef = result.ref;
           channel = result.salesChannel;
           paid = result.paid;
         }
@@ -609,6 +611,7 @@ class _PosScreenState extends State<PosScreen> {
                   isDebt: isDebt,
                   customerName: customerName,
                   paymentMethod: method,
+                  paymentRef: paymentRef,
                   salesChannel: channel,
                   staffName: _activeStaffName,
                   buyGetQuote: gifts,

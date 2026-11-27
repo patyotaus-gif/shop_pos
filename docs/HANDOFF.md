@@ -13,7 +13,9 @@ Rules:
 
 ---
 
-## Current state (updated 2026-11-26)
+## Current state (updated 2026-11-27)
+
+The owner authorized the buyer checkout fixes, recurring in-app update details, and email verification for new and existing non-Google/Apple accounts. For existing accounts the owner selected delivery on next access. Preparing a scoped 1.2.85 (102) candidate from the published branch with the previously tested counter transfer reference fix.
 
 Android 1.2.84 (101), targeting API 36, and the updated retail and restaurant examples are live at https://pok-pok.app/. Hosting version de92cf4e38010b55 was released from 0ffe0b05. The last confirmed physical SM-X900 installation was build 100. The build 100 → 101 upgrade and cold launch were verified on an Android 16 emulator. Physical scanner, fold/unfold and iOS distribution were not tested in this release.
 
@@ -710,6 +712,26 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-27 — Prepare payment, update and account verification release
+
+- The owner explicitly selected verification on next access for existing unverified accounts. Use Firebase transactional verification and cover already-signed-in sessions. Publish a browser sign-in route for owners on old builds before enforcing the new requirement. The current Android 101 checks for updates only in the owner sales shell.
+- The release worktree starts at the published branch. Preserve local-only kiosk and advertising work in the development checkout. Production is still on Android 101 at this point.
+
+### 2026-11-27 — Buyer checkout at the shop and online
+
+- Tested published ordering assets from `0ffe0b05` and the local candidate `316b558` with Chromium, actual customer API/settlement handlers, loopback Firebase Firestore/Storage emulators and synthetic shops. Browser attestation, merchant identity and bank settlement were simulated. No tests ran against live shops, no external bank, notification, payment or production action was initiated, and no app/website fix or release was requested in this run.
+- At the shop: a customer ordered one THB 65 dish at table 02 with the note “ไม่เผ็ด”. Sending to the kitchen opened the table tab without a paid sale. The app's generated customer receipt for that closed tab showed THB 65 total, 100 cash tendered and 35 change. The prepaid table mode displayed a THB 65 QR for table 02 and left the order pending. A retail counter transfer for THB 25 produced one movement and a customer receipt. Checked generated PDFs locally; no physical printer was used.
+- Online: submitted the THB 65 order from a mobile viewport, decoded the displayed PromptPay QR (THB/764, 65.00 and valid checksum), uploaded a synthetic PNG and verified one JPEG actually stored by the slip handler. Upload left zero sales and a pending order. A simulated merchant confirmation produced one sale and one stock deduction. The success page and the re-opened menu showed conflicting copy as noted in Current state, on the released and local personal ordering pages. Bank arrival and live App Check were outside this test.
+- Error paths: after losing a committed order's first network reply, reloading recovered one THB 25 order; cancelling before transfer left no sale and stock at 10. A fresh shop with no PromptPay ID kept the cart and created zero orders or sales. Its form identified the missing recipient while the pay-button dialog told the customer to check gifts. The separate shared kiosk (local feature only) displayed THB 25, waited for merchant confirmation and cleared the cart and phone for the next shopper.
+- Evidence: `D:\PokpokWork\buyer-check-1795773628487` includes mobile captures 01–08, the two customer receipt PDFs, decoded QR results and before/after observations. The auxiliary historical recovery fixture required test-only updates to its module MIME type, page startup and promotion-quote mock; the additional mock recovery checks passed in the temporary copy. The payment/browser observations above used the application handlers and emulated storage.
+
+### 2026-11-27 — Preserve merchant-entered transfer references locally
+
+- Passed the optional transfer reference from both shared payment-sheet callers through owner and staff checkout, persisted counter drafts/retries, and table close with or without promotions. The sale and its ledger movement carry the same reference. Staff read permissions use the existing sale projection. The cashier can see the reference immediately and reopen it from sales history. Legacy bills without a reference and cash/debt stay compatible.
+- Reproduced the missing field before the fix in Flutter pending-checkout recovery, server table close and the Firestore emulator's staff checkout. After the fix, 55 Flutter cases, 46 backend cases and the staff Firestore integration passed. The staff integration checks the saved reference, journal, staff read projection, same-request replay and conflicting reference on a reused ID.
+- Android 16 landscape walkthrough using the real POS, receipt and Report screens in the isolated debug harness: sold one tea for THB 25 by manual transfer, entered `COUNTER-REF-025`, read it on the completed receipt and reopened the same reference through Report → Sales history → bill details. Local Firestore held one sale and its one matching THB 25 movement with that reference; stock went from 10 to 9. Screenshots and machine-checked totals are in `D:\PokpokWork\seller-check-1795770140709\ref-fix-1795772239320`. Targeted Dart analysis passed. Tested with local Firebase and a synthetic merchant, without a physical bank transfer or a physical tablet.
+- Local work only, under the owner's explicit hold on publication. No app version bump or production write.
 
 ### 2026-11-26 — Published Android 1.2.84 (101) and shop-specific website journeys
 

@@ -145,6 +145,13 @@ class Sale {
   /// Legacy checkout and receipt callers expect a non-null tender.
   PaymentMethod get paymentMethod =>
       recordedPaymentMethod ?? PaymentMethod.cash;
+  final String? _paymentRef;
+  String? get paymentRef {
+    if (isDebt || recordedPaymentMethod != PaymentMethod.transfer) return null;
+    final ref = _paymentRef?.trim();
+    return ref == null || ref.isEmpty ? null : ref;
+  }
+
   final SalesChannel salesChannel;
   final bool isRefunded;
   final DateTime? refundedAt;
@@ -189,6 +196,7 @@ class Sale {
     this.customerName,
     this.loyaltyCustomerId,
     PaymentMethod? paymentMethod = PaymentMethod.cash,
+    String? paymentRef,
     this.storedPaymentMethodCode,
     this.salesChannel = SalesChannel.unspecified,
     this.isRefunded = false,
@@ -207,7 +215,8 @@ class Sale {
     this.offlineReview = const [],
     this.tableName,
     this.receiptProfile,
-  }) : _selectedMethod = paymentMethod;
+  })  : _selectedMethod = paymentMethod,
+        _paymentRef = paymentRef;
 
   /// Sum of line item subtotals — total minus service charge plus discount.
   /// Useful for receipts that want to show subtotal explicitly.
@@ -286,6 +295,8 @@ class Sale {
         loyaltyCustomerId: data['loyaltyCustomerId'] as String?,
         paymentMethod: null,
         storedPaymentMethodCode: data['paymentMethod'],
+        paymentRef:
+            data['paymentRef'] is String ? data['paymentRef'] as String : null,
         isRefunded: data['isRefunded'] ?? false,
         refundedAt: (data['refundedAt'] as Timestamp?)?.toDate(),
         refundReason: data['refundReason'],
@@ -324,6 +335,7 @@ class Sale {
         'customerName': customerName,
         if (_selectedMethod != null || storedPaymentMethodCode != null)
           'paymentMethod': _selectedMethod?.name ?? storedPaymentMethodCode,
+        if (paymentRef != null) 'paymentRef': paymentRef,
         if (salesChannel != SalesChannel.unspecified)
           'salesChannel': salesChannel.name,
         if (serviceCharge > 0) 'serviceCharge': serviceCharge,

@@ -1077,6 +1077,8 @@ class _SalesReportState extends State<_SalesReport> {
               Text('฿${bahtFmt.format(sale.total)}',
                   style: const TextStyle(fontWeight: FontWeight.bold)),
             ]),
+            if (sale.paymentRef != null)
+              SelectableText('เลขอ้างอิงเงินโอน ${sale.paymentRef}'),
             if (sale.staffName != null) ...[
               const SizedBox(height: 4),
               Row(children: [

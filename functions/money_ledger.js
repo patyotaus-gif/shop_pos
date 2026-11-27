@@ -17,11 +17,16 @@ function writeMovement(tx, shop, context, id, data, FieldValue) {
   });
   tx.set(context.ref, { sessionId: context.sessionId, revision: FieldValue.increment(1) }, { merge: true });
 }
+function transferReference({paymentMethod, paymentRef, isDebt}) {
+  if (paymentMethod !== 'transfer' || isDebt || typeof paymentRef !== 'string') return {};
+  const ref = paymentRef.trim();
+  return ref ? {paymentRef: ref} : {};
+}
 function saleMovement(sale, actor) {
   const total = minor(sale.total);
   return { kind: 'sale', amountMinor: sale.isDebt ? 0 : total, salesMinor: total,
     debtMinor: sale.isDebt ? total : 0, method: sale.isDebt ? 'credit' : sale.paymentMethod,
-    occurredAt: sale.createdAt, actor: actor || null };
+    ...transferReference(sale), occurredAt: sale.createdAt, actor: actor || null };
 }
 function summarizeMovements(rows, openingFloat) {
   let gross=0, debt=0, refund=0, cash=0, cashSales=0, bills=0, collections=0, cashIn=0, cashOut=0, openingCashIncluded=0, reconciledCount=0;
@@ -48,4 +53,4 @@ function summarizeMovements(rows, openingFloat) {
     cashDebtCollections:cashDebtCollections/100,cashRefunds:cashRefunds/100,
     byMethod:Object.fromEntries(Object.entries(byMethod).map(([k,v])=>[k,v/100]))};
 }
-module.exports={minor,ledgerContext,writeMovement,saleMovement,summarizeMovements};
+module.exports={minor,ledgerContext,writeMovement,transferReference,saleMovement,summarizeMovements};

@@ -66,6 +66,45 @@ void main() {
         Sale.fromFirestore(legacy, 'old').toFirestore()['isRefunded'], isFalse);
   });
 
+  test(
+      'legacy, cash, debt and blank-reference sales omit the transfer reference',
+      () {
+    for (final fields in [
+      {'paymentMethod': 'transfer'},
+      {'paymentMethod': 'cash', 'paymentRef': 'previous selection'},
+      {'paymentMethod': 'transfer', 'paymentRef': '   '},
+      {'paymentMethod': 'transfer', 'paymentRef': 'old', 'isDebt': true},
+    ]) {
+      final bill =
+          Sale.fromFirestore({...sale().toFirestore(), ...fields}, 'bill');
+      expect(bill.toFirestore(), isNot(contains('paymentRef')));
+    }
+  });
+
+  test('resuming a transfer keeps its reference on the sale and movement',
+      () async {
+    final draft = sale();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        'pending-checkout-test-shop',
+        jsonEncode({
+          ...draft.toFirestore(),
+          'id': draft.id,
+          'createdAt': draft.createdAt.millisecondsSinceEpoch,
+          'paymentMethod': 'transfer',
+          'paymentRef': '001-ABC',
+        }));
+    final saved = await SaleService.resumeCheckout();
+    expect(saved.toFirestore()['paymentRef'], '001-ABC');
+    expect(
+        (await shop.collection('sales').doc(draft.id).get()).get('paymentRef'),
+        '001-ABC');
+    expect(
+        (await shop.collection('moneyMovements').doc('sale-${draft.id}').get())
+            .get('paymentRef'),
+        '001-ABC');
+  });
+
   test('stale or orphan table links cannot open another tab', () async {
     final id = await open();
     final table = (await TableService.getTable('one'))!;
@@ -83,6 +122,27 @@ void main() {
     await expectLater(TableService.openOrder(table), throwsStateError);
     expect((await shop.collection('tableOrders').get()).size, 1);
     expect((await shop.collection('sales').get()).size, 0);
+  });
+
+  test('owner table transfer records its reference only once', () async {
+    final id = await open();
+    await TableService.addItem(id, dish);
+    final order = await readOrder(id);
+    Future<String> close() => TableService.closeOrder(
+          order: order,
+          paid: 20,
+          discount: 0,
+          paymentMethod: PaymentMethod.transfer,
+          paymentRef: ' 001-TBL ',
+        );
+    final saleId = await close();
+    expect(await close(), saleId);
+    expect((await shop.collection('sales').doc(saleId).get()).get('paymentRef'),
+        '001-TBL');
+    expect(
+        (await shop.collection('moneyMovements').doc('sale-$saleId').get())
+            .get('paymentRef'),
+        '001-TBL');
   });
 
   test('duplicate open table bills are reported instead of silently hiding one',

@@ -480,6 +480,7 @@ class TableService {
     required double paid,
     required double discount,
     required PaymentMethod paymentMethod,
+    String? paymentRef,
     SalesChannel salesChannel = SalesChannel.dineIn,
     double serviceChargePercent = 0,
     int splitCount = 1,
@@ -502,6 +503,7 @@ class TableService {
         'expectedTotalMinor': order.promotion!['totalMinor'],
         'paid': paid,
         'paymentMethod': paymentMethod.name,
+        if (paymentRef != null) 'paymentRef': paymentRef,
         'splitCount': splitCount,
       });
       return response.data['saleId'] as String;
@@ -566,6 +568,7 @@ class TableService {
         change: change,
         createdAt: now,
         paymentMethod: paymentMethod,
+        paymentRef: paymentRef,
         salesChannel: salesChannel,
         customerName: 'โต๊ะ ${order.tableName}',
         serviceCharge: serviceCharge,

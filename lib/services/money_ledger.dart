@@ -24,6 +24,7 @@ class MoneyLedger {
       'salesMinor': (sale.total * 100).round(),
       'debtMinor': sale.isDebt ? (sale.total * 100).round() : 0,
       'method': sale.isDebt ? 'credit' : sale.paymentMethod.name,
+      if (sale.paymentRef != null) 'paymentRef': sale.paymentRef,
       'occurredAt': Timestamp.fromDate(sale.createdAt),
       'recordedAt': FieldValue.serverTimestamp(),
       'sessionId': late ? null : control['sessionId'],

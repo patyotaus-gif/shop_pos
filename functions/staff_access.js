@@ -1,6 +1,6 @@
 const stock = require('./stock_quantity');
 const crypto = require('node:crypto');
-const {ledgerContext,writeMovement,saleMovement}=require('./money_ledger');
+const {ledgerContext,writeMovement,saleMovement,transferReference}=require('./money_ledger');
 const { HttpsError } = require('firebase-functions/v2/https');
 const { priceLine, effectivePriceOf } = require('./tableorder');
 const fail = (code, message) => { throw new HttpsError(code, message); };
@@ -155,7 +155,8 @@ function createStaffAccess({db, auth, FieldValue, Timestamp, now=()=>new Date()}
     if(typeof manualDiscount!=='number'||!Number.isFinite(manualDiscount)||manualDiscount<0||manualDiscount>1e9||Math.abs(manualDiscount*100-Math.round(manualDiscount*100))>1e-6)fail('invalid-argument','ส่วนลดไม่ถูกต้อง');
     if((manualDiscount&&ctx.member.permissions?.discount!==true)||request.data.isDebt)fail('permission-denied','ไม่มีสิทธิ์ลดราคาหรือขายเชื่อ');
     if(!Array.isArray(items)||!items.length||items.length>50||items.some(i=>!idOk(i.productId))) fail('invalid-argument','รายการสินค้าไม่ถูกต้อง');
-    const digest=crypto.createHash('sha256').update(JSON.stringify({items,paid,paymentMethod,expectedTotal,...(manualDiscount?{manualDiscount}:{}),...(salesChannel?{salesChannel}:{}),
+    const reference=transferReference(request.data);
+    const digest=crypto.createHash('sha256').update(JSON.stringify({items,paid,paymentMethod,expectedTotal,...reference,...(manualDiscount?{manualDiscount}:{}),...(salesChannel?{salesChannel}:{}),
       ...(request.data.buyGetQuote?{buyGetQuote:request.data.buyGetQuote}:{}),
       ...(request.data.bundleQuote?{bundleQuote:request.data.bundleQuote}:{})})).digest('hex');
     const ref=ctx.ref.collection('sales').doc(requestId);
@@ -208,7 +209,7 @@ function createStaffAccess({db, auth, FieldValue, Timestamp, now=()=>new Date()}
       const sale={items:priced,total,discount:bundleDiscount+manualDiscount,
         ...(bundles.length?{bundles,bundleDiscount}:{}),paid:paymentMethod==='cash'?paid:total,change:paymentMethod==='cash'?Math.round((paid-total)*100)/100:0,
         ...(promotion.buyGet?{buyGet:promotion.buyGet}:{}),
-        paymentMethod,...(salesChannel?{salesChannel}:{}),isDebt:false,isRefunded:false,createdAt:Timestamp.fromDate(now()),staffName:member.data().name,staffId:ctx.user.token.staffId,
+        paymentMethod,...reference,...(salesChannel?{salesChannel}:{}),isDebt:false,isRefunded:false,createdAt:Timestamp.fromDate(now()),staffName:member.data().name,staffId:ctx.user.token.staffId,
         staffUid:ctx.user.uid,requestDigest:digest,receiptNo:`S-${day}-${String(seq).padStart(3,'0')}`};
       const context=await ledgerContext(tx,ctx.ref);
       const queue=await require('./round_queue').prepare(tx,ctx.ref,salesChannel==='takeaway'?'takeaway':null,{context});

@@ -52,6 +52,7 @@ class SaleService {
     bool isDebt = false,
     String? customerName,
     PaymentMethod paymentMethod = PaymentMethod.cash,
+    String? paymentRef,
     SalesChannel salesChannel = SalesChannel.storefront,
     String? staffName,
     String? loyaltyCustomerId,
@@ -129,6 +130,7 @@ class SaleService {
             isDebt: isDebt,
             customerName: customerName,
             paymentMethod: paymentMethod,
+            paymentRef: paymentRef,
             salesChannel: salesChannel,
             buyGet: buyGetQuote,
             staffName: staffName);
@@ -179,6 +181,7 @@ class SaleService {
           'paid': draft.paid,
           'expectedTotal': draft.total,
           'paymentMethod': draft.paymentMethod.name,
+          if (draft.paymentRef != null) 'paymentRef': draft.paymentRef,
           if (draft.salesChannel != SalesChannel.unspecified)
             'salesChannel': draft.salesChannel.name,
           'discount':

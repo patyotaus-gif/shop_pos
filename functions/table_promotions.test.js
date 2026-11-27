@@ -28,6 +28,16 @@ function setup() {
   const close=p=>call({action:'close',revision:p.revision,expectedTotalMinor:p.totalMinor,paid:200,paymentMethod:'cash',splitCount:1});
   return {...f,api,call,order,apply,send,close,setClock:d=>clock=d};
 }
+test('closing a transfer table preserves the cashier reference on sale and movement',async()=>{
+  const f=setup(), p=await f.apply();
+  f.send();
+  const request={action:'close',revision:p.revision,expectedTotalMinor:p.totalMinor,
+    paid:p.totalMinor/100,paymentMethod:'transfer',paymentRef:'  001-ABC  ',splitCount:1};
+  const {saleId}=await f.call(request);
+  assert.equal(f.docs.get('shops/s/sales/'+saleId).paymentRef,'001-ABC');
+  assert.equal(f.docs.get('shops/s/moneyMovements/sale-'+saleId).paymentRef,'001-ABC');
+  assert.equal((await f.call(request)).saleId,saleId);
+});
 test('table stacks set, gift and coupon; service on net; close/retry/refund exactly once',async()=>{
   const f=setup(),p=await f.apply();
   assert.equal(p.subtotalMinor,12500);assert.equal(p.discountMinor,3500);assert.equal(p.serviceMinor,900);assert.equal(p.totalMinor,9900);
