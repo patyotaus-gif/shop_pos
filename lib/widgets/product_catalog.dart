@@ -161,76 +161,83 @@ class _ProductCatalogState extends State<ProductCatalog> {
         ],
       ),
     ]);
-    return NestedScrollView(
-        headerSliverBuilder: (_, __) => [SliverToBoxAdapter(child: header)],
-        body: widget.hasError
-            ? const Center(child: Text('โหลดสินค้าไม่สำเร็จ กรุณาลองใหม่'))
-            : widget.loading
-                ? const Center(child: CircularProgressIndicator())
-                : products.isEmpty
-                    ? const Center(child: Text('ไม่พบสินค้า'))
-                    : _layout == ProductCatalogLayout.grid
-                        ? SaleProductGrid(
-                            bottomInset: 80,
-                            key: const PageStorageKey('products-grid'),
-                            footerExtent: footerHeight,
-                            itemCount: products.length,
-                            itemBuilder: (context, i) {
-                              final product = products[i];
-                              return SaleProductCard(
-                                product: product,
-                                onTap: () => widget.onEdit(product),
-                                footer: SizedBox(
-                                    height: footerHeight,
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(
-                                          left: 10, right: 4),
-                                      child: Row(children: [
-                                        Expanded(
-                                            child: Text(
-                                                'สต็อก ${product.stock}',
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                    fontSize: 14,
-                                                    color: widget
-                                                                .showInventory &&
-                                                            product.isLowStock
-                                                        ? Theme.of(context)
-                                                            .colorScheme
-                                                            .error
-                                                        : Theme.of(context)
-                                                            .colorScheme
-                                                            .onSurfaceVariant))),
-                                        if (widget.showInventory &&
-                                            widget.onReceiveStock != null)
-                                          IconButton(
-                                              tooltip: 'จัดการสต๊อก',
-                                              icon: const Icon(
-                                                  Icons.add_box_outlined),
-                                              onPressed: () => widget
-                                                  .onReceiveStock!(product)),
-                                      ]),
-                                    )),
-                              );
-                            },
-                          )
-                        : ContentWidth(
-                            maxWidth: 1040,
-                            child: ListView.builder(
-                              key: const PageStorageKey('products-list'),
-                              padding: const EdgeInsets.fromLTRB(12, 4, 12, 88),
-                              itemCount: products.length,
-                              itemBuilder: (context, i) => _ProductListRow(
-                                product: products[i],
-                                showInventory: widget.showInventory,
-                                onEdit: () => widget.onEdit(products[i]),
-                                onReceiveStock: widget.showInventory &&
-                                        widget.onReceiveStock != null
-                                    ? () => widget.onReceiveStock!(products[i])
-                                    : null,
-                              ),
-                            )));
+    final body = widget.hasError
+        ? const Center(child: Text('โหลดสินค้าไม่สำเร็จ กรุณาลองใหม่'))
+        : widget.loading
+            ? const Center(child: CircularProgressIndicator())
+            : products.isEmpty
+                ? const Center(child: Text('ไม่พบสินค้า'))
+                : _layout == ProductCatalogLayout.grid
+                    ? SaleProductGrid(
+                        bottomInset: 80,
+                        key: const PageStorageKey('products-grid'),
+                        footerExtent: footerHeight,
+                        itemCount: products.length,
+                        itemBuilder: (context, i) {
+                          final product = products[i];
+                          return SaleProductCard(
+                            product: product,
+                            onTap: () => widget.onEdit(product),
+                            footer: SizedBox(
+                                height: footerHeight,
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets.only(left: 10, right: 4),
+                                  child: Row(children: [
+                                    Expanded(
+                                        child: Text('สต็อก ${product.stock}',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                                fontSize: 14,
+                                                color: widget.showInventory &&
+                                                        product.isLowStock
+                                                    ? Theme.of(context)
+                                                        .colorScheme
+                                                        .error
+                                                    : Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurfaceVariant))),
+                                    if (widget.showInventory &&
+                                        widget.onReceiveStock != null)
+                                      IconButton(
+                                          tooltip: 'จัดการสต๊อก',
+                                          icon: const Icon(
+                                              Icons.add_box_outlined),
+                                          onPressed: () =>
+                                              widget.onReceiveStock!(product)),
+                                  ]),
+                                )),
+                          );
+                        },
+                      )
+                    : ContentWidth(
+                        maxWidth: 1040,
+                        child: ListView.builder(
+                          key: const PageStorageKey('products-list'),
+                          padding: const EdgeInsets.fromLTRB(12, 4, 12, 88),
+                          itemCount: products.length,
+                          itemBuilder: (context, i) => _ProductListRow(
+                            product: products[i],
+                            showInventory: widget.showInventory,
+                            onEdit: () => widget.onEdit(products[i]),
+                            onReceiveStock: widget.showInventory &&
+                                    widget.onReceiveStock != null
+                                ? () => widget.onReceiveStock!(products[i])
+                                : null,
+                          ),
+                        ));
+    return LayoutBuilder(builder: (context, constraints) {
+      // Leave room for results when the keyboard or large text crowds the filters.
+      final resultSpace = math.min(144.0, constraints.maxHeight / 2);
+      return Column(children: [
+        ConstrainedBox(
+            constraints:
+                BoxConstraints(maxHeight: constraints.maxHeight - resultSpace),
+            child: SingleChildScrollView(primary: false, child: header)),
+        Expanded(child: body),
+      ]);
+    });
   }
 }
 

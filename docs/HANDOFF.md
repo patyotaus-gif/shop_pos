@@ -713,7 +713,7 @@ or triggered; its Codemagic workflow does not run automatically on push.
 
 ### 2026-11-28 — Product-category app release candidate
 
-- Preparing Android 1.2.86 (103) and the matching iOS source from the published 1.2.85 baseline. Includes the category selector, scanner and management form refinements and their Flutter tests. On a constrained 320×220 viewport with 200% text, the search and category header can now scroll so management results and stock actions remain reachable. The Apple workflow requires a valid build-number lookup. Three legacy test expectations now match the existing production UI. Previous production remains active until artifact verification. No backend or OTP changes.
+- Preparing Android 1.2.86 (103) and the matching iOS source from the published 1.2.85 baseline. Includes the category selector, scanner and management form refinements and their Flutter tests. On a constrained 320×220 viewport with 200% text, a height-limited header can scroll so results and stock actions remain reachable. On larger screens the search and category controls remain visible while results scroll. The Apple workflow requires a valid build-number lookup. Three legacy test expectations now match the existing production UI. Previous production remains active until artifact verification. No backend or OTP changes.
 
 
 ### 2026-11-27 — Payment status, account verification and app update reminders

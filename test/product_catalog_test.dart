@@ -29,6 +29,7 @@ Widget catalog(
         {ValueChanged<Product>? onEdit,
         ValueChanged<Product>? onStock,
         String preferenceKey = 'catalog:shop',
+        List<Product> items = products,
         bool inventory = true,
         double scale = 1}) =>
     MaterialApp(
@@ -39,7 +40,7 @@ Widget catalog(
           child: child!),
       home: Scaffold(
           body: ProductCatalog(
-        products: products,
+        products: items,
         categories: const ['เครื่องดื่ม', 'ขนม'],
         preferenceKey: preferenceKey,
         showInventory: inventory,
@@ -94,6 +95,40 @@ void main() {
     expect(find.byType(SaleProductGrid), findsOneWidget);
   });
 
+  for (final size in [const Size(390, 720), const Size(1024, 768)]) {
+    testWidgets('filters stay in place while scrolling a long list at $size',
+        (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = size;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      await tester.pumpWidget(catalog(items: [
+        products.last,
+        ...List.filled(60, products.first),
+      ]));
+      await tester.pumpAndSettle();
+      final search = find.byType(TextField);
+      final chip = find.widgetWithText(ChoiceChip, 'ขนม');
+      final searchPosition = tester.getTopLeft(search);
+      final chipPosition = tester.getTopLeft(chip);
+      expect(find.text(products.last.name).hitTestable(), findsOneWidget);
+      await tester.dragFrom(
+          Offset(180, size.height - 60), const Offset(0, -400));
+      await tester.pumpAndSettle();
+      expect(find.text(products.last.name).hitTestable(), findsNothing);
+      expect(tester.getTopLeft(search), searchPosition);
+      expect(tester.getTopLeft(chip), chipPosition);
+      await tester.tap(chip);
+      await tester.pumpAndSettle();
+      expect(find.text(products.last.name).hitTestable(), findsOneWidget);
+      expect(find.text(products.first.name), findsNothing);
+      await tester.tap(find.text('รูปภาพ'));
+      await tester.pumpAndSettle();
+      expect(find.byType(SaleProductCard).hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   for (final layout in ProductCatalogLayout.values) {
     testWidgets('keyboard leaves $layout results reachable at 200% text',
         (tester) async {
@@ -108,8 +143,10 @@ void main() {
           .pumpWidget(catalog(scale: 2, onStock: (p) => stock.add(p.id)));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), '67890');
+      final input = tester.widget<EditableText>(find.byType(EditableText));
       tester.view.viewInsets = const FakeViewPadding(bottom: 420);
       await tester.pumpAndSettle();
+      expect(input.focusNode.hasFocus, isTrue);
       expect(tester.getSize(find.byType(ProductCatalog)), const Size(320, 220));
       expect(tester.takeException(), isNull);
 
@@ -121,6 +158,12 @@ void main() {
       expect(action, findsOneWidget);
       await tester.tap(action);
       expect(stock, ['snack']);
+      tester.view.resetViewInsets();
+      await tester.pumpAndSettle();
+      final resizedInput =
+          tester.widget<EditableText>(find.byType(EditableText));
+      expect(resizedInput.focusNode.hasFocus, isTrue);
+      expect(resizedInput.controller.text, '67890');
       expect(tester.takeException(), isNull);
     });
   }
