@@ -44,8 +44,17 @@ function showStatus(order) {
 }
 
 if (reference) {
-  watchCustomerPayment(reference, showStatus, () =>
-    show('ยังตรวจสถานะไม่ได้', 'หากต้องการทราบยอดทันที กรุณาแจ้งเลขออเดอร์กับร้าน', 'หากโอนเงินแล้ว ไม่ต้องโอนซ้ำ'));
+  let hasStatus = false;
+  watchCustomerPayment(reference, order => {
+    hasStatus = true;
+    showStatus(order);
+  }, () => {
+    if (hasStatus) {
+      note.textContent = 'แสดงสถานะล่าสุดที่ตรวจได้ ระบบจะลองตรวจอีกครั้ง ไม่ต้องโอนซ้ำ';
+    } else {
+      show('ยังตรวจสถานะไม่ได้', 'หากต้องการทราบยอดทันที กรุณาแจ้งเลขออเดอร์กับร้าน', 'หากโอนเงินแล้ว ไม่ต้องโอนซ้ำ');
+    }
+  }, {trackFulfillment: true});
 } else if (params.has('review') || orderId?.startsWith('web-')) {
   show('เปิดสถานะออเดอร์บนเครื่องเดิม', 'เปิดด้วยเบราว์เซอร์ที่ใช้สั่ง หรือแจ้งเลขออเดอร์ให้ร้านตรวจสอบ', 'หากโอนเงินแล้ว ไม่ต้องโอนซ้ำ');
 } else {

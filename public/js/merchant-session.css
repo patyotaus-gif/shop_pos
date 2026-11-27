@@ -11,6 +11,13 @@
   font: inherit;
 }
 .merchant-verification::backdrop { background: rgb(31 26 27 / 65%); }
+.merchant-verification-backdrop {
+  position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 2147483647;
+  display: flex; padding: 1rem; overflow: auto; background: rgba(31, 26, 27, .65);
+}
+.merchant-verification-backdrop > .merchant-verification {
+  position: relative; display: block; width: 100%; max-width: 28rem; overflow: auto;
+}
 .merchant-verification h2 { margin: 0 0 .75rem; font-size: 1.35rem; }
 .merchant-verification p { margin: .75rem 0; }
 .merchant-verification strong { overflow-wrap: anywhere; }

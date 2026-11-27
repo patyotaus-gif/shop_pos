@@ -6,6 +6,49 @@ function verified(result) {
     ['google.com', 'apple.com'].includes(result.signInProvider);
 }
 
+function openVerificationDialog(dialog) {
+  const returnFocus = document.activeElement;
+  document.body.append(dialog);
+  if (typeof dialog.showModal === 'function') {
+    try {
+      dialog.showModal();
+      return () => { dialog.close(); dialog.remove(); };
+    } catch { /* Fall back if the browser cannot present a native modal. */ }
+  }
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'merchant-verification-backdrop';
+  dialog.setAttribute('role', 'dialog');
+  dialog.setAttribute('aria-modal', 'true');
+  dialog.setAttribute('open', '');
+  dialog.tabIndex = -1;
+  backdrop.append(dialog);
+  document.body.append(backdrop);
+  const containFocus = event => {
+    if (!dialog.contains(event.target)) dialog.focus();
+  };
+  const cycleButtons = event => {
+    if (event.key !== 'Tab') return;
+    const buttons = dialog.querySelectorAll('button:not(:disabled)');
+    const first = buttons[0], last = buttons[buttons.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && (active === first || active === dialog)) {
+      event.preventDefault(); last.focus();
+    } else if (!event.shiftKey && (active === last || active === dialog)) {
+      event.preventDefault(); first.focus();
+    }
+  };
+  document.addEventListener('focusin', containFocus);
+  dialog.addEventListener('keydown', cycleButtons);
+  dialog.focus();
+  return () => {
+    document.removeEventListener('focusin', containFocus);
+    dialog.removeEventListener('keydown', cycleButtons);
+    backdrop.remove();
+    if (returnFocus?.isConnected) returnFocus.focus();
+  };
+}
+
 // Keep all signed-in merchant portals behind the same Firebase identity check.
 // A cashier PIN never signs in to these web portals.
 export function watchVerifiedAccount(auth, showAccount) {
@@ -97,10 +140,11 @@ export function watchVerifiedAccount(auth, showAccount) {
       }
     }
     const onFocus = () => { if (!document.hidden) process('check'); };
+    const closeDialog = openVerificationDialog(dialog);
     cleanup = () => {
       clearTimeout(timer);
       document.removeEventListener('visibilitychange', onFocus);
-      dialog.remove();
+      closeDialog();
     };
     document.addEventListener('visibilitychange', onFocus);
     dialog.addEventListener('cancel', event => event.preventDefault());
@@ -109,8 +153,6 @@ export function watchVerifiedAccount(auth, showAccount) {
     dialog.querySelector('[data-exit]').onclick = () => signOut(auth).catch(() => {
       status.textContent = 'ออกจากระบบไม่สำเร็จ กรุณาลองอีกครั้ง';
     });
-    document.body.append(dialog);
-    dialog.showModal();
     await process('initial');
   });
   return () => { cleanup(); unsubscribe(); };

@@ -54,6 +54,21 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
     });
   }
 
+  // Match the Auth record check in functions/owner_unlock.js. A provider
+  // linked with a different mailbox cannot stand in for the shop's email.
+  bool _hasMatchingSocialIdentity(User user) {
+    final providers = user.providerData;
+    bool isSocial(UserInfo provider) =>
+        const ['google.com', 'apple.com'].contains(provider.providerId);
+    if (user.email?.isNotEmpty != true) {
+      return providers.isNotEmpty && providers.every(isSocial);
+    }
+    final email = user.email!.trim().toLowerCase();
+    return email.isNotEmpty &&
+        providers
+            .any((p) => isSocial(p) && p.email?.trim().toLowerCase() == email);
+  }
+
   Future<void> _check(
       {bool sendAutomatically = false, bool resend = false}) async {
     if (_busy || !_current) return;
@@ -69,14 +84,12 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen>
         return;
       }
       final claims = token.claims;
-      if (claims?['ownerQuickUnlock'] == true &&
+      _needsOwnerLogin = claims?['ownerQuickUnlock'] == true &&
           claims?['firebase']?['sign_in_provider'] == 'custom' &&
-          (user.providerData.isEmpty ||
-              user.providerData.any((p) =>
-                  const ['google.com', 'apple.com'].contains(p.providerId)))) {
+          _hasMatchingSocialIdentity(user);
+      if (_needsOwnerLogin) {
         // An old PIN token predates the server's social-provider proof. A new
         // sign-in proves that identity without mailing the OAuth address.
-        _needsOwnerLogin = true;
         _message =
             'กรุณาเข้าสู่ระบบด้วยบัญชีเดิมที่ใช้สมัคร เช่น Google หรือ Apple เพื่อเปิดร้านและใช้ PIN เจ้าของต่อ';
         return;

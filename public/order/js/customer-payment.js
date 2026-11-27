@@ -20,8 +20,14 @@ export async function customerOrderAction(action, {orderId, customerToken}, shop
 
 // Watch only while the relevant page or overlay is visible. A closed view must
 // never be updated by an in-flight status request for a previous purchase.
-export function watchCustomerPayment(reference, onStatus, onError) {
+export function watchCustomerPayment(reference, onStatus, onError, {trackFulfillment = false} = {}) {
   let stopped = false, checking = false, timer, delay = 5000;
+  function stop() {
+    stopped = true;
+    clearTimeout(timer);
+    document.removeEventListener('visibilitychange', check);
+    window.removeEventListener('online', check);
+  }
   async function check() {
     clearTimeout(timer);
     if (stopped || checking || document.hidden) return;
@@ -32,8 +38,10 @@ export function watchCustomerPayment(reference, onStatus, onError) {
       const order = await customerOrderAction('status', reference, reference.shopId);
       if (stopped) return;
       onStatus(order);
-      retry = order.status === 'pendingPayment';
-      delay = 5000;
+      const pending = order.status === 'pendingPayment';
+      retry = pending || (trackFulfillment && ['paid', 'accepted', 'ready'].includes(order.status));
+      delay = pending ? 5000 : 15000;
+      if (!retry) stop();
     } catch (_) {
       if (stopped) return;
       onError();
@@ -46,12 +54,7 @@ export function watchCustomerPayment(reference, onStatus, onError) {
   document.addEventListener('visibilitychange', check);
   window.addEventListener('online', check);
   check();
-  return () => {
-    stopped = true;
-    clearTimeout(timer);
-    document.removeEventListener('visibilitychange', check);
-    window.removeEventListener('online', check);
-  };
+  return stop;
 }
 
 const receiptPrefix = 'pokpok-receipt-v1:';
@@ -72,7 +75,7 @@ function listRecentReceipts() {
       localStorage.removeItem(key);
     }
   }
-  return recent.sort((a, b) => b.expiresAt - a.expiresAt);
+  return recent;
 }
 
 export function rememberReceipt({shopId, orderId, customerToken, receiptExpiresAt = newReceiptExpiry()}) {
@@ -84,6 +87,7 @@ export function rememberReceipt({shopId, orderId, customerToken, receiptExpiresA
       localStorage.setItem(receiptPrefix + orderId, JSON.stringify(entry));
       recent.unshift(entry);
     }
+    recent.sort((a, b) => b.expiresAt - a.expiresAt);
     for (const older of recent.slice(maxReceipts)) {
       localStorage.removeItem(receiptPrefix + older.orderId);
     }

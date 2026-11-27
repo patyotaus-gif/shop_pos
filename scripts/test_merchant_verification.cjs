@@ -95,7 +95,35 @@ const publicDir = path.resolve(__dirname, '../public');
     await dialog.locator('[data-exit]').click();
     await page.locator('#login-view').waitFor();
     assert.equal(await dialog.count(), 0);
+    // Some installed WebKit browsers have no native modal dialog. They still
+    // need the email, focus containment, sign-out and a way back after verification.
+    await page.addInitScript(() => { HTMLDialogElement.prototype.showModal = undefined; });
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await status.getByText(/ส่งลิงก์ยืนยันแล้ว/).waitFor({timeout:7000});
+    assert.deepEqual(await page.evaluate(() => window.readPaths || []), []);
+    assert.equal(await page.evaluate(() => localStorage.sends), '1');
+    await page.locator('#email').evaluate(input => input.focus());
+    assert.equal(await dialog.evaluate(modal => modal.contains(document.activeElement)), true);
+    await dialog.locator('[data-exit]').focus();
+    await page.keyboard.press('Tab');
+    assert.equal(await dialog.locator('[data-check]').evaluate(button => button === document.activeElement), true);
+    await page.keyboard.press('Shift+Tab');
+    assert.equal(await dialog.locator('[data-exit]').evaluate(button => button === document.activeElement), true);
+    await page.keyboard.press('Escape');
+    await dialog.locator('[data-exit]').click();
+    await page.locator('#login-view').waitFor();
+    assert.equal(await dialog.count(), 0);
+    await page.locator('#email').focus();
+    assert.equal(await page.locator('#email').evaluate(input => input === document.activeElement), true);
+    await page.evaluate(() => delete localStorage.signedOut);
+    await page.reload();
+    await dialog.waitFor();
+    await page.evaluate(() => localStorage.verified = 'yes');
+    await dialog.locator('[data-check]').click();
+    await page.locator('#shopName').getByText('Verified shop').waitFor();
+    assert.equal(await dialog.count(), 0);
     assert.deepEqual(errors, []);
-    console.log('PASS buyer-free merchant verification UI: pending session blocked, cooldown across reload, resend, verification return, Apple and account switch');
+    console.log('PASS merchant verification UI: first-send recovery, cooldown, resend, verified return, Apple, account switch, and keyboard-accessible fallback without showModal');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

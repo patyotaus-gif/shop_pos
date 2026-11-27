@@ -159,6 +159,63 @@ void main() {
     expect(checks, 4);
   });
 
+  testWidgets(
+      'overlapping entries use the latest check and respect dismissal for this visit',
+      (tester) async {
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    final navigator = GlobalKey<NavigatorState>();
+    final checks = <Completer<AppUpdateInfo?>>[];
+    await tester.pumpWidget(MaterialApp(
+      navigatorKey: navigator,
+      builder: (_, child) => AppUpdateReminder(
+          navigatorKey: navigator,
+          child: child!,
+          check: () {
+            final check = Completer<AppUpdateInfo?>();
+            checks.add(check);
+            return check.future;
+          }),
+      home: const Scaffold(),
+    ));
+    void resume() {
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    }
+
+    expect(checks.length, 1);
+    resume();
+    resume();
+    expect(checks.length, 1);
+    checks.first.complete(android);
+    await tester.pumpAndSettle();
+    expect(checks.length, 2);
+    expect(find.byType(UpdateDialog), findsNothing);
+    checks.last.complete(android);
+    await tester.pumpAndSettle();
+    expect(find.byType(UpdateDialog), findsOneWidget);
+    resume();
+    expect(checks.length, 3);
+    await tester.tap(find.text('ไว้ครั้งหน้า'));
+    await tester.pumpAndSettle();
+    checks.last.complete(android);
+    await tester.pumpAndSettle();
+    expect(find.byType(UpdateDialog), findsNothing);
+    expect(checks.length, 3);
+    resume();
+    checks.last.complete(android);
+    await tester.pumpAndSettle();
+    expect(find.byType(UpdateDialog), findsOneWidget);
+    expect(checks.length, 4);
+    resume();
+    await tester.tap(find.text('ไว้ครั้งหน้า'));
+    await tester.pumpAndSettle();
+    checks.last.complete(AppUpdateInfo.available(
+        {..._manifest, 'mandatory': true}, TargetPlatform.android, 101));
+    await tester.pumpAndSettle();
+    expect(find.byType(UpdateDialog), findsOneWidget);
+    expect(find.text('ไว้ครั้งหน้า'), findsNothing);
+  });
+
   testWidgets('an open dialog follows revised metadata for the same build',
       (tester) async {
     final navigator = GlobalKey<NavigatorState>();

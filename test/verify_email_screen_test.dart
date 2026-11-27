@@ -10,11 +10,20 @@ class _Token extends Fake implements IdTokenResult {
   final Map<String, dynamic> claims;
 }
 
+class _Provider extends Fake implements UserInfo {
+  _Provider(this.providerId, this.email);
+  @override
+  final String providerId;
+  @override
+  final String? email;
+}
+
 class _User extends Fake implements User {
+  _User({this.email = 'merchant@example.test'});
   @override
   final uid = 'merchant-1';
   @override
-  final String email = 'merchant@example.test';
+  final String? email;
   @override
   bool emailVerified = false;
   bool tookAction = false;
@@ -64,7 +73,7 @@ void main() {
     final screen = MaterialApp(home: VerifyEmailScreen(user: user, auth: auth));
     await tester.pumpWidget(screen);
     await tester.pumpAndSettle();
-    expect(find.text(user.email), findsOneWidget);
+    expect(find.text(user.email!), findsOneWidget);
     expect(auth.language, 'th');
     expect(user.sends, 1);
     expect(tester.widget<OutlinedButton>(find.byType(OutlinedButton)).onPressed,
@@ -115,20 +124,48 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets(
-      'old owner PIN with uncertain provider asks for owner sign-in without sending email',
-      (tester) async {
-    final user = _User()
-      ..extraClaims = {
-        'ownerQuickUnlock': true,
-        'firebase': {'sign_in_provider': 'custom'}
-      };
-    await tester.pumpWidget(
-        MaterialApp(home: VerifyEmailScreen(user: user, auth: _Auth(user))));
-    await tester.pumpAndSettle();
-    expect(find.text('กลับไปเข้าสู่ระบบ'), findsOneWidget);
-    expect(find.text('ส่งอีเมลยืนยันอีกครั้ง'), findsNothing);
-    expect(user.sends, 0);
-    await tester.pumpWidget(const SizedBox());
-  });
+  for (final (label, email, providers, needsLogin, sends) in [
+    (
+      'matching Google',
+      'merchant@example.test',
+      [_Provider('google.com', ' Merchant@Example.Test ')],
+      true,
+      0
+    ),
+    (
+      'different linked Google',
+      'merchant@example.test',
+      [
+        _Provider('password', 'merchant@example.test'),
+        _Provider('google.com', 'other@example.test')
+      ],
+      false,
+      1
+    ),
+    ('email and no providers', 'merchant@example.test', <UserInfo>[], false, 1),
+    ('Apple-only without email', null, [_Provider('apple.com', null)], true, 0),
+    (
+      'missing email with mixed providers',
+      null,
+      [_Provider('apple.com', null), _Provider('password', null)],
+      false,
+      0
+    )
+  ]) {
+    testWidgets('old owner PIN with $label', (tester) async {
+      final user = _User(email: email)
+        ..extraClaims = {
+          'ownerQuickUnlock': true,
+          'firebase': {'sign_in_provider': 'custom'}
+        }
+        ..providerData = providers;
+      await tester.pumpWidget(
+          MaterialApp(home: VerifyEmailScreen(user: user, auth: _Auth(user))));
+      await tester.pumpAndSettle();
+      expect(find.text('กลับไปเข้าสู่ระบบ'),
+          needsLogin ? findsOneWidget : findsNothing);
+      expect(user.sends, sends);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
 }

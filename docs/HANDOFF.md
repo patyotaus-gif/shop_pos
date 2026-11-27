@@ -15,6 +15,8 @@ Rules:
 
 ## Current state (updated 2026-11-27)
 
+The reviewed 1.2.85 (102) candidate passed Android signing and the focused buyer/account/update checks. Public transfer functions are ready; promotion of Hosting and account enforcement is in progress.
+
 Android 1.2.85 (102) is signed and the scoped release is being verified. Production transfer handlers already accept new references; the prior public Android APK remains active until the Hosting promotion.
 
 Cloud Functions staffCheckout, staffWorkspace, staffWork and tablePromotions were updated to preserve counter transfer references. Android, Hosting and verification enforcement remain on the previous release pending rollout.
@@ -716,6 +718,11 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-27 — Final rollout checks for (102)
+
+- Installed the signed release over Android 101 in the isolated Android 16 emulator. Independently reviewed the full customer payment, merchant verification and update delta and its follow-up fixes. Corrected deferred foreground checks and mandatory updates, first-send retry, social PIN migration, old WebKit verification, preserving a paid receipt when polling fails, and continued fulfillment status. Browser and Flutter regressions failed on the prior snapshots and passed on the final fixes.
+- Final APK 93230936 bytes; SHA-256 5d134ed453c09a30c4778ae936f58ca9f25a051d2dfae29cd66104c8fbb6e2e5. Firebase Auth/Firestore exercise covered actual verification action redemption; 19-program Firestore and the Storage rules suite passed. Browser checks used a synthetic merchant and simulated bank evidence. The 18-page marketing regression passed across five widths.
 
 ### 2026-11-27 — Verify Android and merchant/buyer release candidate
 

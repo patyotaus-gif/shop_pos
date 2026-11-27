@@ -183,6 +183,29 @@ const server = http.createServer(async (req,res) => {
     await page.reload();
     await page.getByRole('heading',{name:'ร้านยืนยันรับเงินแล้ว'}).waitFor();
     const receiptUrl=page.url();
+    const fulfillment=await customer.newPage();
+    await fulfillment.route('https://**/*',route=>route.abort());
+    await fulfillment.clock.install();
+    let checks=0;
+    fulfillment.on('request',request=>{if(new URL(request.url()).pathname==='/api/customerOrder')checks++;});
+    await fulfillment.goto(receiptUrl);
+    await fulfillment.getByRole('heading',{name:'ร้านยืนยันรับเงินแล้ว'}).waitFor();
+    await fulfillment.route('**/api/customerOrder', route => route.fulfill({status:503,body:'unavailable'}), {times:1});
+    await fulfillment.clock.fastForward(16000);
+    await fulfillment.locator('.note').filter({hasText:'แสดงสถานะล่าสุดที่ตรวจได้'}).waitFor({timeout:4000});
+    assert.ok(await fulfillment.getByRole('heading',{name:'ร้านยืนยันรับเงินแล้ว'}).isVisible());
+    await fulfillment.evaluate(()=>window.dispatchEvent(new Event('online')));
+    await fulfillment.locator('.note').filter({hasText:'ชำระเงินเรียบร้อย'}).waitFor({timeout:4000});
+    for (const [state,message] of Object.entries({accepted:'ร้านกำลังเตรียมออเดอร์',ready:'ออเดอร์พร้อมรับที่ร้าน',completed:'ออเดอร์เสร็จสิ้นแล้ว'})) {
+      submitted.status=state;
+      await fulfillment.clock.fastForward(16000);
+      await fulfillment.locator('#description').filter({hasText:message}).waitFor({timeout:4000});
+    }
+    const terminalChecks=checks;
+    await fulfillment.clock.fastForward(60000);
+    await fulfillment.evaluate(()=>window.dispatchEvent(new Event('online')));
+    assert.equal(checks,terminalChecks,'completed receipt stops polling');
+    await fulfillment.close();
     const visitor=await browser.newPage();
     await visitor.route('https://**/*',route=>route.abort());
     await visitor.goto(receiptUrl);
@@ -197,8 +220,10 @@ const server = http.createServer(async (req,res) => {
         sessionStorage.setItem('pokpok-open-receipt',JSON.stringify(ref('legacy')));
         const migrated=findReceipt('web-legacy')?.shopId==='test-shop';
         for(let i=0;i<20;i++){now+=1000;rememberReceipt(ref(i));}
+        rememberReceipt({...ref('recovered'),receiptExpiresAt:now+60000});
         const evicted=findReceipt('web-legacy')===null;
-        const retained=findReceipt('web-0')?.shopId==='test-shop' && findReceipt('web-19')?.shopId==='test-shop';
+        const retained=findReceipt('web-0')?.shopId==='test-shop' && findReceipt('web-19')?.shopId==='test-shop' &&
+          findReceipt('web-recovered')===null;
         localStorage.setItem('pokpok-payment-v1:test-shop:takeaway',JSON.stringify(ref('oldSlot')));
         const oldSlot=findReceipt('web-oldSlot')?.shopId==='test-shop';
         now+=7*86400000+1000;

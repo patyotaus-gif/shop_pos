@@ -28,6 +28,8 @@ class _AppUpdateReminderState extends State<AppUpdateReminder>
   DialogRoute<void>? _dialog;
   AppUpdateInfo? _displayed;
   bool _checking = false;
+  int _visit = 0;
+  int? _dismissedVisit;
 
   @override
   void initState() {
@@ -38,7 +40,10 @@ class _AppUpdateReminderState extends State<AppUpdateReminder>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) unawaited(_check());
+    if (state == AppLifecycleState.resumed) {
+      _visit++;
+      unawaited(_check());
+    }
   }
 
   bool get _foreground {
@@ -49,15 +54,24 @@ class _AppUpdateReminderState extends State<AppUpdateReminder>
   Future<void> _check() async {
     if (!mounted || _checking || !_foreground) return;
     _checking = true;
+    final visit = _visit;
     try {
       final info = await widget.check();
-      if (!mounted || !_foreground) return;
+      if (!mounted ||
+          !_foreground ||
+          visit != _visit ||
+          (_dismissedVisit == visit && info?.mandatory != true)) {
+        return;
+      }
       final nav = widget.navigatorKey.currentState;
       final overlay = nav?.overlay;
       if (nav == null || overlay == null) return;
       if (_dialog?.isActive == true) {
         if (info != null && info.matches(_displayed)) return;
-        nav.removeRoute(_dialog!);
+        final previous = _dialog!;
+        _dialog = null;
+        _displayed = null;
+        nav.removeRoute(previous);
       }
       if (info == null) return;
       final route = DialogRoute<void>(
@@ -71,10 +85,13 @@ class _AppUpdateReminderState extends State<AppUpdateReminder>
         if (identical(_dialog, route)) {
           _dialog = null;
           _displayed = null;
+          _dismissedVisit = _visit;
         }
       }));
     } finally {
       _checking = false;
+      // Coalesce every entry during this request into one fresh manifest read.
+      if (mounted && _foreground && _visit != visit) unawaited(_check());
     }
   }
 
