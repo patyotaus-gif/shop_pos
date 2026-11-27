@@ -15,15 +15,7 @@ Rules:
 
 ## Current state (updated 2026-11-27)
 
-The reviewed 1.2.85 (102) candidate passed Android signing and the focused buyer/account/update checks. Public transfer functions are ready; promotion of Hosting and account enforcement is in progress.
-
-Android 1.2.85 (102) is signed and the scoped release is being verified. Production transfer handlers already accept new references; the prior public Android APK remains active until the Hosting promotion.
-
-Cloud Functions staffCheckout, staffWorkspace, staffWork and tablePromotions were updated to preserve counter transfer references. Android, Hosting and verification enforcement remain on the previous release pending rollout.
-
-The owner authorized the buyer checkout fixes, recurring in-app update details, and email verification for new and existing non-Google/Apple accounts. For existing accounts the owner selected delivery on next access. Preparing a scoped 1.2.85 (102) candidate from the published branch with the previously tested counter transfer reference fix.
-
-Android 1.2.84 (101), targeting API 36, and the updated retail and restaurant examples are live at https://pok-pok.app/. Hosting version de92cf4e38010b55 was released from 0ffe0b05. The last confirmed physical SM-X900 installation was build 100. The build 100 → 101 upgrade and cold launch were verified on an Android 16 emulator. Physical scanner, fold/unfold and iOS distribution were not tested in this release.
+Android 1.2.85 (102) and buyer/merchant web updates are live at https://pok-pok.app/ from 7613eee2, Hosting 53b4c8e38a193705. All 67 signed-in callable functions are active on new revisions, and the exact Firestore and Storage verification rules are live. The scoped iOS release tag ios-1.2.85 points to the app commit. GitHub reports no Codemagic run or commit status yet. The public TestFlight invite works but does not identify a 1.2.85 build. Owner has the Codemagic start link. The iOS update manifest awaits a confirmed distributable build.
 
 The homepage journeys and horizontal package comparison were previously released on 24 November in Hosting 393cdb2c01979735.
 
@@ -718,6 +710,18 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-27 — Payment status, account verification and app update reminders
+
+- Android 1.2.85 (102) and buyer/merchant web updates are live at https://pok-pok.app/ from 7613eee2, Hosting 53b4c8e38a193705. All 67 signed-in callable functions are active on new revisions, and the exact Firestore and Storage verification rules are live. The scoped iOS release tag ios-1.2.85 points to the app commit. GitHub reports no Codemagic run or commit status yet. The public TestFlight invite works but does not identify a 1.2.85 build. Owner has the Codemagic start link. The iOS update manifest awaits a confirmed distributable build.
+- Returning unverified password owners receive a Firebase verification email on their next access in the updated app or merchant portal. New password accounts verify before opening the shop. The owner chose this timing; no bulk send. Google/Apple and server-issued staff PIN flows remain supported. Already installed Android 101 checks updates only inside its authenticated sales shell; use https://pok-pok.app/#download or https://pok-pok.app/subscribe/ if the legacy client cannot enter. The fallback is available for old iOS clients too.
+- Buyer browser tests against local Firebase confirmed a THB 65 paid order, live status in both original receipt and reopened payment, no second sale on retry, and accurate disabled checkout when a shop has no PromptPay recipient. Counter cash/transfer uses shop staff verification. This release preserves new staff-entered transfer references. Previously missing references cannot be reconstructed.
+- Tested actual Firebase Auth emulator verification issuance and action redemption, duplicate suppression across reload and access after confirmation. Verified the real provider/domain settings and public action handler without sending messages to live customers. Targeted Flutter, browser, Node and emulator evidence is kept in D:/PokpokWork/release-1.2.85. Android 16 emulator accepted the signed build 101 to 102 upgrade and launched the updated application; no physical device was connected.
+- Public APK 93230936 bytes, SHA-256 5d134ed453c09a30c4778ae936f58ca9f25a051d2dfae29cd66104c8fbb6e2e5. The prior Hosting version de92cf4e38010b55 and the original per-service revisions/ruleset IDs were recorded for rollback. No live customer data, payment, bank transfer or purchase was used to test this release.
+
+### 2026-11-27 — Android download and merchant web recovery are live
+
+- Promoted the scoped 7613eee release and checked every changed resource by downloading from the public domain, including the complete signed APK. All 20 matched. Existing files elsewhere in Hosting matched the previous live version. Issued iOS release tag ios-1.2.85 at the same application commit.
 
 ### 2026-11-27 — Final rollout checks for (102)
 
