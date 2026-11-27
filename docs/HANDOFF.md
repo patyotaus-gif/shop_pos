@@ -15,9 +15,9 @@ Rules:
 
 ## Current state (updated 2026-11-28)
 
-The signed 1.2.86 (103) category update passed local verification and an Android 16 emulator upgrade. Production promotion is pending.
+Android 1.2.86 (103) is live at https://pok-pok.app/app/pokpok.apk. The category selector is clearer on the sales and management screens, including the category field when adding and editing products. Release 44f9582, Hosting c2420eb41f15f1e5. The remote ios-1.2.86 source tag is verified. GitHub reports no Codemagic check run or commit status for this revision. A distributed TestFlight build is unconfirmed. The iOS update manifest awaits confirmation. Manual workflow: ios-release at https://codemagic.io/app/6a103596040c9987ff81b4f8 .
 
-Android 1.2.85 (102) and buyer/merchant web updates are live at https://pok-pok.app/ from 7613eee2, Hosting 53b4c8e38a193705. All 67 signed-in callable functions are active on new revisions, and the exact Firestore and Storage verification rules are live. The scoped iOS release tag ios-1.2.85 points to the app commit. GitHub reports no Codemagic run or commit status yet. The public TestFlight invite works but does not identify a 1.2.85 build. Owner has the Codemagic start link. The iOS update manifest awaits a confirmed distributable build.
+The buyer and merchant web, callable functions and Firestore/Storage verification rules remain at the 1.2.85 rollout from 7613eee2.
 
 The homepage journeys and horizontal package comparison were previously released on 24 November in Hosting 393cdb2c01979735.
 
@@ -712,6 +712,12 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-28 — Category update distributed on Android
+
+- Android 1.2.86 (103) is live at https://pok-pok.app/app/pokpok.apk. The category selector is clearer on the sales and management screens, including the category field when adding and editing products. Release 44f9582, Hosting c2420eb41f15f1e5. The remote ios-1.2.86 source tag is verified. GitHub reports no Codemagic check run or commit status for this revision. A distributed TestFlight build is unconfirmed. The iOS update manifest awaits confirmation. Manual workflow: ios-release at https://codemagic.io/app/6a103596040c9987ff81b4f8 .
+- Compared all 133 hosted files, both reserved files and the Hosting configuration against 53b4c8e38a193705. The only changes were /app/pokpok.apk and /app/version.json. Downloaded the entire public APK and verified the same SHA-256 as the signed, emulator-tested build: c1a4cd456e3cf53069e8a3548796e9953405c59ffb9a167a19fece89e2048c0a (93231012 bytes).
+- Flutter passed all 526 tests. The offline Android 16 emulator upgraded from 1.2.85 to 1.2.86 and opened the app. No physical device test for this release. No backend, trial onboarding, SMS or payment change in this rollout.
 
 ### 2026-11-28 — Signed category release verification
 
