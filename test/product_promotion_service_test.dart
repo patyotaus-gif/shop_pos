@@ -82,7 +82,8 @@ void main() {
       (tester) async {
     await tester.pumpWidget(
         const MaterialApp(home: SalesToolsScreen(shopType: ShopType.retail)));
-    await tester.tap(find.text('โปรโมชั่นส่วนลด'));
+    await tester.ensureVisible(find.text('ส่วนลดรายสินค้า'));
+    await tester.tap(find.text('ส่วนลดรายสินค้า'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('ตั้งโปรโมชั่น'));
     await tester.pumpAndSettle();

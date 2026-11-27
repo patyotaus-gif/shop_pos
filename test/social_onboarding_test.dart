@@ -23,7 +23,7 @@ void main() {
         findsOneWidget);
   });
   testWidgets(
-      'signup chooses account first and preserves email when going back',
+      'email signup keeps account details and checks consent before creating a shop',
       (tester) async {
     await tester.pumpWidget(const MaterialApp(home: RegisterScreen()));
     expect(find.text('ดำเนินการต่อด้วย Google'), findsOneWidget);
@@ -38,13 +38,13 @@ void main() {
         find.byType(TextFormField).at(0), 'owner@example.com');
     await tester.enterText(find.byType(TextFormField).at(1), 'example123');
     await tester.enterText(find.byType(TextFormField).at(2), 'example123');
-    await tester.ensureVisible(find.text('ถัดไป: ตั้งค่าร้าน'));
-    await tester.tap(find.text('ถัดไป: ตั้งค่าร้าน'));
+    final create = find.text('สร้างบัญชีและยืนยันอีเมล');
+    await tester.ensureVisible(create);
+    await tester.tap(create);
     await tester.pumpAndSettle();
-    expect(find.text('ชื่อร้าน'), findsOneWidget);
-    expect(find.text('รหัสผ่าน'), findsNothing);
-    await tester.tap(find.text('กลับไปแก้ไขบัญชี'));
-    await tester.pumpAndSettle();
+    expect(find.text('กรุณายอมรับเงื่อนไขการใช้บริการและนโยบายความเป็นส่วนตัว'),
+        findsOneWidget);
+    expect(find.text('ชื่อร้าน'), findsNothing);
     expect(find.text('owner@example.com'), findsOneWidget);
   });
 }

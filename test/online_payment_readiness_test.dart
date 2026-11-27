@@ -22,8 +22,9 @@ void main() {
         ),
       ));
       expect(find.text('บัตรเครดิต / เดบิต'), findsOneWidget);
+      expect(find.text('พร้อมเพย์'), findsOneWidget);
       expect(find.text('TrueMoney'), findsOneWidget);
-      expect(find.text('รอเปิดบริการ • ยังรับชำระไม่ได้'), findsNWidgets(2));
+      expect(find.text('รอเปิดบริการ • ยังรับชำระไม่ได้'), findsNWidgets(3));
       expect(tester.takeException(), isNull);
     });
   }

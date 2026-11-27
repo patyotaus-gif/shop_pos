@@ -94,6 +94,37 @@ void main() {
     expect(find.byType(SaleProductGrid), findsOneWidget);
   });
 
+  for (final layout in ProductCatalogLayout.values) {
+    testWidgets('keyboard leaves $layout results reachable at 200% text',
+        (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(320, 640);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetViewInsets);
+      SharedPreferences.setMockInitialValues({'catalog:shop': layout.name});
+      final stock = <String>[];
+      await tester
+          .pumpWidget(catalog(scale: 2, onStock: (p) => stock.add(p.id)));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '67890');
+      tester.view.viewInsets = const FakeViewPadding(bottom: 420);
+      await tester.pumpAndSettle();
+      expect(tester.getSize(find.byType(ProductCatalog)), const Size(320, 220));
+      expect(tester.takeException(), isNull);
+
+      final action = find.byTooltip('จัดการสต๊อก').hitTestable();
+      for (var swipe = 0; swipe < 8 && action.evaluate().isEmpty; swipe++) {
+        await tester.dragFrom(const Offset(160, 200), const Offset(0, -110));
+        await tester.pumpAndSettle();
+      }
+      expect(action, findsOneWidget);
+      await tester.tap(action);
+      expect(stock, ['snack']);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets(
       'phone/tablet views support large text and cards remain compact; Solo hides stock actions',
       (tester) async {
