@@ -711,6 +711,11 @@ or triggered; its Codemagic workflow does not run automatically on push.
 
 ## Log
 
+### 2026-11-28 — Product-category app release candidate
+
+- Preparing Android 1.2.86 (103) and the matching iOS source from the published 1.2.85 baseline. Includes the category selector, scanner and management form refinements and their Flutter tests. Previous production remains active until artifact verification. No backend or OTP changes.
+
+
 ### 2026-11-27 — Payment status, account verification and app update reminders
 
 - Android 1.2.85 (102) and buyer/merchant web updates are live at https://pok-pok.app/ from 7613eee2, Hosting 53b4c8e38a193705. All 67 signed-in callable functions are active on new revisions, and the exact Firestore and Storage verification rules are live. The scoped iOS release tag ios-1.2.85 points to the app commit. GitHub reports no Codemagic run or commit status yet. The public TestFlight invite works but does not identify a 1.2.85 build. Owner has the Codemagic start link. The iOS update manifest awaits a confirmed distributable build.

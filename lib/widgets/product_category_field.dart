@@ -50,9 +50,18 @@ class _ProductCategoryFieldState extends State<ProductCategoryField> {
             isExpanded: true,
             menuMaxHeight: 360,
             hint: const Text('กดเพื่อเลือกหมวดหมู่'),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'หมวดหมู่สินค้า',
-              border: OutlineInputBorder(),
+              floatingLabelBehavior: FloatingLabelBehavior.always,
+              prefixIcon: const Icon(Icons.category_outlined),
+              prefixIconColor: Theme.of(context).colorScheme.primary,
+              filled: true,
+              fillColor: Theme.of(context).colorScheme.primaryContainer,
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide:
+                    BorderSide(color: Theme.of(context).colorScheme.primary),
+              ),
             ),
             items: [
               ..._options.map((name) => DropdownMenuItem<Object>(

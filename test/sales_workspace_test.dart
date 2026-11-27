@@ -67,6 +67,56 @@ void main() {
   });
 
   testWidgets(
+      'first shop category is reachable on a phone alongside the sales shortcuts',
+      (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 760);
+    addTearDown(tester.view.reset);
+    final controller = SaleDisplayController('category-visibility');
+    await controller.load();
+    await controller.save(controller.value.withMode(SaleDisplayMode.names));
+    for (final theme in [PokpokTheme.light(), PokpokTheme.dark()]) {
+      final boundary = GlobalKey();
+      await tester.pumpWidget(RepaintBoundary(
+          key: boundary,
+          child: MaterialApp(
+              debugShowCheckedModeBanner: false,
+              theme: theme,
+              home: SaleDisplayScope(
+                  controller: controller,
+                  child: Scaffold(
+                      appBar: AppBar(title: const Text('ขายสินค้า')),
+                      body: PosCatalog(
+                          loadProducts: () =>
+                              Stream.value(_products.take(3).toList()),
+                          onScan: () {},
+                          onChooseBundle: () {},
+                          onAdd: (_) {}))))));
+      await tester.pumpAndSettle();
+      final category = find.byKey(const ValueKey('sales-tab-category:อาหาร'));
+      final all = find.byKey(const ValueKey('sales-tab-all'));
+      expect(find.text('หมวดหมู่สินค้า').hitTestable(), findsOneWidget);
+      expect(category.hitTestable(), findsOneWidget);
+      expect(tester.getRect(category).right, lessThanOrEqualTo(390));
+      expect(tester.getRect(find.byKey(const ValueKey('sales-bundles'))).bottom,
+          lessThanOrEqualTo(tester.getRect(category).top));
+      await tester.tap(category);
+      await tester.pumpAndSettle();
+      final chip = tester.widget<ChoiceChip>(category);
+      expect(chip.selected, isTrue);
+      expect(chip.showCheckmark, isTrue);
+      expect(chip.selectedColor, theme.colorScheme.primary);
+      expect(chip.checkmarkColor, theme.colorScheme.onPrimary);
+      expect(tester.widget<ChoiceChip>(all).selected, isFalse);
+      expect(find.byKey(const ValueKey('sale-product-1')), findsOneWidget);
+      expect(find.byKey(const ValueKey('sale-product-2')), findsNothing);
+      await _capture(tester, boundary, '390-category-${theme.brightness.name}');
+      await tester.tap(all);
+      await tester.pumpAndSettle();
+    }
+  });
+
+  testWidgets(
       'favorites, category names, barcode search and availability share one stream',
       (tester) async {
     final controller = SaleDisplayController('catalog');

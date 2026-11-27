@@ -44,12 +44,14 @@ class SaleProductGrid extends StatelessWidget {
       required this.itemBuilder,
       this.controller,
       this.products = const [],
+      this.bottomInset = 0,
       this.footerExtent = 0});
 
   final int itemCount;
   final IndexedWidgetBuilder itemBuilder;
   final ScrollController? controller;
   final double footerExtent;
+  final double bottomInset;
   final List<Product> products;
 
   @override
@@ -66,7 +68,8 @@ class SaleProductGrid extends StatelessWidget {
             SaleDisplayScope.of(context)?.value.mode == SaleDisplayMode.names;
         return GridView.builder(
           controller: controller,
-          padding: const EdgeInsets.all(padding),
+          padding: EdgeInsets.fromLTRB(
+              padding, padding, padding, padding + bottomInset),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: columns,
             mainAxisExtent: names

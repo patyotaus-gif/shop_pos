@@ -7,6 +7,7 @@ import '../models/product.dart';
 import 'product_image.dart';
 import 'sale_product_grid.dart';
 import 'content_width.dart';
+import 'catalog_category_bar.dart';
 
 enum ProductCatalogLayout { list, grid }
 
@@ -129,11 +130,9 @@ class _ProductCatalogState extends State<ProductCatalog> {
                     border: OutlineInputBorder(),
                     isDense: true),
               ))),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Align(
-          alignment: Alignment.centerRight,
-          child: SegmentedButton<ProductCatalogLayout>(
+      CatalogCategoryBar(
+        actions: [
+          SegmentedButton<ProductCatalogLayout>(
             segments: const [
               ButtonSegment(
                   value: ProductCatalogLayout.list,
@@ -150,24 +149,17 @@ class _ProductCatalogState extends State<ProductCatalog> {
             showSelectedIcon: false,
             onSelectionChanged: _selectLayout,
           ),
-        ),
+        ],
+        choices: [
+          for (final cat in ['ทั้งหมด', ...widget.categories])
+            catalogCategoryChip(
+              context,
+              label: cat,
+              selected: cat == _category,
+              onSelected: (_) => setState(() => _category = cat),
+            ),
+        ],
       ),
-      SizedBox(
-          height: math.max(48, scale.scale(16) + 24),
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            children: ['ทั้งหมด', ...widget.categories]
-                .map((cat) => Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(cat),
-                        selected: cat == _category,
-                        onSelected: (_) => setState(() => _category = cat),
-                      ),
-                    ))
-                .toList(),
-          )),
       Expanded(
           child: widget.hasError
               ? const Center(child: Text('โหลดสินค้าไม่สำเร็จ กรุณาลองใหม่'))
@@ -176,55 +168,52 @@ class _ProductCatalogState extends State<ProductCatalog> {
                   : products.isEmpty
                       ? const Center(child: Text('ไม่พบสินค้า'))
                       : _layout == ProductCatalogLayout.grid
-                          ? Padding(
-                              padding: const EdgeInsets.only(bottom: 80),
-                              child: SaleProductGrid(
-                                key: const PageStorageKey('products-grid'),
-                                footerExtent: footerHeight,
-                                itemCount: products.length,
-                                itemBuilder: (context, i) {
-                                  final product = products[i];
-                                  return SaleProductCard(
-                                    product: product,
-                                    onTap: () => widget.onEdit(product),
-                                    footer: SizedBox(
-                                        height: footerHeight,
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(
-                                              left: 10, right: 4),
-                                          child: Row(children: [
-                                            Expanded(
-                                                child: Text(
-                                                    'สต็อก ${product.stock}',
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    style: TextStyle(
-                                                        fontSize: 14,
-                                                        color: widget
-                                                                    .showInventory &&
-                                                                product
-                                                                    .isLowStock
-                                                            ? Theme.of(context)
-                                                                .colorScheme
-                                                                .error
-                                                            : Theme.of(context)
-                                                                .colorScheme
-                                                                .onSurfaceVariant))),
-                                            if (widget.showInventory &&
-                                                widget.onReceiveStock != null)
-                                              IconButton(
-                                                  tooltip: 'จัดการสต๊อก',
-                                                  icon: const Icon(
-                                                      Icons.add_box_outlined),
-                                                  onPressed: () =>
-                                                      widget.onReceiveStock!(
-                                                          product)),
-                                          ]),
-                                        )),
-                                  );
-                                },
-                              ))
+                          ? SaleProductGrid(
+                              bottomInset: 80,
+                              key: const PageStorageKey('products-grid'),
+                              footerExtent: footerHeight,
+                              itemCount: products.length,
+                              itemBuilder: (context, i) {
+                                final product = products[i];
+                                return SaleProductCard(
+                                  product: product,
+                                  onTap: () => widget.onEdit(product),
+                                  footer: SizedBox(
+                                      height: footerHeight,
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(
+                                            left: 10, right: 4),
+                                        child: Row(children: [
+                                          Expanded(
+                                              child: Text(
+                                                  'สต็อก ${product.stock}',
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                      fontSize: 14,
+                                                      color: widget
+                                                                  .showInventory &&
+                                                              product.isLowStock
+                                                          ? Theme.of(context)
+                                                              .colorScheme
+                                                              .error
+                                                          : Theme.of(context)
+                                                              .colorScheme
+                                                              .onSurfaceVariant))),
+                                          if (widget.showInventory &&
+                                              widget.onReceiveStock != null)
+                                            IconButton(
+                                                tooltip: 'จัดการสต๊อก',
+                                                icon: const Icon(
+                                                    Icons.add_box_outlined),
+                                                onPressed: () => widget
+                                                    .onReceiveStock!(product)),
+                                        ]),
+                                      )),
+                                );
+                              },
+                            )
                           : ContentWidth(
                               maxWidth: 1040,
                               child: ListView.builder(
@@ -281,10 +270,21 @@ class _ProductListRow extends StatelessWidget {
                       children: [
                     Text(product.name,
                         style: const TextStyle(fontWeight: FontWeight.w600)),
-                    Text(
-                        '${product.category} · บาร์โค้ด: ${product.barcode.isEmpty ? "-" : product.barcode}',
-                        style: TextStyle(
-                            fontSize: 12, color: cs.onSurfaceVariant)),
+                    Wrap(spacing: 8, children: [
+                      Text(product.category,
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelMedium
+                              ?.copyWith(
+                                  color: cs.primary,
+                                  fontWeight: FontWeight.w600)),
+                      Text(
+                          'บาร์โค้ด: ${product.barcode.isEmpty ? "-" : product.barcode}',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: cs.onSurfaceVariant)),
+                    ]),
                     const SizedBox(height: 4),
                     Wrap(
                         spacing: 8,

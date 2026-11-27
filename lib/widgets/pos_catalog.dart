@@ -1,8 +1,8 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/product.dart';
 import '../services/product_service.dart';
 import '../utils/money_format.dart';
+import 'catalog_category_bar.dart';
 import 'sale_display_controls.dart';
 import 'sale_product_grid.dart';
 
@@ -165,41 +165,36 @@ class _PosCatalogState extends State<PosCatalog> {
                     ]
                   ]);
                 })),
-            SizedBox(
-                height: math.max(
-                    48, MediaQuery.textScalerOf(context).scale(18) + 24),
-                child: Row(children: [
-                  if (!widget.isFoodMenu && widget.onScan != null)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 12),
-                      child: ActionChip(
-                        tooltip: 'สแกนบาร์โค้ด',
-                        avatar: const Icon(Icons.barcode_reader, size: 18),
-                        label: const Text('สแกน'),
-                        onPressed: widget.onScan,
-                      ),
-                    ),
-                  Expanded(
-                      child: ListView(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          children: [
-                        _chip('ทั้งหมด', 'all', tab),
-                        _chip('รายการโปรด', 'favorites', tab,
-                            icon: Icons.push_pin_outlined),
-                        if (widget.onChooseBundle != null)
-                          Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: ActionChip(
-                                  key: const ValueKey('sales-bundles'),
-                                  avatar: const Icon(Icons.inventory_2_outlined,
-                                      size: 18),
-                                  label: const Text('ชุดสินค้า'),
-                                  onPressed: widget.onChooseBundle)),
-                        for (final category in categories)
-                          _chip(category, 'category:$category', tab),
-                      ])),
-                ])),
+            CatalogCategoryBar(
+              leading: !widget.isFoodMenu && widget.onScan != null
+                  ? ActionChip(
+                      tooltip: 'สแกนบาร์โค้ด',
+                      avatar: const Icon(Icons.barcode_reader, size: 18),
+                      label: const Text('สแกน'),
+                      onPressed: widget.onScan)
+                  : null,
+              actions: [
+                _chip(
+                    categories.contains('รายการโปรด')
+                        ? 'ที่ปักหมุดไว้'
+                        : 'รายการโปรด',
+                    'favorites',
+                    tab,
+                    icon: Icons.push_pin_outlined),
+                if (widget.onChooseBundle != null)
+                  ActionChip(
+                    key: const ValueKey('sales-bundles'),
+                    avatar: const Icon(Icons.inventory_2_outlined, size: 18),
+                    label: const Text('ชุดสินค้า'),
+                    onPressed: widget.onChooseBundle,
+                  ),
+              ],
+              choices: [
+                _chip('ทั้งหมด', 'all', tab),
+                for (final category in categories)
+                  _chip(category, 'category:$category', tab),
+              ],
+            ),
           ]);
           final Widget body;
           if (snapshot.hasError) {
@@ -309,12 +304,10 @@ class _PosCatalogState extends State<PosCatalog> {
   }
 
   Widget _chip(String label, String value, String selected, {IconData? icon}) =>
-      Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: ChoiceChip(
-              key: ValueKey('sales-tab-$value'),
-              label: Text(label),
-              avatar: icon != null ? Icon(icon, size: 18) : null,
-              selected: value == selected,
-              onSelected: (_) => _select(value)));
+      catalogCategoryChip(context,
+          key: ValueKey('sales-tab-$value'),
+          label: label,
+          selected: value == selected,
+          icon: icon,
+          onSelected: (_) => _select(value));
 }
