@@ -13,7 +13,9 @@ Rules:
 
 ---
 
-## Current state (updated 2026-11-27)
+## Current state (updated 2026-11-28)
+
+The signed 1.2.86 (103) category update passed local verification and an Android 16 emulator upgrade. Production promotion is pending.
 
 Android 1.2.85 (102) and buyer/merchant web updates are live at https://pok-pok.app/ from 7613eee2, Hosting 53b4c8e38a193705. All 67 signed-in callable functions are active on new revisions, and the exact Firestore and Storage verification rules are live. The scoped iOS release tag ios-1.2.85 points to the app commit. GitHub reports no Codemagic run or commit status yet. The public TestFlight invite works but does not identify a 1.2.85 build. Owner has the Codemagic start link. The iOS update manifest awaits a confirmed distributable build.
 
@@ -710,6 +712,10 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-28 — Signed category release verification
+
+Flutter passed 526 tests, including six focused catalog tests. Focused static analysis and independent review passed. The signed APK uses the same certificate as 1.2.85. Upgraded the offline Android 16 emulator from build 102 to 103 and launched the app. No physical device was connected. APK SHA-256 c1a4cd456e3cf53069e8a3548796e9953405c59ffb9a167a19fece89e2048c0a, 93231012 bytes. The four release notes describe the category controls and small-screen behavior. Production uses the previous release until promotion.
 
 ### 2026-11-28 — Product-category app release candidate
 

@@ -103,25 +103,25 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       addTearDown(tester.view.resetPhysicalSize);
       await tester.pumpWidget(catalog(items: [
-        products.last,
-        ...List.filled(60, products.first),
+        products.first,
+        ...List.filled(60, products.last),
       ]));
       await tester.pumpAndSettle();
       final search = find.byType(TextField);
-      final chip = find.widgetWithText(ChoiceChip, 'ขนม');
+      final chip = find.widgetWithText(ChoiceChip, 'เครื่องดื่ม');
       final searchPosition = tester.getTopLeft(search);
       final chipPosition = tester.getTopLeft(chip);
-      expect(find.text(products.last.name).hitTestable(), findsOneWidget);
+      expect(find.text(products.first.name).hitTestable(), findsOneWidget);
       await tester.dragFrom(
           Offset(180, size.height - 60), const Offset(0, -400));
       await tester.pumpAndSettle();
-      expect(find.text(products.last.name).hitTestable(), findsNothing);
+      expect(find.text(products.first.name).hitTestable(), findsNothing);
       expect(tester.getTopLeft(search), searchPosition);
       expect(tester.getTopLeft(chip), chipPosition);
       await tester.tap(chip);
       await tester.pumpAndSettle();
-      expect(find.text(products.last.name).hitTestable(), findsOneWidget);
-      expect(find.text(products.first.name), findsNothing);
+      expect(find.text(products.first.name).hitTestable(), findsOneWidget);
+      expect(find.text(products.last.name), findsNothing);
       await tester.tap(find.text('รูปภาพ'));
       await tester.pumpAndSettle();
       expect(find.byType(SaleProductCard).hitTestable(), findsOneWidget);
