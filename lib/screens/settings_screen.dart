@@ -1,5 +1,7 @@
 import '../widgets/pokpok_brand.dart';
 import 'owner_pin_screen.dart';
+import 'branch_requests_screen.dart';
+import '../widgets/merchant_phone_gate.dart';
 import '../widgets/line_notification_settings.dart';
 import '../widgets/line_link_card.dart';
 import '../widgets/compact_action.dart';
@@ -440,6 +442,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: Icons.storefront_outlined,
                     children: [
                       // Shop info section
+                      if (!AuthService.isStaff && user != null)
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.add_business_outlined),
+                          title: const Text('ขอเพิ่มสาขา'),
+                          subtitle: const Text('ส่งคำขอและติดตามผลของร้าน'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => Navigator.push(context, MaterialPageRoute(
+                            builder: (_) => MerchantPhoneGate(
+                              ownerId: user.uid,
+                              quickUnlock: AuthService.ownerQuickUnlock,
+                              child: BranchRequestsScreen.owner(shopId: user.uid),
+                            ),
+                          )),
+                        ),
                       const SettingsHeading('ข้อมูลร้าน'),
                       const SizedBox(height: 12),
                       TextField(

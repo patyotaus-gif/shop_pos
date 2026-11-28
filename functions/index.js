@@ -4,7 +4,7 @@ const {getStorage} = require('firebase-admin/storage');
 const {getAppCheck} = require('firebase-admin/app-check');
 const pickupScheduling = require('./pickup');
 const { onRequest, HttpsError } = require("firebase-functions/v2/https");
-const { onCall } = require('./verified_session');
+const { accountOnCall: onCall, onCall: merchantOnCall, merchantPhoneStatus } = require('./verified_session');
 const { onDocumentCreated, onDocumentUpdated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { setGlobalOptions } = require("firebase-functions/v2");
@@ -21,6 +21,16 @@ const staffAccess = require('./staff_access').createStaffAccess({
 });
 
 setGlobalOptions({ region: "asia-southeast1" });
+
+exports.getMerchantPhoneStatus = onCall(merchantPhoneStatus);
+exports.verifyMerchantPhone = onCall(require('./merchant_trial').verifyMerchantPhone({
+  db: firestoreSdk.getFirestore(), auth: getAuth(),
+}));
+const branchRequests = require('./branch_requests').handlers({
+  db: firestoreSdk.getFirestore(), FieldValue: firestoreSdk.FieldValue, assertFounder,
+});
+exports.merchantBranchRequests = merchantOnCall(branchRequests.owner);
+exports.adminBranchRequests = onCall(branchRequests.admin);
 
 exports.staffList = onCall(staffAccess.list);
 exports.staffManage = onCall(staffAccess.manage);

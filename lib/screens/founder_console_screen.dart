@@ -6,6 +6,7 @@ import '../models/hardware_request.dart';
 import '../models/supplier.dart';
 import '../services/admin_service.dart';
 import '../widgets/admin_plan_dialog.dart';
+import 'branch_requests_screen.dart';
 
 /// Founder-only operations console — manage subscriptions, advance hardware
 /// shipments, and onboard/edit marketplace suppliers. Every mutation goes
@@ -91,6 +92,14 @@ class _ShopsTabState extends State<_ShopsTab> {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        ListTile(
+          leading: const Icon(Icons.add_business_outlined),
+          title: const Text('คำขอเพิ่มสาขา'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.push(context, MaterialPageRoute(
+            builder: (_) => const BranchRequestsScreen.admin(),
+          )),
+        ),
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
           child: TextField(

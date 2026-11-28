@@ -13,6 +13,7 @@ class AuthService {
 
   static String? _claimUid;
   static Map<String, dynamic> _claims = {};
+  static bool get ownerQuickUnlock => _claimUid == currentUser?.uid && _claims['ownerQuickUnlock'] == true;
   static bool get isStaff =>
       _claimUid != null &&
       _claimUid == currentUser?.uid &&
@@ -57,6 +58,7 @@ class AuthService {
 
   static bool acceptsOwnerToken(Map<String, dynamic> claims) {
     final provider = claims['firebase']?['sign_in_provider'];
+    if (provider == 'phone') return false;
     return claims['email_verified'] == true ||
         provider == 'google.com' ||
         provider == 'apple.com' ||

@@ -4,7 +4,16 @@
 <dict>
 	<!-- Pokpok Google Sign-In START -->
 	<key>GIDClientID</key><string>1010156115465-k4guasnq24h7tflfkc63m33apcln93eo.apps.googleusercontent.com</string>
-	<key>CFBundleURLTypes</key><array><dict><key>CFBundleURLSchemes</key><array><string>com.googleusercontent.apps.1010156115465-k4guasnq24h7tflfkc63m33apcln93eo</string></array></dict></array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.1010156115465-k4guasnq24h7tflfkc63m33apcln93eo</string>
+				<string>app-1-1010156115465-ios-eb6db61eb6305fdca68ad8</string>
+			</array>
+		</dict>
+	</array>
 	<!-- Pokpok Google Sign-In END -->
 
 	<key>CADisableMinimumFrameDurationOnPhone</key>

@@ -29,7 +29,7 @@ test('real picker changes date, refreshes stale slots and blocks checkout after 
  const context=vm.createContext({...helpers,document:{getElementById:id=>elements[id]},
    Option:class {constructor(text,value){this.text=text;this.value=value;}},
    apiFetch:async()=>response,shopId:'test',orderContext:{}});
- const source=fs.readFileSync(require.resolve('../public/order/js/pickup.js'),'utf8').replace(/^import .*\n/gm,'').replace(/export /g,'');
+ const source=fs.readFileSync(require.resolve('../public/order/js/pickup.js'),'utf8').replace(/^import .*\r?\n/gm,'').replace(/export /g,'');
  vm.runInContext(source,context);
  context.initPickup(); await context.refreshPickup();
  assert.equal(elements.pickupSlot.options[0].text,'09:00–09:15 น.');

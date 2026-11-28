@@ -13,7 +13,9 @@ Rules:
 
 ---
 
-## Current state (updated 2026-11-28)
+## Current state (updated 2026-11-29)
+
+1.2.87 (104) is in release preparation. The owner chose to require one-time phone verification for the additional-branch menu while existing shops continue selling. Founder decisions register a branch with its original shop and entitlement.
 
 Android 1.2.86 (103) is live at https://pok-pok.app/app/pokpok.apk. The category selector is clearer on the sales and management screens, including the category field when adding and editing products. Release 44f9582, Hosting c2420eb41f15f1e5. The remote ios-1.2.86 source tag is verified. GitHub reports no Codemagic check run or commit status for this revision. A distributed TestFlight build is unconfirmed. The iOS update manifest awaits confirmation. Manual workflow: ios-release at https://codemagic.io/app/6a103596040c9987ff81b4f8 .
 
@@ -712,6 +714,10 @@ or triggered; its Codemagic workflow does not run automatically on push.
 ---
 
 ## Log
+
+### 2026-11-29 — Additional-branch release scope
+
+The owner approved the branch workflow first. Existing POS access stays available. Independent review found no release blocker. Flutter passed 534 tests and the selected Dart analyzer found no issues. The Functions unit suite, Firestore branch workflow and Auth/Firestore enrollment-to-branch integration passed. The APK matches the earlier production signing certificate. Production SMS on physical Android and iPhone remains unverified.
 
 ### 2026-11-28 — Category update distributed on Android
 

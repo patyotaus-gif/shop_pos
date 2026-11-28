@@ -5,6 +5,8 @@
   },
   "main": "index.js",
   "scripts": {
+    "test:branch-phone": "firebase emulators:exec --only auth,firestore --project demo-pokpok-admin --config ../firebase.checkout-test.json \"node branch_phone.integration.cjs\"",
+    "test:branch-requests": "firebase emulators:exec --only firestore --project demo-pokpok-admin --config ../firebase.rules-test.json \"node branch_requests.integration.cjs\"",
     "test:native-checkout": "firebase emulators:exec --only auth,firestore --project demo-pokpok-admin --config ../firebase.checkout-test.json \"node native_checkout.integration.cjs\"",
     "test:owner-unlock": "firebase emulators:exec --only firestore --project demo-pokpok-admin --config ../firebase.rules-test.json \"node owner_unlock.integration.cjs\"",
     "test:omise": "node --test omise_sandbox.test.js online_payment_evidence.test.js",

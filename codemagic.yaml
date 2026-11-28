@@ -28,7 +28,7 @@ workflows:
       events:
         - tag
       tag_patterns:
-        - pattern: 'ios-1.2.86'
+        - pattern: 'ios-1.2.87'
           include: true
     max_build_duration: 60
     integrations:

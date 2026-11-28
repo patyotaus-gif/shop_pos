@@ -10,6 +10,20 @@ import 'shop_database.dart';
 class ShopService {
   static DocumentReference<Map<String, dynamic>> _doc() => ShopDatabase.shop;
 
+  static Future<String> merchantPhoneStatus(String ownerId) async {
+    if (AuthService.shopId != ownerId || AuthService.isStaff) {
+      throw StateError('กรุณาเข้าสู่ระบบด้วยบัญชีเจ้าของร้าน');
+    }
+    final result = await FirebaseFunctions.instanceFor(region: 'asia-southeast1')
+        .httpsCallable('getMerchantPhoneStatus').call();
+    return result.data['state'] as String;
+  }
+
+  static Future<void> verifyMerchantPhone(String ownerUid, String proof) async {
+    await FirebaseFunctions.instanceFor(region: 'asia-southeast1')
+        .httpsCallable('verifyMerchantPhone').call({'ownerUid': ownerUid, 'phoneProof': proof});
+  }
+
   /// Claim/change the shop's short-link slug (`pok-pok.app/r/{slug}`).
   /// Returns the normalized slug the server accepted. Throws on taken/invalid.
   static Future<String> setSlug(String slug) async {
